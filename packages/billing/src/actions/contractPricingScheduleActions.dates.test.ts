@@ -28,6 +28,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import {
   createPricingSchedule,
   getPricingSchedulesByContract,
+  getPricingScheduleLineScopes,
   updatePricingSchedule,
 } from './contractPricingScheduleActions';
 
@@ -62,7 +63,7 @@ type Fixtures = {
   /** Fixed lines of the contract, as contract_lines rows. */
   lines?: Array<{ contract_line_id: string; contract_line_name: string | null }>;
   /** Member rows: one per (line, pricing_basis). */
-  members?: Array<{ contract_line_id: string; pricing_basis: string | null }>;
+  members?: Array<{ contract_line_id: string; pricing_basis: string | null; configuration_type?: string; item_kind?: string }>;
 };
 
 /**
@@ -100,9 +101,10 @@ function seedTables(fixtures: Fixtures = {}) {
     select: vi.fn(async () => fixtures.lines ?? DEFAULT_LINES),
   };
   const membersQuery: any = {
+    join: vi.fn().mockReturnThis(),
     leftJoin: vi.fn().mockReturnThis(),
     whereIn: vi.fn().mockReturnThis(),
-    select: vi.fn(async () => fixtures.members ?? []),
+    select: vi.fn(async () => (fixtures.members ?? [{ contract_line_id: 'line-1', pricing_basis: 'bundle' }]).map(member => ({ configuration_type: 'Fixed', item_kind: 'service', ...member }))),
   };
 
   tableMock.mockImplementation((tableName: string) => {
@@ -306,7 +308,7 @@ describe('pricing schedule actions: line scope', () => {
     const { schedulesQuery } = seedTables({
       schedulesFirst: [undefined],
       lines: [{ contract_line_id: 'line-1', contract_line_name: 'Managed Services' }],
-      members: [],
+      members: [{ contract_line_id: 'line-1', pricing_basis: 'bundle' }],
     });
 
     await expect(callCreatePricingSchedule(user, ctx, createData({ contract_line_id: 'line-1' })))
@@ -344,6 +346,34 @@ describe('pricing schedule actions: line scope', () => {
         messageKey: 'msp/contracts:errors.pricingSchedule.lineUnitPriced',
       });
     expect(schedulesQuery.insert).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['product bundle', [{ contract_line_id: 'line-1', pricing_basis: 'bundle', item_kind: 'product' }]],
+    ['legacy product', [{ contract_line_id: 'line-1', pricing_basis: null, item_kind: 'product' }]],
+    ['non-Fixed configuration', [{ contract_line_id: 'line-1', pricing_basis: null, configuration_type: 'Usage' }]],
+    ['empty line', []],
+  ])('excludes and rejects a %s without a billable bundle member', async (_name, members) => {
+    const { schedulesQuery } = seedTables({ members, schedulesFirst: [storedRow] });
+    const scopes = await (getPricingScheduleLineScopes as any)(user, ctx, 'contract-1');
+    expect(scopes).toEqual([expect.objectContaining({ has_bundle_fee: false, has_unit_priced_members: false })]);
+    await expect(callCreatePricingSchedule(user, ctx, createData())).resolves.toMatchObject({
+      messageKey: 'msp/contracts:errors.pricingSchedule.lineNotEligible',
+    });
+    expect(schedulesQuery.insert).not.toHaveBeenCalled();
+    await expect(callUpdatePricingSchedule(user, ctx, 'schedule-1', { contract_line_id: 'line-1' }))
+      .resolves.toMatchObject({ messageKey: 'msp/contracts:errors.pricingSchedule.lineNotEligible' });
+    expect(schedulesQuery.update).not.toHaveBeenCalled();
+  });
+
+  it('does not turn a unit-only service line into a bundle line because it also contains a product', async () => {
+    seedTables({ members: [
+      { contract_line_id: 'line-1', pricing_basis: 'unit' },
+      { contract_line_id: 'line-1', pricing_basis: null, item_kind: 'product' },
+    ] });
+    expect(await (getPricingScheduleLineScopes as any)(user, ctx, 'contract-1')).toEqual([
+      expect.objectContaining({ has_bundle_fee: false, has_unit_priced_members: true }),
+    ]);
   });
 
   it('accepts a mixed line that still has a bundle member', async () => {

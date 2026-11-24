@@ -144,7 +144,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currenc
   // Only lines with a bundle fee can be repriced by a schedule, so they are
   // the ones a whole-contract row actually applies to.
   const bundleFeeLines = lineScopes.filter((line) => line.has_bundle_fee);
-  const unitPricedLineCount = lineScopes.length - bundleFeeLines.length;
+  const unitPricedLineCount = lineScopes.filter((line) => !line.has_bundle_fee && line.has_unit_priced_members).length;
 
   const lineName = (contractLineId: string): string => {
     const line = lineScopes.find((candidate) => candidate.contract_line_id === contractLineId);

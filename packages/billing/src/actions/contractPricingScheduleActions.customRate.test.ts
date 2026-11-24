@@ -81,9 +81,10 @@ function seedTables(schedulesFirstResults: unknown[], row: Record<string, unknow
     select: vi.fn(async () => [{ contract_line_id: 'line-1', contract_line_name: 'Managed Services' }]),
   };
   const membersQuery: any = {
+    join: vi.fn().mockReturnThis(),
     leftJoin: vi.fn().mockReturnThis(),
     whereIn: vi.fn().mockReturnThis(),
-    select: vi.fn(async () => []),
+    select: vi.fn(async () => [{ contract_line_id: 'line-1', configuration_type: 'Fixed', item_kind: 'service', pricing_basis: 'bundle' }]),
   };
   tableMock.mockImplementation((tableName: string) => {
     if (tableName === 'contracts') return contractsQuery;

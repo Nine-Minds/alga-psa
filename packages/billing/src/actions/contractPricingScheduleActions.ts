@@ -129,24 +129,38 @@ async function fetchFixedLineScopes(
 
   const lineIds = lines.map((line: any) => line.contract_line_id);
   const members = await db.table('contract_line_service_configuration as clsc')
+    .join('contract_line_services as cls', function (this: any) {
+      this.on('cls.contract_line_id', '=', 'clsc.contract_line_id')
+        .andOn('cls.service_id', '=', 'clsc.service_id')
+        .andOn('cls.tenant', '=', 'clsc.tenant');
+    })
+    .join('service_catalog as sc', function (this: any) {
+      this.on('sc.service_id', '=', 'clsc.service_id').andOn('sc.tenant', '=', 'clsc.tenant');
+    })
     .leftJoin('contract_line_service_fixed_config as fc', function (this: any) {
       this.on('fc.config_id', '=', 'clsc.config_id').andOn('fc.tenant', '=', 'clsc.tenant');
     })
     .whereIn('clsc.contract_line_id', lineIds)
-    .select({ contract_line_id: 'clsc.contract_line_id', pricing_basis: 'fc.pricing_basis' });
+    .select({
+      contract_line_id: 'clsc.contract_line_id',
+      pricing_basis: 'fc.pricing_basis',
+      configuration_type: 'clsc.configuration_type',
+      item_kind: 'sc.item_kind',
+    });
 
   const unitMembers = new Set<string>();
   const bundleMembers = new Set<string>();
   for (const member of (Array.isArray(members) ? members : []) as any[]) {
+    // Match the engine's fixed-fee members. Products have a separate billing
+    // path, and a non-Fixed configuration is not a bundle member.
+    if (member.configuration_type !== 'Fixed' || member.item_kind !== 'service') continue;
     (member.pricing_basis === 'unit' ? unitMembers : bundleMembers).add(member.contract_line_id);
   }
 
   return lines.map((line: any) => ({
     contract_line_id: line.contract_line_id,
     contract_line_name: line.contract_line_name ?? null,
-    // A line with no members at all keeps bundle semantics: nothing opted into
-    // unit pricing, so the schedule rate is still the line's fee.
-    has_bundle_fee: bundleMembers.has(line.contract_line_id) || !unitMembers.has(line.contract_line_id),
+    has_bundle_fee: bundleMembers.has(line.contract_line_id),
     has_unit_priced_members: unitMembers.has(line.contract_line_id),
   }));
 }
@@ -163,7 +177,7 @@ async function getLineScopeValidationError(
   const scopes = await fetchFixedLineScopes(db, contractId);
   const scope = scopes.find((candidate) => candidate.contract_line_id === contractLineId);
 
-  if (!scope) {
+  if (!scope || (!scope.has_bundle_fee && !scope.has_unit_priced_members)) {
     return {
       message: 'Pricing schedules apply to a fixed-fee line of this contract; pick one of its fixed lines',
       key: 'msp/contracts:errors.pricingSchedule.lineNotEligible',

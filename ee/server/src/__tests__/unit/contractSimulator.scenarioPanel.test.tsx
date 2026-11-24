@@ -12,8 +12,8 @@ import ScenarioPanel from "@ee/components/billing/simulator/ScenarioPanel";
 vi.mock("@alga-psa/ui/lib/i18n/client", () => ({
   useOptionalI18n: () => ({ locale: "en" }),
   useTranslation: () => ({
-    t: (_key: string, options?: { defaultValue?: string }) =>
-      options?.defaultValue ?? _key,
+    t: (_key: string, options?: { defaultValue?: string; [key: string]: unknown }) =>
+      (options?.defaultValue ?? _key).replace(/\{\{(\w+)\}\}/g, (_, key) => String(options?.[key] ?? "")),
   }),
   useFormatters: () => ({
     formatCurrency: (value: number, currency: string) =>
@@ -77,10 +77,10 @@ const initialLine: ScenarioLine = {
   services: [usageService],
 };
 
-function Harness() {
-  const pristine = useMemo(() => [structuredClone(initialLine)], []);
+function Harness({ initialLines = [initialLine], initialSchedules = [] }: { initialLines?: ScenarioLine[]; initialSchedules?: ScenarioPricingSchedule[] }) {
+  const pristine = useMemo(() => structuredClone(initialLines), []);
   const [lines, setLines] = useState(() => structuredClone(pristine));
-  const [schedules, setSchedules] = useState<ScenarioPricingSchedule[]>([]);
+  const [schedules, setSchedules] = useState<ScenarioPricingSchedule[]>(initialSchedules);
   const modified = new Set(
     lines
       .filter(
@@ -115,6 +115,8 @@ function Harness() {
     setLines(next);
   };
   return (
+    <>
+    <div data-testid="schedule-state">{JSON.stringify(schedules)}</div>
     <ScenarioPanel
       lines={lines}
       pristineLines={pristine}
@@ -149,6 +151,7 @@ function Harness() {
       onDiscountsChange={vi.fn()}
       onAdjustmentsChange={vi.fn()}
     />
+    </>
   );
 }
 
@@ -205,10 +208,7 @@ describe("contract simulator ScenarioPanel", () => {
     ).toHaveTextContent("$12.34");
 
     fireEvent.click(screen.getByText("Advanced contract changes"));
-    fireEvent.click(screen.getByText("+ add schedule"));
-    expect(
-      screen.getByLabelText("Schedule effective date"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("+ add schedule")).toBeDisabled();
     expect(screen.getByRole("button", { name: "Reset" })).toBeEnabled();
 
     fireEvent.click(screen.getByRole("button", { name: "Reset" }));
@@ -233,5 +233,62 @@ describe("contract simulator ScenarioPanel", () => {
     expect(
       screen.queryByDisplayValue("Scenario line 1"),
     ).not.toBeInTheDocument();
+  });
+});
+
+function fixedLine(key: string, itemKind = 'service', basis: 'unit' | 'bundle' = 'bundle'): ScenarioLine {
+  return {
+    ...initialLine, key, contract_line_name: key, contract_line_type: 'Fixed',
+    services: [{ ...usageService, item_kind: itemKind, configuration: {
+      configuration_type: 'Fixed', pricing_basis: basis, base_rate: 50000,
+    } as any }],
+  };
+}
+
+function scheduleState() {
+  return JSON.parse(screen.getByTestId('schedule-state').textContent!);
+}
+
+describe('simulator schedule line selection', () => {
+  it('preselects the only eligible line and never authors whole-contract scope', () => {
+    render(<Harness initialLines={[fixedLine('bundle'), fixedLine('product', 'product'), fixedLine('units', 'service', 'unit')]} />);
+    const picker = screen.getByLabelText('Applies to');
+    expect(picker).toHaveValue('bundle');
+    expect(within(picker).queryByRole('option', { name: 'product' })).toBeNull();
+    expect(within(picker).queryByRole('option', { name: 'units' })).toBeNull();
+    expect(within(picker).queryByRole('option', { name: 'Whole contract' })).toBeNull();
+    fireEvent.click(screen.getByText('+ add schedule'));
+    expect(scheduleState()[0].contract_line_key).toBe('bundle');
+  });
+
+  it('requires a choice for multiple lines and identifies imported scope', () => {
+    render(<Harness initialLines={[fixedLine('line-a'), fixedLine('line-b')]} initialSchedules={[
+      { effective_date: '2026-06-01', end_date: null, custom_rate: 90000, contract_line_key: 'line-a' },
+    ]} />);
+    expect(screen.getByLabelText('Applies To')).toHaveValue('line-a');
+    expect(screen.getByText('+ add schedule')).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Applies to'), { target: { value: 'line-b' } });
+    fireEvent.click(screen.getByText('+ add schedule'));
+    expect(scheduleState().map((row: ScenarioPricingSchedule) => row.contract_line_key)).toEqual(['line-a', 'line-b']);
+    fireEvent.change(screen.getAllByLabelText('Applies To')[0], { target: { value: 'line-b' } });
+    expect(scheduleState()[0].contract_line_key).toBe('line-b');
+  });
+
+  it('flags legacy scope with eligible counts and preserves it until explicitly re-scoped', () => {
+    render(<Harness initialLines={[fixedLine('line-a'), fixedLine('line-b'), fixedLine('product', 'product')]} initialSchedules={[
+      { effective_date: '2026-06-01', end_date: null, custom_rate: 90000 },
+    ]} />);
+    expect(screen.getByRole('status')).toHaveTextContent('each of the 2 fixed-fee lines bills $900.00');
+    fireEvent.change(screen.getByLabelText('Schedule rate'), { target: { value: '950' } });
+    expect(scheduleState()[0].contract_line_key).toBeUndefined();
+    fireEvent.change(screen.getByLabelText('Applies To'), { target: { value: 'line-a' } });
+    expect(scheduleState()[0].contract_line_key).toBe('line-a');
+    expect(screen.queryByRole('option', { name: 'Whole contract' })).toBeNull();
+  });
+
+  it('disables authoring when no bundle fee exists', () => {
+    render(<Harness initialLines={[fixedLine('product', 'product'), { ...fixedLine('empty'), services: [] }]} />);
+    expect(screen.getByText('+ add schedule')).toBeDisabled();
+    expect(screen.getByText('This contract has no fixed-fee line, so a pricing schedule has nothing to reprice.')).toBeInTheDocument();
   });
 });

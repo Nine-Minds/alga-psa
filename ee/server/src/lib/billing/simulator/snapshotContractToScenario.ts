@@ -24,7 +24,7 @@ import type {
   ScenarioPoolRef,
   ScenarioPrepaidBlockConfig,
 } from "@alga-psa/types";
-import { toISODate, toPlainDate } from "@alga-psa/core";
+import { toCalendarDateString, toISODate, toPlainDate } from "@alga-psa/core";
 import { tenantDb } from "@alga-psa/db";
 import { resolveCadenceOwner } from "@alga-psa/shared/billingClients/recurringTiming";
 import { resolveEffectiveBillingTiming } from "@alga-psa/shared/billingClients/contractLineTimingRule";
@@ -1147,7 +1147,7 @@ function resolveScenarioPoolRef(
   };
 }
 
-async function loadPricingSchedules(
+export async function loadPricingSchedules(
   db: ReturnType<typeof tenantDb>,
   contractId: string,
   isTemplate = false,
@@ -1176,8 +1176,10 @@ async function loadPricingSchedules(
       custom_rate: number | string | null;
       contract_line_id?: string | null;
     }) => ({
-      effective_date: toMidnightIso(row.effective_date),
-      end_date: row.end_date ? toMidnightIso(row.end_date) : null,
+      // pg DATE values are local-midnight Dates, not instants. Preserve their
+      // calendar day before constructing the simulator's UTC timestamps.
+      effective_date: toMidnightIso(toCalendarDateString(row.effective_date as string | Date)),
+      end_date: row.end_date ? toMidnightIso(toCalendarDateString(row.end_date as string | Date)) : null,
       custom_rate: toCents(row.custom_rate),
       // Scenario line keys are the contract_line_id for a snapshot, so the
       // stored scope carries over unchanged.

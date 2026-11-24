@@ -500,9 +500,9 @@ describe('PricingScheduleDialog scope', () => {
 
     expect(screen.queryByLabelText('pricing-schedule-contract-line')).toBeNull();
     expect(
-      screen.getByText(/Every fixed line on this contract bills per unit/)
+      screen.getByText(/Lines that bill per unit are not listed/)
     ).toBeInTheDocument();
-    expect(screen.getByText(/change the unit price on the line instead/)).toBeInTheDocument();
+    expect(screen.getByText(/Change the unit price on the line instead/)).toBeInTheDocument();
     expect(
       (screen.getByText('Add Schedule').closest('button') as HTMLButtonElement)
     ).toBeDisabled();

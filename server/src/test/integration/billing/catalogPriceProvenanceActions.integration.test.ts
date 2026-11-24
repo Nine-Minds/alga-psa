@@ -475,6 +475,27 @@ describe('Catalog price provenance — clone, wizard, constraints and schedule o
       rate_provenance: 'custom'
     }, 'contract_line_id');
 
+    // A schedule needs a billable bundle service, not just an empty Fixed line.
+    const serviceId = await createTestService(context, {
+      service_name: 'T18 Bundle service',
+      billing_method: 'fixed',
+      default_rate: 10000,
+    });
+    await context.db('contract_line_services').insert({
+      tenant: context.tenantId,
+      contract_line_id: lineId,
+      service_id: serviceId,
+      quantity: 1,
+    });
+    await context.db('contract_line_service_configuration').insert({
+      tenant: context.tenantId,
+      config_id: uuidv4(),
+      contract_line_id: lineId,
+      service_id: serviceId,
+      configuration_type: 'Fixed',
+      quantity: 1,
+    });
+
     // A bounded existing schedule: Feb 1 – Mar 1, on the same fixed-fee line.
     const bounded = await createPricingSchedule({
       contract_id: contractId,

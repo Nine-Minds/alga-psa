@@ -160,13 +160,14 @@ describe('PricingSchedules contract-currency custom rate', () => {
     )).toHaveLength(2);
   });
 
-  it('does not count a unit-priced line in the whole-contract effect', async () => {
+  it('does not count unit-priced or product-only lines in the whole-contract effect', async () => {
     getPricingSchedulesByContractMock.mockResolvedValue([
       schedule({ contract_line_id: null, custom_rate: 90000 }),
     ]);
     getPricingScheduleLineScopesMock.mockResolvedValue([
       fixedLine('line-1', 'Managed Services'),
       fixedLine('line-2', 'Seats', { has_bundle_fee: false, has_unit_priced_members: true }),
+      fixedLine('line-3', 'Products', { has_bundle_fee: false, has_unit_priced_members: false }),
     ]);
 
     renderList();

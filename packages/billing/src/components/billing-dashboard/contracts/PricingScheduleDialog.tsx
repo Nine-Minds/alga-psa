@@ -295,8 +295,8 @@ export function PricingScheduleDialog({
             <Alert variant="warning">
               <AlertDescription>
                 {unitPricedLineCount > 0
-                  ? t('pricingSchedules.dialog.empty.allLinesUnitPriced', {
-                    defaultValue: 'Every fixed line on this contract bills per unit. A pricing schedule never changes a per-unit price — change the unit price on the line instead.',
+                  ? t('pricingSchedules.dialog.notices.unitPricedExcluded', {
+                    defaultValue: 'Lines that bill per unit are not listed: a pricing schedule never changes a per-unit price. Change the unit price on the line instead.',
                   })
                   : t('pricingSchedules.dialog.empty.noEligibleLines', {
                     defaultValue: 'This contract has no fixed-fee line, so a pricing schedule has nothing to reprice.',
