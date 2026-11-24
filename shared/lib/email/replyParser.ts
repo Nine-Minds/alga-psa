@@ -719,7 +719,10 @@ function stripProviderHeaders(text: string, config: ReplyParserConfig, preserveU
         if (classifyQuotedHeaderField(value)) {
           return isCoherentQuotedHeaderBlock(attributionLines, index);
         }
-        return /\bwrote:$/i.test(value) || config.providerReplyHeaders.some((regex) => regex.test(value));
+        // Above an explicit boundary, "Here is what the deployment script wrote:"
+        // is not evidence of provider history. Keep legacy stripping elsewhere.
+        return (!preserveUnattributedQuotes && /\bwrote:$/i.test(value))
+          || config.providerReplyHeaders.some((regex) => regex.test(value));
       });
       // Above an explicit boundary, even a trailing quotation may be authored evidence.
       // Without an attribution, preserve it rather than silently deleting the customer's

@@ -239,6 +239,31 @@ describe('Gmail reply to the contact’s own reply (alga-2026-0003353)', () => {
     },
   );
 
+  it.each([
+    'Here is what the deployment script wrote:',
+    'The service account wrote:',
+    'On Tuesday I emailed jane.client@example.com about the invoice.\nShe wrote:',
+  ])('preserves a trailing authored quotation introduced by %s', (introduction) => {
+    const fixture = readFixture('authored-trailing-quotation.txt');
+    for (const prefix of [introduction, `Deployment details:\n> ${introduction.replace(/\n/g, '\n> ')}`]) {
+      const text = fixture.replace('The deployment failed with this error:', prefix);
+      const result = parseEmailReply({ text });
+
+      expect(result.sanitizedText).toBe(text.split('\n\n--- Please reply above this line ---')[0]);
+      expect(result.appliedHeuristics).not.toContain('quote-prefix');
+    }
+  });
+
+  it('still strips a quoted provider attribution above the explicit boundary', () => {
+    const result = parseEmailReply({
+      text: 'Please investigate.\n> On Mon, Nov 17, 2026 Dana Tech wrote:\n'
+        + '> Previous reply\n\n--- Please reply above this line ---\nOld notification',
+    });
+
+    expect(result.sanitizedText).toBe('Please investigate.');
+    expect(result.appliedHeuristics).toContain('quote-prefix');
+  });
+
   it('still strips a quoted coherent envelope above the explicit boundary', () => {
     const result = parseEmailReply({
       text: 'Please investigate.\n> From: Client <client@example.test>\n> Sent: Monday\n'
