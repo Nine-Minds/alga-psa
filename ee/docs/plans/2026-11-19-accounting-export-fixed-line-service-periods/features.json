@@ -1,0 +1,9 @@
+[
+  {"id": "F001", "description": "Shared pure function projects a charge's canonical recurring detail periods from detail rows: skips rows with neither start nor end, normalizes dates to calendar dates, keeps each distinct (start, end, billing_timing) once, sorts by start then end", "implemented": false, "prdRefs": ["Goals", "Functional Requirements"]},
+  {"id": "F002", "description": "Export invoice selector builds recurring_detail_periods and the summary service period through the shared function, with unchanged output", "implemented": false, "prdRefs": ["Functional Requirements"]},
+  {"id": "F003", "description": "Export validation builds canonicalPeriodsByChargeId through the shared function (grouped by item_id)", "implemented": false, "prdRefs": ["Functional Requirements"]},
+  {"id": "F004", "description": "Export validation normalizes and orders a line's payload periods with the same shared normalize/sort before comparing", "implemented": false, "prdRefs": ["Functional Requirements"]},
+  {"id": "F005", "description": "Fixed contract line with two or more services sharing a period (expanded into per-service export lines) validates without service_period_projection_mismatch", "implemented": false, "prdRefs": ["Goals", "Acceptance Criteria (Definition of Done)"]},
+  {"id": "F006", "description": "Genuine drift between payload periods and canonical detail periods is still reported as service_period_projection_mismatch", "implemented": false, "prdRefs": ["Goals", "Acceptance Criteria (Definition of Done)"]},
+  {"id": "F007", "description": "LEVERAGE pattern marker at attachCanonicalRecurringDetailPeriods in packages/billing/src/models/invoice.ts naming the shared projection", "implemented": false, "prdRefs": ["Non-goals"]}
+]

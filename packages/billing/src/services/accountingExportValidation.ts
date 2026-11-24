@@ -9,6 +9,11 @@ import type {
   AccountingExportServicePeriodSource
 } from '@alga-psa/types';
 import { normalizeAccountingExportCalendarDate } from './accountingExportDateUtils';
+import {
+  normalizeAndSortAccountingExportRecurringPeriods,
+  projectAccountingExportRecurringPeriods,
+  type AccountingExportRecurringPeriodInput
+} from './accountingExportServicePeriods';
 import { AUTOMATIC_DISCOUNT_MAPPING_ID, DISCOUNT_MAPPING_ENTITY_TYPE } from '@alga-psa/types';
 
 /** Adapter lookup for provider-specific rules; AccountingAdapterRegistry satisfies it. */
@@ -241,15 +246,18 @@ export class AccountingExportValidation {
             .whereIn('item_id', Array.from(chargeIds))
             .orderBy('service_period_start', 'asc')
         : [];
-    const canonicalPeriodsByChargeId = new Map<string, NormalizedRecurringPeriod[]>();
+    const detailRowsByChargeId = new Map<string, Array<(typeof chargeDetailRows)[number]>>();
     for (const detailRow of chargeDetailRows) {
-      const normalized = normalizeRecurringPeriod(detailRow);
-      if (!normalized.service_period_start && !normalized.service_period_end) {
-        continue;
+      const existing = detailRowsByChargeId.get(detailRow.item_id) ?? [];
+      existing.push(detailRow);
+      detailRowsByChargeId.set(detailRow.item_id, existing);
+    }
+    const canonicalPeriodsByChargeId = new Map<string, NormalizedRecurringPeriod[]>();
+    for (const [itemId, detailRows] of detailRowsByChargeId) {
+      const projected = projectAccountingExportRecurringPeriods(detailRows);
+      if (projected.length > 0) {
+        canonicalPeriodsByChargeId.set(itemId, projected);
       }
-      const existing = canonicalPeriodsByChargeId.get(detailRow.item_id) ?? [];
-      existing.push(normalized);
-      canonicalPeriodsByChargeId.set(detailRow.item_id, existing);
     }
 
     const invoices =
@@ -739,21 +747,6 @@ function normalizeIsoString(value: unknown): string | null {
   return normalizeAccountingExportCalendarDate(value) ?? null;
 }
 
-function normalizeRecurringPeriod(input: {
-  service_period_start?: unknown;
-  service_period_end?: unknown;
-  billing_timing?: unknown;
-}): NormalizedRecurringPeriod {
-  return {
-    service_period_start: normalizeIsoString(input.service_period_start),
-    service_period_end: normalizeIsoString(input.service_period_end),
-    billing_timing:
-      input.billing_timing === 'advance' || input.billing_timing === 'arrears'
-        ? input.billing_timing
-        : null
-  };
-}
-
 function normalizeExportLinePeriods(
   payload: { recurring_detail_periods?: unknown } | null | undefined
 ): NormalizedRecurringPeriod[] {
@@ -761,10 +754,9 @@ function normalizeExportLinePeriods(
     return [];
   }
 
-  return payload.recurring_detail_periods
-    .map((period) => normalizeRecurringPeriod((period ?? {}) as Record<string, unknown>))
-    .filter((period) => period.service_period_start || period.service_period_end)
-    .sort(compareRecurringPeriods);
+  return normalizeAndSortAccountingExportRecurringPeriods(
+    payload.recurring_detail_periods as AccountingExportRecurringPeriodInput[]
+  );
 }
 
 function normalizeExportLineServicePeriodSource(
@@ -800,16 +792,4 @@ function areRecurringPeriodsEqual(
   }
 
   return true;
-}
-
-function compareRecurringPeriods(left: NormalizedRecurringPeriod, right: NormalizedRecurringPeriod): number {
-  if (left.service_period_start !== right.service_period_start) {
-    return String(left.service_period_start ?? '').localeCompare(String(right.service_period_start ?? ''));
-  }
-
-  if (left.service_period_end !== right.service_period_end) {
-    return String(left.service_period_end ?? '').localeCompare(String(right.service_period_end ?? ''));
-  }
-
-  return String(left.billing_timing ?? '').localeCompare(String(right.billing_timing ?? ''));
 }
