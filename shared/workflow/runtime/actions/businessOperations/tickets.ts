@@ -1376,14 +1376,16 @@ export function registerTicketActions(): void {
       ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
       entity_type: z.enum(['project', 'project_task', 'asset', 'contract']).describe('Entity type'),
       entity_id: uuidSchema.describe('Entity id'),
-      link_type: z.string().min(1).describe('Link type'),
-      metadata: z.record(z.string(), z.unknown()).optional().describe('Optional link metadata')
+      link_type: z.string().min(1).describe(
+        "Link type. Project, project task and contract links keep this value as given. Asset links are stored in asset_associations, which keeps only 'affected' or 'related' as the relationship; any other value is stored as 'affected' and the original value is kept in the link's notes as 'link_type: <value>'."
+      ),
+      metadata: z.record(z.string(), z.unknown()).optional().describe('Optional link metadata. For asset links it is written to the link notes as JSON.')
     }),
     outputSchema: z.object({
       link_id: uuidSchema,
       entity_type: z.string(),
       entity_id: uuidSchema,
-      link_type: z.string(),
+      link_type: z.string().describe('Link type as stored. For asset links this is the stored relationship (affected or related), which for an already-linked asset is the existing link\'s relationship.'),
       source: z.enum(['asset_associations', 'ticket_entity_links']).describe('Table that holds the link'),
       linked_entity_summary: z.object({
         type: z.string(),
@@ -1394,7 +1396,7 @@ export function registerTicketActions(): void {
     }),
     sideEffectful: true,
     idempotency: { mode: 'engineProvided' },
-    ui: { label: 'Link Ticket Entity', category: 'Business Operations', description: 'Link a ticket to another entity' },
+    ui: { label: 'Link Ticket Entity', category: 'Business Operations', description: 'Link a ticket to a project, project task, asset or contract. Asset links only keep affected or related as link_type; see the link_type field.' },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
 
