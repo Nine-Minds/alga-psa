@@ -2,7 +2,7 @@
 
 import { hasPermission, withAuth } from '@alga-psa/auth';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
-import { permissionError } from '@alga-psa/ui/lib/errorHandling';
+import { permissionError, type ActionPermissionErrorShape } from '@alga-psa/ui/lib/errorHandling';
 import { isUuidShaped } from '@alga-psa/validation';
 import type { Knex } from 'knex';
 import {
@@ -33,6 +33,32 @@ export type NoticeActionFailure =
   | { success: false; code: 'not_found' }
   | { success: false; code: 'invalid_audience_type' };
 
+/**
+ * The refusal returned when guard() denies a call. `ActionPermissionError` is aliased to
+ * `never` repo-wide, so it would vanish from a union; the structural shape stays visible.
+ * Narrow with `isActionPermissionError` from '@alga-psa/ui/lib/errorHandling'.
+ */
+export type NoticeActionRefusal = ActionPermissionErrorShape;
+
+export type ListClientPortalNoticesResult = NoticeListItem[] | NoticeActionRefusal;
+export type GetClientPortalNoticeResult =
+  | { success: true; notice: NoticeDetail }
+  | Extract<NoticeActionFailure, { code: 'not_found' }>
+  | NoticeActionRefusal;
+export type CreateClientPortalNoticeResult =
+  | { success: true; noticeId: string }
+  | NoticeActionFailure
+  | NoticeActionRefusal;
+export type UpdateClientPortalNoticeResult = CreateClientPortalNoticeResult;
+export type DeleteClientPortalNoticeResult =
+  | { success: true }
+  | Extract<NoticeActionFailure, { code: 'not_found' }>
+  | NoticeActionRefusal;
+export type PreviewClientPortalNoticeAudienceResult =
+  | string[]
+  | Extract<NoticeActionFailure, { code: 'invalid_audience_type' | 'invalid_targets' }>
+  | NoticeActionRefusal;
+
 const KEYS = {
   read: 'client-portal:errors.access.settingsRead',
   update: 'client-portal:errors.access.settingsUpdate',
@@ -47,7 +73,7 @@ async function guard(
   user: { user_type?: string },
   knex: Knex,
   action: 'read' | 'update',
-) {
+): Promise<NoticeActionRefusal | null> {
   if (user.user_type === 'client') {
     return permissionError('Permission denied: client portal notices are managed by MSP users only', KEYS.mspOnly);
   }
@@ -78,14 +104,14 @@ async function validateAndCheckTargets(
   return { input };
 }
 
-export const listClientPortalNotices = withAuth(async (user, { tenant }) => {
+export const listClientPortalNotices = withAuth(async (user, { tenant }): Promise<ListClientPortalNoticesResult> => {
   const { knex } = await createTenantKnex();
   const denied = await guard(user, knex, 'read');
   if (denied) return denied;
   return listNoticesWithAudience(knex, tenant, new Date());
-}) as () => Promise<NoticeListItem[]>;
+});
 
-export const getClientPortalNotice = withAuth(async (user, { tenant }, noticeId: string) => {
+export const getClientPortalNotice = withAuth(async (user, { tenant }, noticeId: string): Promise<GetClientPortalNoticeResult> => {
   const { knex } = await createTenantKnex();
   const denied = await guard(user, knex, 'read');
   if (denied) return denied;
@@ -93,9 +119,9 @@ export const getClientPortalNotice = withAuth(async (user, { tenant }, noticeId:
   const notice = await getNoticeDetail(knex, tenant, noticeId, new Date());
   if (!notice) return { success: false as const, code: 'not_found' as const };
   return { success: true as const, notice };
-}) as (noticeId: string) => Promise<{ success: true; notice: NoticeDetail } | Extract<NoticeActionFailure, { code: 'not_found' }>>;
+});
 
-export const createClientPortalNotice = withAuth(async (user, { tenant }, rawInput: ClientPortalNoticeInput) => {
+export const createClientPortalNotice = withAuth(async (user, { tenant }, rawInput: ClientPortalNoticeInput): Promise<CreateClientPortalNoticeResult> => {
   const { knex } = await createTenantKnex();
   const denied = await guard(user, knex, 'update');
   if (denied) return denied;
@@ -106,14 +132,14 @@ export const createClientPortalNotice = withAuth(async (user, { tenant }, rawInp
     const noticeId = await insertNotice(trx, tenant, user.user_id, checked.input);
     return { success: true as const, noticeId };
   });
-}) as (input: ClientPortalNoticeInput) => Promise<{ success: true; noticeId: string } | NoticeActionFailure>;
+});
 
 /**
  * Open question 2 (PRD proposed answer): editing content (messages, link label/URL),
  * the audience type or the target set clears every dismissal so users see the changed
  * notice again. Schedule-, severity- and dismissible-only edits keep dismissals.
  */
-export const updateClientPortalNotice = withAuth(async (user, { tenant }, noticeId: string, rawInput: ClientPortalNoticeInput) => {
+export const updateClientPortalNotice = withAuth(async (user, { tenant }, noticeId: string, rawInput: ClientPortalNoticeInput): Promise<UpdateClientPortalNoticeResult> => {
   const { knex } = await createTenantKnex();
   const denied = await guard(user, knex, 'update');
   if (denied) return denied;
@@ -126,9 +152,9 @@ export const updateClientPortalNotice = withAuth(async (user, { tenant }, notice
     if (!found) return { success: false as const, code: 'not_found' as const };
     return { success: true as const, noticeId };
   });
-}) as (noticeId: string, input: ClientPortalNoticeInput) => Promise<{ success: true; noticeId: string } | NoticeActionFailure>;
+});
 
-export const deleteClientPortalNotice = withAuth(async (user, { tenant }, noticeId: string) => {
+export const deleteClientPortalNotice = withAuth(async (user, { tenant }, noticeId: string): Promise<DeleteClientPortalNoticeResult> => {
   const { knex } = await createTenantKnex();
   const denied = await guard(user, knex, 'update');
   if (denied) return denied;
@@ -138,9 +164,9 @@ export const deleteClientPortalNotice = withAuth(async (user, { tenant }, notice
     const found = await deleteNotice(trx, tenant, noticeId);
     return found ? { success: true as const } : { success: false as const, code: 'not_found' as const };
   });
-}) as (noticeId: string) => Promise<{ success: true } | Extract<NoticeActionFailure, { code: 'not_found' }>>;
+});
 
-export const previewClientPortalNoticeAudience = withAuth(async (user, { tenant }, audience: NoticeAudienceSelection) => {
+export const previewClientPortalNoticeAudience = withAuth(async (user, { tenant }, audience: NoticeAudienceSelection): Promise<PreviewClientPortalNoticeAudienceResult> => {
   const { knex } = await createTenantKnex();
   const denied = await guard(user, knex, 'read');
   if (denied) return denied;
@@ -152,6 +178,4 @@ export const previewClientPortalNoticeAudience = withAuth(async (user, { tenant 
   const malformed = targetIds.filter((id) => !isUuidShaped(id));
   if (malformed.length > 0) return { success: false as const, code: 'invalid_targets' as const, missingTargetIds: malformed };
   return previewAudienceClientNames(knex, tenant, { audienceType: audience.audienceType, targetIds });
-}) as (audience: NoticeAudienceSelection) => Promise<
-  string[] | Extract<NoticeActionFailure, { code: 'invalid_audience_type' | 'invalid_targets' }>
->;
+});

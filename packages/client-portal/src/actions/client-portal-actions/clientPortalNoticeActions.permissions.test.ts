@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
 
 let currentUser: any;
 const { hasPermissionMock, createTenantKnexMock, withTransactionMock } = vi.hoisted(() => ({
@@ -138,5 +138,19 @@ describe('client portal notice actions: permission guard', () => {
     grant('read');
     dbLib.listNoticesWithAudience.mockResolvedValue([]);
     expect(await calls.list()).toEqual([]);
+  });
+});
+
+describe('exported signatures expose the permission-error branch', () => {
+  // Compile-time only (checked by tsc): ActionPermissionError is `never`, so the refusal must be
+  // the structural ActionPermissionErrorShape. A cast that hides it makes these fail to compile.
+  it('every action result includes { permissionError: string }', () => {
+    type Refusal = { permissionError: string };
+    expectTypeOf<Refusal>().toExtend<Awaited<ReturnType<typeof listClientPortalNotices>>>();
+    expectTypeOf<Refusal>().toExtend<Awaited<ReturnType<typeof getClientPortalNotice>>>();
+    expectTypeOf<Refusal>().toExtend<Awaited<ReturnType<typeof createClientPortalNotice>>>();
+    expectTypeOf<Refusal>().toExtend<Awaited<ReturnType<typeof updateClientPortalNotice>>>();
+    expectTypeOf<Refusal>().toExtend<Awaited<ReturnType<typeof deleteClientPortalNotice>>>();
+    expectTypeOf<Refusal>().toExtend<Awaited<ReturnType<typeof previewClientPortalNoticeAudience>>>();
   });
 });
