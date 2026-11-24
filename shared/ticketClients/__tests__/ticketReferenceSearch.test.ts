@@ -71,7 +71,7 @@ describe('ticketReferenceSearch', () => {
     }
   });
 
-  it('normalizes complete-reference detection across labels and separators', () => {
+  it('resolves explicit references against loaded numbers across labels and separators', () => {
     for (const queryText of ['#ALGA-2026-0002826', 'Ticket #ALGA-2026-0002826']) {
       expect([...resolveTicketNumberMatches(['TICKET-ALGA-2026-0002826'], parseTicketSearchQuery(queryText))]).toEqual([]);
     }

@@ -143,6 +143,27 @@ describe('buildTicketSearchPredicate', () => {
     }
   });
 
+  it('keeps matching a partial explicit reference as more digits are typed', () => {
+    const rows = [algaNumber];
+    for (const query of [
+      'Ticket #ALGA-2026-00028',
+      'Ticket #ALGA-2026-000282',
+      'Ticket #ALGA-2026-0002826',
+    ]) {
+      expect(rows.filter(buildTicketSearchPredicate(query, rows)).map(({ ticket_number }) => ticket_number)).toEqual([
+        'ALGA-2026-0002826',
+      ]);
+    }
+  });
+
+  it('does not match a complete explicit reference at the end of a longer identifier', () => {
+    const rows = [{ ...ticketPrefixNumber, ticket_number: 'OLD-TIC0002826' }];
+    const results = rows
+      .filter(buildTicketSearchPredicate('Ticket #TIC0002826', rows))
+      .map(({ ticket_number }) => ticket_number);
+    expect(results).toEqual([]);
+  });
+
   it('treats hyphenated and compact complete TICKET references the same', () => {
     const rows = [{ ...ticketPrefixNumber, ticket_number: 'OLD-TICKET-ALGA-2026-0002826' }];
     for (const query of [
