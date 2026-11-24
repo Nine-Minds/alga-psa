@@ -8,6 +8,7 @@
  */
 import { generateKeyPairSync } from 'node:crypto';
 import { simpleParser } from 'mailparser';
+import { collectWireHeaders } from '../../../services/email/inboundWireHeaders';
 
 export const FROM_ADDRESS = 'phill@domotz.com';
 
@@ -76,11 +77,8 @@ export async function buildGatewayMessage(options: GatewayMessageOptions = {}) {
 
   const rawMime = Buffer.from(raw);
   const parsed = await simpleParser(rawMime);
-  // Same shape the ingest path builds: lower-cased names, repeated headers joined in wire order.
-  const headers: Record<string, string> = {};
-  parsed.headers.forEach((value: unknown, key: string) => {
-    if (typeof value === 'string') headers[key] = value;
-    else if (Array.isArray(value)) headers[key] = value.filter((v): v is string => typeof v === 'string').join('\n');
-  });
+  // The header bag the ingest paths build (shared builder): lower-cased names,
+  // repeated headers joined in wire order.
+  const headers = collectWireHeaders(parsed.headers);
   return { rawMime, headers };
 }

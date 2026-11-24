@@ -32,6 +32,7 @@ import { refreshImapAccessToken } from '@alga-psa/shared/services/email/imapOaut
 import { assertImapOauthCredentialIssuerBound, assertSafeImapHost } from '@alga-psa/shared/services/email/imapOutboundTarget';
 import { normalizeInboundMessageIdentity } from '@alga-psa/shared/services/email/inboundEmailIdentity';
 import { resolveInboundAuthTrust } from '@alga-psa/shared/services/email/inboundAuthTrust';
+import { collectWireHeaders } from '@alga-psa/shared/services/email/inboundWireHeaders';
 import { createHash } from 'node:crypto';
 
 export class SourceMessageUnavailableError extends Error {
@@ -359,28 +360,9 @@ function mapParsedMimeToEmailMessageDetails(params: {
   const listRewrite = resolveListRewriteSender(params.parsed);
   const fromEmail = listRewrite ? listRewrite.sender.email : (from?.address || '');
   const fromName = listRewrite ? (listRewrite.sender.name || from?.name || undefined) : (from?.name || undefined);
-  const resolvedHeaders: Record<string, string> = {};
-  // Preserve Authentication-Results from raw MIME for the sender-auth gate.
-  // mailparser normalizes header names in its Map, while Gmail already supplies
-  // a record via GmailAdapter.
-  const parsedHeaders = params.parsed.headers;
-  if (parsedHeaders?.forEach) {
-    parsedHeaders.forEach((value: unknown, key: string) => {
-      const headerName = key.toLowerCase();
-      // These names are processor metadata, never wire data. Only the verified
-      // listRewrite branch below may add them to the downstream header bag.
-      if (headerName.startsWith('x-resolved-') || headerName.startsWith('x-list-')) {
-        return;
-      }
-      if (typeof value === 'string') {
-        resolvedHeaders[headerName] = value;
-      } else if (Array.isArray(value)) {
-        // Header order is wire order: the first Authentication-Results block is
-        // our receiving MTA's topmost result. Preserve each block for the gate.
-        resolvedHeaders[headerName] = value.filter((item): item is string => typeof item === 'string').join('\n');
-      }
-    });
-  }
+  // Preserve Authentication-Results / ARC-* (every block, wire order) from raw
+  // MIME for the sender-auth gate. Gmail already supplies a record via GmailAdapter.
+  const resolvedHeaders: Record<string, string> = collectWireHeaders(params.parsed.headers);
   if (listRewrite) {
     resolvedHeaders['x-list-address'] = listRewrite.listAddress;
     resolvedHeaders['x-resolved-original-sender'] = listRewrite.sender.email;

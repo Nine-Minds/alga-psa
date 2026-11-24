@@ -4,6 +4,8 @@ import {
   buildGatewayMessage,
   mockDkimResolver,
   FROM_ADDRESS,
+  MS_TOP_BLOCK,
+  AVANAN_LOWER_BLOCK,
 } from '../../../lib/email/__tests__/gatewayFixtures';
 import { verifyArcSeal } from '../inboundAuthTrust';
 import type { InboundAuthTrustPolicy } from '../../../lib/email/authResultsChain';
@@ -365,6 +367,76 @@ describe('processInboundEmailInApp', () => {
     it('a verified gateway sender is matched, so no inbound_from watcher is added either', async () => {
       await run({}, policy('arc-sealed'));
       expect(watcherEmails(ticketArgs().attributes?.watch_list)).not.toContain(FROM_ADDRESS);
+    });
+  });
+
+  describe('durable staged-source path (parseStagedMimeIntoEmailDetails)', () => {
+    beforeEach(() => {
+      findContactByEmailMock.mockResolvedValue(GATEWAY_CONTACT);
+      findInboundEmailDomainMappingMock.mockResolvedValue({ clientId: 'client-domotz', autoCreateContacts: false });
+      findValidClientPrimaryContactIdMock.mockResolvedValue('contact-default');
+    });
+
+    /** Same steps as inboundEmailCoreProcessor: parse the staged bytes, verify the seal from them, process. */
+    async function runStaged(
+      messageOptions: Parameters<typeof buildGatewayMessage>[0],
+      inboxPolicy: InboundAuthTrustPolicy | undefined
+    ) {
+      const { rawMime } = await buildGatewayMessage(messageOptions);
+      const { parseStagedMimeIntoEmailDetails } = await import('../inboundEmailSourceStager');
+      const parsed = await parseStagedMimeIntoEmailDetails({
+        tenant: 'tenant-1',
+        providerId: 'provider-1',
+        providerType: 'google',
+        rawMime,
+        fallbackProviderMessageId: 'provider-msg-1',
+      });
+      const arcSeal = inboxPolicy?.mode === 'arc-sealed'
+        ? await verifyArcSeal(rawMime, { resolver: mockDkimResolver() })
+        : undefined;
+      const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+      await processInboundEmailInApp({
+        tenantId: 'tenant-1',
+        providerId: 'provider-1',
+        emailData: parsed.emailData,
+        inboundAuthTrust: inboxPolicy ? { policy: inboxPolicy, arcSeal } : undefined,
+      }, { collectDiagnostics: true });
+      return parsed.emailData;
+    }
+
+    it('carries every Authentication-Results block and the ARC headers to the gate', async () => {
+      const emailData = await runStaged({}, undefined);
+      const blocks = (emailData.headers?.['authentication-results'] ?? '').split('\n');
+      expect(blocks).toEqual([MS_TOP_BLOCK, AVANAN_LOWER_BLOCK]);
+      expect(emailData.headers?.['arc-authentication-results']).toContain('mx.avanan.net');
+      expect(emailData.headers?.['arc-seal']).toBeTruthy();
+    });
+
+    it('policy off: the contact match is dropped and the unverified sender is not a watcher', async () => {
+      await runStaged({}, undefined);
+      const args = ticketArgs();
+      expect(args.contact_id).toBe('contact-default');
+      expect(watcherEmails(args.attributes?.watch_list)).not.toContain(FROM_ADDRESS);
+    });
+
+    it('arc-sealed with a trusted gateway and a valid seal: the contact match is kept', async () => {
+      await runStaged({}, policy('arc-sealed'));
+      const args = ticketArgs();
+      expect(args.contact_id).toBe('contact-phill');
+      expect(watcherEmails(args.attributes?.watch_list)).not.toContain(FROM_ADDRESS);
+    });
+
+    it('mta-arc-pass: kept when the receiving MTA reports arc=pass', async () => {
+      await runStaged(
+        { topBlock: 'spf=none; dkim=none; dmarc=fail header.from=domotz.com; arc=pass (i=1 spf=pass dkim=pass)' },
+        policy('mta-arc-pass')
+      );
+      expect(ticketArgs().contact_id).toBe('contact-phill');
+    });
+
+    it('a forged lower block with no seal is still dropped with the gateway configured', async () => {
+      await runStaged({ seal: false }, policy('arc-sealed'));
+      expect(ticketArgs().contact_id).toBe('contact-default');
     });
   });
 });
