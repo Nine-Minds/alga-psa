@@ -71,7 +71,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
   // `null` is "this reader cannot see invitation state", which hides the column
   // rather than claiming nobody was ever invited.
   const [invitationStates, setInvitationStates] = useState<
-    Map<string, { state: PortalInvitationState; expiresAt: string | null }> | null
+    Map<string, { state: PortalInvitationState; expiresAt: string | null; contactInactive: boolean }> | null
   >(null);
   const [invitationFilter, setInvitationFilter] = useState<'all' | 'expired' | 'pending' | 'open'>('all');
   // False until the check resolves, so the invite affordances never flash in
@@ -126,7 +126,11 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
   const refreshInvitationStates = useCallback(() => {
     getPortalInvitationStatesForClient(clientId)
       .then((rows) => setInvitationStates(rows === null ? null : new Map(
-        rows.map((row) => [row.contactId, { state: row.state, expiresAt: row.expiresAt }]),
+        rows.map((row) => [row.contactId, {
+          state: row.state,
+          expiresAt: row.expiresAt,
+          contactInactive: row.contactInactive,
+        }]),
       )))
       .catch((err) => {
         console.error('Error loading portal invitation states:', err);
@@ -260,13 +264,17 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
 
   // Exactly the rows on screen that a resend would mail: every active filter
   // applies, so the batch is what the MSP is looking at and never the client's
-  // whole backlog. Empty means there is nobody to offer the action to.
+  // whole backlog. A deactivated contact is left out — the send refuses it, so
+  // counting it here would promise an email that never goes out.
+  // Empty means there is nobody to offer the action to.
   const resendContactIds = useMemo(
     () => (invitationStates
       ? locationFilteredContacts
         .filter((contact) => {
-          const state = invitationStates.get(contact.contact_name_id)?.state;
-          return state !== undefined && (resendStates as string[]).includes(state);
+          const entry = invitationStates.get(contact.contact_name_id);
+          return entry !== undefined
+            && !entry.contactInactive
+            && (resendStates as string[]).includes(entry.state);
         })
         .map((contact) => contact.contact_name_id)
       : []),
@@ -286,6 +294,17 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
       return (
         <span className="text-gray-400">
           {t('clientContactsList.invitation.inactiveUser', { defaultValue: 'Inactive portal user' })}
+        </span>
+      );
+    }
+    // An invitation on a deactivated contact is refused at use time, so the
+    // cell says it cannot be used rather than counting down to an expiry.
+    if (entry.contactInactive) {
+      return (
+        <span className="text-gray-400">
+          {t('clientContactsList.invitation.contactInactive', {
+            defaultValue: 'Invitation unusable (contact inactive)',
+          })}
         </span>
       );
     }

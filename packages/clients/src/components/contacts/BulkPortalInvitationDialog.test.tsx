@@ -114,7 +114,7 @@ describe('BulkPortalInvitationDialog', () => {
     expect(await screen.findByText('Sent 1, skipped 3, failed 0.')).toBeInTheDocument();
   });
 
-  it('previews a ticked inactive contact against the list\'s own status filter', async () => {
+  it('previews a ticked inactive contact as one the send will refuse', async () => {
     hoisted.getContactsEligibleForInvitation.mockResolvedValue([
       eligible('dormant', 'dormant@acme.com', { is_inactive: true }),
     ]);
@@ -131,8 +131,14 @@ describe('BulkPortalInvitationDialog', () => {
       />,
     );
 
-    await screen.findByText('1 contacts will be invited to the client portal.');
+    // A link mailed to a deactivated contact is refused at use time, so the
+    // server skips it with CONTACT_INACTIVE: counting it as invitable here
+    // would promise an email that never goes out.
+    await screen.findByText('0 contacts will be invited to the client portal.');
+    // The list's own statuses, so the row is named by what it is rather than
+    // going missing from the eligible set and being blamed on portal access.
     expect(hoisted.getContactsEligibleForInvitation).toHaveBeenCalledWith('acme', 'all');
+    expect(screen.getByText('1 — inactive contact')).toBeInTheDocument();
     expect(screen.queryByText('1 — already has portal access')).not.toBeInTheDocument();
   });
 
@@ -242,8 +248,37 @@ describe('BulkPortalInvitationDialog', () => {
     );
 
     expect(await screen.findByText('Resend 2 expired or pending invitations')).toBeInTheDocument();
-    // An invitation-state resend is the server's own set: active contacts only.
-    expect(hoisted.getContactsEligibleForInvitation).toHaveBeenCalledWith('acme', 'active');
+    // The ids came off the list, so the preview asks for the statuses the list
+    // was showing: an inactive contact among them must be nameable as itself.
+    expect(hoisted.getContactsEligibleForInvitation).toHaveBeenCalledWith('acme', 'all');
+  });
+
+  it('does not count a deactivated contact that a state resend was handed', async () => {
+    hoisted.getContactsEligibleForInvitation.mockResolvedValue([
+      eligible('lapsed', 'lapsed@acme.com'),
+      eligible('dormant', 'dormant@acme.com', { is_inactive: true }),
+    ]);
+    hoisted.getPortalInvitationStatesForClient.mockResolvedValue([
+      { contactId: 'lapsed', state: 'expired', expiresAt: null, emailConflict: false, contactInactive: false },
+      { contactId: 'dormant', state: 'expired', expiresAt: null, emailConflict: false, contactInactive: true },
+    ]);
+
+    render(
+      <BulkPortalInvitationDialog
+        isOpen
+        clientId="acme"
+        target={{ mode: 'invitationState', states: ['expired'], contactIds: ['lapsed', 'dormant'] }}
+        statusFilter="all"
+        contacts={[]}
+        onClose={vi.fn()}
+        onSent={vi.fn()}
+      />,
+    );
+
+    // The button's number is the number of emails: the deactivated contact is
+    // skipped for what it is, not counted and then refused by the server.
+    expect(await screen.findByText('Resend 1 expired invitation')).toBeInTheDocument();
+    expect(screen.getByText('1 — inactive contact')).toBeInTheDocument();
   });
 
   it('mails only the contacts it was handed, not every expired contact of the client', async () => {

@@ -232,7 +232,9 @@ export class PortalInvitationService {
           // sees the same generic invalid-or-expired message. A resend
           // re-points the stored address, which is how a renamed mailbox gets
           // a usable link again.
-          .where('c.is_inactive', false)
+          // contacts.is_inactive is nullable, and a NULL row is an active
+          // contact — comparing it to false would refuse it for ever.
+          .whereRaw('coalesce(c.is_inactive, false) = false')
           .whereRaw('lower(c.email) = lower(pi.email)')
           .select(
             'pi.*',

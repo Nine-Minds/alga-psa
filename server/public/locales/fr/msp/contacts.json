@@ -410,7 +410,9 @@
         "expired": "Expiré",
         "revoked": "Révoqué"
       },
-      "lastSentPrefix": "Dernier envoi :"
+      "lastSentPrefix": "Dernier envoi :",
+      "resendCount_one": "renvoyée une fois",
+      "resendCount_other": "renvoyée {{count}} fois"
     },
     "actions": {
       "sendInvitation": "Envoyer l’invitation au portail",
@@ -680,7 +682,8 @@
       "pendingUntil": "En attente jusqu’au {{date}}",
       "expired": "Invitation expirée",
       "activeUser": "Utilisateur actif du portail",
-      "inactiveUser": "Utilisateur du portail inactif"
+      "inactiveUser": "Utilisateur du portail inactif",
+      "contactInactive": "Invitation inutilisable (contact inactif)"
     }
   },
   "bulkPortalInvitation": {
@@ -694,7 +697,8 @@
       "alreadyHasPortalAccess": "a déjà accès au portail",
       "missingEmail": "aucune adresse e-mail utilisable",
       "sharedMailbox": "boîte aux lettres partagée",
-      "emailInUse": "l’adresse e-mail appartient déjà à un autre utilisateur"
+      "emailInUse": "l’adresse e-mail appartient déjà à un autre utilisateur",
+      "inactiveContact": "contact inactif"
     },
     "actions": {
       "send": "Envoyer {{total}} invitations",
@@ -719,6 +723,7 @@
         "emailInUse": "L’adresse e-mail appartient à un autre utilisateur",
         "permissionDenied": "Vous ne pouvez pas inviter ce contact",
         "stateMismatch": "L’invitation n’est plus dans l’état que vous avez sélectionné",
+        "inactiveContact": "Le contact est inactif",
         "rateLimited": "Trop de tentatives d’invitation pour ce contact. Réessayez plus tard.",
         "invitationFailed": "L’invitation n’a pas pu être envoyée"
       }

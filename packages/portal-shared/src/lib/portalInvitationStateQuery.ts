@@ -27,12 +27,24 @@ function latestInvitation(column: string): string {
 /** When the latest invitation lapses — only meaningful while it is pending. */
 export const LATEST_INVITATION_EXPIRES_AT_SQL = latestInvitation('pi.expires_at');
 
-/** `none` | `pending` | `expired` for the contact's latest invitation. */
+/**
+ * `none` | `pending` | `expired` for the contact's latest invitation.
+ *
+ * An invitation whose stored address is no longer the contact's own counts as
+ * expired, not pending: the link in that old mailbox is refused at use time
+ * (PortalInvitationService.verifyToken), so calling it "pending until <date>"
+ * would promise a link that cannot be opened. Expired is also the state that
+ * repairs it — a resend re-points the stored address and mails a usable link.
+ *
+ * `min(c.email)` rather than a bare `c.email` so the expression stands on its
+ * own in a HAVING clause, whatever the caller grouped by.
+ */
 export const LATEST_INVITATION_STATE_SQL = `case
     when count(pi.invitation_id) = 0 then 'none'
     when ${latestInvitation('pi.used_at')} is not null then 'none'
-    when ${LATEST_INVITATION_EXPIRES_AT_SQL} > now() then 'pending'
-    else 'expired'
+    when ${LATEST_INVITATION_EXPIRES_AT_SQL} <= now() then 'expired'
+    when lower(${latestInvitation('pi.email')}) is distinct from lower(min(c.email)) then 'expired'
+    else 'pending'
   end`;
 
 /**

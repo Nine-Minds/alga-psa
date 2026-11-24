@@ -1278,6 +1278,15 @@ export function ContactPortalTab({
                           {invitation.last_sent_at && (
                             <span> • {t('contactPortalTab.history.lastSentPrefix', { defaultValue: 'Last sent:' })} {formatDate(invitation.last_sent_at)}</span>
                           )}
+                          {/* How many times it was sent again, so "Last sent"
+                              is not the only trace of a chase-up. */}
+                          {invitation.resend_count ? (
+                            <span> • {t('contactPortalTab.history.resendCount', {
+                              count: invitation.resend_count,
+                              defaultValue_one: 'sent again once',
+                              defaultValue_other: 'sent again {{count}} times',
+                            })}</span>
+                          ) : null}
                           {invitation.status === 'pending' && (
                             <span> • {t('contactPortalTab.history.expiresPrefix', { defaultValue: 'Expires:' })} {formatDate(invitation.expires_at)}</span>
                           )}

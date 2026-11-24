@@ -23,7 +23,13 @@ const revokePortalInvitationMock = vi.fn();
 vi.mock('@alga-psa/ui', () => ({ useToast: () => ({ toast: vi.fn() }) }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => {
   const t = (key: string, options?: { defaultValue?: string; [k: string]: unknown }) => {
-    let text = String(options?.defaultValue ?? key);
+    let text = String(
+      (typeof options?.count === 'number' && options.count === 1
+        ? options?.defaultValue_one
+        : options?.defaultValue_other)
+      ?? options?.defaultValue
+      ?? key,
+    );
     for (const [name, value] of Object.entries(options ?? {})) {
       text = text.replace(`{{${name}}}`, String(value));
     }
@@ -168,6 +174,9 @@ describe('ContactPortalTab invitation changes', () => {
     // A resend renews this same row, so "Sent" alone would date the invitation
     // to the day it was created however often it went out since.
     expect(await screen.findByText(/Last sent:/)).toBeInTheDocument();
+    // And how often: the count is stored on the row, so the history shows it
+    // instead of leaving one resend and five looking the same.
+    expect(screen.getByText(/sent again 2 times/)).toBeInTheDocument();
   });
 });
 

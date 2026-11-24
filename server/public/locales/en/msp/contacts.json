@@ -410,7 +410,9 @@
         "expired": "Expired",
         "revoked": "Revoked"
       },
-      "lastSentPrefix": "Last sent:"
+      "lastSentPrefix": "Last sent:",
+      "resendCount_one": "sent again once",
+      "resendCount_other": "sent again {{count}} times"
     },
     "actions": {
       "sendInvitation": "Send Portal Invitation",
@@ -680,7 +682,8 @@
       "pendingUntil": "Pending until {{date}}",
       "expired": "Invitation expired",
       "activeUser": "Active portal user",
-      "inactiveUser": "Inactive portal user"
+      "inactiveUser": "Inactive portal user",
+      "contactInactive": "Invitation unusable (contact inactive)"
     }
   },
   "bulkPortalInvitation": {
@@ -694,7 +697,8 @@
       "alreadyHasPortalAccess": "already has portal access",
       "missingEmail": "no usable email address",
       "sharedMailbox": "shared mailbox",
-      "emailInUse": "email address already belongs to another user"
+      "emailInUse": "email address already belongs to another user",
+      "inactiveContact": "inactive contact"
     },
     "actions": {
       "send": "Send {{total}} invitations",
@@ -719,6 +723,7 @@
         "emailInUse": "The email address belongs to another user",
         "permissionDenied": "You may not invite this contact",
         "stateMismatch": "The invitation is no longer in the state you selected",
+        "inactiveContact": "The contact is inactive",
         "rateLimited": "Too many invitation attempts for this contact. Try again later.",
         "invitationFailed": "The invitation could not be sent"
       }

@@ -24,6 +24,8 @@ export type PortalInvitationErrorCode =
   | 'CONTACT_NOT_FOUND'
   | 'CONTACT_MISSING_EMAIL'
   | 'CONTACT_INVALID_EMAIL'
+  /** The contact is deactivated, so a link mailed to it could never be used. */
+  | 'CONTACT_INACTIVE'
   | 'USER_EXISTS_FOR_CONTACT'
   | 'PORTAL_USER_ALREADY_EXISTS'
   | 'NO_DEFAULT_CLIENT'
@@ -104,6 +106,12 @@ export interface PortalInvitationContactState {
    * actually be mailed.
    */
   emailConflict: boolean;
+  /**
+   * True when the contact is deactivated. Such a contact cannot be invited and
+   * cannot use a link already in its mailbox, so an outstanding invitation on it
+   * is reported as unusable rather than as something to chase up.
+   */
+  contactInactive: boolean;
 }
 
 export interface SendBulkPortalInvitationsParams {

@@ -264,6 +264,32 @@ describe('ClientContactsList bulk portal invitations', () => {
     });
   });
 
+  it('leaves a deactivated contact out of the resend and labels its invitation unusable', async () => {
+    hoisted.getContactsByClient.mockResolvedValue([
+      contact('contact-a', 'Ada Lovelace', 'ada@acme.com'),
+      contact('contact-off', 'Otto Off', 'otto@acme.com'),
+    ]);
+    hoisted.getPortalInvitationStatesForClient.mockResolvedValue([
+      { contactId: 'contact-a', state: 'expired', expiresAt: null, emailConflict: false, contactInactive: false },
+      { contactId: 'contact-off', state: 'expired', expiresAt: null, emailConflict: false, contactInactive: true },
+    ]);
+
+    render(<ClientContactsList clientId="acme" client={client} />);
+    await screen.findByTestId('row-contact-off');
+
+    // The send refuses a deactivated contact, so the column says the invitation
+    // cannot be used rather than offering it up for chasing.
+    expect(await screen.findByText('Invitation unusable (contact inactive)')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Resend expired'));
+
+    expect(hoisted.dialogTarget).toHaveBeenLastCalledWith({
+      mode: 'invitationState',
+      states: ['expired'],
+      contactIds: ['contact-a'],
+    });
+  });
+
   it('does not offer a resend when no contact on screen needs one', async () => {
     hoisted.getPortalInvitationStatesForClient.mockResolvedValue([
       { contactId: 'contact-a', state: 'active_user', expiresAt: null, emailConflict: false },

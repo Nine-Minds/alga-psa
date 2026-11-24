@@ -408,7 +408,9 @@
         "expired": "Verlopen",
         "revoked": "Ingetrokken"
       },
-      "lastSentPrefix": "Laatst verzonden:"
+      "lastSentPrefix": "Laatst verzonden:",
+      "resendCount_one": "eenmaal opnieuw verzonden",
+      "resendCount_other": "{{count}} keer opnieuw verzonden"
     },
     "actions": {
       "sendInvitation": "Portaaluitnodiging verzenden",
@@ -676,7 +678,8 @@
       "pendingUntil": "Openstaand tot {{date}}",
       "expired": "Uitnodiging verlopen",
       "activeUser": "Actieve portaalgebruiker",
-      "inactiveUser": "Inactieve portaalgebruiker"
+      "inactiveUser": "Inactieve portaalgebruiker",
+      "contactInactive": "Uitnodiging onbruikbaar (contact inactief)"
     }
   },
   "bulkPortalInvitation": {
@@ -690,7 +693,8 @@
       "alreadyHasPortalAccess": "heeft al portaaltoegang",
       "missingEmail": "geen bruikbaar e-mailadres",
       "sharedMailbox": "gedeelde postbus",
-      "emailInUse": "e-mailadres hoort al bij een andere gebruiker"
+      "emailInUse": "e-mailadres hoort al bij een andere gebruiker",
+      "inactiveContact": "inactief contact"
     },
     "actions": {
       "send": "{{total}} uitnodigingen verzenden",
@@ -715,6 +719,7 @@
         "emailInUse": "Het e-mailadres hoort bij een andere gebruiker",
         "permissionDenied": "U mag dit contact niet uitnodigen",
         "stateMismatch": "De uitnodiging heeft niet langer de status die u koos",
+        "inactiveContact": "Het contact is inactief",
         "rateLimited": "Te veel uitnodigingspogingen voor dit contact. Probeer het later opnieuw.",
         "invitationFailed": "De uitnodiging kon niet worden verzonden"
       }

@@ -410,7 +410,11 @@
         "expired": "Wygasłe",
         "revoked": "Unieważnione"
       },
-      "lastSentPrefix": "Ostatnio wysłano:"
+      "lastSentPrefix": "Ostatnio wysłano:",
+      "resendCount_one": "wysłano ponownie raz",
+      "resendCount_few": "wysłano ponownie {{count}} razy",
+      "resendCount_many": "wysłano ponownie {{count}} razy",
+      "resendCount_other": "wysłano ponownie {{count}} razy"
     },
     "actions": {
       "sendInvitation": "Wyślij zaproszenie do portalu",
@@ -680,7 +684,8 @@
       "pendingUntil": "Oczekuje do {{date}}",
       "expired": "Zaproszenie wygasło",
       "activeUser": "Aktywny użytkownik portalu",
-      "inactiveUser": "Nieaktywny użytkownik portalu"
+      "inactiveUser": "Nieaktywny użytkownik portalu",
+      "contactInactive": "Zaproszenie nie do użycia (kontakt nieaktywny)"
     }
   },
   "bulkPortalInvitation": {
@@ -694,7 +699,8 @@
       "alreadyHasPortalAccess": "ma już dostęp do portalu",
       "missingEmail": "brak użytecznego adresu e-mail",
       "sharedMailbox": "skrzynka współdzielona",
-      "emailInUse": "adres e-mail należy już do innego użytkownika"
+      "emailInUse": "adres e-mail należy już do innego użytkownika",
+      "inactiveContact": "nieaktywny kontakt"
     },
     "actions": {
       "send": "Wyślij {{total}} zaproszeń",
@@ -725,6 +731,7 @@
         "emailInUse": "Adres e-mail należy do innego użytkownika",
         "permissionDenied": "Nie możesz zaprosić tego kontaktu",
         "stateMismatch": "Zaproszenie nie jest już w wybranym stanie",
+        "inactiveContact": "Kontakt jest nieaktywny",
         "rateLimited": "Zbyt wiele prób zaproszenia tego kontaktu. Spróbuj ponownie później.",
         "invitationFailed": "Nie udało się wysłać zaproszenia"
       }

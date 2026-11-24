@@ -51,7 +51,7 @@ export function registerPortalInvitationRoutes(registry: ApiOpenApiRegistry) {
       contact_id: zOpenApi.string().describe('contacts.contact_name_id.'),
       email: zOpenApi.string().optional().describe('Address the invitation went to, when the contact has one.'),
       status: zOpenApi.enum(['sent', 'skipped', 'failed']).describe(
-        'sent: an invitation email went out. skipped: the contact is not invitable as it stands (no email, invalid email, already a portal user, shared mailbox, not in this client, or no longer in the requested invitation_states). failed: the invitation could not be delivered.',
+        'sent: an invitation email went out. skipped: the contact is not invitable as it stands (no email, invalid email, inactive contact, already a portal user, shared mailbox, not in this client, or no longer in the requested invitation_states). failed: the invitation could not be delivered.',
       ),
       invitation_id: zOpenApi.string().optional().describe('portal_invitations.invitation_id of the invitation created.'),
       error_code: zOpenApi.string().optional().describe('Stable code for a skip or failure, e.g. USER_EXISTS_FOR_CONTACT.'),

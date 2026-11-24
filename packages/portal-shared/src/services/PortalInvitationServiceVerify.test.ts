@@ -21,7 +21,7 @@ const invitation = {
 };
 
 const state: {
-  contact: { is_inactive: boolean; email: string | null; full_name: string };
+  contact: { is_inactive: boolean | null; email: string | null; full_name: string };
   deletes: number;
 } = {
   contact: { is_inactive: false, email: 'casey@acme.test', full_name: 'Casey Client' },
@@ -39,11 +39,11 @@ function invitationQueryBuilder() {
   let requireMatchingEmail = false;
 
   const builder: any = {
-    where(column: unknown, _operator?: unknown, _value?: unknown) {
-      if (column === 'c.is_inactive') requireActiveContact = true;
+    where(_column: unknown, _operator?: unknown, _value?: unknown) {
       return builder;
     },
     whereRaw(sql: string) {
+      if (sql.includes('c.is_inactive')) requireActiveContact = true;
       if (sql.includes('lower(c.email) = lower(pi.email)')) requireMatchingEmail = true;
       return builder;
     },
@@ -51,7 +51,8 @@ function invitationQueryBuilder() {
       return builder;
     },
     first() {
-      if (requireActiveContact && state.contact.is_inactive) return Promise.resolve(undefined);
+      // coalesce(c.is_inactive, false) = false: a NULL row is an active contact.
+      if (requireActiveContact && state.contact.is_inactive === true) return Promise.resolve(undefined);
       if (
         requireMatchingEmail
         && String(state.contact.email ?? '').toLowerCase() !== invitation.email.toLowerCase()
@@ -129,6 +130,16 @@ describe('PortalInvitationService.verifyToken', () => {
       tenant: 'tenant-1',
       contact: { contact_name_id: 'contact-1', email: 'casey@acme.test' },
     });
+  });
+
+  it('accepts the token of a contact whose is_inactive was never written', async () => {
+    // The column is nullable with a false default, so comparing it to false
+    // would refuse a NULL row's invitation for ever.
+    state.contact.is_inactive = null;
+
+    const result = await PortalInvitationService.verifyToken('token-1');
+
+    expect(result).toMatchObject({ valid: true, contact: { contact_name_id: 'contact-1' } });
   });
 
   it('refuses the token of a deactivated contact', async () => {

@@ -804,6 +804,22 @@ async function sendPortalInvitationForContact(
     };
   }
 
+  // A deactivated contact is refused at use time (PortalInvitationService.verifyToken),
+  // so mailing it a link would report "Sent" for something the recipient can never
+  // open. "Invite all eligible" already skips these; an explicit selection and the
+  // REST endpoint reach here, and are told why.
+  if (contact.is_inactive) {
+    return {
+      outcome: 'skipped',
+      email: contact.email,
+      result: {
+        success: false,
+        error: 'This contact is inactive. Reactivate the contact before inviting it to the client portal.',
+        errorCode: 'CONTACT_INACTIVE'
+      }
+    };
+  }
+
   // Validate contact has an email address
   if (!contact.email || contact.email.trim() === '') {
     return {
@@ -1146,10 +1162,14 @@ export const getPortalInvitationStatesForClient = withAuth(async (
       joinContactInvitations(scopedDb, query);
       query
         .andWhere('c.client_id', normalizedClientId)
-        .groupBy('c.contact_name_id', 'c.full_name', 'c.email')
+        .groupBy('c.contact_name_id', 'c.full_name', 'c.email', 'c.is_inactive')
         .orderBy('c.full_name', 'asc')
         .select('c.contact_name_id')
         .select('c.email')
+        // A deactivated contact cannot be invited and cannot use a link already
+        // in its mailbox, so the column says so instead of counting down to an
+        // expiry that will never matter. Nullable column, NULL is active.
+        .select(trx.raw('coalesce(c.is_inactive, false) as contact_inactive'))
         .select(trx.raw('coalesce(bool_or(u.user_id is not null), false) as has_portal_user'))
         // A portal user that was deactivated is not an active one: the row says
         // so instead of passing for "Active portal user".
@@ -1159,6 +1179,7 @@ export const getPortalInvitationStatesForClient = withAuth(async (
       const contactRows = await query as unknown as Array<{
         contact_name_id: string;
         email: string | null;
+        contact_inactive: boolean | null;
         has_portal_user: boolean | null;
         has_active_portal_user: boolean | null;
         invitation_state: string | null;
@@ -1166,7 +1187,14 @@ export const getPortalInvitationStatesForClient = withAuth(async (
       }>;
 
       // Whose email the send path would refuse, by the same rule it refuses on.
-      const conflictedContactIds = await resolvePortalEmailConflicts(trx, tenant, contactRows);
+      // Only the contacts a batch could still be aimed at are looked up: the
+      // conflict is read for invitable candidates only, and the lookup is an
+      // unindexed lower(email) scan over users that runs on every list load.
+      const conflictedContactIds = await resolvePortalEmailConflicts(
+        trx,
+        tenant,
+        contactRows.filter((row) => !row.has_portal_user && !row.contact_inactive)
+      );
       return { contactRows, conflictedContactIds };
     });
 
@@ -1180,6 +1208,7 @@ export const getPortalInvitationStatesForClient = withAuth(async (
           ? new Date(row.latest_expires_at).toISOString()
           : null,
         emailConflict: rows.conflictedContactIds.has(row.contact_name_id),
+        contactInactive: Boolean(row.contact_inactive),
       };
     });
 

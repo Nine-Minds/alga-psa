@@ -410,7 +410,9 @@
         "expired": "Utgången",
         "revoked": "Återkallad"
       },
-      "lastSentPrefix": "Senast skickad:"
+      "lastSentPrefix": "Senast skickad:",
+      "resendCount_one": "skickad igen en gång",
+      "resendCount_other": "skickad igen {{count}} gånger"
     },
     "actions": {
       "sendInvitation": "Skicka portalinbjudan",
@@ -680,7 +682,8 @@
       "pendingUntil": "Väntande till {{date}}",
       "expired": "Inbjudan har gått ut",
       "activeUser": "Aktiv portalanvändare",
-      "inactiveUser": "Inaktiv portalanvändare"
+      "inactiveUser": "Inaktiv portalanvändare",
+      "contactInactive": "Inbjudan kan inte användas (kontakten är inaktiv)"
     }
   },
   "bulkPortalInvitation": {
@@ -694,7 +697,8 @@
       "alreadyHasPortalAccess": "har redan portalåtkomst",
       "missingEmail": "ingen användbar e-postadress",
       "sharedMailbox": "delad brevlåda",
-      "emailInUse": "e-postadressen tillhör redan en annan användare"
+      "emailInUse": "e-postadressen tillhör redan en annan användare",
+      "inactiveContact": "inaktiv kontakt"
     },
     "actions": {
       "send": "Skicka {{total}} inbjudningar",
@@ -719,6 +723,7 @@
         "emailInUse": "E-postadressen tillhör en annan användare",
         "permissionDenied": "Du får inte bjuda in den här kontakten",
         "stateMismatch": "Inbjudan har inte längre den status du valde",
+        "inactiveContact": "Kontakten är inaktiv",
         "rateLimited": "För många inbjudningsförsök för den här kontakten. Försök igen senare.",
         "invitationFailed": "Inbjudan kunde inte skickas"
       }

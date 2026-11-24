@@ -410,7 +410,9 @@
         "expired": "Scaduto",
         "revoked": "Revocato"
       },
-      "lastSentPrefix": "Ultimo invio:"
+      "lastSentPrefix": "Ultimo invio:",
+      "resendCount_one": "inviato di nuovo una volta",
+      "resendCount_other": "inviato di nuovo {{count}} volte"
     },
     "actions": {
       "sendInvitation": "Invia invito al portale",
@@ -680,7 +682,8 @@
       "pendingUntil": "In attesa fino al {{date}}",
       "expired": "Invito scaduto",
       "activeUser": "Utente attivo del portale",
-      "inactiveUser": "Utente del portale inattivo"
+      "inactiveUser": "Utente del portale inattivo",
+      "contactInactive": "Invito non utilizzabile (contatto inattivo)"
     }
   },
   "bulkPortalInvitation": {
@@ -694,7 +697,8 @@
       "alreadyHasPortalAccess": "ha già accesso al portale",
       "missingEmail": "nessun indirizzo e-mail utilizzabile",
       "sharedMailbox": "casella condivisa",
-      "emailInUse": "l’indirizzo email appartiene già a un altro utente"
+      "emailInUse": "l’indirizzo email appartiene già a un altro utente",
+      "inactiveContact": "contatto inattivo"
     },
     "actions": {
       "send": "Invia {{total}} inviti",
@@ -719,6 +723,7 @@
         "emailInUse": "L’indirizzo email appartiene a un altro utente",
         "permissionDenied": "Non puoi invitare questo contatto",
         "stateMismatch": "L’invito non è più nello stato selezionato",
+        "inactiveContact": "Il contatto è inattivo",
         "rateLimited": "Troppi tentativi di invito per questo contatto. Riprova più tardi.",
         "invitationFailed": "Non è stato possibile inviare l’invito"
       }

@@ -17,6 +17,8 @@ type InvitationRow = {
   expires_at: string;
   /** Set when the invitation was accepted or revoked. */
   used_at?: string | null;
+  /** The address it was mailed to; defaults to the contact's current one. */
+  email?: string;
 };
 
 type ContactRow = {
@@ -40,24 +42,27 @@ const lapsedInvitation = (createdAt: string): InvitationRow =>
 const closedInvitation = (createdAt: string, expiresAt = PENDING_EXPIRES_AT): InvitationRow =>
   ({ created_at: createdAt, expires_at: expiresAt, used_at: '2024-06-01T00:00:00.000Z' });
 
+const latestInvitationOf = (invitations: InvitationRow[] | undefined): InvitationRow | undefined =>
+  [...(invitations ?? [])].sort((left, right) => right.created_at.localeCompare(left.created_at))[0];
+
 /**
  * What Postgres would answer for the state expression: the LATEST invitation
  * row decides, and a latest row that was used or revoked leaves nothing
- * outstanding however many lapsed rows sit under it.
+ * outstanding however many lapsed rows sit under it. An invitation mailed to an
+ * address the contact no longer has is expired, not pending — verifyToken
+ * refuses that link, and a resend is what repairs it.
  */
-function latestInvitationState(invitations: InvitationRow[] | undefined): 'none' | 'pending' | 'expired' {
-  const rows = [...(invitations ?? [])].sort((left, right) =>
-    right.created_at.localeCompare(left.created_at));
-  const latest = rows[0];
+function latestInvitationState(contact: Pick<ContactRow, 'email' | 'invitations'>): 'none' | 'pending' | 'expired' {
+  const latest = latestInvitationOf(contact.invitations);
   if (!latest) return 'none';
   if (latest.used_at) return 'none';
-  return new Date(latest.expires_at).getTime() > Date.now() ? 'pending' : 'expired';
+  if (new Date(latest.expires_at).getTime() <= Date.now()) return 'expired';
+  const mailedTo = (latest.email ?? contact.email ?? '').toLowerCase();
+  return mailedTo === (contact.email ?? '').toLowerCase() ? 'pending' : 'expired';
 }
 
 function latestInvitationExpiresAt(invitations: InvitationRow[] | undefined): string | null {
-  const rows = [...(invitations ?? [])].sort((left, right) =>
-    right.created_at.localeCompare(left.created_at));
-  return rows[0]?.expires_at ?? null;
+  return latestInvitationOf(invitations)?.expires_at ?? null;
 }
 
 const state: {
@@ -67,6 +72,8 @@ const state: {
   inactivePortalUserContactIds: Set<string>;
   /** Users holding a contact's email that the send path would refuse. */
   emailOwners: Array<{ email: string; user_type: string; contact_id: string | null; linked: boolean }>;
+  /** Address lists the email-conflict read asked the users table for. */
+  emailConflictLookups: string[][];
   /** `null` means no bundle narrows this caller; otherwise the contacts they may read. */
   scopedContactIds: string[] | null;
   /** `null` means every client is in scope. */
@@ -78,6 +85,7 @@ const state: {
   portalUserContactIds: new Set(),
   inactivePortalUserContactIds: new Set(),
   emailOwners: [],
+  emailConflictLookups: [],
   scopedContactIds: null,
   scopedClientIds: null,
   tenantSettings: {},
@@ -145,7 +153,7 @@ function contactsBuilder() {
           (filterClientId === undefined || contact.client_id === filterClientId) &&
           (scopeIds === null || scopeIds.includes(contact.contact_name_id)) &&
           (havingStates === null
-            || havingStates.includes(latestInvitationState(contact.invitations))),
+            || havingStates.includes(latestInvitationState(contact))),
       );
       // The invitation-state read selects aggregates; everything else selects ids.
       const rows = selectedExpressions.some((expression) => expression.includes('invitation_state'))
@@ -155,7 +163,8 @@ function contactsBuilder() {
           has_portal_user: state.portalUserContactIds.has(contact.contact_name_id)
             || state.inactivePortalUserContactIds.has(contact.contact_name_id),
           has_active_portal_user: state.portalUserContactIds.has(contact.contact_name_id),
-          invitation_state: latestInvitationState(contact.invitations),
+          contact_inactive: Boolean(contact.is_inactive),
+          invitation_state: latestInvitationState(contact),
           latest_expires_at: latestInvitationExpiresAt(contact.invitations),
         }))
         : visible.map((contact) => ({ contact_name_id: contact.contact_name_id }));
@@ -185,6 +194,7 @@ function usersBuilder() {
     // The email-conflict read asks for a whole client's addresses at once.
     whereIn(_column: unknown, values: string[]) {
       lookupEmails = values;
+      state.emailConflictLookups.push(values);
       return builder;
     },
     select() {
@@ -409,6 +419,36 @@ describe('sendBulkPortalInvitations', () => {
     expect(result.sent).toBe(1);
     expect(result.results).toContainEqual(
       expect.objectContaining({ contactId: 'contact-other-client', status: 'skipped', errorCode: 'CONTACT_NOT_FOUND' }),
+    );
+  });
+
+  it('skips a deactivated contact instead of mailing a link it could never use', async () => {
+    // verifyToken refuses an inactive contact's token, so reporting "Sent" for
+    // one would promise an email the recipient can never act on. "All eligible"
+    // never offers these; an explicit selection and the REST endpoint do.
+    const { sendBulkPortalInvitations } = await import('./portalInvitationActions');
+
+    state.contacts.push({
+      contact_name_id: 'contact-off',
+      client_id: 'client-a',
+      full_name: 'Switched Off',
+      email: 'off@acme.test',
+      is_inactive: true,
+    });
+
+    const result = await sendBulkPortalInvitations({
+      clientId: 'client-a',
+      contactIds: ['contact-ok', 'contact-off'],
+    });
+
+    expect(result.sent).toBe(1);
+    expect(result.skipped).toBe(1);
+    expect(result.results).toContainEqual(
+      expect.objectContaining({ contactId: 'contact-off', status: 'skipped', errorCode: 'CONTACT_INACTIVE' }),
+    );
+    expect(sendPortalInvitationEmailMock).toHaveBeenCalledTimes(1);
+    expect(sendPortalInvitationEmailMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'off@acme.test' }),
     );
   });
 
@@ -684,6 +724,7 @@ describe('getPortalInvitationStatesForClient', () => {
     state.portalUserContactIds = new Set(['contact-user']);
     state.inactivePortalUserContactIds = new Set();
     state.emailOwners = [];
+    state.emailConflictLookups = [];
     state.scopedContactIds = null;
     state.scopedClientIds = null;
     state.tenantSettings = {};
@@ -695,10 +736,10 @@ describe('getPortalInvitationStatesForClient', () => {
     const states = await getPortalInvitationStatesForClient('client-a');
 
     expect(states).toEqual([
-      { contactId: 'contact-expired', state: 'expired', expiresAt: null, emailConflict: false },
-      { contactId: 'contact-pending', state: 'pending', expiresAt: PENDING_EXPIRES_AT, emailConflict: false },
-      { contactId: 'contact-never', state: 'none', expiresAt: null, emailConflict: false },
-      { contactId: 'contact-user', state: 'active_user', expiresAt: null, emailConflict: false },
+      { contactId: 'contact-expired', state: 'expired', expiresAt: null, emailConflict: false, contactInactive: false },
+      { contactId: 'contact-pending', state: 'pending', expiresAt: PENDING_EXPIRES_AT, emailConflict: false, contactInactive: false },
+      { contactId: 'contact-never', state: 'none', expiresAt: null, emailConflict: false, contactInactive: false },
+      { contactId: 'contact-user', state: 'active_user', expiresAt: null, emailConflict: false, contactInactive: false },
     ]);
   });
 
@@ -708,7 +749,7 @@ describe('getPortalInvitationStatesForClient', () => {
     const { getPortalInvitationStatesForClient } = await import('./portalInvitationActions');
 
     await expect(getPortalInvitationStatesForClient('client-a')).resolves.toEqual([
-      { contactId: 'contact-pending', state: 'pending', expiresAt: PENDING_EXPIRES_AT, emailConflict: false },
+      { contactId: 'contact-pending', state: 'pending', expiresAt: PENDING_EXPIRES_AT, emailConflict: false, contactInactive: false },
     ]);
   });
 
@@ -760,9 +801,9 @@ describe('getPortalInvitationStatesForClient', () => {
     await expect(getPortalInvitationStatesForClient('client-a')).resolves.toEqual([
       // A revoked newest invitation leaves nothing outstanding, whatever lapsed
       // rows the 90-day retention floor kept underneath it.
-      { contactId: 'contact-revoked', state: 'none', expiresAt: null, emailConflict: false },
-      { contactId: 'contact-rechased', state: 'pending', expiresAt: PENDING_EXPIRES_AT, emailConflict: false },
-      { contactId: 'contact-expired', state: 'expired', expiresAt: null, emailConflict: false },
+      { contactId: 'contact-revoked', state: 'none', expiresAt: null, emailConflict: false, contactInactive: false },
+      { contactId: 'contact-rechased', state: 'pending', expiresAt: PENDING_EXPIRES_AT, emailConflict: false, contactInactive: false },
+      { contactId: 'contact-expired', state: 'expired', expiresAt: null, emailConflict: false, contactInactive: false },
     ]);
   });
 
@@ -775,8 +816,68 @@ describe('getPortalInvitationStatesForClient', () => {
     const states = await getPortalInvitationStatesForClient('client-a');
 
     expect(states).toContainEqual(
-      { contactId: 'contact-user', state: 'inactive_user', expiresAt: null, emailConflict: false },
+      { contactId: 'contact-user', state: 'inactive_user', expiresAt: null, emailConflict: false, contactInactive: false },
     );
+  });
+
+  it('counts an invitation mailed to an address the contact no longer has as expired', async () => {
+    state.contacts = [
+      {
+        contact_name_id: 'contact-renamed',
+        client_id: 'client-a',
+        full_name: 'Renamed',
+        email: 'new.address@acme.test',
+        // Still unexpired, but the link in the old mailbox is refused at use
+        // time, so "Pending until <date>" would promise a dead link.
+        invitations: [{ ...pendingInvitation('2026-01-01T00:00:00.000Z'), email: 'old.address@acme.test' }],
+      },
+    ];
+
+    const { getPortalInvitationStatesForClient } = await import('./portalInvitationActions');
+
+    await expect(getPortalInvitationStatesForClient('client-a')).resolves.toEqual([
+      { contactId: 'contact-renamed', state: 'expired', expiresAt: null, emailConflict: false, contactInactive: false },
+    ]);
+  });
+
+  it('says an outstanding invitation on a deactivated contact cannot be used', async () => {
+    state.contacts = [{
+      contact_name_id: 'contact-off',
+      client_id: 'client-a',
+      full_name: 'Switched Off',
+      email: 'off@acme.test',
+      is_inactive: true,
+      invitations: [pendingInvitation('2026-01-01T00:00:00.000Z')],
+    }];
+
+    const { getPortalInvitationStatesForClient } = await import('./portalInvitationActions');
+
+    const states = await getPortalInvitationStatesForClient('client-a');
+
+    // The invitation row is still pending, but the contact cannot be invited
+    // and cannot use the link: the flag is what the list labels it by.
+    expect(states).toEqual([
+      { contactId: 'contact-off', state: 'pending', expiresAt: PENDING_EXPIRES_AT, emailConflict: false, contactInactive: true },
+    ]);
+  });
+
+  it('asks the users table only about contacts a batch could still be aimed at', async () => {
+    // An unindexed lower(email) scan runs on every contacts-list load, and the
+    // conflict is only read for invitable candidates, so a contact that already
+    // has a portal user or is deactivated is not worth asking about.
+    state.contacts = [
+      ...state.contacts,
+      { contact_name_id: 'contact-off', client_id: 'client-a', full_name: 'Off', email: 'off@acme.test', is_inactive: true },
+    ];
+
+    const { getPortalInvitationStatesForClient } = await import('./portalInvitationActions');
+
+    await getPortalInvitationStatesForClient('client-a');
+
+    expect(state.emailConflictLookups).toHaveLength(1);
+    expect([...state.emailConflictLookups[0]].sort()).toEqual([
+      'lapsed@acme.test', 'never@acme.test', 'waiting@acme.test',
+    ]);
   });
 
   it('flags a contact whose email another user owns, the way the send refuses it', async () => {

@@ -46,6 +46,7 @@ const BULK_INVITE_RESULT_KEYS: Partial<Record<PortalInvitationErrorCode, { key: 
   PORTAL_USER_ALREADY_EXISTS: { key: 'bulkPortalInvitation.results.reasons.emailInUse', defaultValue: 'The email address belongs to another user' },
   PERMISSION_DENIED_INVITE: { key: 'bulkPortalInvitation.results.reasons.permissionDenied', defaultValue: 'You may not invite this contact' },
   INVITATION_STATE_MISMATCH: { key: 'bulkPortalInvitation.results.reasons.stateMismatch', defaultValue: 'The invitation is no longer in the state you selected' },
+  CONTACT_INACTIVE: { key: 'bulkPortalInvitation.results.reasons.inactiveContact', defaultValue: 'The contact is inactive' },
   RATE_LIMITED: { key: 'bulkPortalInvitation.results.reasons.rateLimited', defaultValue: 'Too many invitation attempts for this contact. Try again later.' },
   INVITATION_FAILED: { key: 'bulkPortalInvitation.results.reasons.invitationFailed', defaultValue: 'The invitation could not be sent' },
 };
@@ -63,7 +64,7 @@ interface BulkPortalInvitationDialogProps {
 }
 
 /** Why a chosen contact will not receive an invitation. */
-type SkipReason = 'alreadyHasPortalAccess' | 'missingEmail' | 'sharedMailbox' | 'emailInUse';
+type SkipReason = 'alreadyHasPortalAccess' | 'missingEmail' | 'sharedMailbox' | 'emailInUse' | 'inactiveContact';
 
 /**
  * Confirms a bulk portal invitation before anything is sent, then reports what
@@ -93,11 +94,12 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
     : target.mode === 'invitationState'
       ? `state:${targetStates.join(',')}:${target.contactIds.join(',')}`
       : 'all';
-  // "Invite all eligible" and an invitation-state resend are the server's own
-  // sets, which are active contacts only. A named selection is whatever the
-  // list was showing, so an inactive contact the user ticked is previewed as
-  // invitable rather than reported under the wrong reason.
-  const previewStatus = target.mode === 'selected' ? statusFilter : 'active';
+  // "Invite all eligible" is the server's own set, which is active contacts
+  // only. Every other mode carries ids the list put on screen, so the preview
+  // asks for the same statuses the list was showing: otherwise an inactive
+  // contact is missing from the eligible rows and gets reported under the wrong
+  // reason ("already has portal access") while the server still receives its id.
+  const previewStatus = target.mode === 'allEligible' ? 'active' : statusFilter;
 
   useEffect(() => {
     if (!isOpen) {
@@ -180,6 +182,12 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
         skipped.push({ contactId, reason: 'sharedMailbox' });
         continue;
       }
+      // The send refuses a deactivated contact (its link could never be used),
+      // so it is counted as skipped here for the same reason the server gives.
+      if (eligible.is_inactive) {
+        skipped.push({ contactId, reason: 'inactiveContact' });
+        continue;
+      }
       // Same check the send path runs, so the preview count cannot disagree
       // with the number of emails that actually go out.
       if (!isValidEmail(eligible.email)) {
@@ -197,7 +205,7 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
 
     const skipCounts = skipped.reduce<Record<SkipReason, number>>(
       (counts, entry) => ({ ...counts, [entry.reason]: counts[entry.reason] + 1 }),
-      { alreadyHasPortalAccess: 0, missingEmail: 0, sharedMailbox: 0, emailInUse: 0 },
+      { alreadyHasPortalAccess: 0, missingEmail: 0, sharedMailbox: 0, emailInUse: 0, inactiveContact: 0 },
     );
 
     return {
@@ -267,6 +275,9 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
     }),
     emailInUse: t('bulkPortalInvitation.skipReasons.emailInUse', {
       defaultValue: 'email address already belongs to another user',
+    }),
+    inactiveContact: t('bulkPortalInvitation.skipReasons.inactiveContact', {
+      defaultValue: 'inactive contact',
     }),
   };
 

@@ -410,7 +410,9 @@
         "expired": "Expirado",
         "revoked": "Revogado"
       },
-      "lastSentPrefix": "Último envio:"
+      "lastSentPrefix": "Último envio:",
+      "resendCount_one": "reenviado uma vez",
+      "resendCount_other": "reenviado {{count}} vezes"
     },
     "actions": {
       "sendInvitation": "Enviar convite do portal",
@@ -680,7 +682,8 @@
       "pendingUntil": "Pendente até {{date}}",
       "expired": "Convite expirado",
       "activeUser": "Usuário ativo do portal",
-      "inactiveUser": "Usuário do portal inativo"
+      "inactiveUser": "Usuário do portal inativo",
+      "contactInactive": "Convite inutilizável (contato inativo)"
     }
   },
   "bulkPortalInvitation": {
@@ -694,7 +697,8 @@
       "alreadyHasPortalAccess": "já tem acesso ao portal",
       "missingEmail": "sem endereço de e-mail utilizável",
       "sharedMailbox": "caixa de correio compartilhada",
-      "emailInUse": "o e-mail já pertence a outro usuário"
+      "emailInUse": "o e-mail já pertence a outro usuário",
+      "inactiveContact": "contato inativo"
     },
     "actions": {
       "send": "Enviar {{total}} convites",
@@ -719,6 +723,7 @@
         "emailInUse": "O e-mail pertence a outro usuário",
         "permissionDenied": "Você não pode convidar este contato",
         "stateMismatch": "O convite não está mais no estado que você selecionou",
+        "inactiveContact": "O contato está inativo",
         "rateLimited": "Muitas tentativas de convite para este contato. Tente novamente mais tarde.",
         "invitationFailed": "Não foi possível enviar o convite"
       }
