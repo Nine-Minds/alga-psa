@@ -286,6 +286,8 @@
         "contactNotFound": "Contatto non trovato.",
         "contactMissingEmailGeneric": "Il contatto non ha un indirizzo e-mail. Aggiungi un indirizzo e-mail al contatto prima di inviare un invito.",
         "contactInvalidEmail": "Il contatto ha un indirizzo e-mail non valido. Aggiorna il contatto con un indirizzo e-mail valido prima di inviare un invito.",
+        "contactInactive": "Questo contatto è inattivo. Riattiva il contatto prima di invitarlo al portale clienti.",
+        "invitationRateLimited": "Troppi tentativi di invito per questo contatto. Riprova più tardi.",
         "invalidEmail": "Inserisci un indirizzo e-mail valido",
         "noDefaultClient": "Nessun client predefinito configurato per questo tenant. Imposta un client predefinito nelle Impostazioni generali.",
         "noDefaultLocation": "Il client predefinito deve avere una sede predefinita configurata per inviare inviti al portale.",

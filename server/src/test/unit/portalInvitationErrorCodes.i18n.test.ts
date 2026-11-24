@@ -2,12 +2,12 @@
  * Every portal-invitation refusal the MSP or the invited contact can run into
  * has to arrive in their own language.
  *
- * Two surfaces answer for that: the portal setup page maps the whole
+ * Three surfaces answer for that: the portal setup page maps the whole
  * `PortalInvitationErrorCode` union (a total Record, so a new code breaks the
- * build until it is translated), and the contact's Portal tab maps each code
- * its own send/revoke path can emit. A code with no key falls through to the
- * English `error` string the server attached, which is what a German MSP would
- * then read on a German screen.
+ * build until it is translated), and the contact's Portal tab and the user
+ * management screen each map the codes their own send/create paths can emit. A
+ * code with no key falls through to the English `error` string the server
+ * attached, which is what a German MSP would then read on a German screen.
  */
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -101,6 +101,41 @@ describe('portal invitation error codes are translated', () => {
     for (const locale of locales) {
       it(`has every mapped message in ${locale}`, () => {
         const messages = JSON.parse(readFileSync(join(localesDir, locale, 'msp/contacts.json'), 'utf8'));
+        const missing = [...mapped.values()].filter((key) => typeof lookup(messages, key) !== 'string');
+        expect(missing).toEqual([]);
+      });
+    }
+  });
+
+  describe('user management screen (msp/settings namespace)', () => {
+    const screen = 'server/src/components/settings/general/UserManagement.tsx';
+    const mapped = mappedKeys(screen, 'PORTAL_INVITE_ERROR_KEYS');
+
+    it('maps every code its own invite and create paths can refuse with', () => {
+      // sendPortalInvitation / createClientPortalUser, the two calls this screen
+      // makes. Its own picker only offers active contacts, but a contact can be
+      // deactivated between the list load and the click, and the per-contact
+      // rate limit applies here as it does anywhere else.
+      const perContactCodes = [
+        'PERMISSION_DENIED_INVITE',
+        'PERMISSION_DENIED_CREATE',
+        'EMAIL_NOT_CONFIGURED',
+        'CONTACT_NOT_FOUND',
+        'CONTACT_MISSING_EMAIL',
+        'CONTACT_INVALID_EMAIL',
+        'CONTACT_INACTIVE',
+        'USER_EXISTS_FOR_CONTACT',
+        'PORTAL_USER_ALREADY_EXISTS',
+        'BASE_URL_NOT_CONFIGURED',
+        'RATE_LIMITED',
+      ];
+      expect(perContactCodes.filter((code) => !mapped.has(code))).toEqual([]);
+      expect(perContactCodes.filter((code) => !codes.includes(code))).toEqual([]);
+    });
+
+    for (const locale of locales) {
+      it(`has every mapped message in ${locale}`, () => {
+        const messages = JSON.parse(readFileSync(join(localesDir, locale, 'msp/settings.json'), 'utf8'));
         const missing = [...mapped.values()].filter((key) => typeof lookup(messages, key) !== 'string');
         expect(missing).toEqual([]);
       });

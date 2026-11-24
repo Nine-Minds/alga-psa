@@ -286,6 +286,8 @@
         "contactNotFound": "Contacto no encontrado.",
         "contactMissingEmailGeneric": "El contacto no tiene dirección de correo electrónico. Agregue una dirección de correo al contacto antes de enviar una invitación.",
         "contactInvalidEmail": "El contacto tiene una dirección de correo electrónico no válida. Actualice el contacto con una dirección válida antes de enviar una invitación.",
+        "contactInactive": "Este contacto está inactivo. Reactive el contacto antes de invitarlo al portal de clientes.",
+        "invitationRateLimited": "Demasiados intentos de invitación para este contacto. Vuelva a intentarlo más tarde.",
         "invalidEmail": "Por favor ingrese una dirección de correo electrónico válida",
         "noDefaultClient": "No hay un cliente predeterminado configurado para este tenant. Configure un cliente predeterminado en Configuración General.",
         "noDefaultLocation": "El cliente predeterminado debe tener una ubicación predeterminada configurada para enviar invitaciones al portal.",

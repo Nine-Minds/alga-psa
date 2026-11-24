@@ -28,6 +28,8 @@ const PORTAL_INVITE_ERROR_KEYS: Partial<Record<PortalInvitationErrorCode, string
   CONTACT_NOT_FOUND: 'users.messages.error.contactNotFound',
   CONTACT_MISSING_EMAIL: 'users.messages.error.contactMissingEmailGeneric',
   CONTACT_INVALID_EMAIL: 'users.messages.error.contactInvalidEmail',
+  CONTACT_INACTIVE: 'users.messages.error.contactInactive',
+  RATE_LIMITED: 'users.messages.error.invitationRateLimited',
   USER_EXISTS_FOR_CONTACT: 'users.messages.error.portalUserExistsForContact',
   PORTAL_USER_ALREADY_EXISTS: 'users.messages.error.portalUserExists',
   NO_DEFAULT_CLIENT: 'users.messages.error.noDefaultClient',

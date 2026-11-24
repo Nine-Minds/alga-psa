@@ -286,6 +286,8 @@
         "contactNotFound": "Contact not found.",
         "contactMissingEmailGeneric": "Contact does not have an email address. Please add an email address to the contact before sending an invitation.",
         "contactInvalidEmail": "Contact has an invalid email address. Please update the contact with a valid email address before sending an invitation.",
+        "contactInactive": "This contact is inactive. Reactivate the contact before inviting it to the client portal.",
+        "invitationRateLimited": "Too many invitation attempts for this contact. Try again later.",
         "invalidEmail": "Please enter a valid email address",
         "noDefaultClient": "No default client configured for this tenant. Please set a default client in General Settings.",
         "noDefaultLocation": "Default client must have a default location configured to send portal invitations.",

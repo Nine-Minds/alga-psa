@@ -286,6 +286,8 @@
         "contactNotFound": "Contact introuvable.",
         "contactMissingEmailGeneric": "Le contact n'a pas d'adresse e-mail. Ajoutez une adresse e-mail au contact avant d'envoyer une invitation.",
         "contactInvalidEmail": "Le contact a une adresse e-mail invalide. Mettez à jour le contact avec une adresse e-mail valide avant d'envoyer une invitation.",
+        "contactInactive": "Ce contact est inactif. Réactivez le contact avant de l'inviter au portail client.",
+        "invitationRateLimited": "Trop de tentatives d’invitation pour ce contact. Réessayez plus tard.",
         "invalidEmail": "Veuillez saisir une adresse e-mail valide",
         "noDefaultClient": "Aucun client par défaut n'est configuré pour ce tenant. Veuillez définir un client par défaut dans les paramètres généraux.",
         "noDefaultLocation": "Le client par défaut doit avoir un emplacement par défaut configuré pour envoyer des invitations au portail.",
