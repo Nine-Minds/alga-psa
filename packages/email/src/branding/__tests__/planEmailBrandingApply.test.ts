@@ -425,6 +425,69 @@ describe('enterprise brand assets in the plan', () => {
     }
   });
 
+  /** The attribution strip as it shipped before the fix: the slogan survived it. */
+  const legacyStrip = (html: string) => html
+    .replace(/<p>\s*Powered by AlgaPSA\s*<\/p>/gi, '')
+    .replace(/\s*&middot;\s*Powered by AlgaPSA/gi, '')
+    .replace(/Powered by AlgaPSA\s*&middot;\s*/gi, '')
+    .replace(/Powered by AlgaPSA/gi, '');
+
+  /** Rows as the old apply wrote them: an orphaned slogan, or an empty band. */
+  function storedBeforeTheFix() {
+    const plan = planEmailBrandingApply({
+      systemRows: SYSTEM_ROWS,
+      tenantRows: [],
+      target: TERRACOTTA,
+      scope: SCOPE,
+      decorate: (html: string) => legacyStrip(decorateBrandedHtml(html, { logo })),
+    });
+
+    return plan.inserts.map((insert, index) => ({
+      id: 800 + index,
+      name: insert.name,
+      language_code: insert.language,
+      subject: insert.subject,
+      html_content: insert.html,
+      text_content: insert.text,
+    }));
+  }
+
+  const EMPTY_FOOTER_BAND = /<tr[^>]*>\s*<td[^>]*>\s*<\/td>\s*<\/tr>/;
+
+  /**
+   * How an existing tenant picks up the fix: "Apply to templates" again, with
+   * the branding settings exactly as they were. Their stored copies carry what
+   * the old strip left — the bare slogan, or the empty band where the footer
+   * was the attribution alone (alga-2026-0003353) — so an apply that changes no
+   * setting must still rewrite that footer instead of reporting the rows as
+   * already up to date.
+   */
+  it('rewrites copies left on an orphaned slogan, branding unchanged', () => {
+    const stored = storedBeforeTheFix();
+    expect(stored).toHaveLength(6);
+    for (const row of stored) {
+      const slogans = LEGACY_BRAND_SLOGANS.filter((slogan) => row.html_content.includes(slogan));
+      expect(slogans.length > 0 || EMPTY_FOOTER_BAND.test(row.html_content)).toBe(true);
+    }
+
+    const plan = planEmailBrandingApply({
+      systemRows: SYSTEM_ROWS,
+      tenantRows: stored,
+      target: TERRACOTTA,
+      appliedPalette: TERRACOTTA,
+      scope: SCOPE,
+      decorate,
+    });
+
+    expect(plan.skipped).toEqual([]);
+    expect(plan.updates).toHaveLength(6);
+    for (const update of plan.updates) {
+      expect(containsBrandAttribution(update.html)).toBe(false);
+      expect(LEGACY_BRAND_SLOGANS.filter((slogan) => update.html.includes(slogan))).toEqual([]);
+      expect(update.html).not.toMatch(EMPTY_FOOTER_BAND);
+    }
+  });
+
   it('still recognizes those rows as its own on a re-apply', () => {
     const tenantRows = applyOnce();
     const plan = planEmailBrandingApply({

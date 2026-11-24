@@ -168,6 +168,22 @@ describe('email branding panel markup', () => {
     expect(panelSource).toContain("useRegisterUnsavedChanges('email-branding-panel', isDirty)");
   });
 
+  /**
+   * How a tenant picks up a correction to the standard templates — the orphaned
+   * footer slogan among them (alga-2026-0003353): apply the palette they already
+   * have. So the affordance may only be gated on the permission, a saved palette
+   * and unsaved edits, never on the palette having changed since the last apply.
+   */
+  it('offers "Apply to templates" for a palette that has not changed', () => {
+    expect(panelSource).toContain('id="open-apply-email-branding"');
+    expect(panelSource).toContain('disabled={!status.canEdit || !status.palette || isDirty}');
+
+    const button = panelSource.slice(panelSource.indexOf('id="open-apply-email-branding"'));
+    const gate = button.slice(0, button.indexOf('</Button>'));
+    expect(gate).not.toContain('appliedAt');
+    expect(gate).not.toContain('appliedPalette');
+  });
+
   it('gives every control a kebab-case id', () => {
     const literalIds = [...panelSource.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
     expect(literalIds.length).toBeGreaterThan(5);
