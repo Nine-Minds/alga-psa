@@ -14,6 +14,7 @@ import {
 import {
   fetchTimeEntriesForTimeSheet,
   saveTimeEntry,
+  logStopwatchSession,
   updateTimeEntryApprovalStatus,
   deleteTimeEntry,
   getTimeEntryById
@@ -44,6 +45,7 @@ export {
   deleteTimeSheets,
   fetchTimeEntriesForTimeSheet,
   saveTimeEntry,
+  logStopwatchSession,
   updateTimeEntryApprovalStatus,
   deleteTimeEntry,
   getTimeEntryById,

@@ -10,8 +10,11 @@ import {
   periodForWorkDate,
   periodLastInclusiveDay,
   resolveEntryDefaults,
+  resolveSingleDayPlanDefaults,
   workDateInTimeZone,
+  zonedWorkDayCalendar,
 } from '../src/lib/timeEntryPeriodSelection';
+import { toEntryPlan, toEntrySpan } from '../src/lib/stopwatch/stopwatchMath';
 
 const weeklyPeriod = { start_date: '2026-09-07', end_date: '2026-09-14' };
 
@@ -213,5 +216,83 @@ describe('timeEntryPeriodSelection', () => {
       expect(date.getMonth()).toBe(8);
       expect(date.getDate()).toBe(7);
     });
+  });
+});
+
+describe('zonedWorkDayCalendar', () => {
+  const at = (iso: string) => Date.parse(iso);
+
+  it('UTC: days split at 00:00Z', () => {
+    const cal = zonedWorkDayCalendar('UTC');
+    expect(cal.dayOf(at('2026-10-28T23:59:59Z'))).toBe('2026-10-28');
+    expect(cal.nextDayStart(at('2026-10-28T23:59:59Z'))).toBe(at('2026-10-29T00:00:00Z'));
+  });
+
+  it('falls back to UTC for a missing or invalid zone', () => {
+    expect(zonedWorkDayCalendar(null).nextDayStart(at('2026-10-28T10:00:00Z'))).toBe(at('2026-10-29T00:00:00Z'));
+    expect(zonedWorkDayCalendar('Not/AZone').dayOf(at('2026-10-28T10:00:00Z'))).toBe('2026-10-28');
+  });
+
+  it('America/New_York: midnight is local, DST days are 23h and 25h', () => {
+    const cal = zonedWorkDayCalendar('America/New_York');
+    expect(cal.dayOf(at('2026-10-29T03:59:00Z'))).toBe('2026-10-28');
+    expect(cal.nextDayStart(at('2026-10-29T03:59:00Z'))).toBe(at('2026-10-29T04:00:00Z'));
+    expect(cal.nextDayStart(at('2026-03-08T06:00:00Z')) - at('2026-03-08T05:00:00Z')).toBe(23 * 3600_000);
+    expect(cal.nextDayStart(at('2026-11-01T05:00:00Z')) - at('2026-11-01T04:00:00Z')).toBe(25 * 3600_000);
+  });
+
+  it('+13 zone (Pacific/Auckland)', () => {
+    const cal = zonedWorkDayCalendar('Pacific/Auckland');
+    // 2026-01-15T10:30Z is 23:30 NZDT on the 15th
+    expect(cal.dayOf(at('2026-01-15T10:30:00Z'))).toBe('2026-01-15');
+    expect(cal.nextDayStart(at('2026-01-15T10:30:00Z'))).toBe(at('2026-01-15T11:00:00Z'));
+  });
+
+  it('a zone with no midnight on a DST day (America/Sao_Paulo 2018-11-04)', () => {
+    const cal = zonedWorkDayCalendar('America/Sao_Paulo');
+    // Midnight 2018-11-04 was skipped: clocks jumped 00:00 -> 01:00 (UTC-3 -> UTC-2).
+    const next = cal.nextDayStart(at('2018-11-03T12:00:00Z'));
+    expect(next).toBe(at('2018-11-04T03:00:00Z')); // 01:00 -02, the day's first instant
+    expect(cal.dayOf(next)).toBe('2018-11-04');
+    expect(cal.dayOf(next - 1)).toBe('2018-11-03');
+  });
+});
+
+describe('resolveSingleDayPlanDefaults (one-item stopwatch plan)', () => {
+  const periods = [{ period_id: 'p', start_date: '2026-10-01', end_date: '2026-11-01', timeSheetStatus: 'DRAFT' }];
+  const calendar = zonedWorkDayCalendar('UTC');
+  const run = (segments: Array<{ started_at: string; ended_at: string | null }>) => {
+    const now = Date.parse('2026-12-01T00:00:00Z');
+    const plan = toEntryPlan(segments, now, calendar);
+    const span = toEntrySpan(segments, now);
+    expect(plan).toHaveLength(1);
+    const defaults = resolveSingleDayPlanDefaults({
+      context: { workItemId: 't', workItemType: 'ticket', workItemName: 'T', startTime: span.start, endTime: span.end },
+      planItem: plan[0],
+      periods,
+      timeZone: 'UTC',
+    });
+    return { defaults, plan: plan[0], span };
+  };
+
+  it('a dropped first day leaves the planned span on day 2, same day', () => {
+    // 23:59:45 + 10s (rounds to 0, dropped), then 2h the next day starting 08:00
+    const { defaults, plan, span } = run([
+      { started_at: '2026-10-05T23:59:45Z', ended_at: '2026-10-05T23:59:55Z' },
+      { started_at: '2026-10-06T08:00:00Z', ended_at: '2026-10-06T10:00:00Z' },
+    ]);
+    expect(span.end.toISOString().slice(0, 10)).not.toBe(span.start.toISOString().slice(0, 10)); // the old toEntrySpan prefill crossed midnight
+    expect(defaults!.defaultStartTime).toEqual(plan.start);
+    expect(defaults!.defaultEndTime).toEqual(plan.end);
+    expect(workDateInTimeZone(defaults!.defaultStartTime, 'UTC')).toBe(workDateInTimeZone(defaults!.defaultEndTime, 'UTC'));
+    expect(defaults!.moved).toEqual({ kind: 'none' });
+  });
+
+  it('a segment ending just after midnight is capped at 23:59 on its own day', () => {
+    const { defaults, plan } = run([{ started_at: '2026-10-05T23:58:40Z', ended_at: '2026-10-06T00:00:20Z' }]);
+    expect(defaults!.defaultStartTime.toISOString()).toBe('2026-10-05T23:58:00.000Z');
+    expect(defaults!.defaultEndTime.toISOString()).toBe('2026-10-05T23:59:00.000Z');
+    expect(defaults!.defaultEndTime).toEqual(plan.end);
+    expect(workDateInTimeZone(defaults!.defaultStartTime, 'UTC')).toBe(workDateInTimeZone(defaults!.defaultEndTime, 'UTC'));
   });
 });

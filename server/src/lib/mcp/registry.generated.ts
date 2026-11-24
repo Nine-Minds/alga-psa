@@ -54845,7 +54845,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/stopwatch/{id}/log",
     "displayName": "Log stopwatch as time entry",
     "summary": "Log stopwatch as time entry",
-    "description": "Logs the session as exactly one time entry: start = first segment start (to the minute), end = start + active duration, billable_duration = active minutes (min 1). Any body field overrides the derived value. The time sheet is resolved server-side from the start date; a locked (submitted/approved) sheet returns 409 and the session is left untouched.",
+    "description": "Logs the session as one time entry per work day (in the entry user timezone) that has active time: each entry starts at the first active instant of that day (to the minute) and lasts the active minutes of that day, ending no later than 23:59; paused time is never booked. A session within one day is one entry (billable_duration = active minutes, min 1). An explicit start_time/end_time in the body produces exactly one entry over that span. Other body fields override the derived value. The time sheet is resolved server-side from the start date; a locked (submitted/approved) sheet returns 409 and the session is left untouched.",
     "tags": [
       "Work Management v1"
     ],
@@ -54902,12 +54902,21 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "time_entry": {
               "type": "object",
               "additionalProperties": {},
-              "description": "The persisted time entry."
+              "description": "The persisted time entry (the first one when the session spans several work days)."
+            },
+            "time_entries": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "description": "Every persisted time entry, one per work day with active time."
             }
           },
           "required": [
             "session",
-            "time_entry"
+            "time_entry",
+            "time_entries"
           ]
         }
       },

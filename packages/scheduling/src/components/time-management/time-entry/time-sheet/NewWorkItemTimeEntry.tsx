@@ -24,6 +24,11 @@ interface NewWorkItemTimeEntryProps {
   contextNotice?: string;
   /** Stopwatch session this entry logs; saving closes it atomically. */
   stopwatchSessionId?: string;
+  /**
+   * The stopwatch session split into one entry per work day. More than one item renders the
+   * multi-day drawer; a single item (or none) renders the ordinary one-entry drawer.
+   */
+  entryPlan?: Array<{ start: Date; end: Date }>;
 }
 
 /**
@@ -42,6 +47,7 @@ export default function NewWorkItemTimeEntry({
   defaults,
   contextNotice,
   stopwatchSessionId,
+  entryPlan,
 }: NewWorkItemTimeEntryProps): React.JSX.Element {
   const { t } = useTranslation('msp/time-entry');
   const { formatDate } = useFormatters();
@@ -94,12 +100,14 @@ export default function NewWorkItemTimeEntry({
       isOpen={true}
       onClose={closeDrawer}
       onSave={handleSave}
+      onSaveAll={handleSave}
       workItem={workItem}
       date={defaults.date}
       periodCatalog={periods}
       isEditable={true}
       defaultStartTime={defaults.defaultStartTime}
       defaultEndTime={defaults.defaultEndTime}
+      defaultEntries={entryPlan}
       inDrawer={true}
       notice={notice}
       workTimeZone={userTimeZone}
