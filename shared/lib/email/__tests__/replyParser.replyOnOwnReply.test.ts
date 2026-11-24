@@ -225,6 +225,31 @@ describe('Gmail reply to the contact’s own reply (alga-2026-0003353)', () => {
     }
   });
 
+  it.each(['Subject: Deployment failure', 'From: Deployment service', 'Sent: Monday', 'To: Support', 'Cc: Operations'])(
+    'preserves a trailing error quotation introduced by an isolated %s field',
+    (field) => {
+      const fixture = readFixture('authored-trailing-quotation.txt');
+      for (const prefix of [field, `Deployment details:\n> ${field}`]) {
+        const text = fixture.replace('The deployment failed with this error:', prefix);
+        const result = parseEmailReply({ text });
+
+        expect(result.sanitizedText).toBe(text.split('\n\n--- Please reply above this line ---')[0]);
+        expect(result.appliedHeuristics).not.toContain('quote-prefix');
+      }
+    },
+  );
+
+  it('still strips a quoted coherent envelope above the explicit boundary', () => {
+    const result = parseEmailReply({
+      text: 'Please investigate.\n> From: Client <client@example.test>\n> Sent: Monday\n'
+        + '> To: Support <support@example.test>\n> Subject: Deployment failure\n'
+        + '> Previous reply\n\n--- Please reply above this line ---\nOld notification',
+    });
+
+    expect(result.sanitizedText).toBe('Please investigate.');
+    expect(result.appliedHeuristics).toContain('quote-prefix');
+  });
+
   it.each(['', '\n--- Please reply above this line ---\nOld notification'])(
     'rejects a trim that removes an inline answer, with boundary %j',
     (boundary) => {

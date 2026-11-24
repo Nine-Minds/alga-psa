@@ -1222,7 +1222,10 @@ export async function processInboundEmailInApp(
     return withDiagnostics({ outcome: 'skipped', reason: 'notification_loop' }, diagnostics);
   }
 
-  if (conversationToken && !hasSubstantiveReplyContent(parsedEmail, emailData.body)) {
+  // Attachment submissions must reach the comment writer (response state and notifications)
+  // and artifact processing even when the parsed body is empty, as in the workflow path.
+  if (conversationToken && !emailData.attachments?.length
+    && !hasSubstantiveReplyContent(parsedEmail, emailData.body)) {
     console.info('processInboundEmailInApp: skipping token-only inbound email with no reply content', {
       tenantId,
       providerId,

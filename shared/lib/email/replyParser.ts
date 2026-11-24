@@ -711,9 +711,16 @@ function stripProviderHeaders(text: string, config: ReplyParserConfig, preserveU
         end += 1;
       }
       const precedingLine = kept.filter((value) => value.trim()).at(-1)?.trim() ?? '';
-      const quoteOpening = line.replace(/^>\s*/, '');
-      const hasAttribution = [precedingLine, quoteOpening].some((value) =>
-        /\bwrote:$/i.test(value) || config.providerReplyHeaders.some((regex) => regex.test(value)));
+      const attributionLines = [precedingLine, ...lines.slice(i, end).map((value) => value.trim().replace(/^>\s*/, ''))];
+      const hasAttribution = [0, 1].some((index) => {
+        const value = attributionLines[index];
+        // Header-like fields need the same coherent envelope evidence here as above.
+        // An isolated Subject: (before or inside the quote) may label authored evidence.
+        if (classifyQuotedHeaderField(value)) {
+          return isCoherentQuotedHeaderBlock(attributionLines, index);
+        }
+        return /\bwrote:$/i.test(value) || config.providerReplyHeaders.some((regex) => regex.test(value));
+      });
       // Above an explicit boundary, even a trailing quotation may be authored evidence.
       // Without an attribution, preserve it rather than silently deleting the customer's
       // error message. Elsewhere, keep the existing inline-quotation safeguard.

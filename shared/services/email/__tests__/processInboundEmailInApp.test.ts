@@ -726,6 +726,52 @@ describe('processInboundEmailInApp', () => {
     expect(createCommentFromEmailMock).toHaveBeenCalledTimes(1);
   });
 
+  it.each([false, true])('processes an attachment-only reply and reaches the comment writer (Alga token: %j)', async (withToken) => {
+    parseEmailReplyBodyMock.mockImplementation(async (body: any) => parseEmailReply(body));
+    findContactByEmailMock.mockResolvedValue({ contact_id: 'contact-1', client_id: 'client-1' });
+    reopenPolicyRows.ticket = { ticket_id: 'ticket-attachments', board_id: 'board-1', client_id: 'client-1', is_closed: false };
+    if (withToken) {
+      findTicketByReplyTokenMock.mockResolvedValue({ ticketId: 'ticket-attachments' });
+    } else {
+      findTicketByEmailThreadMock.mockResolvedValue({ ticketId: 'ticket-attachments', matchedBy: 'in_reply_to' });
+    }
+    const attachments = [{ id: 'attachment-1', name: 'diagnostics.txt', contentType: 'text/plain', size: 128 }];
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        from: { email: 'client@example.com', name: 'Client' },
+        inReplyTo: '<previous-message@example.test>',
+        body: {
+          text: withToken ? '[ALGA-REPLY-TOKEN attachment-token]\n--- Please reply above this line ---\nOld notification' : '',
+          html: '<div dir="ltr"><br></div>',
+        },
+        attachments,
+      }),
+    });
+
+    expect(result).toMatchObject({ outcome: 'replied', ticketId: 'ticket-attachments' });
+    expect(createCommentFromEmailMock).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        ticket_id: 'ticket-attachments',
+        author_type: 'contact',
+        contact_id: 'contact-1',
+        source: 'email',
+        inboundReplyEvent: expect.objectContaining({ from: 'client@example.com' }),
+      }),
+      'tenant-1',
+    );
+    expect(processInboundEmailArtifactsBestEffortMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ticketId: 'ticket-attachments',
+        scopeLabel: 'reply',
+        emailData: expect.objectContaining({ attachments }),
+      }),
+    );
+    expect(createTicketFromEmailMock).not.toHaveBeenCalled();
+  });
+
   it.each([
     ['&nbsp;-only', '<div>&nbsp;&nbsp;</div><p>&nbsp;</p>'],
     ['whitespace-only', '<div> \n </div><br>'],
@@ -1666,17 +1712,20 @@ describe('processInboundEmailInApp', () => {
       expect(content).toContain(answer);
     });
 
-    it('stores the trailing error quotation above an explicit reply boundary', async () => {
-      parseEmailReplyBodyMock.mockImplementation(async (body: any) => parseEmailReply(body));
-      const content = await storedCommentContent('email-trailing-error-quotation', {
-        text: readEmailFixture('authored-trailing-quotation.txt') + '\n[ALGA-REPLY-TOKEN OWNREPLY-TOKEN-11]',
-        html: '',
-      });
+    it.each(['The deployment failed with this error:', 'Subject: Deployment failure'])(
+      'stores the trailing error quotation introduced by %s above an explicit reply boundary', async (prefix) => {
+        parseEmailReplyBodyMock.mockImplementation(async (body: any) => parseEmailReply(body));
+        const content = await storedCommentContent('email-trailing-error-quotation', {
+          text: readEmailFixture('authored-trailing-quotation.txt').replace('The deployment failed with this error:', prefix)
+            + '\n[ALGA-REPLY-TOKEN OWNREPLY-TOKEN-11]',
+          html: '',
+        });
 
-      expect(content).toContain('ACCESS DENIED (code 5). The service account cannot access the deployment share.');
-      expect(content).toContain('Retry failed. No machines were updated.');
-      expect(content).not.toContain('Old notification');
-      expect(content).not.toContain('[ALGA-REPLY-TOKEN');
-    });
+        expect(content).toContain('ACCESS DENIED (code 5). The service account cannot access the deployment share.');
+        expect(content).toContain('Retry failed. No machines were updated.');
+        expect(content).not.toContain('Old notification');
+        expect(content).not.toContain('[ALGA-REPLY-TOKEN');
+      },
+    );
   });
 });

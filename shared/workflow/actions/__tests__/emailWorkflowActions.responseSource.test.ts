@@ -100,7 +100,7 @@ describe('createCommentFromEmail response source metadata', () => {
     ticketStateFirstMock.mockResolvedValue({ response_state: null });
   });
 
-  it('processes an attachment-only workflow reply through the writer and its side effects', async () => {
+  it.each([false, true])('processes an attachment-only workflow reply through the writer and its side effects (Alga token: %j)', async (withToken) => {
     const { registerEmailWorkflowActionsV2 } = await import('../../runtime/actions/registerEmailWorkflowActions');
     const { parseEmailReply } = await import('../../../lib/email/replyParser');
     registerEmailWorkflowActionsV2();
@@ -108,7 +108,10 @@ describe('createCommentFromEmail response source metadata', () => {
       .find((entry) => entry.id === 'create_comment_from_parsed_email');
     ticketStateFirstMock.mockResolvedValue({ response_state: 'awaiting_client' });
     createCommentMock.mockResolvedValue({ comment_id: 'comment-1', is_internal: false });
-    const body = { text: '', html: '<div dir="ltr"><br></div>' };
+    const body = {
+      text: withToken ? '[ALGA-REPLY-TOKEN attachment-token]\n--- Please reply above this line ---\nOld notification' : '',
+      html: '<div dir="ltr"><br></div>',
+    };
     const input = action.inputSchema.parse({
       ticketId: 'ticket-1',
       contact_id: 'contact-1',
