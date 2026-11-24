@@ -13,6 +13,7 @@ const files = [
   'ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts',
   'server/src/test/integration/invoiceTicketImmutable.integration.test.ts',
   'server/src/test/integration/remainingBucketUnits.integration.test.ts',
+  'server/src/test/integration/emailOAuthGrants.citus.integration.test.ts',
   'server/migrations/__tests__/unitOfMeasureBackfill.integration.test.ts',
   'server/migrations/__tests__/collapseRecurringServicePeriodObligationTypeMigration.integration.test.ts',
   'server/migrations/__tests__/coManagedMeetingCreationOperationsMigration.integration.test.ts',
@@ -27,7 +28,17 @@ try {
   if (process.env.TEST_DB_BACKEND !== 'citus') throw new Error('This gate requires TEST_DB_BACKEND=citus');
   const before = testRevision(root);
   const run = args => spawnSync(process.execPath, [path.join(root, 'node_modules/vitest/vitest.mjs'),
-    ...args], { cwd: server, stdio: 'inherit' });
+    ...args], {
+      cwd: server,
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        REQUIRE_CITUS: '1',
+        CITUS_TEST_HOST: process.env.CITUS_TEST_HOST || process.env.DB_HOST || 'localhost',
+        CITUS_TEST_PORT: process.env.CITUS_TEST_PORT || process.env.DB_PORT || '5432',
+        CITUS_TEST_ADMIN_PASSWORD: process.env.CITUS_TEST_ADMIN_PASSWORD || process.env.DB_PASSWORD_ADMIN,
+      },
+    });
   const selection = files.map(file => path.relative(server, path.join(root, file)));
   const fileCollection = run(['list', ...selection, '--filesOnly', `--json=${path.join(output, 'collected.json')}`]);
   if (fileCollection.status !== 0) throw new Error('Citus runtime file collection failed');

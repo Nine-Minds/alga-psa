@@ -185,6 +185,10 @@ jobs:
         env:
           CI: 'true'
           TEST_DB_BACKEND: citus
+          REQUIRE_CITUS: '1'
+          CITUS_TEST_HOST: localhost
+          CITUS_TEST_PORT: '5432'
+          CITUS_TEST_ADMIN_PASSWORD: citus_test
           TEST_DB_NAME: citus_runtime
           DB_NAME_SERVER: citus_runtime
           TEST_MIGRATIONS_DIR: ${{ github.workspace }}/server/combined-migrations

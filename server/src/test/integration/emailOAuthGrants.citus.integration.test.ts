@@ -14,7 +14,7 @@ const databaseNames = [
 const appRole = `oauth_app_${randomUUID().replaceAll('-', '').slice(0, 16)}`;
 const appPassword = randomUUID();
 const host = process.env.CITUS_TEST_HOST || '127.0.0.1';
-const port = Number(process.env.CITUS_TEST_PORT || 5433);
+const port = Number(process.env.CITUS_TEST_PORT || 5432);
 let admin: Knex;
 let freshDb: Knex;
 let partialDb: Knex;
@@ -62,6 +62,7 @@ async function createCitusDatabase(databaseName: string): Promise<Knex> {
     await db.raw('CREATE EXTENSION citus');
     const version = await db.raw('SELECT citus_version() AS version');
     expect(version.rows[0].version).toContain('Citus');
+    await db.raw('SET citus.shard_count = 4');
     await db.raw('SELECT citus_set_coordinator_host(?, 5432)', ['localhost']);
     await db.raw("SELECT citus_set_node_property('localhost', 5432, 'shouldhaveshards', true)");
     await db.raw(`CREATE ROLE ?? LOGIN PASSWORD '${appPassword}'`, [appRole]).catch(async (error: { code?: string }) => {
@@ -70,11 +71,48 @@ async function createCitusDatabase(databaseName: string): Promise<Knex> {
     await db.raw(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${appRole}`);
     await db.raw('CREATE TABLE tenants (tenant uuid PRIMARY KEY)');
     await db.raw("SELECT create_distributed_table('tenants', 'tenant')");
+    await installForeignKeyDistributionGuard(db);
     return db;
   } catch (error) {
     await db.destroy();
     throw new Error(`REQUIRE_CITUS=1 but database ${databaseName} could not be prepared as Citus: ${String(error)}`);
   }
+}
+
+async function installForeignKeyDistributionGuard(db: Knex): Promise<void> {
+  // The Citus 12.1 single-node CI service accepts coordinator-local FK DDL,
+  // even though DDL propagation in distributed deployments rejects that
+  // intermediate state. Enforce the distributed-DDL invariant at the database
+  // boundary so a reversed migration order fails during FK creation on this
+  // otherwise permissive coordinator.
+  await db.raw(`
+    CREATE FUNCTION reject_local_email_oauth_grants_fk() RETURNS event_trigger
+    LANGUAGE plpgsql AS $$
+    DECLARE
+      grants_distributed boolean;
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM pg_constraint
+         WHERE conrelid = 'email_oauth_grants'::regclass
+           AND conname = 'email_oauth_grants_tenant_foreign'
+      ) THEN
+        SELECT EXISTS (
+          SELECT 1 FROM pg_dist_partition
+           WHERE logicalrelid = 'email_oauth_grants'::regclass
+        ) INTO grants_distributed;
+        IF NOT grants_distributed THEN
+          RAISE EXCEPTION 'Citus requires email_oauth_grants distribution before its tenant foreign key';
+        END IF;
+      END IF;
+    END;
+    $$
+  `);
+  await db.raw(`
+    CREATE EVENT TRIGGER email_oauth_grants_fk_requires_distribution
+    ON ddl_command_end
+    WHEN TAG IN ('ALTER TABLE')
+    EXECUTE FUNCTION reject_local_email_oauth_grants_fk()
+  `);
 }
 
 async function prepareInterruptedCreationState(db: Knex): Promise<void> {

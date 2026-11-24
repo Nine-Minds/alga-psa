@@ -12,6 +12,7 @@ const runtimeFiles = [
   'ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts',
   'server/src/test/integration/invoiceTicketImmutable.integration.test.ts',
   'server/src/test/integration/remainingBucketUnits.integration.test.ts',
+  'server/src/test/integration/emailOAuthGrants.citus.integration.test.ts',
   'server/migrations/__tests__/unitOfMeasureBackfill.integration.test.ts',
   'server/migrations/__tests__/collapseRecurringServicePeriodObligationTypeMigration.integration.test.ts',
   'server/migrations/__tests__/coManagedMeetingCreationOperationsMigration.integration.test.ts',

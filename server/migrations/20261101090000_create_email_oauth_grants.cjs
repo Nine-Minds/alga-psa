@@ -22,9 +22,9 @@ exports.up = async function up(knex) {
     });
   }
 
-  // These DDL steps are deliberately retryable because create_distributed_table
-  // cannot run in a transaction and a failed migration can leave the new table
-  // behind before distribution completes.
+  // These DDL steps are deliberately retryable because this migration is
+  // configured with transaction:false. If a later step fails, earlier DDL can
+  // remain in place before distribution completes.
   await knex.raw(
     `CREATE INDEX IF NOT EXISTS ${PROVIDER_EXPIRY_INDEX} ON ${TABLE} (tenant, provider_id, expires_at)`
   );

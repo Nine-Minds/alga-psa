@@ -37,6 +37,7 @@ const SERVER_UNIT_INCLUDE = [
 // an unscoped run. Opt in with RUN_VISUAL=1 (see src/test/visual/README.md).
 const SERVER_UNIT_EXCLUDE = [
   '**/node_modules/**',
+  ...(process.env.TEST_DB_BACKEND === 'citus' ? [] : ['**/*.citus.integration.test.?(c|m)[jt]s?(x)']),
   ...(process.env.RUN_VISUAL ? [] : ['**/src/test/visual/**']),
   // *.db.test.* suites (shared/workflow businessOperations.*) recreate a
   // live Postgres database and mutate DB_* env for the whole fork — they
