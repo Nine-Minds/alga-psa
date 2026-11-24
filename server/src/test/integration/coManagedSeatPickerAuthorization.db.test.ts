@@ -270,8 +270,9 @@ describeDb('seat pickers and actions return only what the operation allows', { s
 
     const picker = await getAssociationContacts() as any[];
     expect(picker.map((row) => row.contact_name_id)).toEqual([s.cX.contactId]);
-    // Only what an option renders: never the phone, the role or any other column of the contact row.
-    expect(Object.keys(picker[0]).sort()).toEqual(['avatarUrl', 'client_id', 'client_name', 'contact_name_id', 'email', 'full_name', 'is_inactive']);
+    // Only what an option renders (name, email, client, the remote-work hint): never the phone, the role or any
+    // other column of the contact row.
+    expect(Object.keys(picker[0]).sort()).toEqual(['avatarUrl', 'client_id', 'client_name', 'contact_name_id', 'email', 'full_name', 'is_inactive', 'work_arrangement']);
 
     // Selecting the target at upload time is held to the same scope.
     const target = (type: string, id: string, action: 'read' | 'create' = 'read') => db.transaction((trx) => runWithTenant(s.tenant, async () =>

@@ -168,12 +168,21 @@ export const getDocumentAssociationContactsForPicker = withAuth(async (
     db.tenantJoin(contactsQuery, 'clients as cl', 'c.client_id', 'cl.client_id', { type: 'left' });
 
     // The same target-record read scope as the search picker, applied in the query before anything is read or
-    // hydrated, and only the columns an option renders (ContactPicker shows the name, email and client).
+    // hydrated, and only the columns an option renders (ContactPicker shows the name, email, client and the
+    // remote-work hint derived from work_arrangement).
     if (!await applyAssociationTargetSearchScope(contactsQuery, trx, tenant, user, 'contact', 'c')) {
       return [];
     }
     const contacts = await contactsQuery
-      .select('c.contact_name_id', 'c.full_name', 'c.email', 'c.client_id', 'c.is_inactive', 'cl.client_name')
+      .select(
+        'c.contact_name_id',
+        'c.full_name',
+        'c.email',
+        'c.client_id',
+        'c.is_inactive',
+        'c.work_arrangement',
+        'cl.client_name',
+      )
       .andWhere('c.is_inactive', false)
       .orderBy('c.full_name', 'asc');
 
