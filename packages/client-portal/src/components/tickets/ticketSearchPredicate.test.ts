@@ -102,8 +102,48 @@ describe('buildTicketSearchPredicate', () => {
 
     expect(run('Ticket #ALGA-2026-0002826')).toEqual(['ALGA-2026-0002826']);
     expect(run('#ALGA-2026-0002826')).toEqual(['ALGA-2026-0002826']);
+    expect(run('Ticket ALGA-2026-0002826')).toEqual(['TICKET-ALGA-2026-0002826']);
     expect(run('Ticket #ALGA-2026')).toEqual(['ALGA-2026-0002826', 'TICKET-ALGA-2026-0002826']);
     expect(run('2826')).toEqual(['ALGA-2026-0002826', 'TICKET-ALGA-2026-0002826']);
+    expect(run('Ticket 2826')).toEqual(['ALGA-2026-0002826', 'TICKET-ALGA-2026-0002826']);
+    expect(run('Ticket #2826')).toEqual(['ALGA-2026-0002826', 'TICKET-ALGA-2026-0002826']);
+  });
+
+  it.each([
+    ['  ticket #alga-2026-0002826  ', ['ALGA-2026-0002826']],
+    ['ALGA 2026 0002826', ['ALGA-2026-0002826']],
+    ['alga20260002826', ['ALGA-2026-0002826']],
+  ])('matches the normalized number form for %j', (query, expectedNumbers) => {
+    const rows = [algaNumber, ticketAlgaNumber];
+    const results = rows.filter(buildTicketSearchPredicate(query, rows)).map(({ ticket_number }) => ticket_number);
+    expect(results).toEqual(expectedNumbers);
+  });
+
+  it('does not return a TICKET-prefixed identifier for the complete email reference', () => {
+    const rows = [ticketAlgaNumber];
+    const results = rows
+      .filter(buildTicketSearchPredicate('Ticket #ALGA-2026-0002826', rows))
+      .map(({ ticket_number }) => ticket_number);
+    expect(results).toEqual([]);
+  });
+
+  it('keeps the TICKET prefix in a hash-introduced identifier', () => {
+    expect([algaNumber]
+      .filter(buildTicketSearchPredicate('#TICKET ALGA 2026 0002826', [algaNumber]))
+      .map(({ ticket_number }) => ticket_number)).toEqual([]);
+    const rows = [algaNumber, ticketAlgaNumber];
+    const results = rows
+      .filter(buildTicketSearchPredicate('#TICKET ALGA 2026 0002826', rows))
+      .map(({ ticket_number }) => ticket_number);
+    expect(results).toEqual(['TICKET-ALGA-2026-0002826']);
+  });
+
+  it('finds a number from the short query Ticket 2826', () => {
+    const rows = [algaNumber];
+    const results = rows
+      .filter(buildTicketSearchPredicate('Ticket 2826', rows))
+      .map(({ ticket_number }) => ticket_number);
+    expect(results).toEqual(['ALGA-2026-0002826']);
   });
 
   it('prefers an exact literal TICKET number over the label interpretation when both rows are loaded', () => {

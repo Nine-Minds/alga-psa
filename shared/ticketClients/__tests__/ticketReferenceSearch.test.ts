@@ -59,6 +59,41 @@ describe('ticketReferenceSearch', () => {
     ]);
   });
 
+  it('does not let a complete email reference fall through to a different identifier substring', () => {
+    for (const queryText of [
+      'Ticket #ALGA-2026-0002826',
+      'Ticket #ALGA 2026 0002826',
+      'Ticket #ALGA20260002826',
+    ]) {
+      const query = parseTicketSearchQuery(queryText);
+      expect([...resolveTicketNumberMatches(['TICKET-ALGA-2026-0002826'], query)]).toEqual([]);
+      expect(ticketNumberMatchesQuery('TICKET-ALGA-2026-0002826', query)).toBe(false);
+    }
+  });
+
+  it('treats a leading hash as introducing an identifier that can begin with TICKET', () => {
+    const query = parseTicketSearchQuery('#TICKET ALGA 2026 0002826');
+    expect([...resolveTicketNumberMatches(['ALGA-2026-0002826'], query)]).toEqual([]);
+    expect([...resolveTicketNumberMatches(['ALGA-2026-0002826', 'TICKET-ALGA-2026-0002826'], query)]).toEqual([
+      'ticketalga20260002826',
+    ]);
+    expect(ticketNumberMatchesQuery('ALGA-2026-0002826', query)).toBe(false);
+    expect(ticketNumberMatchesQuery('TICKET-ALGA-2026-0002826', query)).toBe(true);
+  });
+
+  it('strips a Ticket label before a short numeric reference', () => {
+    expect(matches('Ticket 2826')).toBe(true);
+    expect(matches('Ticket #2826')).toBe(true);
+  });
+
+  it('supports whitespace, case, and separator-insensitive forms with identical helper matching', () => {
+    for (const queryText of ['  ticket #alga-2026-0002826  ', 'alga 2026 0002826', 'ALGA20260002826']) {
+      const query = parseTicketSearchQuery(queryText);
+      expect(ticketNumberMatchesQuery(NUMBER, query)).toBe(true);
+      expect([...resolveTicketNumberMatches([NUMBER], query)]).toEqual(['alga20260002826']);
+    }
+  });
+
   it('prefers an exact literal TICKET identifier before the email-label interpretation', () => {
     const numbers = ['ALGA-2026-0002826', 'TICKET-ALGA-2026-0002826'];
     const query = parseTicketSearchQuery('TICKET ALGA 2026 0002826');

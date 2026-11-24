@@ -1,9 +1,10 @@
 import { cleanSearchIdentifierQuery } from './searchIdentifier';
 
-// "Ticket #ALGA…" and "Ticket ALGA…" use an email label. A digit or hyphen
-// after optional whitespace belongs to the TICKET identifier itself.
-const LEADING_TICKET_LABEL = /^ticket(?=$|#|\s+[^\s\d-])/i;
+// "Ticket #ALGA…" is an email label. Plain "Ticket" is also a label before
+// words or a single numeric suffix; multiple numeric groups can be a literal TICKET number.
+const LEADING_TICKET_LABEL = /^ticket(?=$|#|\s+(?:[^\s\d-]|\d+\s*$))/i;
 const SEPARATORS = /[\s-]+/g;
+const COMPLETE_TICKET_NUMBER = /^(?:[a-z]+[-\s]*\d+(?:[-\s]+\d+)+|[a-z]+\d{10,})$/i;
 
 export interface TicketSearchQuery {
   /** The query trimmed of surrounding whitespace; use for title/status/priority matching. */
@@ -17,6 +18,8 @@ export interface TicketSearchQuery {
   literalReference: string;
   /** True when the trimmed input starts with the email label marker, including a leading #. */
   isExplicitLabel: boolean;
+  /** True for a complete number copied from the email's `Ticket #...` reference. */
+  isCompleteEmailReference: boolean;
 }
 
 export function compactTicketReference(value: string): string {
@@ -26,11 +29,19 @@ export function compactTicketReference(value: string): string {
 export function parseTicketSearchQuery(rawQuery: string): TicketSearchQuery {
   const text = rawQuery.trim();
   const cleaned = cleanSearchIdentifierQuery(text);
-  const reference = compactTicketReference(cleanSearchIdentifierQuery(cleaned.replace(LEADING_TICKET_LABEL, '')));
-  const literalText = /^ticket\s*#/i.test(text) ? text.replace(/^ticket\s*/i, '') : cleaned;
+  const emailReferenceText = text.replace(/^ticket\s*#\s*/i, '');
+  const hashIntroducedText = text.replace(/^#\s*/, '');
+  const labelText = /^ticket\s*#/i.test(text)
+    ? emailReferenceText
+    : text.startsWith('#')
+      ? hashIntroducedText
+      : cleaned.replace(LEADING_TICKET_LABEL, '');
+  const reference = compactTicketReference(cleanSearchIdentifierQuery(labelText));
+  const literalText = /^ticket\s*#/i.test(text) ? emailReferenceText : cleaned;
   const literalReference = compactTicketReference(cleanSearchIdentifierQuery(literalText));
   const isExplicitLabel = /^(?:ticket\s*)?#/i.test(text);
-  return { text, reference, literalReference, isExplicitLabel };
+  const isCompleteEmailReference = /^ticket\s*#/i.test(text) && COMPLETE_TICKET_NUMBER.test(labelText.trim());
+  return { text, reference, literalReference, isExplicitLabel, isCompleteEmailReference };
 }
 
 /** Separator-insensitive substring match for a ticket number and either parsed interpretation. */
@@ -38,9 +49,8 @@ export function ticketNumberMatchesQuery(
   ticketNumber: string | null | undefined,
   query: TicketSearchQuery
 ): boolean {
-  if (!ticketNumber || (!query.reference && !query.literalReference)) return false;
-  const number = compactTicketReference(ticketNumber);
-  return [query.literalReference, query.reference].some((reference) => reference && number.includes(reference));
+  if (!ticketNumber) return false;
+  return resolveTicketNumberMatches([ticketNumber], query).has(compactTicketReference(ticketNumber));
 }
 
 /**
@@ -62,6 +72,7 @@ export function resolveTicketNumberMatches(
 
   const exactReference = query.reference ? numbers.filter((number) => number === query.reference) : [];
   if (exactReference.length > 0) return new Set(exactReference);
+  if (query.isCompleteEmailReference) return new Set();
 
   const references = query.isExplicitLabel
     ? [query.reference, query.literalReference]
