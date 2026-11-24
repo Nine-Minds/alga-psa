@@ -148,8 +148,42 @@ describe('contact client admin flag repair (role writers)', () => {
     const { knex, calls } = fakeKnex({ tenants: ['tenant-1'], rowCounts: [] });
     knex.schema = { hasTable: async (table: string) => table !== 'user_roles' };
 
-    await migration.up(knex);
+    await migration.up(knex, () => undefined);
 
     expect(calls).toEqual([]);
+  });
+
+  /**
+   * The repair rewrites rows that decide portal scope and cannot be undone, so
+   * a deploy has to be able to read what it changed: how many contacts each
+   * tenant had cleared and how many set.
+   */
+  it('reports per tenant how many contacts it cleared and how many it set', async () => {
+    const { knex } = fakeKnex({
+      tenants: ['tenant-1', 'tenant-2'],
+      // tenant-1: 3 cleared, 1 set. tenant-2: nothing either way.
+      rowCounts: [3, 1, 0, 0],
+    });
+    const lines: string[] = [];
+
+    await migration.up(knex, (line: string) => lines.push(line));
+
+    expect(lines).toEqual([
+      '[repair_contact_client_admin_flag_role_writers] tenant tenant-1: cleared 3 contact(s) whose portal user holds no client Admin role, set 1 whose portal user does',
+      '[repair_contact_client_admin_flag_role_writers] done: 2 tenant(s) scanned, 3 contact(s) cleared, 1 set',
+    ]);
+  });
+
+  it('counts every batch of a pass, not just the last one', async () => {
+    const { knex } = fakeKnex({
+      tenants: ['tenant-1'],
+      rowCounts: [migration.BATCH_SIZE, 7, 2],
+    });
+    const lines: string[] = [];
+
+    await migration.up(knex, (line: string) => lines.push(line));
+
+    expect(lines[0]).toContain(`cleared ${migration.BATCH_SIZE + 7} contact(s)`);
+    expect(lines[0]).toContain('set 2 whose portal user does');
   });
 });

@@ -103,30 +103,49 @@ const SET_MISSING_FLAG_SQL = `
 exports.CLEAR_STALE_FLAG_SQL = CLEAR_STALE_FLAG_SQL;
 exports.SET_MISSING_FLAG_SQL = SET_MISSING_FLAG_SQL;
 
+/** Runs one pass to completion and returns how many contacts it moved. */
 async function convergeTenant(knex, tenant, sql) {
+  let total = 0;
   for (;;) {
     const result = await knex.transaction(async (trx) => {
       await trx.raw("SET LOCAL lock_timeout = '2s'");
       return trx.raw(sql, [tenant, tenant, BATCH_SIZE, tenant]);
     });
     const updated = typeof result.rowCount === 'number' ? result.rowCount : 0;
+    total += updated;
     if (updated < BATCH_SIZE) break;
   }
+  return total;
 }
 
 exports.convergeTenant = convergeTenant;
 
-exports.up = async function up(knex) {
+exports.up = async function up(knex, log = console.log) {
   if (!(await knex.schema.hasTable('contacts')) || !(await knex.schema.hasTable('user_roles'))) {
     return;
   }
 
   const tenants = await knex('users').where({ user_type: 'client' }).distinct('tenant').pluck('tenant');
 
+  // The repair cannot be undone and the rows it rewrites decide portal scope,
+  // so a deploy has to be able to read what it changed: one line per tenant
+  // that moved anything, plus a total.
+  let clearedTotal = 0;
+  let setTotal = 0;
   for (const tenant of tenants) {
-    await convergeTenant(knex, tenant, CLEAR_STALE_FLAG_SQL);
-    await convergeTenant(knex, tenant, SET_MISSING_FLAG_SQL);
+    const cleared = await convergeTenant(knex, tenant, CLEAR_STALE_FLAG_SQL);
+    const set = await convergeTenant(knex, tenant, SET_MISSING_FLAG_SQL);
+    clearedTotal += cleared;
+    setTotal += set;
+    if (cleared > 0 || set > 0) {
+      log(
+        `[repair_contact_client_admin_flag_role_writers] tenant ${tenant}: cleared ${cleared} contact(s) whose portal user holds no client Admin role, set ${set} whose portal user does`
+      );
+    }
   }
+  log(
+    `[repair_contact_client_admin_flag_role_writers] done: ${tenants.length} tenant(s) scanned, ${clearedTotal} contact(s) cleared, ${setTotal} set`
+  );
 };
 
 exports.down = async function down() {
