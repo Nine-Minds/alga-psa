@@ -127,7 +127,7 @@ import { createTicketReadScopeFromRules, createTicketReadScope, type TicketReadS
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
 import { markAssignableAgents } from '../lib/assignableAgents';
-import { projectTicketWatchListForCaller } from '../lib/watchListProjection';
+import { projectTicketWatchList, watchListOf, WATCHER_KINDS } from '../lib/watchListProjection';
 import { resolveOperationBoardIds } from '@alga-psa/authorization/operationScope';
 import { authorizeTicketRecordAccess, type TicketRecordRow } from '../lib/ticketRecordAuthorization';
 import { isRecordFieldHidden, projectReadableRecord } from '@alga-psa/authorization/recordProjection';
@@ -626,7 +626,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     // An existing ticket's destination boards (and the statuses that belong to them) are the boards an UPDATE may
     // leave it on, the placement policy `authorizeTicketRecordAccess` enforces on the write. The board the ticket
     // is on stays listed so the picker can show its current value.
-    const destinationBoardIds = await resolveOperationBoardIds(trx, { tenant, user: user as IUserWithRoles, action: 'update' });
+    const destinationBoardIds = await resolveOperationBoardIds(trx, {
+      tenant, user: user as IUserWithRoles, action: 'update', requestCache: authorizationContext.requestCache,
+    });
     const onDestinationBoards = <Q extends Knex.QueryBuilder>(query: Q): Q => {
       if (destinationBoardIds === null) return query;
       return query.where((scope) => {
@@ -1129,7 +1131,10 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 
     // The stored watch list keeps every recipient's email for delivery (board defaults included); the screen gets
     // it as the caller may read it, the same projection the create response uses.
-    const normalizedTicketData = convertDates(await projectTicketWatchListForCaller(trx, tenant, user, ticketData));
+    const watchPeople = watchListOf(ticketData)
+      ? await projectedPeopleForSubject(trx, authorizationContext.authorizationSubject, { kinds: WATCHER_KINDS })
+      : null;
+    const normalizedTicketData = convertDates(projectTicketWatchList(ticketData, watchPeople));
 
     // Bundle context (master/child + settings + children list)
     const masterTicketId = normalizedTicketData.master_ticket_id ?? null;
