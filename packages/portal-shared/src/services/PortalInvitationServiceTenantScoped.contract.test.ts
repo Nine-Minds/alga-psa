@@ -54,6 +54,43 @@ describe('portal invitation service tenant-scoped query contract', () => {
     expect(transactionalCreate).not.toContain("interval '24 hours'");
   });
 
+  it('only renews a link that is still going to one of the contact\'s own addresses', () => {
+    // Renewing a row whose stored address the contact lost would re-arm the
+    // token in a stranger's mailbox for the tenant's whole validity, every time
+    // the MSP resends. Such a row is revoked and replaced with a new token, and
+    // "the contact's own address" is the product's rule: primary ∪ additional.
+    const transactionalCreate = sectionBetween(
+      'static async createInvitationWithTransaction',
+      'static async verifyToken'
+    );
+
+    expect(transactionalCreate).toContain(
+      'if (invitationAddressBelongsToContact(existingInvitation.email, contactAddresses)) {'
+    );
+    expect(transactionalCreate).toContain('this.resolveContactAddresses(trx, tenant, contactId, contact.email)');
+    expect(transactionalCreate).toContain("revoked_reason: 'email_changed'");
+    expect(transactionalCreate).toContain('used_at: trx.fn.now(),');
+
+    // The address set is read tenant-scoped, like everything else here.
+    const addressRead = sectionBetween(
+      'static async resolveContactAddresses',
+      'static async createInvitationWithTransaction'
+    );
+    expect(addressRead).toContain("tenantDb(db, tenant).table('contact_additional_email_addresses')");
+    expect(addressRead).not.toMatch(/\bdb\('contact_additional_email_addresses'\)/);
+  });
+
+  it('judges the address at use time by the same rule the MSP\'s screens use', () => {
+    const section = sectionBetween('static async verifyToken', 'static async markTokenAsUsed');
+
+    expect(section).toContain('invitationRefusedAtUseTime({');
+    expect(section).toContain('contactEmails: contactAddresses');
+    expect(section).toContain('this.resolveContactAddresses(');
+    // The old single-address predicate refused a link sitting in an address the
+    // MSP kept on the contact, which inbound email still matches to them.
+    expect(section).not.toContain('lower(btrim(c.email)) = lower(btrim(pi.email))');
+  });
+
   it('keeps expired invitations until the retention floor instead of deleting them on sight', () => {
     expect(source).toContain('const PORTAL_INVITATION_RETENTION_DAYS = 90;');
     const deletes = source.match(
@@ -87,6 +124,9 @@ describe('portal invitation service tenant-scoped query contract', () => {
     expect(section).toContain("scopedDb.tenantJoin(query, 'contacts as c', 'pi.contact_id', 'c.contact_name_id'");
     expect(section).toContain("'c.email as contact_email'");
     expect(section).toContain('coalesce(c.is_inactive, false) as contact_inactive');
+    // Every address the contact can receive at, not just the primary one: the
+    // history has to reach verifyToken's verdict about the very same link.
+    expect(section).toContain('contact_emails: contactAddresses');
     expect(section).not.toMatch(/knex\('contacts'\)/);
   });
 

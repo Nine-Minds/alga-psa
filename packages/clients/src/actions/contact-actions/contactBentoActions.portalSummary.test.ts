@@ -18,7 +18,9 @@ const state: {
   portalUser: Row;
   invitation: Row;
   contact: Row;
-} = { portalUser: undefined, invitation: undefined, contact: undefined };
+  /** Addresses the MSP kept on the contact besides its primary one. */
+  additionalEmails: string[];
+} = { portalUser: undefined, invitation: undefined, contact: undefined, additionalEmails: [] };
 
 function builderFor(table: string) {
   const row = table === 'users'
@@ -31,6 +33,13 @@ function builderFor(table: string) {
     orderBy: () => builder,
     select: () => builder,
     first: async () => row,
+    // The additional-address read awaits the query itself, like a knex select.
+    then: (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) =>
+      Promise.resolve(
+        table === 'contact_additional_email_addresses'
+          ? state.additionalEmails.map((email_address) => ({ email_address }))
+          : [],
+      ).then(resolve, reject),
   };
   return builder;
 }
@@ -65,6 +74,7 @@ beforeEach(() => {
   state.portalUser = undefined;
   state.contact = { email: CONTACT_EMAIL, is_inactive: false };
   state.invitation = undefined;
+  state.additionalEmails = [];
 });
 
 describe('getContactPortalSummary', () => {
@@ -99,6 +109,15 @@ describe('getContactPortalSummary', () => {
     state.invitation = { created_at: PAST, expires_at: FUTURE, email: CONTACT_EMAIL, metadata: {} };
     state.contact = { email: CONTACT_EMAIL, is_inactive: true };
     expect((await getContactPortalSummary('contact-1')).invitationState).toBe('expired');
+  });
+
+  it('keeps a link in an address the contact still has as pending', async () => {
+    // The primary address changed but the old one is still on the contact, so
+    // the link in that mailbox opens — the tile must not send the MSP chasing.
+    state.invitation = { created_at: PAST, expires_at: FUTURE, email: 'old@acme.test', metadata: {} };
+    state.additionalEmails = ['old@acme.test'];
+
+    expect((await getContactPortalSummary('contact-1')).invitationState).toBe('pending');
   });
 
   it('treats a used or revoked invitation as nothing outstanding', async () => {

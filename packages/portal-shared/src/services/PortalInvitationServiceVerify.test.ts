@@ -22,9 +22,15 @@ const invitation = {
 
 const state: {
   contact: { is_inactive: boolean | null; email: string | null; full_name: string };
+  /** The address the stored invitation was mailed to. */
+  invitationEmail: string | null;
+  /** The addresses the MSP kept on the contact besides its primary one. */
+  additionalEmails: string[];
   deletes: number;
 } = {
   contact: { is_inactive: false, email: 'casey@acme.test', full_name: 'Casey Client' },
+  invitationEmail: invitation.email,
+  additionalEmails: [],
   deletes: 0,
 };
 
@@ -33,40 +39,28 @@ const trxStub = {
   fn: { now: () => ({ sql: 'now()' }) },
 };
 
-/** The joined invitation + contact row, filtered the way Postgres would. */
+/**
+ * The joined invitation + contact row. The address and the contact's standing
+ * are judged in code, by the one rule the MSP's screens are judged by, so the
+ * row comes back whole and the refusal happens after it.
+ */
 function invitationQueryBuilder() {
-  let requireActiveContact = false;
-  let requireMatchingEmail = false;
-
   const builder: any = {
     where(_column: unknown, _operator?: unknown, _value?: unknown) {
-      return builder;
-    },
-    whereRaw(sql: string) {
-      if (sql.includes('c.is_inactive')) requireActiveContact = true;
-      if (sql.includes('lower(btrim(c.email)) = lower(btrim(pi.email))')) requireMatchingEmail = true;
       return builder;
     },
     select() {
       return builder;
     },
     first() {
-      // coalesce(c.is_inactive, false) = false: a NULL row is an active contact.
-      if (requireActiveContact && state.contact.is_inactive === true) return Promise.resolve(undefined);
-      // lower(btrim(...)) on both sides: case and surrounding space are the
-      // same mailbox, exactly as invitationRefusedAtUseTime judges it.
-      if (
-        requireMatchingEmail
-        && String(state.contact.email ?? '').trim().toLowerCase()
-          !== invitation.email.trim().toLowerCase()
-      ) {
-        return Promise.resolve(undefined);
-      }
       return Promise.resolve({
         ...invitation,
+        email: state.invitationEmail,
         tenant: 'tenant-1',
         full_name: state.contact.full_name,
         contact_email: state.contact.email,
+        // coalesce(c.is_inactive, false): a NULL row is an active contact.
+        contact_inactive: state.contact.is_inactive ?? false,
         client_name: 'Acme',
       });
     },
@@ -77,6 +71,15 @@ function invitationQueryBuilder() {
 const scopedDb = {
   table: (table: string) => {
     if (table === 'portal_invitations as pi') return invitationQueryBuilder();
+    if (table === 'contact_additional_email_addresses') {
+      return {
+        where: () => ({
+          select: () => Promise.resolve(
+            state.additionalEmails.map((email_address) => ({ email_address }))
+          ),
+        }),
+      } as any;
+    }
     if (table === 'portal_invitations') {
       return {
         where: () => ({
@@ -121,6 +124,8 @@ const { PortalInvitationService } = await import('./PortalInvitationService');
 
 beforeEach(() => {
   state.contact = { is_inactive: false, email: 'casey@acme.test', full_name: 'Casey Client' };
+  state.invitationEmail = invitation.email;
+  state.additionalEmails = [];
   state.deletes = 0;
 });
 
@@ -181,5 +186,39 @@ describe('PortalInvitationService.verifyToken', () => {
     state.contact.email = ' casey@acme.test ';
 
     await expect(PortalInvitationService.verifyToken('token-1')).resolves.toMatchObject({ valid: true });
+  });
+
+  it('accepts a link mailed to one of the contact\'s additional addresses', async () => {
+    // The MSP changed the primary address and kept the old one on the contact.
+    // That mailbox is still the contact's — it is the address inbound email and
+    // ContactModel.getContactByEmail match them by — so the link in it opens.
+    state.contact.email = 'casey@newplace.test';
+    state.additionalEmails = ['casey@acme.test'];
+
+    await expect(PortalInvitationService.verifyToken('token-1')).resolves.toMatchObject({
+      valid: true,
+      contact: { contact_name_id: 'contact-1' },
+    });
+  });
+
+  it('refuses a link whose address was taken off the contact altogether', async () => {
+    state.contact.email = 'casey@newplace.test';
+    state.additionalEmails = ['casey.client@newplace.test'];
+
+    await expect(PortalInvitationService.verifyToken('token-1')).resolves.toMatchObject({
+      valid: false,
+      errorCode: 'INVALID_OR_EXPIRED_TOKEN',
+    });
+  });
+
+  it('refuses a stored invitation with no address at all', async () => {
+    // A legacy row with a blank address matches nothing, exactly as the
+    // contact list's state SQL and the Portal tab's history judge it.
+    state.invitationEmail = '   ';
+
+    await expect(PortalInvitationService.verifyToken('token-1')).resolves.toMatchObject({
+      valid: false,
+      errorCode: 'INVALID_OR_EXPIRED_TOKEN',
+    });
   });
 });

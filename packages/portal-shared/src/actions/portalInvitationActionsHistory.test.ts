@@ -24,6 +24,8 @@ type HistoryRow = {
   used_at?: Date;
   metadata?: Record<string, unknown>;
   contact_email: string | null;
+  /** Every address the contact can receive at, its primary one first. */
+  contact_emails: Array<string | null>;
   contact_inactive: boolean | null;
 };
 
@@ -38,6 +40,7 @@ function row(overrides: Partial<HistoryRow> = {}): HistoryRow {
     expires_at: FUTURE,
     metadata: {},
     contact_email: CONTACT_EMAIL,
+    contact_emails: [CONTACT_EMAIL],
     contact_inactive: false,
     ...overrides,
   };
@@ -124,15 +127,28 @@ describe('getPortalInvitations', () => {
   });
 
   it('calls an invitation sent to an address the contact no longer has expired', async () => {
-    // The MSP corrected the contact's email after inviting them: verifyToken
-    // refuses the link in the old mailbox, so the row must not promise an
-    // expiry that is still in the future. A resend re-points the address.
+    // The MSP corrected the contact's email after inviting them and dropped the
+    // old address: verifyToken refuses the link in that mailbox, so the row must
+    // not promise an expiry that is still in the future. A resend replaces it.
     getInvitationHistoryMock.mockResolvedValue([row({ email: 'old@acme.test' })]);
 
     const [item] = await getPortalInvitations(CONTACT_ID);
 
     expect(item.status).toBe('expired');
     expect(item.unusable_reason).toBe('email_changed');
+  });
+
+  it('leaves an invitation sent to an address the contact kept pending', async () => {
+    // The old address is still on the contact, so the link in it still reaches
+    // them and still opens — the same verdict verifyToken reaches.
+    getInvitationHistoryMock.mockResolvedValue([
+      row({ email: 'old@acme.test', contact_emails: [CONTACT_EMAIL, 'old@acme.test'] }),
+    ]);
+
+    const [item] = await getPortalInvitations(CONTACT_ID);
+
+    expect(item.status).toBe('pending');
+    expect(item.unusable_reason).toBeUndefined();
   });
 
   it('matches the stored address case-insensitively, like the verify query', async () => {

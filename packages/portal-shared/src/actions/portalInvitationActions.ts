@@ -992,18 +992,30 @@ async function sendPortalInvitationForContact(
 }
 
 /**
- * Every invitation the contact ever had, for the state rule in
- * portalInvitationStateQuery: the classification needs the LATEST row, so the
- * join cannot pre-filter to the unused ones — a newer revoked or accepted
- * invitation is exactly what makes an older lapsed row irrelevant.
+ * Everything the state rule in portalInvitationStateQuery reads about a
+ * contact: every invitation it ever had (alias `pi`) and every additional
+ * address it can receive at (alias `cea`).
+ *
+ * The classification needs the LATEST invitation, so the join cannot pre-filter
+ * to the unused ones — a newer revoked or accepted invitation is exactly what
+ * makes an older lapsed row irrelevant. The addresses travel with it because a
+ * link mailed to an address the MSP later kept as an additional one still
+ * reaches the contact, and the state expression says so.
  */
-function joinContactInvitations(
+function joinContactInvitationState(
   scopedDb: ReturnType<typeof tenantDb>,
   query: Knex.QueryBuilder
 ): void {
   scopedDb.tenantJoin(query, 'portal_invitations as pi', 'pi.contact_id', 'c.contact_name_id', {
     type: 'left',
   });
+  scopedDb.tenantJoin(
+    query,
+    'contact_additional_email_addresses as cea',
+    'cea.contact_name_id',
+    'c.contact_name_id',
+    { type: 'left' }
+  );
 }
 
 /** Narrows a grouped contact query to the asked-for invitation states. */
@@ -1040,7 +1052,7 @@ async function resolveEligibleContactIdsForInvitation(
       },
     });
     if (invitationStates.length > 0) {
-      joinContactInvitations(scopedDb, query);
+      joinContactInvitationState(scopedDb, query);
     }
     query
       .whereNull('u.user_id')
@@ -1161,7 +1173,7 @@ export const getPortalInvitationStatesForClient = withAuth(async (
           join.andOn(trx.raw('u.user_type = ?', ['client']));
         },
       });
-      joinContactInvitations(scopedDb, query);
+      joinContactInvitationState(scopedDb, query);
       query
         .andWhere('c.client_id', normalizedClientId)
         .groupBy('c.contact_name_id', 'c.full_name', 'c.email', 'c.is_inactive')
@@ -1298,7 +1310,7 @@ export const sendBulkPortalInvitations = withAuth(async (
           })
           .select('c.contact_name_id');
         if (states.length > 0) {
-          joinContactInvitations(scopedDb, query);
+          joinContactInvitationState(scopedDb, query);
         }
         // A contact the caller's bundle hides does not exist for this batch,
         // exactly as it does not exist for their contact list.
@@ -1869,7 +1881,7 @@ export const getPortalInvitations = withAuth(async (
         // Same rule, one row at a time.
         unusableReason = invitationRefusedAtUseTime({
           contactInactive: invitation.contact_inactive,
-          contactEmail: invitation.contact_email,
+          contactEmails: invitation.contact_emails,
           invitationEmail: invitation.email,
         }) ?? undefined;
         if (unusableReason) {

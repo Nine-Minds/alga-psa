@@ -27,6 +27,8 @@ type ContactRow = {
   full_name: string;
   email: string | null;
   is_inactive?: boolean;
+  /** Addresses the MSP kept on the contact besides its primary one. */
+  additionalEmails?: string[];
   /** Every invitation the contact ever had, newest or oldest first — no matter. */
   invitations?: InvitationRow[];
 };
@@ -49,16 +51,21 @@ const latestInvitationOf = (invitations: InvitationRow[] | undefined): Invitatio
  * What Postgres would answer for the state expression: the LATEST invitation
  * row decides, and a latest row that was used or revoked leaves nothing
  * outstanding however many lapsed rows sit under it. An invitation mailed to an
- * address the contact no longer has is expired, not pending — verifyToken
- * refuses that link, and a resend is what repairs it.
+ * address that is none of the contact's — neither its primary nor one it kept
+ * as an additional address — is expired, not pending: verifyToken refuses that
+ * link, and a resend is what repairs it.
  */
-function latestInvitationState(contact: Pick<ContactRow, 'email' | 'invitations'>): 'none' | 'pending' | 'expired' {
+function latestInvitationState(
+  contact: Pick<ContactRow, 'email' | 'additionalEmails' | 'invitations'>
+): 'none' | 'pending' | 'expired' {
   const latest = latestInvitationOf(contact.invitations);
   if (!latest) return 'none';
   if (latest.used_at) return 'none';
   if (new Date(latest.expires_at).getTime() <= Date.now()) return 'expired';
-  const mailedTo = (latest.email ?? contact.email ?? '').toLowerCase();
-  return mailedTo === (contact.email ?? '').toLowerCase() ? 'pending' : 'expired';
+  const normalize = (value: string | null | undefined) => value?.trim().toLowerCase() || null;
+  const mailedTo = normalize(latest.email ?? contact.email);
+  const contactAddresses = [contact.email, ...(contact.additionalEmails ?? [])].map(normalize);
+  return mailedTo && contactAddresses.includes(mailedTo) ? 'pending' : 'expired';
 }
 
 function latestInvitationExpiresAt(invitations: InvitationRow[] | undefined): string | null {
@@ -837,6 +844,35 @@ describe('getPortalInvitationStatesForClient', () => {
 
     await expect(getPortalInvitationStatesForClient('client-a')).resolves.toEqual([
       { contactId: 'contact-renamed', state: 'expired', expiresAt: null, emailConflict: false, contactInactive: false },
+    ]);
+  });
+
+  it('leaves a link in an address the contact kept as pending', async () => {
+    state.contacts = [
+      {
+        contact_name_id: 'contact-renamed',
+        client_id: 'client-a',
+        full_name: 'Renamed',
+        email: 'new.address@acme.test',
+        // The MSP corrected the primary address and kept the old one on the
+        // contact. That mailbox is still theirs — it is how inbound email is
+        // matched to them — so the link in it still opens and the rollout has
+        // nothing to chase here.
+        additionalEmails: ['old.address@acme.test'],
+        invitations: [{ ...pendingInvitation('2026-01-01T00:00:00.000Z'), email: 'old.address@acme.test' }],
+      },
+    ];
+
+    const { getPortalInvitationStatesForClient } = await import('./portalInvitationActions');
+
+    await expect(getPortalInvitationStatesForClient('client-a')).resolves.toEqual([
+      {
+        contactId: 'contact-renamed',
+        state: 'pending',
+        expiresAt: PENDING_EXPIRES_AT,
+        emailConflict: false,
+        contactInactive: false,
+      },
     ]);
   });
 

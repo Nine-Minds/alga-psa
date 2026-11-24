@@ -246,7 +246,7 @@ export const getContactPortalSummary = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx) => {
-    const [portalUser, latestInvitation, contactRow] = await Promise.all([
+    const [portalUser, latestInvitation, contactRow, additionalAddresses] = await Promise.all([
       scopedTable(trx, tenant, 'users')
         .where({ contact_id: contactId, user_type: 'client' })
         .select('is_inactive', 'last_login_at')
@@ -260,6 +260,12 @@ export const getContactPortalSummary = withAuth(async (
         .where({ contact_name_id: contactId })
         .select('email', 'is_inactive')
         .first(),
+      // An invitation mailed to an address the MSP later kept as an additional
+      // one still reaches this contact, so the tile judges the link against
+      // every address they can receive at — the rule verifyToken applies.
+      scopedTable(trx, tenant, 'contact_additional_email_addresses')
+        .where({ contact_name_id: contactId })
+        .select('email_address'),
     ]);
 
     // Lapsed invitations are kept for the MSP's "who never used theirs?" view,
@@ -274,7 +280,10 @@ export const getContactPortalSummary = withAuth(async (
           ? 'expired'
           : invitationRefusedAtUseTime({
             contactInactive: contactRow?.is_inactive,
-            contactEmail: contactRow?.email,
+            contactEmails: [
+              contactRow?.email,
+              ...(additionalAddresses ?? []).map((row: { email_address: string | null }) => row.email_address),
+            ],
             invitationEmail: latestInvitation.email,
           })
             ? 'expired'
