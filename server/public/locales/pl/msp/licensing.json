@@ -505,8 +505,7 @@
         "save": "Zapisz domyślne ustawienia przekazania"
       },
       "client": {
-        "seatArrangement": "Uzgodnienie stanowisk",
-        "summary": "Uzgodnienie stanowisk: wykorzystano {{used}} z {{count}} stanowisk"
+        "seatArrangement": "Uzgodnienie stanowisk"
       },
       "technicians": {
         "sent": "Wysłano zaproszenie.",
@@ -606,8 +605,6 @@
     },
     "client": {
       "awaitingAcceptance": "Administrator klienta musi zaakceptować, zanim dostęp zostanie przyznany.",
-      "chooseRelationship": "Wybierz relację",
-      "endedHint": "Ta relacja została zakończona. Zachowana historia i archiwa pozostają dostępne.",
       "endedOn": "Zakończona {{date}}",
       "failedHint": "Konfiguracja nie została ukończona. Stanowiska pozostają zarezerwowane; spróbuj ponownie, aby ją kontynuować, lub anuluj konfigurację.",
       "forClient": "Współzarządzane IT dla {{name}}",
@@ -624,7 +621,6 @@
       "setupHint": "Włącz współzarządzane IT dla tego klienta, aby zarezerwować techników klienta i zaprosić administratora.",
       "tab": "Współzarządzane IT",
       "viewDetails": "Zobacz szczegóły",
-      "viewHistory": "Zobacz historię",
       "workspace": "Obszar roboczy klienta",
       "seatUsage": "{{used}} z {{count}} stanowisk technika",
       "seatAllocation": "{{count}} przydzielonych stanowisk technika"
