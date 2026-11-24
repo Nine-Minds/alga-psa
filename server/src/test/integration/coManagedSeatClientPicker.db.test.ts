@@ -13,12 +13,13 @@ import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 import { createCoManagedSeatArrangement } from '@alga-psa/co-managed';
 import { CO_MANAGED_SEAT_RESOLVER_ID } from '@alga-psa/co-managed/seatAuthority';
 import { retainBuiltinResolverSubject } from '@alga-psa/authorization/subject';
+import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
 import {
   createAuthorizationBundle, createBundleAssignment, publishBundleRevision, upsertBundleRule,
 } from '@alga-psa/authorization/bundles/service';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
-import { createClient, createTenant, createUser } from '../../../test-utils/testDataFactory';
+import { createClient, createContact, createTenant, createUser } from '../../../test-utils/testDataFactory';
 
 const ref = vi.hoisted(() => ({ knex: null as Knex | null, tenant: '', user: null as any }));
 
@@ -54,6 +55,7 @@ describeDb('the client picker respects the co-managed seat', { shuffle: false },
   let arranged = { id: '', name: '' };
   let other = { id: '', name: '' };
   let msp = '';
+  let contacts = { arranged: '', other: '' };
   let admin = '';
 
   const as = async (userId: string) => {
@@ -72,12 +74,16 @@ describeDb('the client picker respects the co-managed seat', { shuffle: false },
     return { userId, assignmentId };
   }
 
-  async function bundleFor(userId: string, rules: Array<{ resourceType: string; templateKey: string; config: Record<string, unknown> }>) {
+  async function bundleFor(
+    userId: string,
+    rules: Array<{ resourceType: string; templateKey: string; config: Record<string, unknown>; constraintKey?: string }>,
+    baseline?: 'open' | 'closed'
+  ) {
     const bundle = await createAuthorizationBundle(db, { tenant: sponsor, name: `picker-${randomUUID().slice(0, 8)}`, actorUserId: admin });
     for (const rule of rules) {
       await upsertBundleRule(db, { tenant: sponsor, bundleId: bundle.bundleId, revisionId: bundle.revisionId, action: 'read', actorUserId: admin, ...rule });
     }
-    await publishBundleRevision(db as any, { tenant: sponsor, bundleId: bundle.bundleId, revisionId: bundle.revisionId, actorUserId: admin });
+    await publishBundleRevision(db as any, { tenant: sponsor, bundleId: bundle.bundleId, revisionId: bundle.revisionId, actorUserId: admin, ...(baseline ? { baseline } : {}) });
     await createBundleAssignment(db, { tenant: sponsor, bundleId: bundle.bundleId, targetType: 'user', targetId: userId, actorUserId: admin });
   }
 
@@ -109,6 +115,7 @@ describeDb('the client picker respects the co-managed seat', { shuffle: false },
     arranged.id = await createClient(db, sponsor, arranged.name);
     other.id = await createClient(db, sponsor, other.name);
     arrangementId = (await createCoManagedSeatArrangement(db, { sponsorTenant: sponsor, clientId: arranged.id, operationId: randomUUID(), seats: 5 })).arrangement_id;
+    contacts = { arranged: await createContact(db, sponsor, arranged.id), other: await createContact(db, sponsor, other.id) };
     msp = await createUser(db, sponsor, { user_type: 'internal' });
     admin = await createUser(db, sponsor, { user_type: 'internal' });
   }, 300_000);
@@ -160,5 +167,47 @@ describeDb('the client picker respects the co-managed seat', { shuffle: false },
       expect(page.total, label).toBe(2);
       expect((await picker({ ids: [arranged.id, other.id] })).clients, label).toHaveLength(2);
     }
+  });
+
+  /** What an ordinary (non-seat) user reads: both pickers' first page and the contact scope the contact list applies. */
+  async function visibleTo(userId: string) {
+    await as(userId);
+    const pickers: Record<string, string[]> = {};
+    for (const [label, picker] of Object.entries(PICKERS)) {
+      pickers[label] = (await picker({})).clients.map((c) => c.client_id).sort();
+    }
+    const scope = await createClientScopeContext(db, sponsor, ref.user);
+    const contactRows = await (await scope.narrowing('contact', 'c'))
+      .apply(db('contacts as c').where('c.tenant', sponsor))
+      .pluck('c.contact_name_id');
+    return { pickers, contacts: contactRows.sort() };
+  }
+
+  it('T005: a non-seat user with a published closed bundle that names neither client nor contact reads no clients or contacts', async () => {
+    // Plan D4 of the client-scope-completion PRD: a closed bundle denies every resource it does not name.
+    const user = await createUser(db, sponsor, { user_type: 'internal' });
+    await bundleFor(user, [{ resourceType: 'ticket', templateKey: 'selected_clients', config: { selectedClientIds: [arranged.id] } }], 'closed');
+    const seen = await visibleTo(user);
+    for (const [label, ids] of Object.entries(seen.pickers)) expect(ids, label).toEqual([]);
+    expect(seen.contacts).toEqual([]);
+  });
+
+  it('T006: a non-seat user whose only client and contact rules redact fields (hide_sensitive_fields) keeps the rows the template selects', async () => {
+    const both = [arranged.id, other.id];
+    const redacting = await createUser(db, sponsor, { user_type: 'internal' });
+    await bundleFor(redacting, [
+      { resourceType: 'client', templateKey: 'selected_clients', constraintKey: 'hide_sensitive_fields', config: { selectedClientIds: both } },
+      { resourceType: 'contact', templateKey: 'selected_clients', constraintKey: 'hide_sensitive_fields', config: { selectedClientIds: both } },
+    ]);
+    const plain = await createUser(db, sponsor, { user_type: 'internal' });
+    await bundleFor(plain, [
+      { resourceType: 'client', templateKey: 'selected_clients', config: { selectedClientIds: both } },
+      { resourceType: 'contact', templateKey: 'selected_clients', config: { selectedClientIds: both } },
+    ]);
+    const withRedaction = await visibleTo(redacting);
+    for (const [label, ids] of Object.entries(withRedaction.pickers)) expect(ids, label).toEqual([...both].sort());
+    expect(withRedaction.contacts).toEqual([contacts.arranged, contacts.other].sort());
+    // The redaction constraint removes no row the same rule without it would return.
+    expect(withRedaction).toEqual(await visibleTo(plain));
   });
 });
