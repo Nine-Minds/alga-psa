@@ -36,6 +36,7 @@ const PORTAL_ERROR_CODE_KEYS: Record<PortalInvitationErrorCode, string> = {
   CONTACT_NOT_FOUND: 'auth.portalSetup.errors.contactNotFound',
   CONTACT_MISSING_EMAIL: 'auth.portalSetup.errors.contactMissingEmail',
   CONTACT_INVALID_EMAIL: 'auth.portalSetup.errors.contactInvalidEmail',
+  CONTACT_INACTIVE: 'auth.portalSetup.errors.contactInactive',
   USER_EXISTS_FOR_CONTACT: 'auth.portalSetup.errors.userExistsForContact',
   PORTAL_USER_ALREADY_EXISTS: 'auth.portalSetup.errors.portalUserAlreadyExists',
   NO_DEFAULT_CLIENT: 'auth.portalSetup.errors.noDefaultClient',
@@ -45,7 +46,9 @@ const PORTAL_ERROR_CODE_KEYS: Record<PortalInvitationErrorCode, string> = {
   INVITATION_NOT_FOUND: 'auth.portalSetup.errors.invitationNotFound',
   REVOKE_FAILED: 'auth.portalSetup.errors.revokeFailed',
   BATCH_LIMIT_EXCEEDED: 'auth.portalSetup.errors.batchLimitExceeded',
-  NO_TARGETS_SELECTED: 'auth.portalSetup.errors.noTargetsSelected'
+  NO_TARGETS_SELECTED: 'auth.portalSetup.errors.noTargetsSelected',
+  INVITATION_STATE_MISMATCH: 'auth.portalSetup.errors.invitationStateMismatch',
+  RATE_LIMITED: 'auth.portalSetup.errors.rateLimited'
 };
 
 interface ContactInfo {
