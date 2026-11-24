@@ -22,3 +22,21 @@ export function unresolvedAssigneeLabel(input: {
   if (saved && input.selectableUserIds.includes(saved)) return null;
   return name;
 }
+
+/**
+ * The saved assignee's name for display. The ticket row's own name when it carries one; otherwise the name of
+ * that person in the people the caller may SEE. The assignee control offers only the people the caller may
+ * ASSIGN (`assignableAgentsOf`), so a visible but non-assignable assignee (an MSP staffer on a seat technician's
+ * ticket) is named from the visible list, never shown as "Not assigned".
+ */
+export function savedAssigneeName(
+  savedAssigneeId: string | null | undefined,
+  rowName: string | null | undefined,
+  visiblePeople: ReadonlyArray<{ user_id: string; first_name?: string | null; last_name?: string | null }>,
+): string | null {
+  if (rowName?.trim()) return rowName;
+  if (!savedAssigneeId) return null;
+  const person = visiblePeople.find((candidate) => candidate.user_id === savedAssigneeId);
+  const name = person ? `${person.first_name ?? ''} ${person.last_name ?? ''}`.trim() : '';
+  return name || null;
+}
