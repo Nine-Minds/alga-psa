@@ -156,61 +156,66 @@ function isCoherentQuotedHeaderBlock(lines: string[], startIndex: number): boole
   return fields.has('from') && fields.has('sent') && fields.has('to') && fields.has('subject');
 }
 
-/** How many lines a provider attribution may wrap over before it stops looking like one. */
-const MAX_WRAPPED_HEADER_LINES = 3;
 /** Quoted lines a wrapped attribution must introduce: a whole quoted message, not one sentence. */
 const MIN_WRAPPED_HEADER_QUOTED_LINES = 2;
-/** The address a provider attribution names, which is what makes it wrap in the first place. */
-const attributionAddressRegex = /[^\s<>@]+@[^\s<>@]+\.[A-Za-z]{2,}/;
+/** Months a provider attribution spells out, in the languages the `On …` form covers. */
+const ATTRIBUTION_MONTHS = '(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\\.?';
+/** A provider attribution names the moment it quotes: a clock time or a calendar date. */
+const attributionDateTimeRegex = new RegExp(
+  `\\b\\d{1,2}:\\d{2}\\b|\\b\\d{1,2}[/.-]\\d{1,2}[/.-]\\d{2,4}\\b`
+  + `|\\b${ATTRIBUTION_MONTHS},?\\s+\\d{1,2}\\b|\\b\\d{1,2}\\s+${ATTRIBUTION_MONTHS}`,
+  'i',
+);
+/** The address a provider attribution wraps on sits directly before `wrote:`. */
+const wrappedAttributionTailRegex = /[^\s<>@]+@[^\s<>@]+\.[A-Za-z]{2,}>?\s*wrote:$/i;
 
-/** Length of the quoted-line run starting at the first non-empty line from `startIndex`. */
-function quotedLineRunLength(lines: string[], startIndex: number): number {
+/**
+ * Does a quoted run start here and carry on to the end of the message, or to a signature?
+ * Authored text below a quote means the author quoted inline, so it is not trailing history
+ * and nothing above it may be cut.
+ */
+function isTrailingQuotedHistory(lines: string[], startIndex: number, config: ReplyParserConfig): boolean {
   let quoted = 0;
 
   for (let i = startIndex; i < lines.length; i += 1) {
     const line = lines[i].trim();
     if (!line) {
-      if (quoted === 0) continue;
+      continue;
+    }
+    if (line.startsWith('>')) {
+      quoted += 1;
+      continue;
+    }
+    if (config.signatureMarkers.some((regex) => regex.test(line))) {
       break;
     }
-    if (!line.startsWith('>')) break;
-    quoted += 1;
-  }
-
-  return quoted;
-}
-
-/**
- * Gmail wraps a long `On <date> <Name> <addr> wrote:` attribution over two or three lines, so the
- * single-line `providerReplyHeaders` patterns miss it. An authored sentence can open with "On" and
- * introduce a quote of its own ("On Friday I spoke to the vendor. / He wrote: / > …"), and cutting
- * there destroys the text below it, so require what only a real attribution carries: the address
- * that forced the wrap, and the previous message — not a single line — quoted beneath.
- */
-function isWrappedProviderReplyHeader(lines: string[], startIndex: number): boolean {
-  if (!/^on\b/i.test(lines[startIndex].trim())) {
     return false;
   }
 
-  const endIndex = Math.min(lines.length, startIndex + MAX_WRAPPED_HEADER_LINES);
-  let run = lines[startIndex].trim();
+  return quoted >= MIN_WRAPPED_HEADER_QUOTED_LINES;
+}
 
-  for (let i = startIndex + 1; i < endIndex; i += 1) {
-    const line = lines[i].trim();
-    if (!line) {
-      return false;
-    }
-    run = `${run} ${line}`;
-    if (!/wrote:$/i.test(line)) {
-      continue;
-    }
-    return (
-      attributionAddressRegex.test(run)
-      && quotedLineRunLength(lines, i + 1) >= MIN_WRAPPED_HEADER_QUOTED_LINES
-    );
+/**
+ * Gmail wraps a long `On <date> <Name> <addr> wrote:` attribution over two lines, so the
+ * single-line `providerReplyHeaders` patterns miss it. Authored prose can wear the same clothes
+ * ("On Tuesday I emailed jane@example.com about the invoice. / She wrote: / > …"), and cutting
+ * there destroys everything the customer wrote below, so only accept the shape providers emit:
+ * a date or time in the `On …` part, the address immediately before `wrote:` on the very next
+ * line, and the previous message — not a single line — quoted from there to the end of the
+ * message or to a signature.
+ */
+function isWrappedProviderReplyHeader(lines: string[], startIndex: number, config: ReplyParserConfig): boolean {
+  const opening = lines[startIndex].trim();
+  if (!/^on\b/i.test(opening) || !attributionDateTimeRegex.test(opening)) {
+    return false;
   }
 
-  return false;
+  const continuation = (lines[startIndex + 1] ?? '').trim();
+  if (!wrappedAttributionTailRegex.test(continuation)) {
+    return false;
+  }
+
+  return isTrailingQuotedHistory(lines, startIndex + 2, config);
 }
 
 const htmlCommentTokenRegex = /<!--\s*alga:reply-token:(?<payload>[^-]+)-->?/i;
@@ -615,7 +620,7 @@ function stripProviderHeaders(text: string, config: ReplyParserConfig): TrimResu
       break;
     }
 
-    if (isWrappedProviderReplyHeader(lines, i)) {
+    if (isWrappedProviderReplyHeader(lines, i, config)) {
       matched = line;
       heuristic = 'provider-header';
       break;

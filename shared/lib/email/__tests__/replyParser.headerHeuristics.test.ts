@@ -61,6 +61,20 @@ jane.client@example.test> wrote:
     expect(result.sanitizedText).toBe('Thursday afternoon works for us.');
   });
 
+  it('trims a single-line attribution above quoted history', () => {
+    const result = parseEmailReply({
+      text: `Thursday afternoon works for us.
+
+On Mon, Nov 17, 2026 at 8:42 AM Jane Client <jane.client@example.test> wrote:
+
+> Tell us what you need from our side before the install day.
+> The laptops are still sealed in their shipping boxes.`,
+    });
+
+    expect(result.appliedHeuristics).toContain('provider-header');
+    expect(result.sanitizedText).toBe('Thursday afternoon works for us.');
+  });
+
   it('keeps authored text that introduces a quote of its own', () => {
     // The wrapped-attribution heuristic looks for the address Gmail wraps on and the previous
     // message below it. An author who writes "On Friday … He wrote:" above one quoted line has
@@ -78,5 +92,44 @@ Please confirm the Wednesday install.`,
     expect(result.sanitizedText).toContain('Here is the update you asked for.');
     expect(result.sanitizedText).toContain('On Friday I spoke to the vendor.');
     expect(result.sanitizedText).toContain('Please confirm the Wednesday install.');
+  });
+
+  it('keeps the last line when an authored sentence names an address above a quote', () => {
+    // "On Tuesday I emailed <addr> …" / "She wrote:" carries an address and introduces two
+    // quoted lines, but the address is not the one a provider puts right before "wrote:",
+    // and the author keeps writing below the quote. Nothing here may be cut.
+    const result = parseEmailReply({
+      text: `On Tuesday I emailed jane.client@example.com about the invoice.
+She wrote:
+> please send it again
+> to the new address
+We have now sent it twice. Can you confirm which address is right?`,
+    });
+
+    expect(result.sanitizedText).toContain('On Tuesday I emailed jane.client@example.com about the invoice.');
+    expect(result.sanitizedText).toContain('She wrote:');
+    expect(result.sanitizedText).toContain('We have now sent it twice. Can you confirm which address is right?');
+    // Authored lines survive on their own merit, not because the blunt keep-everything
+    // fallback restored the raw body with its quoted lines.
+    expect(result.sanitizedText).not.toContain('please send it again');
+  });
+
+  it('keeps an inline provider-shaped quote followed by more authored text', () => {
+    // A pasted attribution with a real date and address can still be an inline quote: the
+    // author writes on below it. Trailing history never has authored text after it.
+    const result = parseEmailReply({
+      text: `Here is where we landed with the vendor.
+
+On Mon, Nov 17, 2026 at 8:42 AM Vendor Rep <
+rep@vendor.test> wrote:
+
+> The replacement chassis ships Monday.
+> Tracking follows on Tuesday.
+
+That timeline works for us, so please book the Wednesday install.`,
+    });
+
+    expect(result.sanitizedText).toContain('Here is where we landed with the vendor.');
+    expect(result.sanitizedText).toContain('That timeline works for us, so please book the Wednesday install.');
   });
 });
