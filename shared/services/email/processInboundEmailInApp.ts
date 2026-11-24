@@ -25,6 +25,10 @@ import {
   blocksFromEmailBody,
 } from './inboundEmbeddedImageUrlRewrite';
 import {
+  hasSubstantiveReplyContent,
+  replyBodyForComment,
+} from './inboundReplyBody';
+import {
   buildInboundWatchListRecipients,
   getActiveWatchListEmails,
   mergeTicketWatchListRecipients,
@@ -393,47 +397,6 @@ function extractConversationToken(parsedEmail: any): string | undefined {
     return nested.trim();
   }
   return undefined;
-}
-
-function stripAutomatedReplyMarkers(text: string): string {
-  return text
-    .replace(/\\?\[ALGA-REPLY-TOKEN[^\]\n\r]*(?:\])?/gi, ' ')
-    .replace(/ALGA-REPLY-TOKEN:[^\n\r]*/gi, ' ')
-    .replace(/ALGA-(?:TICKET|PROJECT|COMMENT|THREAD)-ID:[^\n\r]*/gi, ' ')
-    .replace(/---\s*Please reply above this line\s*---/gi, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-/**
- * Body a comment is built from. A successful parse owns the result: an undefined
- * `sanitizedHtml` means the parser's safety net rejected its own HTML trim, so the comment
- * must come from `sanitizedText`. Falling back to the raw body there would store the whole
- * quoted history the parser had just removed (alga-2026-0003353). The raw body stays the
- * fallback only when parsing threw and there is no parse result at all.
- */
-function replyBodyForComment(
-  parsedEmail: any,
-  emailData: EmailMessageDetails,
-): { html?: string; text?: string } {
-  if (parsedEmail) {
-    return { html: parsedEmail.sanitizedHtml, text: parsedEmail.sanitizedText };
-  }
-  return { html: emailData.body?.html, text: emailData.body?.text };
-}
-
-function hasSubstantiveReplyContent(parsedEmail: any, emailData: EmailMessageDetails): boolean {
-  const candidateText =
-    parsedEmail?.sanitizedText ??
-    parsedEmail?.text ??
-    emailData.body?.text ??
-    '';
-
-  if (String(candidateText).trim()) return stripAutomatedReplyMarkers(String(candidateText)).length > 0;
-  // HTML-only mail has no sanitizedText in the reply parser. Use its existing
-  // HTML text projection, without reviving quoted HTML when a text part exists.
-  if (emailData.body?.text?.trim()) return false;
-  return stripAutomatedReplyMarkers(htmlToVisibleText(replyBodyForComment(parsedEmail, emailData).html ?? '')).length > 0;
 }
 
 function normalizePositiveInteger(value: unknown, fallback: number): number {
@@ -1259,7 +1222,7 @@ export async function processInboundEmailInApp(
     return withDiagnostics({ outcome: 'skipped', reason: 'notification_loop' }, diagnostics);
   }
 
-  if (conversationToken && !hasSubstantiveReplyContent(parsedEmail, emailData)) {
+  if (conversationToken && !hasSubstantiveReplyContent(parsedEmail, emailData.body)) {
     console.info('processInboundEmailInApp: skipping token-only inbound email with no reply content', {
       tenantId,
       providerId,
@@ -1489,7 +1452,7 @@ export async function processInboundEmailInApp(
 
     const oneOffRecipients = await loadTicketOneOffRecipients(tenantId, params.ticketId);
 
-    const { html: parsedHtml, text: parsedText } = replyBodyForComment(parsedEmail, emailData);
+    const { html: parsedHtml, text: parsedText } = replyBodyForComment(parsedEmail, emailData.body);
     const blocks = await blocksFromEmailBody({
       html: parsedHtml,
       text: parsedText,
@@ -1999,7 +1962,7 @@ export async function processInboundEmailInApp(
           // participant, never through the native writer, so the audience is stamped on the thread.
           const writer = await coManagedInboundCommentSeam.resolve(tenantId);
           if (!writer) throw new InboundRetryLaterError('co-managed inbound writer is not available in this process; leaving the message to retry');
-          const commentBody = replyBodyForComment(parsedEmail, emailData);
+          const commentBody = replyBodyForComment(parsedEmail, emailData.body);
           const text = (commentBody.text ?? htmlToVisibleText(commentBody.html ?? '')).trim();
           const written = await writer.write({
             tenant: tenantId,
@@ -2452,7 +2415,7 @@ export async function processInboundEmailInApp(
     }
   }
 
-  const { html: parsedHtml, text: parsedText } = replyBodyForComment(parsedEmail, emailData);
+  const { html: parsedHtml, text: parsedText } = replyBodyForComment(parsedEmail, emailData.body);
   const blocks = await blocksFromEmailBody({
     html: parsedHtml,
     text: parsedText,
