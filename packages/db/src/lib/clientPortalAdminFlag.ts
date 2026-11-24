@@ -64,12 +64,10 @@ async function linkedPortalUserIds(
  * Recompute one contact's `is_client_admin` from the roles of the portal
  * user(s) linked to it and write it when it drifted.
  *
- * `users.contact_id` is indexed but not unique, so a contact can carry more
- * than one portal account. The flag is one per contact, and the rule — the same
- * one the repair migrations converge on — is that it is true when ANY linked
- * portal user holds the client 'Admin' role. Deriving it from only the user
- * just written would let a second, plain 'User' account clear the flag its
- * admin colleague's access depends on.
+ * A contact may have only one portal account. Keep the existing ANY-linked
+ * derivation defensively for legacy duplicate links: this neither authorizes
+ * new duplicates nor deletes or merges existing accounts. API creation and
+ * relinking enforce ownership in clientPortalContactOwnership.ts.
  *
  * A contact with no portal user at all is left alone: there the flag is the
  * invitation pre-mark, not a mirror (see `resolveInitialPortalRoleId`).

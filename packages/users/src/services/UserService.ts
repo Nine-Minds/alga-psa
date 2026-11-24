@@ -7,7 +7,7 @@
  */
 
 import { Knex } from 'knex';
-import { addUserRoles, assertSeatTechnicianWrite, assertUserRoleFloor, BaseService, ServiceContext, ListResult, isUserRoleFloorRejected, removeUserRoles, setUserRoles, syncContactClientAdminFlagsForUserLinkChange, tenantDb, withSavepoint, withTransaction } from '@alga-psa/db';
+import { addUserRoles, assertSeatTechnicianWrite, assertUserRoleFloor, BaseService, checkClientPortalContactAvailability, ServiceContext, ListResult, isUserRoleFloorRejected, removeUserRoles, setUserRoles, syncContactClientAdminFlagsForUserLinkChange, tenantDb, withSavepoint, withTransaction } from '@alga-psa/db';
 import type { UserRoleFloorChange, UserRoleFloorViolation } from '@alga-psa/db';
 import {
   IUser, IUserWithRoles, IRole, IRoleWithPermissions, ITeam,
@@ -81,6 +81,21 @@ class ConflictError extends Error {
   readonly name = 'ConflictError';
   readonly statusCode = 409;
   readonly code = 'CONFLICT';
+}
+
+async function enforceClientPortalContactOwnership(
+  trx: Knex.Transaction,
+  tenant: string,
+  userType: string,
+  contactId: string | null | undefined,
+  currentUserId?: string,
+): Promise<void> {
+  if (userType !== 'client' || !contactId) return;
+  const availability = await checkClientPortalContactAvailability(trx, tenant, contactId, currentUserId);
+  if (availability === 'not_found') throw new NotFoundError('Contact not found');
+  if (availability === 'occupied') {
+    throw new ConflictError('This contact already has a client portal user. Choose another contact.');
+  }
 }
 
 /**
@@ -414,6 +429,8 @@ export class UserService extends BaseService<IUser> {
         updated_at: knex.raw('now()')
       };
 
+      await enforceClientPortalContactOwnership(trx, context.tenant, targetUserType, userData.contact_id);
+
       // Insert user
       const [createdUser] = await tenantDb(trx, context.tenant).table('users')
         .insert(userData)
@@ -553,11 +570,28 @@ export class UserService extends BaseService<IUser> {
         }
       }
 
+      await enforceClientPortalContactOwnership(
+        trx,
+        context.tenant,
+        data.user_type ?? existingUser.user_type,
+        data.contact_id !== undefined ? data.contact_id : existingUser.contact_id,
+        id
+      );
+
+      // Compare the pre-image too: concurrent updates of this same account
+      // must not combine a user_type from one request with an unchecked link
+      // from another. A conflict rolls back without moving roles or flags.
+      // This avoids taking a user row lock before the existing role/seat locks.
       // Update user
       const [updatedUser] = await this.buildTenantScopedQuery(trx, context)
         .where({ user_id: id })
+        .where({ user_type: existingUser.user_type, contact_id: existingUser.contact_id ?? null })
         .update(updateData)
         .returning(USER_RESPONSE_FIELD_NAMES);
+
+      if (!updatedUser) {
+        throw new ConflictError('The user contact or type changed during this update. Please retry.');
+      }
 
       if (takesNewSeat) {
         await assertInternalUserSeatsWithinLimit(trx, context.tenant, licenseCheck);
