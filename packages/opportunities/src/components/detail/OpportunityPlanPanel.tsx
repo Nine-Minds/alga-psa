@@ -38,6 +38,7 @@ export function OpportunityPlanPanel({
   onStageSelect,
   onOpenCitation,
   canOpenInteraction,
+  onEditEvidence,
   onChanged,
 }: {
   opportunityId: string;
@@ -52,6 +53,8 @@ export function OpportunityPlanPanel({
   /** Opens the interaction or document a rung cites. */
   onOpenCitation?: (type: 'interaction' | 'document', id: string) => void;
   canOpenInteraction?: boolean;
+  /** Opens the evidence editor for a reached stage. */
+  onEditEvidence?: (stage: PlannableStage) => void;
   onChanged: () => void;
 }) {
   const { t } = useTranslation('msp/opportunities');
@@ -171,6 +174,7 @@ export function OpportunityPlanPanel({
         onStageSelect={onStageSelect}
         onOpenCitation={onOpenCitation}
         canOpenInteraction={canOpenInteraction}
+        onEditEvidence={onEditEvidence}
         onAddStep={(forStage) => openEditor(null, 'title', forStage)}
         onApplyTemplate={(stages) =>
           runQuietly(

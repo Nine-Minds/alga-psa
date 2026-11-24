@@ -552,6 +552,13 @@
         "addedUnavailable": "{{name}} is toegevoegd maar kan niet worden uitgenodigd.",
         "unavailable": "Niet getoond omdat ze inactief zijn, geen e-mailadres hebben of al een plek of uitnodiging hebben: {{count}}."
       },
+      "trial": {
+        "available": "Hierboven is een gratis proefperiode van 15 dagen beschikbaar. Co-managed plekken kunnen op elk moment worden toegevoegd.",
+        "availableTrialEnables": "Door de technicus uit te nodigen start de proefperiode en wordt gezamenlijk beheerde IT voor deze klant ingeschakeld. Koop na de 15 dagen een plek om de technicus te behouden.",
+        "pending": "Een uitnodiging voor de proefperiode van 15 dagen wacht op de technicus. Co-managed plekken kunnen op elk moment worden toegevoegd.",
+        "active": "De proefperiode van 15 dagen loopt. Voeg co-managed plekken toe om de technicus daarna te behouden.",
+        "ended": "De proefperiode van 15 dagen is afgelopen. Voeg co-managed plekken toe om de technicus te behouden."
+      },
       "chooser": {
         "seat": "Plek",
         "seatHint": "De technici van de klant werken in uw PSA, beperkt tot hun eigen bedrijf.",
@@ -559,7 +566,11 @@
         "workspaceHint": "Het IT-team van de klant krijgt een eigen servicedesk en escaleert naar u.",
         "description": "Kies hoe het IT-team van deze klant met u samenwerkt.",
         "shape": "Co-managed vorm",
-        "pool": "{{available}} van {{purchased}} plekken beschikbaar. {{allocated}} toegewezen."
+        "pool": "{{available}} van {{purchased}} plekken beschikbaar. {{allocated}} toegewezen.",
+        "poolEmpty": "Nog geen co-managed plekken.",
+        "seatHintAfterTrial": "Voeg co-managed plekken toe om de technicus na de proefperiode van 15 dagen te behouden.",
+        "seatHintTrialCovers": "De proefplek dekt deze technicus tot {{date}}. Koop een plek om hem of haar te behouden.",
+        "seatHintTrial": "15 dagen gratis. Nodig een technicus uit om gezamenlijk beheerde IT voor deze klant in te schakelen."
       },
       "states": {
         "active": "Actief",
@@ -615,6 +626,7 @@
       "inconsistentHint": "Een co-managed configuratie voor deze klant verwijst naar een werkruimterecord van een andere klant. Hier kan niets worden beheerd of ingesteld totdat support het record corrigeert.",
       "invitation": "Beheerdersuitnodiging",
       "notEnabled": "Gezamenlijk beheerde IT niet ingeschakeld",
+      "notEnabledTrialEnables": "Gezamenlijk beheerde IT is nog niet ingeschakeld. Als u de gratis proefperiode van 15 dagen voor een plek start, wordt het voor deze klant ingeschakeld.",
       "progress": "Voortgang van instelling",
       "provisioningHint": "Gereserveerde plaatsen blijven gereserveerd tot de instelling is voltooid of de opschoning is bevestigd.",
       "relationship": "Relatie",

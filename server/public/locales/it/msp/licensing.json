@@ -552,6 +552,13 @@
         "addedUnavailable": "{{name}} è stato aggiunto ma non può essere invitato.",
         "unavailable": "Non elencati perché inattivi, senza email o con già un posto o un invito: {{count}}."
       },
+      "trial": {
+        "available": "Qui sopra è disponibile una prova gratuita di 15 giorni. Le postazioni cogestite possono essere aggiunte in qualsiasi momento.",
+        "availableTrialEnables": "Invitare il tecnico avvia la prova e abilita l'IT cogestita per questo cliente. Dopo i 15 giorni, acquista una postazione per mantenere il tecnico.",
+        "pending": "Un invito alla prova di 15 giorni è in attesa del tecnico. Le postazioni cogestite possono essere aggiunte in qualsiasi momento.",
+        "active": "La prova di 15 giorni è in corso. Aggiungi postazioni cogestite per mantenere il tecnico in seguito.",
+        "ended": "La prova di 15 giorni è terminata. Aggiungi postazioni cogestite per mantenere il tecnico."
+      },
       "chooser": {
         "seat": "Postazione",
         "seatHint": "I tecnici del cliente lavorano nel tuo PSA, limitati alla loro azienda.",
@@ -559,7 +566,11 @@
         "workspaceHint": "Il team IT del cliente ha un proprio service desk e inoltra in escalation a te.",
         "description": "Scegli come il team IT di questo cliente lavora con te.",
         "shape": "Formula cogestita",
-        "pool": "{{available}} di {{purchased}} postazioni disponibili. {{allocated}} assegnate."
+        "pool": "{{available}} di {{purchased}} postazioni disponibili. {{allocated}} assegnate.",
+        "poolEmpty": "Ancora nessuna postazione cogestita.",
+        "seatHintAfterTrial": "Aggiungi postazioni cogestite per mantenere il tecnico dopo la prova di 15 giorni.",
+        "seatHintTrialCovers": "La postazione di prova copre questo tecnico fino al {{date}}. Acquista una postazione per mantenerlo.",
+        "seatHintTrial": "Gratis per 15 giorni. Invita un tecnico per abilitare l'IT cogestita per questo cliente."
       },
       "states": {
         "active": "Attivo",
@@ -615,6 +626,7 @@
       "inconsistentHint": "Una configurazione in co-gestione per questo cliente punta a un record di area di lavoro che appartiene a un altro cliente. Qui non è possibile gestire o configurare nulla finché l’assistenza non corregge il record.",
       "invitation": "Invito dell'amministratore",
       "notEnabled": "IT cogestita non abilitata",
+      "notEnabledTrialEnables": "L'IT cogestita non è ancora abilitata. Avviare la prova gratuita di 15 giorni di una postazione la abilita per questo cliente.",
       "progress": "Avanzamento della configurazione",
       "provisioningHint": "I posti riservati restano trattenuti finché la configurazione non è completata o la pulizia non è confermata.",
       "relationship": "Relazione",

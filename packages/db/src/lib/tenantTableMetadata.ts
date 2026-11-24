@@ -445,6 +445,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   online_meetings: { scope: 'tenant' },
   opportunities: { scope: 'tenant' },
   opportunity_evidence: { scope: 'tenant' },
+  opportunity_evidence_citations: { scope: 'tenant' },
   opportunity_steps: { scope: 'tenant' },
   opportunity_step_templates: { scope: 'tenant' },
   opportunity_suggestions: { scope: 'tenant' },

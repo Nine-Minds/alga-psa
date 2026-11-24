@@ -542,6 +542,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'opportunity_commitments', deletion: 'ordered' },
   { table: 'opportunity_steps', deletion: 'ordered' },
   { table: 'opportunity_step_templates', deletion: 'ordered' },
+  { table: 'opportunity_evidence_citations', deletion: 'ordered' },
   { table: 'opportunity_evidence', deletion: 'ordered' },
   { table: 'opportunity_qbr_triggers', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'opportunity_suggestions', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },

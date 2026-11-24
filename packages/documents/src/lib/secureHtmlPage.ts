@@ -52,13 +52,17 @@ function budgetedFetcher(options: SecureHtmlPageOptions): NonNullable<RenderHtml
   const maxBytes = options.maxRemoteAssetBytes ?? 5 * 1024 * 1024;
   const maxRequests = options.maxRemoteAssetRequests ?? 20;
   const maxTimeMs = options.maxRemoteAssetTimeMs ?? 10_000;
-  const startedAt = Date.now();
+  // The clock starts at the first remote fetch: the budget bounds time spent
+  // resolving remote images, not parsing and rewriting the surrounding HTML.
+  let startedAt: number | undefined;
   let totalBytes = 0;
   let requests = 0;
 
   return async (url) => {
+    const now = Date.now();
+    startedAt ??= now;
     const remainingBytes = maxBytes - totalBytes;
-    const remainingTimeMs = maxTimeMs - (Date.now() - startedAt);
+    const remainingTimeMs = maxTimeMs - (now - startedAt);
     if (remainingBytes <= 0) throw new Error('Remote image resource budget exceeded');
     if (requests >= maxRequests) throw new Error('Remote image request budget exceeded');
     if (remainingTimeMs <= 0) throw new Error('Remote image time budget exceeded');

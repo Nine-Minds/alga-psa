@@ -14,6 +14,7 @@ vi.mock('@/lib/actions/coManagedSeatActions', () => ({
 
 import { QuickAddClientProvider } from '@alga-psa/ui/context/QuickAddClientContext';
 import CoManagedShapeChooser from '@/components/co-managed/CoManagedShapeChooser';
+import { resolveSeatEnableStory, type SeatTrialStory } from '@/lib/co-managed/seatEnableStory';
 
 const enable = (overrides: any = {}) => ({ capacity: { purchased: 10, allocated: 4, available: 6 }, blocker: null, ...overrides });
 // The standard quick-add contact dialog stands in as a button that "creates" a contact for the preset client.
@@ -166,5 +167,78 @@ describe('shape chooser', () => {
     await waitFor(() => expect(onEnabled).toHaveBeenCalledOnce());
     const [first, second] = actions.enable.mock.calls.map(([input]) => input.operationId);
     expect(first).toBe(second);
+  });
+});
+
+describe('shape chooser under a seat trial', () => {
+  const trialStory = (trial: SeatTrialStory, e: any, purchaseOpen = false) =>
+    resolveSeatEnableStory({ enable: e, trial, purchaseOpen, workspaceOffered: true });
+
+  it('trial available, no pool: Seat leads to the trial card; no alert, no 0-of-0 line, no pool-funded setup; Workspace still offered', () => {
+    const e = enable({ capacity: { purchased: 0, allocated: 0, available: 0 }, blocker: 'SPONSOR_NOT_ELIGIBLE' });
+    mount({ enable: e, story: trialStory('available', e), seatTrial: <div>seat-trial-card</div> });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(document.querySelector('#t-blocker')).toBeNull();
+    expect(screen.queryByText(/This workspace has no co-managed pool/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/0 of 0 seats/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Inviting the technician starts the trial and enables co-managed IT for this client/)).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Seat/ })).toBeEnabled();
+    expect(screen.getByRole('radio', { name: /Seat/ })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByText('Free for 15 days. Invite a technician to enable co-managed IT for this client.')).toBeInTheDocument();
+    expect(screen.getByText('seat-trial-card')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Number of seats')).not.toBeInTheDocument();
+    expect(document.querySelector('#t-seat-card')).toBeNull();
+    expect(screen.getByRole('radio', { name: /Workspace/ })).toBeEnabled();
+    fireEvent.click(screen.getByRole('radio', { name: /Workspace/ }));
+    expect(screen.getByText('workspace-setup-flow')).toBeInTheDocument();
+    expect(screen.queryByText('seat-trial-card')).not.toBeInTheDocument();
+  });
+
+  it('a running trial names its end date in the hint', () => {
+    const e = enable({ capacity: { purchased: 0, allocated: 0, available: 0 }, blocker: 'SPONSOR_NOT_ELIGIBLE' });
+    mount({ enable: e, story: trialStory('active', e), trialEnds: '12 Dec' });
+    expect(screen.getByText('The trial seat covers this technician until 12 Dec. Buy a seat to keep them.')).toBeInTheDocument();
+  });
+
+  it('trial pending, no pool: Seat stays disabled with the after-trial hint and the trial card is not injected', () => {
+    const e = enable({ capacity: { purchased: 0, allocated: 0, available: 0 }, blocker: 'SPONSOR_NOT_ELIGIBLE' });
+    mount({ enable: e, story: trialStory('pending', e), seatTrial: <div>seat-trial-card</div> });
+    expect(screen.getByRole('radio', { name: /Seat/ })).toBeDisabled();
+    expect(screen.queryByText('seat-trial-card')).not.toBeInTheDocument();
+  });
+
+  it('a trial that ended says so, without an alert', () => {
+    const e = enable({ capacity: { purchased: 0, allocated: 0, available: 0 }, blocker: 'SPONSOR_NOT_ELIGIBLE' });
+    mount({ enable: e, story: trialStory('ended', e) });
+    expect(screen.getByText('The 15-day trial has ended. Add co-managed seats to keep the technician.')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('trial available with a paid pool: Seat opens the paid setup and the note points at the trial card above', () => {
+    const e = enable();
+    mount({ enable: e, story: trialStory('available', e), seatTrial: <div>seat-trial-card</div> });
+    expect(screen.getByText('A free 15-day trial is available above. Co-managed seats can be added at any time.')).toBeInTheDocument();
+    expect(screen.queryByText(/Inviting the technician starts the trial/)).not.toBeInTheDocument();
+    expect(screen.getByText('6 of 10 seats available. 4 allocated.')).toBeInTheDocument();
+    expect(screen.queryByText('seat-trial-card')).not.toBeInTheDocument();
+  });
+
+  it('a trial with a paid pool still shows the counts', () => {
+    mount({ story: trialStory('pending', enable()) });
+    expect(screen.getByText('6 of 10 seats available. 4 allocated.')).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Seat/ })).toBeEnabled();
+  });
+
+  it('the empty pool variant reads "No co-managed seats yet."', () => {
+    mount({ story: { tone: 'blocked', blocker: null, notice: null, pool: 'empty', seatDisabled: false, seatHint: 'default', seatLeadsTo: 'setup', heading: 'notEnabled' } });
+    expect(screen.getByText('No co-managed seats yet.')).toBeInTheDocument();
+  });
+
+  it('blocked (no trial) still gives the destructive alert and the pool line', () => {
+    const e = enable({ capacity: { purchased: 0, allocated: 0, available: 0 }, blocker: 'SPONSOR_NOT_ELIGIBLE' });
+    mount({ enable: e, story: trialStory('none', e) });
+    expect(screen.getByRole('alert')).toHaveTextContent('This workspace has no co-managed pool.');
+    expect(screen.getByText('0 of 0 seats available. 0 allocated.')).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Seat/ })).toBeDisabled();
   });
 });
