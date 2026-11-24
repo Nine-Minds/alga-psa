@@ -203,10 +203,13 @@ describe('sendPortalInvitationEmail validity wording', () => {
   });
 
   // Which space ICU puts between the number and the unit is its business (fr
-  // uses a narrow no-break space), so compare on the wording.
-  const expirationTimeOf = () => String(
-    tenantSendMock.mock.calls[0]?.[0]?.templateData?.expirationTime ?? '',
-  ).replace(/\s/gu, ' ');
+  // uses a narrow no-break space), so compare on the wording. Read out of the
+  // rendered body rather than off the send call: the duration is derived from
+  // the template the lookup picks, so the body is the only place it exists.
+  const expirationTimeOf = async () => {
+    const rendered = await renderedBy(tenantSendMock);
+    return String(rendered.html.match(/<strong>([^<]*)<\/strong>/)?.[1] ?? '').replace(/\s/gu, ' ');
+  };
 
   // German and Swedish are read out of DAY_UNIT_OVERRIDES, not ICU: the
   // carrier sentence "läuft in … ab" wants the dative plural "Tagen", and a
@@ -225,13 +228,13 @@ describe('sendPortalInvitationEmail validity wording', () => {
 
     await sendPortalInvitationEmail({ ...params, validityDays });
 
-    expect(expirationTimeOf()).toBe(expected);
+    expect(await expirationTimeOf()).toBe(expected);
   });
 
   it('never promises an expiry that already passed when handed a nonsense validity', async () => {
     await sendPortalInvitationEmail({ ...params, validityDays: 0 });
 
-    expect(expirationTimeOf()).toBe('1 day');
+    expect(await expirationTimeOf()).toBe('1 day');
   });
 });
 
@@ -293,6 +296,29 @@ describe('sendPortalInvitationEmail duration follows the template that is sent',
     expect(rendered.html).toContain('Example MSP copy');
     expect(rendered.html).toContain('<strong>14 Tagen</strong>');
     expect(rendered.html).not.toContain('14 days');
+  });
+
+  /**
+   * The lookup belongs to the template processor, not to this 'use server'
+   * module: resolving the row here would attribute a tenant-table read to an
+   * exported action that reaches no permission check (S20/F037). So nothing is
+   * read until the provider renders the message it was handed.
+   */
+  it('leaves the template lookup to the processor it hands the provider', async () => {
+    const lookups: string[] = [];
+    const seeded = createFakeTemplateKnex([...SYSTEM_TEMPLATES, tenantRow('en')]);
+    getConnectionMock.mockResolvedValue(((table: string) => {
+      lookups.push(table);
+      return (seeded as any)(table);
+    }) as unknown as Knex);
+
+    await sendPortalInvitationEmail({ ...params, validityDays: 14 });
+
+    expect(lookups).toEqual([]);
+
+    const rendered = await renderedBy(tenantSendMock);
+    expect(rendered.html).toContain('<strong>14 days</strong>');
+    expect(lookups).toContain('tenant_email_templates');
   });
 
   it('renders the same language pairing on the system email fallback', async () => {

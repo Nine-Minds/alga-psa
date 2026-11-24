@@ -1,7 +1,7 @@
 'use server'
 
 import { getSystemEmailService, TenantEmailService } from './index';
-import { DatabaseTemplateProcessor, StaticTemplateProcessor } from './templateProcessors';
+import { LanguageAwareTemplateProcessor } from './templateProcessors';
 import { getConnection, runWithTenant } from '@alga-psa/db';
 import { getUserInfoForEmail, resolveEmailLocale } from './emailLocaleResolver';
 import { SupportedLocale } from './lib/localeConfig';
@@ -98,19 +98,6 @@ export async function sendPortalInvitationEmail({
         clientId: recipientInfo.clientId
       });
 
-      // Resolve the template once, before the body is rendered: the row that
-      // wins the lookup (tenant locale -> tenant en -> system locale -> system
-      // en) decides both the wording of the email and the language the validity
-      // has to be written in. A tenant with an English-only copy of
-      // 'portal-invitation' sends English to a German recipient, and that email
-      // must say "14 days", not "14 Tage".
-      const template = await new DatabaseTemplateProcessor(knex, 'portal-invitation')
-        .resolveTemplate({ tenantId: tenant, locale: recipientLocale });
-      logger.info('[SendPortalInvitationEmail] Selected template language:', {
-        templateLanguage: template.language,
-        recipientLocale
-      });
-
       // Prepare template data. clientLocationEmail/clientLocationPhone are kept
       // as aliases of the support contact so template rows that predate the
       // supportEmail/supportPhone rename still render the right values.
@@ -121,7 +108,6 @@ export async function sendPortalInvitationEmail({
         clientName,
         tenantName: tenantName || clientName,
         portalLink,
-        expirationTime: formatValidityDuration(template.language, validityDays),
         currentYear: new Date().getFullYear(),
         supportEmail: resolvedSupportEmail,
         supportPhone: resolvedSupportPhone,
@@ -130,12 +116,22 @@ export async function sendPortalInvitationEmail({
       };
 
       const tenantEmailService = TenantEmailService.getInstance(tenant);
-      // The resolved row is handed to both providers, so the system fallback
-      // renders the same body in the same language as the tenant attempt.
+      // `expirationTime` is written in the language of the row the lookup picks
+      // (tenant locale -> tenant en -> system locale -> system en), not in the
+      // recipient's resolved locale: a tenant with an English-only copy of
+      // 'portal-invitation' sends an English body, and that body must say
+      // "14 days", not "14 Tagen". One processor instance serves both providers,
+      // so a system-provider retry renders the same row in the same language.
       const emailParams = {
         mailClass: 'account' as const,
         to: email,
-        templateProcessor: new StaticTemplateProcessor(template.subject, template.html, template.text),
+        templateProcessor: new LanguageAwareTemplateProcessor(knex, 'portal-invitation', (templateLanguage) => {
+          logger.info('[SendPortalInvitationEmail] Selected template language:', {
+            templateLanguage,
+            recipientLocale
+          });
+          return { expirationTime: formatValidityDuration(templateLanguage, validityDays) };
+        }),
         templateData,
         locale: recipientLocale,
         fromName,

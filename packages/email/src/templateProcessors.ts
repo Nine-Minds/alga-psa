@@ -144,8 +144,15 @@ export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
   }
 
   async process(options: TemplateProcessorOptions): Promise<EmailTemplateContent> {
+    return this.renderResolved(await this.resolveTemplate(options), options);
+  }
+
+  /** Variable replacement over a row the lookup already picked. */
+  protected renderResolved(
+    template: ResolvedEmailTemplate,
+    options: TemplateProcessorOptions
+  ): EmailTemplateContent {
     const { tenantId, templateData } = options;
-    const template = await this.resolveTemplate(options);
 
     let { subject, html, text } = template;
 
@@ -242,6 +249,38 @@ export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
       text: template.text_content || this.htmlToText(html),
       language: normalizeLocale(template.language_code) ?? 'en'
     };
+  }
+}
+
+/**
+ * A database template whose data depends on the language of the row the lookup
+ * actually picks. `deriveData` is handed that language and returns the values
+ * to render with it, so a formatted duration lands in the body in the body's
+ * own language — not in the recipient's requested locale, which a tenant that
+ * keeps an English-only copy of the template would contradict.
+ *
+ * The lookup stays inside the processor, where every other send keeps it: a
+ * caller that resolved the row itself would be reading the template tables from
+ * its own module. The row is resolved once per instance, so the tenant provider
+ * and a system-provider retry of the same message render the same body.
+ */
+export class LanguageAwareTemplateProcessor extends DatabaseTemplateProcessor {
+  private resolved?: Promise<ResolvedEmailTemplate>;
+
+  constructor(
+    knex: Knex | Knex.Transaction,
+    templateName: string,
+    private deriveData: (language: SupportedLocale) => Record<string, any>
+  ) {
+    super(knex, templateName);
+  }
+
+  async process(options: TemplateProcessorOptions): Promise<EmailTemplateContent> {
+    const template = await (this.resolved ??= this.resolveTemplate(options));
+    return this.renderResolved(template, {
+      ...options,
+      templateData: { ...options.templateData, ...this.deriveData(template.language) }
+    });
   }
 }
 
