@@ -44,6 +44,7 @@ import {
   readStagedSourceMime,
 } from './inboundEmailSourceStager';
 import { processInboundEmailInApp } from './processInboundEmailInApp';
+import { resolveInboundAuthTrust } from './inboundAuthTrust';
 import { InboundEmailOutboxEventPublisher } from '../../workflow/adapters/inboundEmailOutboxEventPublisher';
 import { buildArtifactKey } from './inboundEmailIdentity';
 import { extractEmbeddedImageAttachments } from './inboundEmailArtifactHelpers';
@@ -172,6 +173,7 @@ export async function processInboundInbox(
   }
 
   let parsed: Awaited<ReturnType<typeof parseStagedMimeIntoEmailDetails>>;
+  let inboundAuthTrust: Awaited<ReturnType<typeof resolveInboundAuthTrust>>;
   try {
     const rawMime = await readStagedSourceMime({
       tenant: inbox.tenant,
@@ -185,6 +187,13 @@ export async function processInboundInbox(
       providerType: inbox.provider_type,
       rawMime,
       fallbackProviderMessageId: inbox.provider_message_id,
+    });
+    // ARC seal verification does DNS lookups, so it runs here with the raw bytes
+    // and outside the commit transaction. It is a no-op unless the inbox opted in.
+    inboundAuthTrust = await resolveInboundAuthTrust({
+      tenantId: inbox.tenant,
+      providerId: inbox.provider_id,
+      rawMime,
     });
   } catch (error: any) {
     const message = error?.message || String(error);
@@ -236,6 +245,7 @@ export async function processInboundInbox(
         trx,
         inbox: locked,
         emailData: parsed.emailData,
+        inboundAuthTrust,
       });
       return { terminalReplay: false as const, ...result };
     });
@@ -309,6 +319,7 @@ async function runCommitPhase(params: {
   trx: Knex.Transaction;
   inbox: InboundEmailInboxRecord;
   emailData: Parameters<typeof processInboundEmailInApp>[0]['emailData'];
+  inboundAuthTrust: Parameters<typeof processInboundEmailInApp>[0]['inboundAuthTrust'];
 }): Promise<CommitResult> {
   const { trx, inbox, emailData } = params;
   const tenantId = params.tenantId;
@@ -335,7 +346,7 @@ async function runCommitPhase(params: {
   });
 
   const result = await processInboundEmailInApp(
-    { tenantId, providerId, emailData },
+    { tenantId, providerId, emailData, inboundAuthTrust: params.inboundAuthTrust },
     {
       collectDiagnostics: true,
       durableExecution: {

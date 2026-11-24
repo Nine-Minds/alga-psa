@@ -222,6 +222,23 @@
       "missingDescription": "No Gmail watch is registered for {{mailbox}}, so no inbound mail will arrive. Refresh Pub/Sub & Watch to register one.",
       "expiringTitle": "Gmail push delivery expires within a day",
       "expiringDescription": "Gmail watches last seven days. Refresh Pub/Sub & Watch before this one lapses, or inbound mail will stop without further notice."
+    },
+    "trustedGateway": {
+      "title": "Trusted inbound gateway",
+      "description": "If a mail-security gateway rewrites messages before this mailbox receives them, the receiving server may fail the sender's authentication even though the gateway verified it. Choose how to trust the gateway's verdict. This only affects matching the sender to a client contact — it never applies to internal users.",
+      "modeLabel": "Gateway trust mode",
+      "modes": {
+        "off": "Off (receiving mail server only)",
+        "arcSealed": "Verify the gateway's ARC seal",
+        "mtaArcPass": "Rely on the mail server's ARC result"
+      },
+      "idsLabel": "Trusted authserv-ids",
+      "idsPlaceholder": "mx.example.net",
+      "idsHelp": "Comma-separated. Use the name the gateway puts at the start of its Authentication-Results header (for example mx.avanan.net). A mismatched name is never trusted: the ARC seal must also verify.",
+      "contactOnly": "Contact attribution only. Messages from addresses that belong to internal users are still verified by the receiving server alone.",
+      "save": "Save",
+      "saved": "Trusted gateway settings saved",
+      "saveFailed": "Failed to save trusted gateway settings"
     }
   },
   "forms": {

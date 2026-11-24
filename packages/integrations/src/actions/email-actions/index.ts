@@ -1,6 +1,7 @@
 export { configureGmailProvider, type ConfigureGmailProviderResult } from './configureGmailProvider';
 export { getEmailProviders, upsertEmailProvider, createEmailProvider, updateEmailProvider, deleteEmailProvider, resyncImapProvider, testEmailProviderConnection, retryMicrosoftSubscriptionRenewal, runMicrosoft365Diagnostics } from './emailProviderActions';
 export { pauseEmailProvider, resumeEmailProvider } from './inboundPauseActions';
+export { getInboundAuthTrust, updateInboundAuthTrust } from './inboundAuthTrustActions';
 export { getEmailDomains, addEmailDomain, verifyEmailDomain, deleteEmailDomain } from './emailDomainActions';
 export { getEmailSettings, getMicrosoftOutboundMailboxes, updateEmailSettings, testOutboundEmail, runOutboundEmailDiagnostics } from './emailSettingsActions';
 export type { MicrosoftOutboundMailboxOption } from './emailSettingsActions';

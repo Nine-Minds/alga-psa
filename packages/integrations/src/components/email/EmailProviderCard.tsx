@@ -28,7 +28,9 @@ import {
   Repeat,
   Stethoscope,
 } from 'lucide-react';
+import type { InboundAuthTrustPolicy } from '@alga-psa/shared/lib/email/authResultsChain';
 import type { PublicEmailProvider } from './types';
+import { TrustedGatewaySettings } from './TrustedGatewaySettings';
 import { INBOUND_DEFAULTS_WARNING, providerNeedsInboundDefaults } from './emailProviderDefaults';
 
 interface EmailProviderCardProps {
@@ -48,6 +50,11 @@ interface EmailProviderCardProps {
   onRunDiagnostics: (provider: PublicEmailProvider) => void;
   onChangeDefaults: (provider: PublicEmailProvider, defaultsId?: string) => void | Promise<void>;
   onTogglePause: (provider: PublicEmailProvider) => void | Promise<void>;
+  /** When provided, the card shows the "Trusted inbound gateway" settings section. */
+  onSaveInboundAuthTrust?: (
+    provider: PublicEmailProvider,
+    policy: InboundAuthTrustPolicy
+  ) => Promise<{ success: boolean; error?: string; policy?: InboundAuthTrustPolicy }>;
   /**
    * Provider-specific reconnect dispatch for providers auto-paused on
    * repeated auth failures. Threaded from EmailProviderConfiguration so the
@@ -86,6 +93,7 @@ export function EmailProviderCard({
   onRunDiagnostics,
   onChangeDefaults,
   onTogglePause,
+  onSaveInboundAuthTrust,
   onReconnect,
 }: EmailProviderCardProps) {
   const { t } = useTranslation('msp/email-providers');
@@ -540,6 +548,13 @@ export function EmailProviderCard({
             disabled={updatingProviderId === provider.id}
           />
         </div>
+
+        {onSaveInboundAuthTrust && (
+          <TrustedGatewaySettings
+            provider={provider}
+            onSave={(policy) => onSaveInboundAuthTrust(provider, policy)}
+          />
+        )}
       </CardContent>
     </Card>
   );

@@ -1,3 +1,5 @@
+import type { InboundAuthTrustPolicy } from '@alga-psa/shared/lib/email/authResultsChain';
+
 export interface EmailProvider {
   id: string;
   tenant: string;
@@ -13,6 +15,8 @@ export interface EmailProvider {
   isActive: boolean;
   inboundPausedAt?: string | null;
   inboundPauseReason?: 'manual' | 'tenant_cancelled' | 'auth_failure' | null;
+  /** Trusted inbound gateway policy for contact attribution; absent/`off` = receiving MTA only. */
+  inboundAuthTrust?: InboundAuthTrustPolicy;
   inboundAuthFailureCount?: number;
   inboundAuthFailureLastAt?: string | null;
   inboundAuthFailureCode?: string | null;

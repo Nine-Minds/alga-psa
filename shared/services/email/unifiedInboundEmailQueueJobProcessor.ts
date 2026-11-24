@@ -31,6 +31,7 @@ import { getEmailWebhookBaseUrl } from './webhookBaseUrl';
 import { refreshImapAccessToken } from '@alga-psa/shared/services/email/imapOauthToken';
 import { assertImapOauthCredentialIssuerBound, assertSafeImapHost } from '@alga-psa/shared/services/email/imapOutboundTarget';
 import { normalizeInboundMessageIdentity } from '@alga-psa/shared/services/email/inboundEmailIdentity';
+import { resolveInboundAuthTrust } from '@alga-psa/shared/services/email/inboundAuthTrust';
 import { createHash } from 'node:crypto';
 
 export class SourceMessageUnavailableError extends Error {
@@ -1187,10 +1188,17 @@ export async function processUnifiedInboundEmailQueueJob(
     }
 
     try {
+      // Verified from the raw MIME carried on emailData; a no-op unless the inbox opted in.
+      const inboundAuthTrust = await resolveInboundAuthTrust({
+        tenantId: job.tenantId,
+        providerId: job.providerId,
+        rawMimeBase64: emailData.rawMimeBase64,
+      });
       const result = await processInboundEmailInApp({
         tenantId: job.tenantId,
         providerId: job.providerId,
         emailData,
+        inboundAuthTrust,
       }, {
         collectDiagnostics: true,
       });

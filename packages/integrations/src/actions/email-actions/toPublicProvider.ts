@@ -6,6 +6,7 @@
  * deliberately; secrets are surfaced only as `has_*` booleans.
  */
 
+import { normalizeInboundAuthTrust } from '@alga-psa/shared/lib/email/authResultsChain';
 import type {
   EmailProvider,
   GoogleEmailProviderConfig,
@@ -132,6 +133,7 @@ export function toPublicProvider(p: EmailProvider): PublicEmailProvider {
     isActive: p.isActive,
     inboundPausedAt: p.inboundPausedAt,
     inboundPauseReason: p.inboundPauseReason,
+    inboundAuthTrust: normalizeInboundAuthTrust(p.inboundAuthTrust),
     inboundAuthFailureCount: p.inboundAuthFailureCount,
     inboundAuthFailureLastAt: p.inboundAuthFailureLastAt,
     inboundAuthFailureCode: p.inboundAuthFailureCode,
