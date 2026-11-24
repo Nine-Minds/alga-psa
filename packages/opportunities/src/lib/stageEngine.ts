@@ -197,7 +197,7 @@ function sameDeclaration(a: ResolvedDeclaration, b: ResolvedDeclaration): boolea
 /**
  * The only code that inserts or supersedes a `user_declared` row for a
  * checkpoint. Resolves `content` against the live declaration (patch
- * semantics), guards every supplied citation, and writes nothing when the
+ * semantics), guards every citation the edit introduces, and writes nothing when the
  * result equals what is already there. A change supersedes the live row with
  * a correction and inserts its replacement with the citation rows; the
  * replacement inherits `recorded_at` / `recorded_by`, because that is when the
