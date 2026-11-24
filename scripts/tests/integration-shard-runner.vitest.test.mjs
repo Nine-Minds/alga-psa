@@ -22,10 +22,11 @@ test('actual integration runner partitions, executes and rejects missing or stal
     write(file, readFileSync(path.join(source, file), 'utf8'));
   }
   write('.gitignore', 'node_modules\ntest-results/\nserver/test-results-integration.json\n');
-  write('server/vitest.config.mjs', `export default ${JSON.stringify({ test: { globals: true, include: ['src/test/integration/**/*.test.ts'], fileParallelism: false, maxWorkers: 1 } })};`);
+  write('server/vitest.config.mjs', `export default ${JSON.stringify({ test: { globals: true, include: ['src/test/integration/**/*.test.ts'], exclude: ['**/*.citus.integration.test.ts'], fileParallelism: false, maxWorkers: 1 } })};`);
   const files = ['billing/invoices/invoiceDueDate.test.ts', 'billing/invoices/manualInvoice.test.ts',
     'billing/tax/taxRoundingBehavior.test.ts', 'billing/credits/creditApplication.test.ts', 'extra.test.ts'];
   for (const file of files) write(`server/src/test/integration/${file}`, "test('observes the result', () => expect(2 + 3).toBe(5));\n");
+  write('server/src/test/integration/emailOAuthGrants.citus.integration.test.ts', "test('belongs to the Citus runtime lane', () => expect(1).toBe(1));\n");
   write('server/src/amount.ts', 'export const amount = () => 5;\n');
   write('server/src/test/integration/extra.test.ts', "import { amount } from '../../amount'; test('observes affected behavior', () => expect(amount()).toBeGreaterThan(0));\n");
   write('server/src/test/integration/tier1.manifest.json', JSON.stringify({ paths: ['src/test/integration/billing/invoices/invoiceDueDate.test.ts'] }));
@@ -46,6 +47,7 @@ test('actual integration runner partitions, executes and rejects missing or stal
     const evidence = read('test-results/integration/evidence.json');
     assert.equal(evidence.status, 'passed');
     assert.equal(evidence.workingTreeDirty, false);
+    assert.ok(!evidence.expectedFiles.includes('server/src/test/integration/emailOAuthGrants.citus.integration.test.ts'));
     assert.equal(evidence.expectedFiles.length, index === 3 ? 1 : 2);
     cpSync(path.join(root, 'test-results/integration'), path.join(root, `test-results/integration-shards/server-integration-shard-${index}`), { recursive: true });
   }

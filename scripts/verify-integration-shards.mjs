@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compareExecutionEvidence, reconcileExecution } from './lib/test-execution-evidence.mjs';
 import { reconcileTestShards } from './lib/test-sharding.mjs';
-import { repositoryTestFiles } from './lib/test-discovery.mjs';
+import { isPostgresIntegrationTest, repositoryTestFiles } from './lib/test-discovery.mjs';
 import { testRevision } from './lib/test-revision.mjs';
 import { readChangedFiles, selectIntegration } from './lib/integration-selection.mjs';
 
@@ -56,7 +56,8 @@ try {
     }
     result = reconcileTestShards({ shards, suite: 'integration', revision: source.revision, mode: 'selected', total,
       jobResult: process.env.INTEGRATION_JOB_RESULT || 'missing' });
-    const candidates = repositoryTestFiles(root).filter(file => file.startsWith('server/src/test/integration/') || file.startsWith('ee/temporal-workflows/src/__tests__/integration/'));
+    const candidates = repositoryTestFiles(root).filter(file => isPostgresIntegrationTest(file)
+      && (file.startsWith('server/src/test/integration/') || file.startsWith('ee/temporal-workflows/src/__tests__/integration/')));
     const manifest = JSON.parse(readFileSync(path.join(root, 'server/src/test/integration/tier1.manifest.json'), 'utf8'));
     const floor = manifest.paths.map(file => path.relative(root, path.resolve(root, 'server', file)).split(path.sep).join('/'));
     let required = candidates;

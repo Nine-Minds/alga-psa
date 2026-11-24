@@ -11,6 +11,17 @@ export function repositoryTestFiles(root) {
   return [...new Set(files.split('\0').filter((file) => /\.(test|spec)\.[cm]?[jt]sx?$/.test(file)))].sort();
 }
 
+// Citus-specific integration suites are owned and collected by the Citus lane.
+// They remain mandatory repository candidates, but must not be attributed to
+// PostgreSQL integration shards that exclude them in Vitest configuration.
+export function isCitusOwnedIntegrationTest(file) {
+  return /^server\/src\/test\/integration\/.*\.citus\.integration\.test\.[cm]?[jt]sx?$/.test(file);
+}
+
+export function isPostgresIntegrationTest(file) {
+  return !isCitusOwnedIntegrationTest(file);
+}
+
 // These tests are excluded from the DB-less unit job. Server unit-directory
 // DB tests need the same positive assignment as colocated package DB tests.
 // Integration/infrastructure directories retain their own database lanes.

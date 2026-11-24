@@ -54,6 +54,7 @@ test('same-revision artifact inventory covers every lane and rejects stale, miss
   assert.equal(valid.executionVerified, false);
   assert.equal(valid.tests.length, candidates.length);
   assert.equal(valid.runners.find(r => r.runner === 'manual').mandatory, false);
+  assert.equal(valid.runners.find(r => r.runner === 'citus-runtime').mandatory, true);
   assert.equal(verifyRepositoryInventory({ ...args, candidates: [...candidates, 'new.test.js'] }).status, 'failed');
   const unitDir = path.join(input, vitestInventoryArtifacts(revision)[0].directory);
   write(path.join(unitDir, 'evidence.json'), { source: { ...source, before: { ...source.before, revision: 'b'.repeat(40) } } });

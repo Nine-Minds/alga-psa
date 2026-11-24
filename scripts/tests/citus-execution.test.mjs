@@ -17,6 +17,8 @@ test('Citus CLI independently requires both complete suites and replaces stale g
   const runnerSource = readFileSync(new URL('../run-citus-runtime-tests.mjs', import.meta.url), 'utf8');
   const runnerFiles = [...runnerSource.match(/const files = \[([\s\S]*?)\];/)[1].matchAll(/'([^']+)'/g)].map(match => match[1]);
   assert.ok(runnerFiles.length > 1, 'Citus runner must declare more than one required suite');
+  const grantsSuite = 'server/src/test/integration/emailOAuthGrants.citus.integration.test.ts';
+  assert.ok(runnerFiles.includes(grantsSuite), 'OAuth grants Citus suite must be collected by its owner lane');
   const files = {
     // Seed exactly what the runtime runner collects so the gate cannot drift from its producer.
     'citus-runtime': runnerFiles,
@@ -57,6 +59,11 @@ test('Citus CLI independently requires both complete suites and replaces stale g
     return result;
   };
   assert.equal(run().status, 'passed');
+  seed('citus-runtime', files['citus-runtime'].filter(file => file !== grantsSuite));
+  const missingGrantsSuite = run();
+  assert.equal(missingGrantsSuite.status, 'failed');
+  assert.ok(missingGrantsSuite.failures.some(message => message.includes(`Uncollected candidate: ${grantsSuite}`)));
+  seed('citus-runtime');
   for (const CITUS_JOB_RESULT of ['failure', 'cancelled', 'skipped', '']) assert.equal(run({ CITUS_JOB_RESULT }).status, 'failed');
   for (const lane of Object.keys(files)) {
     seed(lane, files[lane].slice(1));

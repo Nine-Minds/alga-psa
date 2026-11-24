@@ -13,6 +13,7 @@ export function vitestInventoryArtifacts(revision) {
       .map(suite => [suite, `${suite}-${revision}`, 'Workspace maintainers', 'Existing workspace CI runtime']),
     ...[1, 2, 3].map(n => [`enterprise-unit-${n}`, `enterprise-unit-shard-${n}`, 'Enterprise maintainers', 'Node/jsdom']),
     ...[1, 2, 3, 4].map(n => [`integration-${n}`, `server-integration-shard-${n}`, 'CI and domain maintainers', 'PostgreSQL/Redis']),
+    ['citus-runtime', 'citus-runtime', 'Citus maintainers', 'Citus/PostgreSQL'],
     ...[1, 2, 3].map(n => [`infrastructure-${n}`, `infrastructure-shard-${n}`, 'Platform maintainers', 'PostgreSQL/Redis']),
     ['workspace-db', 'workspace-db-evidence', 'Workspace maintainers', 'PostgreSQL/Redis'],
     ['api-e2e', 'fresh-install-api-community', 'API maintainers', 'Built application/PostgreSQL'],
