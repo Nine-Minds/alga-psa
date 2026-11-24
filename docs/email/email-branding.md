@@ -58,9 +58,11 @@ Click **Remove Branding** to delete only the rows that email branding previously
 Enterprise tenants see two additional controls on the **Email Branding** tab:
 
 - **Header logo** – Upload an image to inject as a header logo into branded templates. The logo is embedded in each outgoing email as an inline `cid:` attachment (Base64-encoded, capped at 1 MB), so it renders automatically in all email clients — including Gmail, Outlook, and Apple Mail — without requiring recipients to enable image downloading. Template rows written before this change are repaired automatically on their next send; no manual migration is required. The logo is injected idempotently: re-applying branding after uploading a new logo replaces the old one without duplicating it.
-- **Remove "Powered by AlgaPSA" attribution** – Toggle off the footer attribution line from all branded templates. The removal is idempotent; re-applying branding never re-inserts the line once it has been removed.
+- **Remove "Powered by AlgaPSA" attribution** – Toggle off the footer attribution line from all branded templates. The whole footer line goes with it: the attribution, the AlgaPSA slogan that follows it ("Keeping teams aligned" and its translations), and the coloured band they sat in. The slogan is AlgaPSA's line rather than yours, so turning the attribution off leaves nothing behind that reads as your own tagline. The removal is idempotent; re-applying branding never re-inserts the line once it has been removed, and switching the toggle back on restores the standard footer on the next apply.
 
 Both controls apply only to templates that pass through the branding apply run. Customized templates excluded from the run keep whatever logo and footer state they had before.
+
+> **Footers branded before this change:** earlier versions removed only the words "Powered by AlgaPSA" and left the slogan — or, where the footer was the attribution alone, an empty coloured band — in the footer of every branded copy. AlgaPSA does not rewrite stored template copies on your behalf, so those footers stay as they are until you click **Apply to templates** again. That run rewrites your branded copies even when the palette, logo and toggles are unchanged, which is all it takes to pick up the corrected footer. A footer you edited yourself — including one where you kept the attribution and added your own words beside it — is classified `customized` and stays out of the run unless you tick it.
 
 ## Handling Newly Added System Templates
 

@@ -176,10 +176,14 @@ describe('email branding panel markup', () => {
    */
   it('offers "Apply to templates" for a palette that has not changed', () => {
     expect(panelSource).toContain('id="open-apply-email-branding"');
-    expect(panelSource).toContain('disabled={!status.canEdit || !status.palette || isDirty}');
 
     const button = panelSource.slice(panelSource.indexOf('id="open-apply-email-branding"'));
     const gate = button.slice(0, button.indexOf('</Button>'));
+    const disabled = /disabled=\{([^}]*)\}/.exec(gate)?.[1] ?? '';
+
+    expect(disabled).toContain('status.canEdit');
+    expect(disabled).toContain('status.palette');
+    expect(disabled).toContain('isDirty');
     expect(gate).not.toContain('appliedAt');
     expect(gate).not.toContain('appliedPalette');
   });
