@@ -484,65 +484,150 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
     };
     const LEAKS = ['[ALGA-REPLY-TOKEN', 'Please reply above this line', 'Comment from Dana Tech'];
 
-    const writtenComment = async (parsedEmail: any) => {
+    const emailData = {
+      id: 'email-own-reply',
+      subject: 'Re: Laptop deployment',
+      body: QUOTED_MAIL,
+      from: { email: 'jane.client@example.test' },
+      to: [{ email: 'support@example.com' }],
+    };
+
+    /** Visible text of the stored body, which is serialized BlockNote blocks. */
+    const visibleText = (content: string): string => {
+      const collect = (node: any): string[] => {
+        if (Array.isArray(node)) return node.flatMap(collect);
+        if (!node || typeof node !== 'object') return [];
+        return [
+          ...(typeof node.text === 'string' ? [node.text] : []),
+          ...collect(node.content),
+          ...collect(node.children),
+        ];
+      };
+      return collect(JSON.parse(content)).join(' ').trim();
+    };
+
+    const expectNoLeaks = (content: string) => {
+      // Markup is converted, never stored as literal tags.
+      expect(content).not.toContain('<div');
+      expect(content).not.toContain('<br');
+      for (const leaked of LEAKS) {
+        expect(visibleText(content)).not.toContain(leaked);
+      }
+    };
+
+    const writtenComment = async (parsedEmail: any, inboundEmail: any = emailData) => {
       const { registerEmailWorkflowActionsV2 } = await import('../registerEmailWorkflowActions');
       registerEmailWorkflowActionsV2();
       const action = registeredActions.find((entry) => entry.id === 'create_comment_from_parsed_email');
       expect(action).toBeDefined();
 
-      await action!.handler(
-        {
-          ticketId: 'ticket-own-reply',
-          emailData: {
-            id: 'email-own-reply',
-            subject: 'Re: Laptop deployment',
-            body: QUOTED_MAIL,
-            from: { email: 'jane.client@example.test' },
-            to: [{ email: 'support@example.com' }],
-          },
-          parsedEmail,
-        },
-        { tenantId: 'tenant-1' }
-      );
+      await action!.handler({ ticketId: 'ticket-own-reply', emailData: inboundEmail, parsedEmail }, { tenantId: 'tenant-1' });
 
       expect(createCommentFromEmailMock).toHaveBeenCalledTimes(1);
       return createCommentFromEmailMock.mock.calls[0][0] as any;
     };
 
-    it('writes the parsed text, not the untrimmed original body', async () => {
-      const comment = await writtenComment({
-        sanitizedText: AUTHORED,
-        sanitizedHtml: undefined,
-        confidence: 'high',
-        strategy: 'custom-boundary',
-        appliedHeuristics: ['token-strip', 'explicit-boundary', 'html-blockquote-trim', 'html-trim-rejected'],
-        warnings: [
-          'HTML blockquote trim removed significantly more content than text heuristics; using text result.',
-        ],
-        metadata: {},
-      });
+    const writtenTicket = async (parsedEmail: any) => {
+      const { registerEmailWorkflowActionsV2 } = await import('../registerEmailWorkflowActions');
+      registerEmailWorkflowActionsV2();
+      const action = registeredActions.find((entry) => entry.id === 'create_ticket_with_initial_comment');
+      expect(action).toBeDefined();
 
-      expect(comment).toMatchObject({ content: AUTHORED, format: 'text' });
-      for (const leaked of LEAKS) {
-        expect(comment.content).not.toContain(leaked);
-      }
+      await action!.handler(
+        {
+          emailData,
+          parsedEmail,
+          ticketDefaults: { board_id: 'board-1' },
+          targetClientId: 'client-1',
+          targetContactId: 'contact-1',
+          targetLocationId: null,
+        },
+        { tenantId: 'tenant-1' }
+      );
+
+      return {
+        ticket: createTicketFromEmailMock.mock.calls[0][0] as any,
+        comment: createCommentFromEmailMock.mock.calls[0][0] as any,
+      };
+    };
+
+    const REJECTED_TRIM = {
+      sanitizedText: AUTHORED,
+      sanitizedHtml: undefined,
+      confidence: 'high',
+      strategy: 'custom-boundary',
+      appliedHeuristics: ['token-strip', 'explicit-boundary', 'html-blockquote-trim', 'html-trim-rejected'],
+      warnings: [
+        'HTML blockquote trim removed significantly more content than text heuristics; using text result.',
+      ],
+      metadata: {},
+    };
+    const EMPTY_PARSE = {
+      sanitizedText: '',
+      sanitizedHtml: undefined,
+      confidence: 'high',
+      strategy: 'custom-boundary',
+      appliedHeuristics: ['token-strip', 'explicit-boundary'],
+      warnings: [],
+      metadata: {},
+    };
+
+    it('writes the parsed text, not the untrimmed original body', async () => {
+      const comment = await writtenComment(REJECTED_TRIM);
+
+      expect(visibleText(comment.content)).toBe(AUTHORED);
+      expectNoLeaks(comment.content);
     });
 
     it('keeps an empty parse empty instead of reviving the quoted mail', async () => {
-      const comment = await writtenComment({
-        sanitizedText: '',
-        sanitizedHtml: undefined,
-        confidence: 'high',
-        strategy: 'custom-boundary',
-        appliedHeuristics: ['token-strip', 'explicit-boundary'],
-        warnings: [],
-        metadata: {},
-      });
+      const comment = await writtenComment(EMPTY_PARSE);
 
-      expect(comment.content).toBe('');
-      for (const leaked of LEAKS) {
-        expect(comment.content).not.toContain(leaked);
-      }
+      expect(visibleText(comment.content)).toBe('');
+      expectNoLeaks(comment.content);
+    });
+
+    // The parser reports an empty reply through sanitizedText alone; its HTML side may still
+    // hold the quoted notification when no blockquote wrapped it.
+    it('ignores the retained HTML of a reply the parser reported as empty', async () => {
+      const comment = await writtenComment({ ...EMPTY_PARSE, sanitizedHtml: QUOTED_MAIL.html });
+
+      expect(visibleText(comment.content)).toBe('');
+      expectNoLeaks(comment.content);
+    });
+
+    it('stores a trimmed HTML-only reply as blocks, not as literal markup', async () => {
+      const comment = await writtenComment(
+        { ...REJECTED_TRIM, sanitizedText: '', sanitizedHtml: `<div dir="ltr">${AUTHORED}</div><br>` },
+        { ...emailData, body: { html: QUOTED_MAIL.html } }
+      );
+
+      expect(visibleText(comment.content)).toContain(AUTHORED);
+      expectNoLeaks(comment.content);
+    });
+
+    it('builds the new ticket description and first comment from the parsed body', async () => {
+      const { ticket, comment } = await writtenTicket(REJECTED_TRIM);
+
+      expect(visibleText(ticket.description)).toBe(AUTHORED);
+      expect(comment.content).toBe(ticket.description);
+      expectNoLeaks(ticket.description);
+    });
+
+    it('does not restore the raw text into the description of an empty parse', async () => {
+      const { ticket, comment } = await writtenTicket(EMPTY_PARSE);
+
+      expect(visibleText(ticket.description)).toBe('');
+      expectNoLeaks(ticket.description);
+      // Still a valid body: an empty string would fail comment validation and leave the
+      // ticket behind with no comment at all.
+      expect(comment.content.length).toBeGreaterThan(0);
+      expectNoLeaks(comment.content);
+    });
+
+    it('still falls back to the raw body when parsing never produced a result', async () => {
+      const comment = await writtenComment(undefined);
+
+      expect(visibleText(comment.content)).toContain(AUTHORED);
     });
   });
 

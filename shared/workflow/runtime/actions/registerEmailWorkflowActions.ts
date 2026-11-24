@@ -18,6 +18,7 @@ import {
   saveEmailClientAssociation
 } from '../../actions/emailWorkflowActions';
 import { extractEmailDomain } from '../../../lib/email/addressUtils';
+import { substantiveReplyBody } from '../../../services/email/inboundReplyBody';
 
 // =============================================================================
 // SHARED OUTPUT SCHEMAS FOR EMAIL ACTIONS
@@ -121,24 +122,20 @@ const inboundTicketDefaultsSchema = z.object({
   location_id: z.string().optional().describe('Default location ID')
 });
 
-function buildCommentPayload(parsedEmail: any, emailData: any) {
-  const sanitizedHtml = parsedEmail?.sanitizedHtml;
-  const sanitizedText = parsedEmail?.sanitizedText;
-  // A successful parse owns the body: an undefined sanitizedHtml means the parser's safety net
-  // rejected its own HTML trim, so the comment comes from the parsed text. Falling back to the
-  // raw body there would store the whole quoted history (alga-2026-0003353).
-  const rawHtml = parsedEmail ? undefined : emailData?.body?.html;
-  const rawText = parsedEmail ? undefined : emailData?.body?.text;
-  const content = sanitizedHtml || sanitizedText || rawHtml || rawText || '';
-  const format = sanitizedHtml
-    ? 'html'
-    : sanitizedText
-      ? 'text'
-      : rawHtml
-        ? 'html'
-        : 'text';
-  const metadata = parsedEmail?.metadata;
-  return { content, format, metadata };
+/**
+ * Body the workflow stores for an inbound email, as the serialized BlockNote blocks a
+ * comment and a ticket description are read as — the same shape processInboundEmailInApp
+ * writes, so neither path renders raw markup. `substantiveReplyBody` decides which body
+ * is used: a successful parse owns it, and an empty parsed reply stays empty instead of
+ * reviving the quoted history the parser removed (alga-2026-0003353).
+ *
+ * BlockNote conversion is imported lazily: the action registry is loaded by workers that
+ * never touch an email body.
+ */
+async function buildInboundBodyBlocks(parsedEmail: any, emailData: any): Promise<string> {
+  const { blocksFromEmailBody } = await import('../../../services/email/inboundEmbeddedImageUrlRewrite');
+  const body = substantiveReplyBody(parsedEmail, emailData?.body);
+  return JSON.stringify(await blocksFromEmailBody(body));
 }
 
 /**
@@ -593,10 +590,14 @@ export function registerEmailWorkflowActionsV2(): void {
     handler: async (input, ctx) => {
       const tenant = ctx.tenantId ?? '';
       const emailData = input.emailData;
+      // One body for the description and the first comment, exactly as the in-app path
+      // stores them. The raw text must not come back here either: an empty parsed reply
+      // would otherwise put the quoted notification into the description.
+      const bodyBlocks = await buildInboundBodyBlocks(input.parsedEmail, emailData);
 
       const ticketResult = await createTicketFromEmail({
         title: emailData.subject,
-        description: input.parsedEmail?.sanitizedText || emailData.body?.text || '',
+        description: bodyBlocks,
         client_id: input.targetClientId ?? undefined,
         contact_id: input.targetContactId ?? undefined,
         source: 'email',
@@ -618,18 +619,16 @@ export function registerEmailWorkflowActionsV2(): void {
         }
       }, tenant);
 
-      const commentPayload = buildCommentPayload(input.parsedEmail, emailData);
       const commentId = await createCommentFromEmail({
         ticket_id: ticketResult.ticket_id,
-        content: commentPayload.content,
-        format: commentPayload.format,
+        content: bodyBlocks,
         source: 'email',
         author_type: 'contact',
         author_id: input.targetAuthorUserId ?? undefined,
         contact_id: input.targetContactId ?? undefined,
         // First comment on a new ticket: covered by the TICKET_CREATED email, so keep in-app only.
         suppressTechEmailNotification: true,
-        metadata: withEmailSenderMetadata(commentPayload.metadata, emailData.from)
+        metadata: withEmailSenderMetadata(input.parsedEmail?.metadata, emailData.from)
       }, tenant);
 
       return {
@@ -725,7 +724,7 @@ export function registerEmailWorkflowActionsV2(): void {
     ui: { label: 'Create Comment from Parsed Email', category: 'Email' },
     handler: async (input, ctx) => {
       const tenant = ctx.tenantId ?? '';
-      const commentPayload = buildCommentPayload(input.parsedEmail, input.emailData);
+      const bodyBlocks = await buildInboundBodyBlocks(input.parsedEmail, input.emailData);
       const senderEmail = input.emailData?.from?.email;
       const matchedContact =
         !input.contact_id && senderEmail
@@ -737,13 +736,12 @@ export function registerEmailWorkflowActionsV2(): void {
 
       const commentId = await createCommentFromEmail({
         ticket_id: input.ticketId,
-        content: commentPayload.content,
-        format: commentPayload.format,
+        content: bodyBlocks,
         source: input.source ?? 'email',
         author_type: resolvedAuthorType,
         author_id: resolvedAuthorId,
         contact_id: resolvedContactId,
-        metadata: withEmailSenderMetadata(commentPayload.metadata, input.emailData?.from)
+        metadata: withEmailSenderMetadata(input.parsedEmail?.metadata, input.emailData?.from)
       }, tenant);
       return { comment_id: commentId };
     }
