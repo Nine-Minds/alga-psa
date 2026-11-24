@@ -1,7 +1,7 @@
 'use server'
 
 import { getSystemEmailService, TenantEmailService } from './index';
-import { DatabaseTemplateProcessor } from './templateProcessors';
+import { DatabaseTemplateProcessor, StaticTemplateProcessor } from './templateProcessors';
 import { getConnection, runWithTenant } from '@alga-psa/db';
 import { getUserInfoForEmail, resolveEmailLocale } from './emailLocaleResolver';
 import { SupportedLocale } from './lib/localeConfig';
@@ -13,7 +13,7 @@ interface SendPortalInvitationEmailParams {
   clientName: string;      // Recipient's own client company
   tenantName?: string;     // MSP sending the invitation
   portalLink: string;
-  /** Tenant's invitation validity in whole days; rendered in the recipient's locale. */
+  /** Tenant's invitation validity in whole days; rendered in the language of the template that is sent. */
   validityDays: number;
   tenant: string;
   supportEmail?: string;   // MSP support contact shown to the recipient
@@ -24,9 +24,11 @@ interface SendPortalInvitationEmailParams {
 }
 
 /**
- * "7 days" / "7 Tage" / "1 day" in the recipient's own language. The templates
- * interpolate the rendered string as `{{expirationTime}}`, so a German
- * invitation no longer reads "läuft in 24 hours ab".
+ * "7 days" / "7 Tage" / "1 day" in the language of the template that carries it.
+ * The templates interpolate the rendered string as `{{expirationTime}}`, so a
+ * German invitation no longer reads "läuft in 24 hours ab" — and an English
+ * template sent to a German recipient (a tenant that keeps an English-only copy)
+ * does not read "expire in 14 Tage" either.
  */
 function formatValidityDuration(locale: SupportedLocale, validityDays: number): string {
   const days = Number.isFinite(validityDays) ? Math.max(1, Math.round(validityDays)) : 1;
@@ -77,6 +79,19 @@ export async function sendPortalInvitationEmail({
         clientId: recipientInfo.clientId
       });
 
+      // Resolve the template once, before the body is rendered: the row that
+      // wins the lookup (tenant locale -> tenant en -> system locale -> system
+      // en) decides both the wording of the email and the language the validity
+      // has to be written in. A tenant with an English-only copy of
+      // 'portal-invitation' sends English to a German recipient, and that email
+      // must say "14 days", not "14 Tage".
+      const template = await new DatabaseTemplateProcessor(knex, 'portal-invitation')
+        .resolveTemplate({ tenantId: tenant, locale: recipientLocale });
+      logger.info('[SendPortalInvitationEmail] Selected template language:', {
+        templateLanguage: template.language,
+        recipientLocale
+      });
+
       // Prepare template data. clientLocationEmail/clientLocationPhone are kept
       // as aliases of the support contact so template rows that predate the
       // supportEmail/supportPhone rename still render the right values.
@@ -87,7 +102,7 @@ export async function sendPortalInvitationEmail({
         clientName,
         tenantName: tenantName || clientName,
         portalLink,
-        expirationTime: formatValidityDuration(recipientLocale, validityDays),
+        expirationTime: formatValidityDuration(template.language, validityDays),
         currentYear: new Date().getFullYear(),
         supportEmail: resolvedSupportEmail,
         supportPhone: resolvedSupportPhone,
@@ -95,14 +110,13 @@ export async function sendPortalInvitationEmail({
         clientLocationPhone: resolvedSupportPhone
       };
 
-      // Create database template processor with locale support
-      const templateProcessor = new DatabaseTemplateProcessor(knex, 'portal-invitation');
-
       const tenantEmailService = TenantEmailService.getInstance(tenant);
+      // The resolved row is handed to both providers, so the system fallback
+      // renders the same body in the same language as the tenant attempt.
       const emailParams = {
         mailClass: 'account' as const,
         to: email,
-        templateProcessor,
+        templateProcessor: new StaticTemplateProcessor(template.subject, template.html, template.text),
         templateData,
         locale: recipientLocale,
         fromName,

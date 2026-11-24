@@ -2,7 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import Handlebars from 'handlebars';
-import { SupportedLocale } from './lib/localeConfig';
+import { normalizeLocale, SupportedLocale } from './lib/localeConfig';
 
 const SYSTEM_EMAIL_TEMPLATE_LOOKUP_TENANT = '__system_email_template_lookup__';
 
@@ -10,6 +10,20 @@ export interface EmailTemplateContent {
   subject: string;
   html: string;
   text: string;
+}
+
+/**
+ * The template row the lookup picked, before any variable is replaced.
+ */
+export interface ResolvedEmailTemplate extends EmailTemplateContent {
+  /**
+   * The language the chosen row is written in — not the requested locale. A
+   * tenant that keeps an English-only copy of a template sends English to a
+   * German recipient, so a caller that renders a value into the body (a
+   * duration, a date) has to format it in this language or the email ends up
+   * half-translated.
+   */
+  language: SupportedLocale;
 }
 
 export interface TemplateProcessorOptions {
@@ -130,7 +144,31 @@ export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
   }
 
   async process(options: TemplateProcessorOptions): Promise<EmailTemplateContent> {
-    const { tenantId, templateData, locale = 'en' } = options;
+    const { tenantId, templateData } = options;
+    const template = await this.resolveTemplate(options);
+
+    let { subject, html, text } = template;
+
+    // Replace template variables if data provided
+    if (templateData) {
+      subject = this.replaceTemplateVariables(subject, templateData, { html: false, field: 'subject', templateId: this.templateName, tenantId: tenantId });
+      html = this.replaceTemplateVariables(html, templateData, { html: true, field: 'html', templateId: this.templateName, tenantId: tenantId });
+      text = this.replaceTemplateVariables(text, templateData, { html: false, field: 'text', templateId: this.templateName, tenantId: tenantId });
+    }
+
+    return { subject, html, text };
+  }
+
+  /**
+   * The row this send will actually use, with the language it is written in.
+   *
+   * The lookup order lives here only: a caller that needs the language before
+   * the body is rendered resolves once and hands the content to a
+   * StaticTemplateProcessor, so the language and the body always come from the
+   * same row.
+   */
+  async resolveTemplate(options: TemplateProcessorOptions): Promise<ResolvedEmailTemplate> {
+    const { tenantId, locale = 'en' } = options;
 
     // Try to get tenant-specific template first
     let template: any = null;
@@ -196,18 +234,14 @@ export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
       throw new Error(`Template '${this.templateName}' not found`);
     }
 
-    let subject = template.subject;
-    let html = template.html_content;
-    let text = template.text_content || this.htmlToText(html);
+    const html = template.html_content;
 
-    // Replace template variables if data provided
-    if (templateData) {
-      subject = this.replaceTemplateVariables(subject, templateData, { html: false, field: 'subject', templateId: this.templateName, tenantId: tenantId });
-      html = this.replaceTemplateVariables(html, templateData, { html: true, field: 'html', templateId: this.templateName, tenantId: tenantId });
-      text = this.replaceTemplateVariables(text, templateData, { html: false, field: 'text', templateId: this.templateName, tenantId: tenantId });
-    }
-
-    return { subject, html, text };
+    return {
+      subject: template.subject,
+      html,
+      text: template.text_content || this.htmlToText(html),
+      language: normalizeLocale(template.language_code) ?? 'en'
+    };
   }
 }
 
