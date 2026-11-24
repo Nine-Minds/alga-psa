@@ -6,7 +6,10 @@ export function isCoManagedReadFieldHidden(redactions: readonly string[], names:
   return redactions.some(field => {
     if (typeof field !== 'string') throw new CoManagedSharedWorkError();
     if (field === '*' || field === 'fields') return true;
-    const path = field.startsWith('fields.') ? field.slice(7) : field;
+    let path = field;
+    while (path.startsWith('fields.') || path.startsWith('values.')) {
+      path = path.slice(path.indexOf('.') + 1);
+    }
     return names.some(name => path === name || path.startsWith(`${name}.`) || name.startsWith(`${path}.`));
   });
 }

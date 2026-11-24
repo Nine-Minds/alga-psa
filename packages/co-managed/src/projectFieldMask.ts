@@ -46,6 +46,42 @@ export function coManagedColumnHidden(redactedFields: readonly string[], table: 
 /** Extra display-name aliases per logical column, for columns that are derived or joined (the client name, the manager's name, a status name). */
 export type CoManagedColumnSpec = Readonly<Record<string, readonly string[]>>;
 
+export interface CoManagedFieldDependency {
+  readonly sourceField: string;
+  readonly dependentFields: readonly string[];
+}
+
+/** A source redaction also hides every display field that can be reconstructed from that source. */
+export function coManagedRedactionsWithDependencies(
+  redactedFields: readonly string[],
+  table: string,
+  dependencies: readonly CoManagedFieldDependency[],
+  columns: CoManagedColumnSpec,
+): string[] {
+  const expanded = new Set(redactedFields);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const { sourceField, dependentFields } of dependencies) {
+      if (!coManagedColumnHidden([...expanded], table, sourceField, columns[sourceField] ?? [])) continue;
+      for (const field of dependentFields) {
+        if (expanded.has(field)) continue;
+        expanded.add(field);
+        changed = true;
+      }
+    }
+  }
+  return [...expanded];
+}
+
+/** Joined project task values and the source fields from which they are derived. */
+export const CO_MANAGED_TASK_FIELD_DEPENDENCIES: readonly CoManagedFieldDependency[] = [
+  { sourceField: 'project_status_mapping_id', dependentFields: ['status_name', 'is_closed', 'status_color'] },
+  { sourceField: 'status_name', dependentFields: ['status_color'] },
+  { sourceField: 'priority_id', dependentFields: ['priority_name', 'priority_color'] },
+  { sourceField: 'priority_name', dependentFields: ['priority_color'] },
+];
+
 /** The non-text `projects` columns (and their joined display values) a project list or candidate carries. */
 export const CO_MANAGED_PROJECT_COLUMNS: CoManagedColumnSpec = {
   project_number: [], wbs_code: [], is_inactive: [], start_date: [], end_date: [], created_at: [], updated_at: [],
@@ -58,12 +94,16 @@ export const CO_MANAGED_PROJECT_COLUMNS: CoManagedColumnSpec = {
 
 /** The non-text `project_tasks` columns (and their joined display values) a candidate carries. */
 export const CO_MANAGED_TASK_COLUMNS: CoManagedColumnSpec = {
-  due_date: [], updated_at: [],
-  status_name: ['status', 'status_id', 'project_status_mapping_id', 'project_tasks.project_status_mapping_id', 'project_status_mappings', 'statuses', 'standard_statuses', 'statusMappingId', 'mapping_id'],
-  is_closed: ['status', 'status_id', 'project_status_mapping_id', 'project_tasks.project_status_mapping_id', 'project_status_mappings', 'statuses', 'standard_statuses', 'statusMappingId', 'mapping_id'],
-  status_color: ['status', 'status_id', 'status_name', 'project_tasks.status_name', 'project_status_mapping_id', 'project_tasks.project_status_mapping_id', 'project_status_mappings', 'statuses', 'standard_statuses', 'statusMappingId', 'mapping_id'],
-  priority_name: ['priority_id', 'project_tasks.priority_id', 'priority', 'priorities', 'priorityId'],
-  priority_color: ['priority_id', 'project_tasks.priority_id', 'priority', 'priority_name', 'project_tasks.priority_name', 'priorities', 'priorityId'],
+  due_date: [], updated_at: [], wbs_code: ['wbsCode'],
+  project_status_mapping_id: ['status', 'status_name', 'statuses', 'project_status_mappings', 'mapping_id', 'statusMappingId'],
+  priority_id: ['priority', 'priority_name', 'priority_color', 'priorityColor', 'priorityId'],
+  assigned_to: ['assignee', 'assignee_name', 'assigned_to_name', 'users', 'teams'],
+  assigned_team_id: ['assignee', 'assigned_to_name', 'teams'],
+  status_name: ['statusName', 'status'],
+  is_closed: ['isClosed', 'closed'],
+  status_color: ['statusColor', 'color'],
+  priority_name: ['priorityName', 'priority'],
+  priority_color: ['priorityColor', 'color'],
   assigned_to_name: [...CO_MANAGED_ASSIGNEE_NAME_ALIASES, 'assigned_to'],
 };
 

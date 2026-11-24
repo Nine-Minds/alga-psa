@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const state = vi.hoisted(() => ({
   redactedFields: [] as string[],
   tenant: 'tenant-1',
+  decisions: new Map<string, { allowed: boolean; redactedFields: string[] }>(),
 }));
 
 const fixtures = {
@@ -97,9 +98,12 @@ function makeQuery(rootExpression: string, tenant: string) {
 }
 
 vi.mock('@alga-psa/authorization/projectReadAuthorization', () => ({
-  authorizeProjectsByIds: vi.fn(async (_trx: unknown, tenant: string, _reader: unknown, projectIds: string[]) => projectIds
-    .filter((projectId) => tenant === state.tenant && projectId === 'project-1')
-    .map((project_id) => ({ project: { project_id, client_id: 'client-1' }, allowed: true, redactedFields: [...state.redactedFields] }))),
+  authorizeProjectsByIds: vi.fn(async (_trx: unknown, tenant: string, _reader: unknown, projectIds: string[]) => tenant === state.tenant
+    ? projectIds.map((project_id) => ({
+      project: { project_id, client_id: 'client-1' },
+      ...(state.decisions.get(project_id) ?? { allowed: true, redactedFields: [...state.redactedFields] }),
+    }))
+    : []),
 }));
 vi.mock('../models/project', () => ({ default: {
   getByIds: async (_trx: unknown, tenant: string, ids: string[]) => tenant === state.tenant ? ids.map((project_id) => ({ project_id, project_name: 'Network project', is_closed: false, client_id: 'client-1' })) : [],
@@ -123,7 +127,7 @@ import { loadAuthorizedProjectTaskActivities } from './projectTaskActivityRead';
 const reader = { user_id: 'reader-1', user_type: 'internal' } as any;
 const trx = { raw: (sql: string, args?: unknown[]) => ({ sql, args }) } as any;
 
-beforeEach(() => { state.redactedFields = []; });
+beforeEach(() => { state.redactedFields = []; state.decisions.clear(); });
 
 describe('authorized project task activity projection', () => {
   it('uses real masked task and phase projections for populated status and priority data', async () => {
@@ -142,8 +146,16 @@ describe('authorized project task activity projection', () => {
       ['project_tasks.status_name', { statusName: null, statusColor: null }],
       ['project_tasks.is_closed', { isClosed: false }],
       ['statusMappingId', { statusName: null, statusColor: null, isClosed: false }],
+      ['values.project_status_mapping_id', { statusName: null, statusColor: null, isClosed: false }],
+      ['fields.values.project_status_mapping_id', { statusName: null, statusColor: null, isClosed: false }],
+      ['fields.project_tasks.project_status_mapping_id', { statusName: null, statusColor: null, isClosed: false }],
       ['project_tasks.priority_name', { priorityName: null, priorityColor: null }],
       ['priorityId', { priorityName: null, priorityColor: null }],
+      ['values.priority_id', { priorityName: null, priorityColor: null }],
+      ['fields.values.priority_id', { priorityName: null, priorityColor: null }],
+      ['fields.project_tasks.priority_id', { priorityName: null, priorityColor: null }],
+      ['fields.values.status_name', { statusName: null, statusColor: null }],
+      ['fields.values.priority_name', { priorityName: null, priorityColor: null }],
       ['project_tasks.priority_color', { priorityColor: null }],
       ['statusColor', { statusColor: null }],
       ['priorityColor', { priorityColor: null }],
@@ -155,6 +167,28 @@ describe('authorized project task activity projection', () => {
       expect(masked, redaction).toMatchObject(expected);
       if (redaction === 'project_tasks.status_name') expect(masked.statusName).not.toBe('Blocked');
       if (redaction === 'project_tasks.priority_name') expect(masked.priorityName).not.toBe('High');
+      if (redaction.includes('project_status_mapping_id')) expect(masked.task.project_status_mapping_id).toBeNull();
+      if (redaction.includes('priority_id')) expect(masked.task.priority_id).toBeNull();
     }
+  });
+
+  it('omits denied project tasks in mixed results and restores values when access returns', async () => {
+    const identities = [
+      { taskId: 'task-1', projectId: 'project-1' },
+      { taskId: 'task-2', projectId: 'project-2' },
+    ];
+    state.decisions.set('project-2', { allowed: false, redactedFields: [] });
+
+    const mixed = await loadAuthorizedProjectTaskActivities(trx, 'tenant-1', reader, identities);
+    expect(mixed).toHaveLength(1);
+    expect(mixed[0]).toMatchObject({ task: { task_id: 'task-1' }, statusName: 'Blocked', priorityName: 'High' });
+
+    state.decisions.set('project-1', { allowed: false, redactedFields: [] });
+    expect(await loadAuthorizedProjectTaskActivities(trx, 'tenant-1', reader, identities)).toEqual([]);
+
+    state.decisions.delete('project-1');
+    const restored = await loadAuthorizedProjectTaskActivities(trx, 'tenant-1', reader, identities);
+    expect(restored).toHaveLength(1);
+    expect(restored[0]).toMatchObject({ task: { task_name: 'Restore the network' }, statusName: 'Blocked', statusColor: '#bb0000', priorityName: 'High' });
   });
 });

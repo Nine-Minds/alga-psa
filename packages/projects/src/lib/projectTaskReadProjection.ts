@@ -6,6 +6,8 @@ import {
   coManagedHiddenColumns,
   coManagedProjectFamilyMask,
   CO_MANAGED_TASK_COLUMNS,
+  CO_MANAGED_TASK_FIELD_DEPENDENCIES,
+  coManagedRedactionsWithDependencies,
 } from '@alga-psa/co-managed/projectFieldMask';
 import { CO_MANAGED_ASSIGNEE_NAME_ALIASES } from '@alga-psa/co-managed/sharedWorkProjection';
 
@@ -28,35 +30,20 @@ export async function loadAuthorizedProjectTasks(
   priority_name: string | null;
   priority_color: string | null;
 }>> {
-  const mask = coManagedProjectFamilyMask(redactedFields, 'project_task');
+  const effectiveRedactions = coManagedRedactionsWithDependencies(
+    redactedFields, 'project_tasks', CO_MANAGED_TASK_FIELD_DEPENDENCIES, CO_MANAGED_TASK_COLUMNS,
+  );
+  const mask = coManagedProjectFamilyMask(effectiveRedactions, 'project_task');
   if (mask.dropRow) return [];
   const fields = [
     'tenant', 'task_id', 'phase_id', 'task_name', 'description', 'description_rich_text', 'assigned_to',
     'assigned_team_id', 'estimated_hours', 'actual_hours', 'project_status_mapping_id', 'created_at', 'updated_at',
     'wbs_code', 'order_key', 'start_date', 'due_date', 'priority_id', 'task_type_key', 'service_id',
   ];
-  const hidden = coManagedHiddenColumns(redactedFields, 'project_tasks', CO_MANAGED_TASK_COLUMNS);
-  const derivedAliases: Record<string, string[]> = {
-    status_name: ['statusName', 'status'],
-    is_closed: ['isClosed', 'closed'],
-    status_color: ['statusColor', 'color'],
-    priority_name: ['priorityName', 'priority'],
-    priority_color: ['priorityColor', 'color'],
-  };
-  for (const [field, aliases] of Object.entries(derivedAliases)) {
-    if (coManagedColumnHidden(redactedFields, 'project_tasks', field, aliases)) hidden.add(field);
-  }
-  const aliasesByField: Record<string, string[]> = {
-    project_status_mapping_id: ['status', 'status_name', 'statuses', 'project_status_mappings', 'mapping_id', 'statusMappingId'],
-    priority_id: ['priority', 'priority_name', 'priority_color', 'priorityColor'],
-    assigned_to: ['assignee', 'assignee_name', 'assigned_to_name', 'users', 'teams'],
-    assigned_team_id: ['assignee', 'assigned_to_name', 'teams'],
-  };
-  for (const field of fields) {
-    if (coManagedColumnHidden(redactedFields, 'project_tasks', field,
-      field === 'wbs_code' ? ['wbsCode'] : aliasesByField[field] ?? []) || (mask.body && field.startsWith('description'))) {
-      hidden.add(field);
-    }
+  const hidden = coManagedHiddenColumns(effectiveRedactions, 'project_tasks', CO_MANAGED_TASK_COLUMNS);
+  if (mask.body) {
+    hidden.add('description');
+    hidden.add('description_rich_text');
   }
   const maskColumn = (field: string, type: string) => hidden.has(field)
     ? trx.raw(`NULL::${type} as ??`, [field])
@@ -78,7 +65,7 @@ export async function loadAuthorizedProjectTasks(
     ? trx.raw('?::text as task_name', [mask.neutralTitle])
     : maskColumn('task_name', 'text');
   const assignedNameHidden = hidden.has('assigned_to') || hidden.has('assigned_team_id') ||
-    coManagedColumnHidden(redactedFields, 'project_tasks', 'assigned_to_name', CO_MANAGED_ASSIGNEE_NAME_ALIASES);
+    coManagedColumnHidden(effectiveRedactions, 'project_tasks', 'assigned_to_name', CO_MANAGED_ASSIGNEE_NAME_ALIASES);
   const assignedName = assignedNameHidden
     ? trx.raw('NULL::text as assigned_to_name')
     : trx.raw("CONCAT(users.first_name, ' ', users.last_name) as assigned_to_name");
