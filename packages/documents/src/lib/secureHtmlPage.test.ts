@@ -1,5 +1,25 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setSecureHtmlContent } from './secureHtmlPage';
+
+// Lets a test charge simulated wall-clock time to HTML preparation (parsing and
+// rewriting the document) before any remote image is fetched.
+const preparation = vi.hoisted(() => ({ beforeResolve: undefined as (() => void) | undefined }));
+
+vi.mock('./renderHtmlToPng', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./renderHtmlToPng')>();
+  return {
+    ...actual,
+    resolveRemoteAssets: async (...args: Parameters<typeof actual.resolveRemoteAssets>) => {
+      preparation.beforeResolve?.();
+      return actual.resolveRemoteAssets(...args);
+    },
+  };
+});
+
+afterEach(() => {
+  preparation.beforeResolve = undefined;
+  vi.restoreAllMocks();
+});
 
 function fakePage() {
   const handlers: Record<string, (request: any) => void> = {};
@@ -86,5 +106,37 @@ describe('shared secure Chromium HTML policy', () => {
       timeoutMs: expect.any(Number),
     });
     expect(page.html).toContain('aria-label="slow"');
+  });
+
+  it('starts the time budget at the first remote fetch, not when HTML preparation begins', async () => {
+    let clock = 1_000_000;
+    vi.spyOn(Date, 'now').mockImplementation(() => clock);
+    // Preparing the document takes far longer than the whole remote-image budget.
+    preparation.beforeResolve = () => { clock += 1_000; };
+    const fetchAsset = vi.fn(async () => {
+      // Each fetch consumes more than half of the 20ms budget.
+      clock += 15;
+      return { bytes: Buffer.alloc(4), contentType: 'image/png' };
+    });
+    const page = fakePage();
+
+    await setSecureHtmlContent(
+      page as any,
+      '<img src="https://public.example/first" alt="first"><img src="https://public.example/second" alt="second">',
+      { fetchAsset, maxRemoteAssetTimeMs: 20 },
+    );
+
+    // The first image gets the full budget despite the slow preparation...
+    expect(fetchAsset).toHaveBeenNthCalledWith(1, 'https://public.example/first', {
+      maxBytes: 5 * 1024 * 1024,
+      timeoutMs: 20,
+    });
+    // ...and the budget still bounds aggregate fetch time across images.
+    expect(fetchAsset).toHaveBeenNthCalledWith(2, 'https://public.example/second', {
+      maxBytes: 5 * 1024 * 1024 - 4,
+      timeoutMs: 5,
+    });
+    expect(page.html).toContain('data:image/png;base64,');
+    expect(page.html).not.toContain('aria-label="first"');
   });
 });

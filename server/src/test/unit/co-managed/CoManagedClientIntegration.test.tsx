@@ -13,9 +13,16 @@ vi.mock('@alga-psa/ui/hooks', () => ({
     : { enabled: capability.admitted, admitted: capability.admitted, resolved: true },
 }));
 const getSeat = vi.hoisted(() => vi.fn());
+const getOffer = vi.hoisted(() => vi.fn());
+vi.mock('@enterprise/lib/actions/coManagedSeatTrialActions', () => ({ getSeatTrialOfferAction: getOffer }));
+// The card is presentational; this stand-in shows the offer it was handed.
+vi.mock('@enterprise/components/co-managed/CoManagedSeatTrial', () => ({
+  default: ({ offer }: any) => offer ? <div>trial-card:{offer.canStart ? 'available' : offer.pilot?.status}</div> : null,
+}));
 vi.mock('@/lib/actions/coManagedSeatActions', () => ({ getCoManagedSeatClientState: getSeat }));
-vi.mock('@/components/co-managed/CoManagedSeatClientView', () => ({ default: ({ children }: any) => <div>seat-tab-body{children}</div> }));
-vi.mock('@/components/co-managed/CoManagedShapeChooser', () => ({ default: ({ workspaceSetup }: any) => <div>chooser{workspaceSetup ? '+workspace' : ''}</div> }));
+vi.mock('@/components/co-managed/CoManagedSeatClientView', () => ({ default: ({ children, notEnabledHeading }: any) => <div>seat-tab-body<span>heading:{notEnabledHeading}</span>{children}</div> }));
+vi.mock('@/components/co-managed/CoManagedSeatSummary', () => ({ default: () => <div>seat-summary</div> }));
+vi.mock('@/components/co-managed/CoManagedShapeChooser', () => ({ default: ({ workspaceSetup, story, seatTrial }: any) => <div>chooser{workspaceSetup ? '+workspace' : ''}:{story?.tone}:{story?.notice ?? 'no-notice'}{seatTrial}</div> }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({ t: (_k: string, o?: any) => (o?.defaultValue ?? _k).replace(/\{\{(\w+)\}\}/g, (_m: string, k: string) => String(o?.[k])) }),
   useFormatters: () => ({ formatDate: (d: Date) => d.toISOString().slice(0, 10) }),
@@ -28,7 +35,7 @@ import Integration from '@/components/co-managed/CoManagedClientIntegration';
 const mount = (children: (slots: any) => React.ReactNode) =>
   render(<Integration clientId="client-1" clientName="Acme" idPrefix="t" children={children} />);
 
-beforeEach(() => { capability.admitted = true; capability.seat = false; getView.mockReset(); getSeat.mockReset(); });
+beforeEach(() => { capability.admitted = true; capability.seat = false; getView.mockReset(); getSeat.mockReset(); getOffer.mockReset().mockResolvedValue(null); });
 afterEach(cleanup);
 
 describe('client co-managed integration slots', () => {
@@ -118,5 +125,70 @@ describe('client co-managed integration slots', () => {
     expect(latest.tab.id).toBe('co-managed');
     expect(latest.tab.hasUnsavedChanges()).toBe(false);
     expect(getView).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('seat trial and chooser tell one story', () => {
+  const blockedEnable = { capacity: { purchased: 0, allocated: 0, available: 0 }, blocker: 'SPONSOR_NOT_ELIGIBLE' };
+  const seatOnly = () => {
+    capability.admitted = false; capability.seat = true;
+    getSeat.mockResolvedValue({ panel: null, canManage: true, enable: blockedEnable });
+    mount((slots) => <div>{slots?.tab?.content}</div>);
+  };
+
+  for (const [name, offer, card, notice] of [
+    ['available', { canStart: true, canPurchase: false, intake: true, pilot: null, price: null }, 'trial-card:available', 'available'],
+    ['pending', { canStart: false, canPurchase: true, intake: true, pilot: { trialId: 't', status: 'pending', invited: true }, price: null }, 'trial-card:pending', 'pending'],
+  ] as const) {
+    it(`${name}: the offer is read once and the card and chooser agree`, async () => {
+      getOffer.mockResolvedValue(offer);
+      seatOnly();
+      await waitFor(() => expect(screen.getByText(card)).toBeInTheDocument());
+      expect(screen.getByText(`chooser:trial:${notice}`, { exact: false })).toBeInTheDocument();
+      expect(screen.getAllByText(card)).toHaveLength(1);
+      expect(getOffer).toHaveBeenCalledTimes(1);
+      expect(getOffer).toHaveBeenCalledWith('client-1');
+    });
+  }
+
+  // The trial is how Seat is enabled: the heading says so and the trial card sits inside the chooser's Seat option, once.
+  it('available: the heading variant says the trial enables co-managed IT and the card is handed to the chooser, not shown above it', async () => {
+    getOffer.mockResolvedValue({ canStart: true, canPurchase: false, intake: true, pilot: null, price: null });
+    seatOnly();
+    await waitFor(() => expect(screen.getByText('heading:trialEnables')).toBeInTheDocument());
+    const chooser = screen.getByText(/^chooser:trial:available/);
+    expect(chooser).toHaveTextContent('trial-card:available');
+  });
+
+  for (const [name, offer] of [
+    ['pending', { canStart: false, canPurchase: true, intake: true, pilot: { trialId: 't', status: 'pending', invited: true }, price: null }],
+    ['active', { canStart: false, canPurchase: true, intake: true, pilot: { trialId: 't', status: 'active', invited: true }, price: null }],
+    ['ended', { canStart: false, canPurchase: true, intake: true, pilot: { trialId: 't', status: 'ended', invited: true }, price: null }],
+    ['no offer', null],
+  ] as const) {
+    it(`${name}: heading unchanged and the card stays above the chooser`, async () => {
+      getOffer.mockResolvedValue(offer);
+      seatOnly();
+      await waitFor(() => expect(screen.getByText(/^chooser:/)).toBeInTheDocument());
+      expect(screen.getByText('heading:notEnabled')).toBeInTheDocument();
+      expect(screen.getByText(/^chooser:/)).not.toHaveTextContent('trial-card');
+    });
+  }
+
+  it('no trial: the chooser is blocked with no notice', async () => {
+    seatOnly();
+    await waitFor(() => expect(screen.getByText('chooser:blocked:no-notice')).toBeInTheDocument());
+    expect(getOffer).toHaveBeenCalledTimes(1);
+  });
+
+  it('holds the chooser back until the offer has settled', async () => {
+    let resolve: (value: unknown) => void = () => undefined;
+    getOffer.mockReturnValue(new Promise((r) => { resolve = r; }));
+    seatOnly();
+    await waitFor(() => expect(getSeat).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByText(/seat-tab-body/)).toBeInTheDocument());
+    expect(screen.queryByText(/chooser/)).not.toBeInTheDocument();
+    resolve({ canStart: true, canPurchase: false, intake: true, pilot: null, price: null });
+    await waitFor(() => expect(screen.getByText(/^chooser:trial:available/)).toBeInTheDocument());
   });
 });

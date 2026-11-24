@@ -8,7 +8,7 @@ import CoManagedOverview from '@/components/co-managed/CoManagedOverview';
 import CoManagedCustomerHome from '@/components/co-managed/CoManagedCustomerHome';
 import { resolveCoManagedRootAccess } from '@/lib/co-managed/commercialAccess';
 import CoManagedPurchaseOverview from '@enterprise/components/co-managed/CoManagedPurchaseOverview';
-import CoManagedSeatTrial from '@enterprise/components/co-managed/CoManagedSeatTrial';
+import CoManagedSeatTrialSection from '@/components/co-managed/CoManagedSeatTrialSection';
 import CoManagedPurchasePool from '@enterprise/components/co-managed/CoManagedPurchasePool';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -44,7 +44,7 @@ export default async function CoManagedPage({ searchParams }: { searchParams?: P
   // Commercial eligibility alone gets the pool and nothing else: no client query is even read, so a
   // `clientId` confers no authority, and none of the operational readers mount.
   if (access.commercial && !access.operational) return <CoManagedPurchaseOverview />;
-  if (access.trial && !access.operational) return <CoManagedSeatTrial />;
+  if (access.trial && !access.operational) return <CoManagedSeatTrialSection />;
   if (!access.served) notFound();
   const clientId = (await searchParams)?.clientId;
   // The pool's "free to allocate" line links to Clients only for an actor who may open them.
@@ -53,5 +53,5 @@ export default async function CoManagedPage({ searchParams }: { searchParams?: P
   // When both paths apply, the existing overview carries the pool in place of its capacity line.
   return <CoManagedOverview
     initialClientId={typeof clientId === 'string' && UUID.test(clientId) ? clientId : undefined}
-    purchasePool={access.commercial ? <CoManagedPurchasePool clientsHref={canOpenClients ? '/msp/clients' : undefined} /> : access.trial ? <CoManagedSeatTrial /> : undefined} />;
+    purchasePool={access.commercial ? <CoManagedPurchasePool clientsHref={canOpenClients ? '/msp/clients' : undefined} /> : access.trial ? <CoManagedSeatTrialSection /> : undefined} />;
 }

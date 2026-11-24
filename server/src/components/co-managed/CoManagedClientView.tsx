@@ -5,15 +5,16 @@ import type { CoManagedClientManagementView, CoManagedClientRelationshipView } f
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { resolveClientRelationshipSummary } from '@/lib/co-managed/clientRelationshipSummary';
+import { resolveClientRelationshipSummary, workspaceSetupOpen } from '@/lib/co-managed/clientRelationshipSummary';
 import CoManagedClientSetup from './CoManagedClientSetup';
 import CoManagedClientRecovery from './CoManagedClientRecovery';
 import CoManagedRelationshipHistory from './CoManagedRelationshipHistory';
+import type { SeatEnableStory } from '@/lib/co-managed/seatEnableStory';
 
 /** Embeddable client-relationship sections: status/setup, capacity, access and
  * SLA, delegation, and history/departure. Detailed settings mount only while
  * this view is open, and every control is namespaced by the instance prefix. */
-export default function CoManagedClientView({ view, clientId, clientName, idPrefix, relationshipId, onSelectRelationship, onReload, resetKey, onDirtyChange, renderSetup }: {
+export default function CoManagedClientView({ view, clientId, clientName, idPrefix, relationshipId, onSelectRelationship, onReload, resetKey, onDirtyChange, renderSetup, notEnabledHeading = 'notEnabled' }: {
   view: CoManagedClientManagementView;
   clientId: string;
   clientName: string;
@@ -25,6 +26,8 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
   onDirtyChange?: (dirty: boolean) => void;
   /** Wraps the workspace setup in the shape chooser when the seat shape is open; absent, the setup renders as it always has. */
   renderSetup?: (workspaceSetup: React.ReactNode) => React.ReactNode;
+  /** The heading variant for a client with no relationship, from `resolveSeatEnableStory`. */
+  notEnabledHeading?: SeatEnableStory['heading'];
 }) {
   const { t } = useTranslation('msp/licensing');
   const { formatDate } = useFormatters();
@@ -59,7 +62,9 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
                   ? t('coManaged.client.inconsistent', { defaultValue: 'Co-managed record needs attention' })
                   : phase.kind === 'selection_required' && phase.multiple
                     ? t('coManaged.client.selectionRequired', { defaultValue: 'Select a co-managed relationship' })
-                    : t('coManaged.client.notEnabled', { defaultValue: 'Co-managed IT not enabled' })}
+                    : notEnabledHeading === 'trialEnables'
+                      ? t('coManaged.client.notEnabledTrialEnables', { defaultValue: 'Co-managed IT is not enabled yet. Starting the free 15-day Seat trial enables it for this client.' })
+                      : t('coManaged.client.notEnabled', { defaultValue: 'Co-managed IT not enabled' })}
             </h3>
             {endedOn && <p id={`${idPrefix}-ended-on`} className="text-sm text-[rgb(var(--color-text-600))]">{endedOn}</p>}
             {!selected && view.inconsistent && !hasLiveRelationship && (
@@ -129,7 +134,7 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
         </CardContent>
       </Card>
 
-      {!hasLiveRelationship && !hasRetainedRelationship && !view.inconsistent && view.canManage && (() => {
+      {workspaceSetupOpen(view) && (() => {
         const setup = <CoManagedClientSetup key={resetKey} clientId={clientId} clientName={clientName} idPrefix={idPrefix}
           onProvisioned={() => onReload?.()} onDirtyChange={onDirtyChange} />;
         // LEVERAGE: friction co-managed-setup-slot — the shape chooser has to wrap the workspace setup through a render prop because this view owns the "setup is open" derivation; a setup slot that knows its shapes would let the chooser sit beside it.
