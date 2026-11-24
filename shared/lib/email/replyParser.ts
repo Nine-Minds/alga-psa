@@ -624,8 +624,13 @@ function trimHtmlAtBoundary(html: string, config: ReplyParserConfig, hasTextBase
     const visiblePrefix = htmlToVisibleText(prefix);
     // An attribution before a legacy notification is not evidence of a top-posted answer.
     // Without an independent text part, cutting here can silently discard a bottom reply.
+    // Check each line, including folded attributions: an authored preface must not hide
+    // the provider header from the anchored expressions. This guard only preserves HTML.
+    const prefixLines = visiblePrefix.split('\n').map((line) => line.trim());
     if (!hasTextBaseline && config.providerReplyHeaders.some((regex) =>
-      regex.test(visiblePrefix.replace(/\s+/g, ' ').trim()))) {
+      regex.test(visiblePrefix.replace(/\s+/g, ' ').trim())
+      || prefixLines.some((_, index) => [1, 2, 3].some((count) =>
+        regex.test(prefixLines.slice(index, index + count).join(' ').trim()))))) {
       return { text: html.trim() };
     }
     return {

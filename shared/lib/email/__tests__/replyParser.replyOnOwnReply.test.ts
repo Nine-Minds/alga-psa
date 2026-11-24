@@ -141,6 +141,21 @@ describe('Gmail reply to the contact’s own reply (alga-2026-0003353)', () => {
       expect(result.sanitizedHtml).toBe(html);
       expect(result.appliedHeuristics).not.toContain('html-marker-boundary');
     });
+
+    it.each([
+      '<p>My answer is below.</p><div>On Mon, Nov 17, 2026 Dana Tech wrote:</div>',
+      '<div>My answer is below.<br>On Mon, Nov 17, 2026 Dana Tech wrote:</div>',
+      '<p>My answer is below.</p><div>On Mon, Nov 17, 2026 Dana Tech &lt;<br>dana@msp.test&gt; wrote:</div>',
+    ])('preserves an HTML-only bottom answer with preface %j', (prefix) => {
+      const answer = 'No, do not restart it. Payroll is still running.';
+      const html = prefix + `<div style="display:none">${TOKEN}</div>`
+        + '<p>--- Please reply above this line ---</p><p>New comment added</p>'
+        + `<p>${answer}</p>`;
+      const result = parseEmailReply({ text: '', html });
+
+      expect(htmlToVisibleText(result.sanitizedHtml ?? '')).toContain(answer);
+      expect(result.appliedHeuristics).not.toContain('html-marker-boundary');
+    });
   });
 
   it('keeps rejecting an HTML trim that genuinely destroys authored content', () => {

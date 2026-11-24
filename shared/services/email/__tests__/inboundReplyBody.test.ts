@@ -56,7 +56,12 @@ describe('inbound reply body', () => {
     expect(substantiveReplyBody(parsed, body)).toEqual({});
   });
 
-  it.each(['<html><body>', '<div><br></div>', '<div>On Mon, Nov 17, 2026 Dana Tech wrote:</div>'])(
+  it.each([
+    '<html><body>',
+    '<div><br></div>',
+    '<div>On Mon, Nov 17, 2026 Dana Tech wrote:</div>',
+    '<p>My answer is below.</p><div>On Mon, Nov 17, 2026 Dana Tech wrote:</div>',
+  ])(
     'stores an HTML-only bottom reply after %j', async (wrapper) => {
       const answer = 'Yes, Thursday works, please book it.';
       const body = { html: `${wrapper}<div>${TOKEN}</div><p>--- Please reply above this line ---</p><p>Old notification</p><p>${answer}</p>` };
@@ -72,7 +77,6 @@ describe('inbound reply body', () => {
     for (const body of [
       { text: `${authored}\n\n${QUOTED_TEXT}`, html: quotedHtml(authored) },
       { text: `${authored}\n\n${QUOTED_TEXT}` },
-      { html: quotedHtml(authored) },
     ]) {
       const stored = await storedBody(body);
       expect(stored).toContain(authored);
@@ -80,6 +84,19 @@ describe('inbound reply body', () => {
         expect(stored).not.toContain(leaked);
       }
     }
+  });
+
+  it('preserves ambiguous HTML-only history when a preface precedes the attribution', async () => {
+    // Without a text baseline, the parser cannot know whether the notification ends
+    // with an authored answer. Keep the whole HTML even when the preface is substantive.
+    const authored = 'Sounds good, go ahead.';
+    const body = { html: quotedHtml(authored) };
+    const parsed = parseEmailReply({ text: '', html: body.html });
+
+    expect(parsed.appliedHeuristics).not.toContain('html-marker-boundary');
+    const stored = await storedBody(body);
+    expect(stored).toContain(authored);
+    expect(stored).toContain('deployment stands');
   });
 
   it('stores nothing when the text confirms a reply holds only quoted history', async () => {
