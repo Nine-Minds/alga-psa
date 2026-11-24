@@ -35,7 +35,7 @@ import {
 } from '@alga-psa/types';
 import { DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES } from '@alga-psa/types';
 import { fetchPrepaidBlockIssuanceDueWorkRows } from '../lib/prepaidBlockDueWork';
-import { findRecurringInvoiceBillingCycle } from '../lib/billing/recurringInvoiceBillingCycle';
+import { findRecurringInvoiceBillingCycles } from '../lib/billing/recurringInvoiceBillingCycle';
 import { resolvePrepaidBlockBusinessDate } from '../lib/prepaidBlockDates';
 import { TaxService } from '../services/taxService';
 import { calculatePreviewTaxAfterDiscounts, type AutomaticDiscountInput, type TaxableChargeInput } from '../lib/billing/taxAfterDiscounts';
@@ -744,7 +744,7 @@ async function attachInvoiceBillingProfileIds<T extends IRecurringDueWorkRow>(
         ] as const),
     );
     const scopeByClient = new Map<string, InvoiceProfileScope>();
-    const cycleByWindowAndProfile = new Map<string, string | null>();
+    const cycleRows: Array<{ index: number; isDefaultProfile: boolean }> = [];
     const result: T[] = [];
     for (const row of rows) {
         const lineId = lineIdOf(row);
@@ -761,26 +761,21 @@ async function attachInvoiceBillingProfileIds<T extends IRecurringDueWorkRow>(
         const invoiceBillingProfileId = resolveRecurringLineLandingProfile(
             { lineProfileId: assignment.line, contractProfileId: assignment.contract }, scope,
         );
-        let billingCycleId = row.billingCycleId;
         if (row.executionWindow.kind === 'client_cadence_window' && row.chargeType !== 'PrepaidBlock') {
-            const key = JSON.stringify([row.clientId, row.invoiceWindowStart, row.invoiceWindowEnd, invoiceBillingProfileId]);
-            if (!cycleByWindowAndProfile.has(key)) {
-                cycleByWindowAndProfile.set(key, await findRecurringInvoiceBillingCycle(trx, tenant, {
-                    clientId: row.clientId,
-                    windowStart: row.invoiceWindowStart,
-                    windowEnd: row.invoiceWindowEnd,
-                    billingProfileId: invoiceBillingProfileId,
-                    isDefaultProfile: invoiceBillingProfileId === scope.billingProfileId,
-                }));
-            }
-            billingCycleId = cycleByWindowAndProfile.get(key) ?? null;
+            cycleRows.push({ index: result.length, isDefaultProfile: invoiceBillingProfileId === scope.billingProfileId });
         }
-        result.push({
-            ...row,
-            billingCycleId,
-            invoiceBillingProfileId,
-        });
+        result.push({ ...row, invoiceBillingProfileId });
     }
+    const cycleIds = await findRecurringInvoiceBillingCycles(trx, tenant, cycleRows.map(({ index, isDefaultProfile }) => ({
+        clientId: result[index].clientId,
+        windowStart: result[index].invoiceWindowStart,
+        windowEnd: result[index].invoiceWindowEnd,
+        billingProfileId: result[index].invoiceBillingProfileId!,
+        isDefaultProfile,
+    })));
+    cycleRows.forEach(({ index }, cycleIndex) => {
+        result[index] = { ...result[index], billingCycleId: cycleIds[cycleIndex] };
+    });
     return result;
 }
 

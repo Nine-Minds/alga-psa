@@ -65,7 +65,6 @@ import { auditLog } from '@alga-psa/db';
 import { getClientDocumentLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import { calculateAndDistributeTax, claimRecurringServicePeriodsForSelectionInputs, describeTimeCharge, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
 import { previewAutomaticInvoiceDiscounts, reconcileAutomaticInvoiceAdjustments } from '../services/invoiceAutomaticAdjustments';
-import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import {
   reconcileContractChangeAdjustmentsForInvoice,
   releaseOrphanedContractAdjustments,
@@ -2827,7 +2826,8 @@ async function resolveRecurringSelectionBillingProfileId(
   options: { billingProfileId?: string | null } = {},
 ): Promise<string | null> {
   const clientId = assertSameRecurringSelectionWindow(selectorInputs).clientId;
-  const defaultProfileId = await getClientDefaultBillingProfileId(knex, tenant, clientId);
+  const defaultScope = await resolveInvoiceProfileScope(knex, tenant, clientId, null);
+  const defaultProfileId = defaultScope.billingProfileId;
   const resolvedProfileIds = new Set<string>();
 
   for (const selector of selectorInputs) {
@@ -2907,6 +2907,8 @@ async function resolveRecurringSelectionBillingProfileId(
   }
 
   for (const billingProfileId of resolvedProfileIds) {
+    // The default was already loaded for this client and tenant above.
+    if (billingProfileId === defaultProfileId) continue;
     const ownedProfile = await tenantDb(knex, tenant)
       .table('client_billing_profiles')
       .where({ billing_profile_id: billingProfileId, client_id: clientId })
@@ -2926,12 +2928,6 @@ async function resolveRecurringSelectionBillingProfileId(
     return profile.billing_profile_id;
   }
 
-  const defaultScope = await resolveInvoiceProfileScope(
-    knex,
-    tenant,
-    clientId,
-    null,
-  );
   if (!defaultScope.isScoped) {
     return defaultScope.billingProfileId;
   }
