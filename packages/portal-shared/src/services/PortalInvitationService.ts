@@ -46,6 +46,13 @@ const PORTAL_INVITATION_TENANT_DISCOVERY = 'tenant-discovery';
  */
 const PORTAL_INVITATION_RETENTION_DAYS = 90;
 
+/**
+ * How many rows the per-contact history returns. Retaining lapsed invitations
+ * means a contact can carry a run of them, and the tab that shows this asks for
+ * "recent portal invitations", so the read is bounded rather than open-ended.
+ */
+const PORTAL_INVITATION_HISTORY_LIMIT = 50;
+
 export class PortalInvitationService {
   /**
    * Generate a cryptographically secure token
@@ -294,6 +301,7 @@ export class PortalInvitationService {
           contact_id: contactId
         })
         .orderBy('created_at', 'desc')
+        .limit(PORTAL_INVITATION_HISTORY_LIMIT)
         .select('*') as PortalInvitation[];
 
       return invitations;
