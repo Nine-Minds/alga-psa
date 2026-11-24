@@ -4,6 +4,7 @@ import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache';
 import { tenantDb, withTransaction, createTenantKnex } from '@alga-psa/db';
 import { authorizeTicketRecordAccess } from '@alga-psa/authorization/ticketRecordAuthorization';
+import { createProjectReadAuthorizer } from '@alga-psa/authorization/projectReadAuthorization';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { IStockMovement, IStockUnit, IProductInventorySettings, IUserWithRoles } from '@alga-psa/types';
@@ -69,6 +70,17 @@ async function removeDeliveringMaterialLine(
       ticketId: material[parentCol],
       action: 'update',
     });
+  } else {
+    // Same record-level decision the project material actions make (bundle narrowing can
+    // restrict a user to a subset of projects).
+    const project = await db.table('projects')
+      .where({ project_id: material[parentCol] })
+      .first('project_id', 'client_id', 'assigned_to');
+    if (!project) throw new Error('Project not found');
+    const authorize = await createProjectReadAuthorizer(trx, tenant, user, 'update');
+    if (!(await authorize(project))) {
+      throw new Error('Permission denied: Cannot update project');
+    }
   }
 
   // Release the staging reference before deleting the material: its foreign key

@@ -5,6 +5,8 @@ const mocks = vi.hoisted(() => ({
   createTenantKnex: vi.fn(),
   hasPermission: vi.fn(async () => true),
   authorizeTicketRecordAccess: vi.fn(async () => undefined),
+  authorizeProject: vi.fn(async () => true),
+  createProjectReadAuthorizer: vi.fn(),
   recordStockMovement: vi.fn(async () => ({ movement_id: 'return-1' })),
   ensureStockLevel: vi.fn(async () => undefined),
   assertLocationWritable: vi.fn(async () => undefined),
@@ -19,6 +21,9 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.hasPermission }));
 vi.mock('@alga-psa/authorization/ticketRecordAuthorization', () => ({
   authorizeTicketRecordAccess: mocks.authorizeTicketRecordAccess,
+}));
+vi.mock('@alga-psa/authorization/projectReadAuthorization', () => ({
+  createProjectReadAuthorizer: mocks.createProjectReadAuthorizer,
 }));
 vi.mock('@alga-psa/db', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/db')>()),
@@ -45,6 +50,8 @@ afterAll(async () => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.authorizeProject.mockResolvedValue(true);
+  mocks.createProjectReadAuthorizer.mockResolvedValue(mocks.authorizeProject);
 });
 
 function setupReturn(
@@ -72,6 +79,8 @@ function setupReturn(
             };
           } else if (sql.includes('from "stock_movements"')) {
             result = { movement_id: 'delivery-1', created_at: new Date(), ...latestDelivery };
+          } else if (sql.includes('from "projects"')) {
+            result = { project_id: 'parent-1', client_id: 'client-1', assigned_to: null };
           } else if (sql.startsWith(`select`) && sql.includes(`from "${parentType}_materials"`)) {
             result = { is_billed: isBilled, [`${parentType}_id`]: 'parent-1' };
           } else if (sql.startsWith('update "project_staging_lines"')) {
@@ -117,6 +126,20 @@ describe('serialized material restock', () => {
       connection, 'tenant-1', 'unit-1', 'project', 'parent-1',
     );
     expect(mocks.revalidatePath).toHaveBeenCalledWith('/msp/projects/parent-1');
+    expect(mocks.createProjectReadAuthorizer).toHaveBeenCalledWith(connection, 'tenant-1', { user_id: 'user-1' }, 'update');
+    expect(mocks.authorizeProject).toHaveBeenCalledWith({ project_id: 'parent-1', client_id: 'client-1', assigned_to: null });
+    expect(statements.find(({ sql }) => sql.includes('from "projects"'))?.bindings).toContain('tenant-1');
+  });
+
+  it('refuses to remove a project material the user may not update', async () => {
+    const { statements } = setupReturn('project');
+    mocks.authorizeProject.mockResolvedValue(false);
+
+    await expect(restockReturn({ unit_id: 'unit-1' })).resolves.toMatchObject({
+      permissionError: expect.any(String),
+    });
+    expect(statements.some(({ sql }) => sql.startsWith('update ') || sql.startsWith('delete '))).toBe(false);
+    expect(mocks.detachDeliveredAssetAssociation).not.toHaveBeenCalled();
   });
 
   it('retains ticket authorization and removes a ticket material without a staging update', async () => {
