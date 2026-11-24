@@ -115,6 +115,23 @@ describe('Teams recording webhook route', () => {
     expect(scheduleImmediateJobMock).not.toHaveBeenCalled();
   });
 
+  it('schedules a forced renewal for authentic lifecycle notifications instead of artifact processing', async () => {
+    const route = await import('@/app/api/teams/webhooks/recordings/route');
+    const clientState = `teams-online-meeting-artifacts:tenant-1:recordings:${VALID_SECRET}`;
+    const response = await route.POST(webhookRequest([
+      { subscriptionId: 'sub-1', clientState, lifecycleEvent: 'reauthorizationRequired' },
+      { subscriptionId: 'sub-1', clientState, lifecycleEvent: 'subscriptionRemoved' },
+      { subscriptionId: 'sub-1', clientState, lifecycleEvent: 'missed' },
+      { subscriptionId: 'forged-sub', clientState, lifecycleEvent: 'reauthorizationRequired' },
+    ]));
+
+    expect(response.status).toBe(202);
+    expect(scheduleImmediateJobMock).toHaveBeenCalledTimes(2);
+    for (const call of scheduleImmediateJobMock.mock.calls) {
+      expect(call).toEqual(['renew-teams-meeting-artifact-subscriptions', { tenantId: 'tenant-1', force: true }]);
+    }
+  });
+
   it('rejects a legacy clientState that carries no secret', async () => {
     const route = await import('@/app/api/teams/webhooks/recordings/route');
     const response = await route.POST(webhookRequest([

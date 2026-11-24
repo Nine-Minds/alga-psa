@@ -20,6 +20,12 @@ vi.mock('@alga-psa/clients/actions', () => ({
   getInteractionsPage: mocks.getInteractionsPage,
   getAllInteractionTypes: mocks.getAllInteractionTypes,
   getInteractionStatuses: mocks.getInteractionStatuses,
+  getClientById: vi.fn(),
+}));
+
+// The page's logos come from a by-id lookup through the picker search, never a tenant client list.
+vi.mock('@alga-psa/clients/actions/clientPickerActions', () => ({
+  searchClientsForPicker: async () => ({ clients: [{ client_id: 'client-1', client_name: 'Emerald City', logoUrl: '/client-logo.png' }], total: 1 }),
 }));
 
 vi.mock('@alga-psa/ui', () => ({
@@ -162,7 +168,7 @@ describe('OverallInteractionsFeed table', () => {
   afterEach(cleanup);
 
   it('uses DataTable pagination and resets to page one for debounced search', async () => {
-    render(<OverallInteractionsFeed users={[]} contacts={[]} clients={[]} />);
+    render(<OverallInteractionsFeed users={[]} contacts={[]} />);
 
     expect(await screen.findByTestId('interaction-data-table')).toBeTruthy();
     expect(mocks.getInteractionsPage).toHaveBeenCalledWith(expect.objectContaining({
@@ -191,7 +197,7 @@ describe('OverallInteractionsFeed table', () => {
   });
 
   it('keeps advanced filters collapsed until the standard Filters control is opened', async () => {
-    render(<OverallInteractionsFeed users={[]} contacts={[]} clients={[]} />);
+    render(<OverallInteractionsFeed users={[]} contacts={[]} />);
     await screen.findByTestId('interaction-data-table');
 
     expect(document.getElementById('overall-interactions-expanded-filters')).toBeNull();
@@ -204,7 +210,7 @@ describe('OverallInteractionsFeed table', () => {
   });
 
   it('restores the Add Interaction action and opens the standalone quick-add dialog', async () => {
-    render(<OverallInteractionsFeed users={[]} contacts={[]} clients={[]} />);
+    render(<OverallInteractionsFeed users={[]} contacts={[]} />);
     await screen.findByTestId('interaction-data-table');
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Interaction' }));
@@ -218,7 +224,6 @@ describe('OverallInteractionsFeed table', () => {
       <OverallInteractionsFeed
         users={users}
         contacts={contacts}
-        clients={clients}
         onOpenUser={openUser}
       />,
     );

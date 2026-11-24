@@ -43,6 +43,7 @@ const SILENT_WRITERS: Record<string, string> = {
   'packages/clients/src/actions/contact-actions/contactNoteActions.ts': 'only sets notes_document_id (internal document link), not a contact attribute exposed by the webhook contract',
   'packages/documents/src/actions/documentActions.ts': 'clears notes_document_id when the notes document is deleted (internal link)',
   'packages/client-portal/src/actions/client-portal-actions/visibilityGroupActions.ts': 'portal_visibility_group_id is portal access configuration, not a contact attribute',
+  'packages/db/src/lib/clientPortalAdminFlag.ts': 'is_client_admin mirrors the client portal Admin role (portal access configuration, derived from user_roles); the role write it runs alongside is what publishes contact.updated',
   'packages/clients/src/actions/inboundTicketDestinationActions.ts': 'inbound_ticket_defaults_id is email-routing configuration, not a contact attribute',
   'packages/integrations/src/actions/email-actions/inboundTicketDefaultsActions.ts': 'detaches routing defaults from contacts when a defaults row is deleted (configuration cleanup)',
   'packages/marketing/src/lib/sequences.ts': 'read-only lookup of the contact (update targets marketing_sequence_enrollments)',

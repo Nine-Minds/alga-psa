@@ -122,7 +122,7 @@ export const AUTHORIZATION_ENTRY_POINTS: ReadonlySet<string> = new Set([
   'readableTicketIds', 'authorizeTicketRecordAccess', 'authorizeTicketRecordAccessConcealed', 'createTicketAuthorizationContext',
   'applyTicketReadAuthorizationSql',
   // projects
-  'createProjectReadAuthorizer', 'createProjectReadDecider', 'assertProjectReadAllowed', 'assertProjectReadAllowedById',
+  'createProjectReadAuthorizer', 'createProjectReadDecider', 'createProjectActionDecider', 'assertProjectReadAllowed', 'assertProjectReadAllowedById',
   // assets
   'createAssetReadContext', 'createAssetReadContextWithRules', 'isAssetReadAllowed', 'isAssetActionAllowed',
   'isAssetClientActionAllowed', 'isAssetClientReadAllowed', 'authorizeAssetsForAction', 'filterAssetsAllowedForAction',

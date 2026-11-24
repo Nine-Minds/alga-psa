@@ -526,7 +526,8 @@
   "templateRenderer": {
     "loading": "Vorlagenvorschau wird geladen...",
     "errorPrefix": "Fehler:",
-    "empty": "Bitte wählen Sie eine Rechnung und eine Vorlage zur Vorschau aus."
+    "empty": "Bitte wählen Sie eine Rechnung und eine Vorlage zur Vorschau aus.",
+    "frameTitle": "Rechnungsvorschau"
   },
   "templateDesigner": {
     "propertyEditor": {

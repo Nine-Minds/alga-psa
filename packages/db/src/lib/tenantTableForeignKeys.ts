@@ -1082,6 +1082,8 @@ export const TENANT_TABLE_FOREIGN_KEYS: readonly TenantTableForeignKey[] = [
   { child: 'time_sheets', parent: 'time_periods', column: 'period_id', deleteRule: 'NO ACTION', name: 'time_sheets_tenant_period_id_foreign' },
   { child: 'time_sheets', parent: 'users', column: 'approved_by', deleteRule: 'NO ACTION', name: 'time_sheets_tenant_approved_by_foreign' },
   { child: 'time_sheets', parent: 'users', column: 'user_id', deleteRule: 'NO ACTION', name: 'time_sheets_tenant_user_id_foreign' },
+  { child: 'time_tracking_session_entries', parent: 'time_entries', column: 'entry_id', deleteRule: 'CASCADE', name: 'time_tracking_session_entries_entry_fkey' },
+  { child: 'time_tracking_session_entries', parent: 'time_tracking_sessions', column: 'session_id', deleteRule: 'CASCADE', name: 'time_tracking_session_entries_session_fkey' },
   { child: 'time_tracking_session_segments', parent: 'time_tracking_sessions', column: 'session_id', deleteRule: 'CASCADE', name: 'time_tracking_session_segments_session_fkey' },
   { child: 'time_tracking_sessions', parent: 'users', column: 'user_id', deleteRule: 'NO ACTION', name: 'time_tracking_sessions_user_fkey' },
   { child: 'transactions', parent: 'accounting_export_batches', column: 'accounting_export_batch_id', deleteRule: 'NO ACTION', name: 'transactions_tenant_accounting_export_batch_fk' },

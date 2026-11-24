@@ -47,7 +47,7 @@ import { getContactByContactNameId, getContactByEmail, getContactsEligibleForInv
 
 import * as ticketLookups from '../../../../../packages/tickets/src/actions/clientLookupActions';
 import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
-import { getAllClients as getAllClientsModel, getClientById as getClientByIdModel } from '@alga-psa/shared/ticketClients/clients';
+import { getClientById as getClientByIdModel } from '@alga-psa/shared/ticketClients/clients';
 import {
   getAllActiveContacts as getAllActiveContactsModel,
   getContactsByClient as getContactsByClientModel,
@@ -206,7 +206,8 @@ describe('client and contact reads narrowed by a client-scoped bundle (real kern
 
     it('lists and reads clients in scope only', async () => {
       asUser(restrictedId);
-      expect(names(await ticketLookups.getAllClients(), 'client_name')).toEqual([`Alpha ${mark}`, `Bravo ${mark}`]);
+      // Tickets lists clients only through the server-searched picker (it no longer loads every client).
+      expect(names((await ticketLookups.searchClientsForPicker({ search: mark, status: 'all' })).clients, 'client_name')).toEqual([`Alpha ${mark}`, `Bravo ${mark}`]);
       expect(await ticketLookups.getClientById(clients.c)).toBeNull();
       expect((await ticketLookups.getClientById(clients.a))?.client_id).toBe(clients.a);
     }, HOOK_TIMEOUT);
@@ -297,7 +298,6 @@ describe('client and contact reads narrowed by a client-scoped bundle (real kern
         expect([...without, ...probe].sort()).toEqual(withScope);
       };
 
-      await expectProbeOnly('getAllClients', () => ticketLookups.getAllClients(), () => getAllClientsModel(db, plainTenant, true));
       await expectProbeOnly('getClientById', () => ticketLookups.getClientById(plainClient), async () => {
         await getClientByIdModel(db, plainTenant, plainClient);
         await getClientLogoUrl(plainClient, plainTenant);

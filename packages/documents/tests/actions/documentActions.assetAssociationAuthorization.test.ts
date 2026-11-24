@@ -77,6 +77,14 @@ vi.mock('@alga-psa/auth', () => ({
   }),
   checkMultiplePermissions: vi.fn(async (_user: unknown, checks: Array<{ resource: string; action: string }>) => checks.map((check) => ({ ...check, granted: true }))),
 }));
+// LEVERAGE: pattern test-rbac-forwarding — auth and authorization fixtures must share one permission policy.
+vi.mock('@alga-psa/authorization/rbac', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/rbac')>()),
+  hasPermission: async (...args: Parameters<typeof import('@alga-psa/authorization/rbac').hasPermission>) => {
+    const { hasPermission } = await import('@alga-psa/auth');
+    return hasPermission(args[0] as import('@alga-psa/types').IUser, args[1], args[2], args[3]);
+  },
+}));
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-1' })),
   withTransaction: vi.fn(async (_knex: unknown, fn: (trx: unknown) => unknown) => {
@@ -99,7 +107,8 @@ vi.mock('@alga-psa/storage/StorageService', () => ({
 }));
 vi.mock('@alga-psa/documents/lib/documentPreviewGenerator', () => ({ generatePreviewsForDocument: vi.fn(async () => ({})) }));
 vi.mock('@alga-psa/documents/lib/documentPreviewJob', () => ({ scheduleDocumentPreviews: vi.fn(async () => true) }));
-vi.mock('../../src/lib/documentPermissions', () => ({
+vi.mock('../../src/lib/documentPermissions', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/lib/documentPermissions')>()),
   applyDocumentProductReadScope: vi.fn(),
   canReadDocument: vi.fn(async () => true),
   canReadTicketDocuments: vi.fn(async () => true),

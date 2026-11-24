@@ -4,6 +4,15 @@ import { ControlError } from '@alga-psa/emulator-host';
 import type { StripeEmulatorConfig, StripeEmulatorCore } from './core';
 import { deliverEvent } from './notifier';
 
+const addressSchema = z.object({
+  line1: z.string().optional(),
+  line2: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  postal_code: z.string().optional(),
+  country: z.string().optional(),
+});
+
 /**
  * Masks a credential for control-plane responses. The raw value stays internal
  * to the core (auth checks, webhook signing); only masked forms round-trip.
@@ -86,8 +95,10 @@ export function register(reg: ControlRegistry, core: StripeEmulatorCore): void {
       email: z.string().email(),
       name: z.string().optional(),
       id: z.string().optional(),
+      address: addressSchema.optional(),
+      phone: z.string().optional(),
     }),
-    run: ({ email, name, id }) => core.createCustomer({ id, email, name }),
+    run: ({ email, name, id, address, phone }) => core.createCustomer({ id, email, name, address, phone }),
   });
 
   reg.seeder({
@@ -132,10 +143,16 @@ export function register(reg: ControlRegistry, core: StripeEmulatorCore): void {
 
   reg.action({
     name: 'complete-session',
-    description: 'Mark a Checkout session paid, emit checkout.session.completed, and deliver the signed webhook',
-    params: z.object({ sessionId: z.string() }),
-    run: async ({ sessionId }) => {
-      const event = core.completeSession(sessionId);
+    description:
+      'Mark a Checkout session paid, emit checkout.session.completed, and deliver the signed webhook; billingDetails become the session customer_details',
+    params: z.object({
+      sessionId: z.string(),
+      billingDetails: z
+        .object({ name: z.string().optional(), phone: z.string().optional(), address: addressSchema.optional() })
+        .optional(),
+    }),
+    run: async ({ sessionId, billingDetails }) => {
+      const event = core.completeSession(sessionId, billingDetails);
       await deliverEvent(core, event, core.env);
       return { eventId: event.id, eventType: event.type, sessionId };
     },

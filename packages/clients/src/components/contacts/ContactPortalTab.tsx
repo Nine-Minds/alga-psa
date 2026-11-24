@@ -23,6 +23,7 @@ import {
   getContactReportCount,
   getClientPortalVisibilityBoardsByClient,
   getClientPortalVisibilityGroupById,
+  getClientPortalVisibilityGroupAssignmentForContact,
   getClientPortalVisibilityGroupsForContact,
   assignClientPortalVisibilityGroupToContact,
   createClientPortalVisibilityGroupForContact,
@@ -61,6 +62,7 @@ const PORTAL_INVITE_ERROR_KEYS: Partial<Record<PortalInvitationErrorCode, string
   CONTACT_MISSING_EMAIL: 'contactPortalTab.toast.errors.contactMissingEmail',
   CONTACT_INVALID_EMAIL: 'contactPortalTab.toast.errors.contactInvalidEmail',
   USER_EXISTS_FOR_CONTACT: 'contactPortalTab.toast.errors.userExistsForContact',
+  PORTAL_USER_ALREADY_EXISTS: 'contactPortalTab.toast.errors.portalUserAlreadyExists',
   NO_DEFAULT_CLIENT: 'contactPortalTab.toast.errors.noDefaultClient',
   NO_DEFAULT_LOCATION: 'contactPortalTab.toast.errors.noDefaultLocation',
   NO_LOCATION_EMAIL: 'contactPortalTab.toast.errors.noLocationEmail',
@@ -202,9 +204,10 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       const clientPortalRoles = roles.filter(role => role.client && !role.msp);
       setClientRoles(clientPortalRoles);
 
-      const [groupRows, boardRows] = await Promise.all([
+      const [groupRows, boardRows, assignment] = await Promise.all([
         getClientPortalVisibilityGroupsForContact(contact.contact_name_id),
         getClientPortalVisibilityBoardsByClient(contact.contact_name_id),
+        getClientPortalVisibilityGroupAssignmentForContact(contact.contact_name_id),
       ]);
 
       if (isReturnedActionError(groupRows)) {
@@ -220,7 +223,13 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       } else {
         setVisibilityBoards(boardRows || []);
       }
-      setSelectedVisibilityGroupId(contact.portal_visibility_group_id || null);
+      // The `contact` prop never changes after the page renders, so re-reading the
+      // assignment is what keeps the dropdown from snapping back to a stale group.
+      if (isReturnedActionError(assignment)) {
+        showReturnedActionError(assignment);
+      } else {
+        setSelectedVisibilityGroupId(assignment?.group_id ?? null);
+      }
 
       // Load invitation history
       await loadInvitationHistory();

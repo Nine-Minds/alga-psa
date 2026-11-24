@@ -284,11 +284,14 @@ function seatFactsQuery(knex: Knex | Knex.Transaction, subject: { tenant: string
     if (liveOnly) query.where('a.state', 'active');
     return query;
   };
+  const arrangements = ofUser(db.table('co_managed_seat_arrangements as r'), 'r.arrangement_id', false);
+  arrangements.whereNotExists(db.table('co_managed_unavailable_trial_assignments as blocked').select(knex.raw('1'))
+    .where('blocked.assignment_id', knex.ref('a.assignment_id')));
   return knex.queryBuilder().select(knex.raw(
     `jsonb_build_object('assignments', (?), 'arrangements', (?), 'boards', (?), 'projects', (?))`,
     [
       aggregate(knex, db.table('co_managed_seat_assignments').where('user_id', subject.userId).select('arrangement_id', 'state')),
-      aggregate(knex, ofUser(db.table('co_managed_seat_arrangements as r'), 'r.arrangement_id', false)
+      aggregate(knex, arrangements
         .distinct('r.arrangement_id', 'r.client_id', 'r.state')),
       aggregate(knex, ofUser(db.table('co_managed_seat_board_scopes as s'), 's.arrangement_id', true)
         .select('s.arrangement_id', 's.board_id', 's.can_create')),
@@ -301,9 +304,10 @@ function seatFactsQuery(knex: Knex | Knex.Transaction, subject: { tenant: string
 export const coManagedSeatResolver: BuiltinRuleResolver = {
   id: CO_MANAGED_SEAT_RESOLVER_ID,
   baseline: 'closed',
-  // A seat technician sees the operational surface only and holds no API credential. The surface is data in
-  // the product surface registry under this key.
-  principalKind: { kind: CO_MANAGED_SEAT_PRINCIPAL_KIND, apiCredentials: 'refused' },
+  // A seat technician sees the operational surface only and holds no general API credential: only the mobile
+  // app's session key, which the edge holds to the seat's API surface. The surface is data in the product
+  // surface registry under this key.
+  principalKind: { kind: CO_MANAGED_SEAT_PRINCIPAL_KIND, apiCredentials: 'refused', credentialPurposes: ['mobile_session'] },
   facts: {
     tenantHasSubjects: (knex, tenant) => builtinResolverSubjectsQuery(knex, tenant, CO_MANAGED_SEAT_RESOLVER_ID),
     subjectFacts: seatFactsQuery,

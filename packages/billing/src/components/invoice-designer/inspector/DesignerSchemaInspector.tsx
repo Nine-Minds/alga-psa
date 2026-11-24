@@ -668,6 +668,8 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById, tab 
   );
   const setNodeProp = useInvoiceDesignerStore((state) => state.setNodeProp);
   const unsetNodeProp = useInvoiceDesignerStore((state) => state.unsetNodeProp);
+  const nodes = useInvoiceDesignerStore((state) => state.nodes);
+  const documentKind = useMemo(() => resolveDesignerDocumentKind(nodes), [nodes]);
 
   const schema = useMemo(() => getComponentSchema(node.type), [node.type]);
   const panels = (schema.inspector?.panels ?? []).filter((panel) => !tab || (panel.tab ?? 'content') === tab);
@@ -691,8 +693,8 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById, tab 
   );
 
   const resolveVisibleWhenValue = useCallback(
-    (rule: DesignerInspectorVisibleWhen | undefined): boolean => isRuleVisible(rule, node, parent),
-    [node, parent]
+    (rule: DesignerInspectorVisibleWhen | undefined): boolean => isRuleVisible(rule, node, parent, documentKind),
+    [node, parent, documentKind]
   );
 
   // While typing, an emptied field must stay empty: unsetting the prop mid-edit
@@ -1031,14 +1033,23 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById, tab 
 
     if (field.kind === 'boolean') {
       const value = resolveValue(field);
-      const checked = Boolean(value);
+      // A keyword-valued checkbox (e.g. breakBefore: 'page') clears the property
+      // when unchecked, so the document's own flow decides again.
+      const checked = field.checkedValue ? value === field.checkedValue : Boolean(value);
       return (
         <label key={field.id} className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
           <input
             id={domId}
+            data-automation-id={domId}
             type="checkbox"
             checked={checked}
-            onChange={(event) => setNodeProp(node.id, field.path, event.target.checked, true)}
+            onChange={(event) => {
+              if (!field.checkedValue) {
+                setNodeProp(node.id, field.path, event.target.checked, true);
+                return;
+              }
+              applyNormalized(field.path, event.target.checked ? field.checkedValue : undefined, true);
+            }}
           />
           {renderFieldLabel(panel, field)}
         </label>

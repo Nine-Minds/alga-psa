@@ -58,10 +58,10 @@ export async function readCoManagedSeatEnableState(
   const pool: CoManagedEntitlementState | null = eligible ? await getCoManagedEntitlementState(db, input.sponsorTenant) : null;
   const capacity = pool ? { purchased: pool.capacity, allocated: pool.allocated, available: pool.available } : none;
   const blocker: CoManagedSeatEnableBlocker | null =
-    !eligible ? 'SPONSOR_NOT_ELIGIBLE'
-      : !client ? 'CLIENT_NOT_FOUND'
-        : seat || named ? 'CLIENT_HAS_ARRANGEMENT'
-          : client.is_inactive ? 'CLIENT_INACTIVE'
+    !client ? 'CLIENT_NOT_FOUND'
+      : seat || named ? 'CLIENT_HAS_ARRANGEMENT'
+        : client.is_inactive ? 'CLIENT_INACTIVE'
+          : !eligible ? 'SPONSOR_NOT_ELIGIBLE'
             : pool && (pool.isReadOnly || pool.graceEndsAt) ? 'ENTITLEMENT_LAPSED'
               : pool && pool.available < 1 ? 'CAPACITY_UNAVAILABLE' : null;
   return { clientName: client?.client_name ?? null, capacity, blocker };

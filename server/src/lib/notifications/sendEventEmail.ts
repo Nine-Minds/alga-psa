@@ -390,6 +390,37 @@ export function resolveDeliveryClaim(
   return null;
 }
 
+/** The locale an event email is rendered in; exported so callers can format values to match. */
+export async function resolveEventEmailLocale(
+  params: Pick<SendEmailParams, 'tenantId' | 'to' | 'locale' | 'recipientUserId' | 'recipientClientId'>,
+): Promise<SupportedLocale> {
+  if (params.locale) {
+    logger.debug('[SendEventEmail] Using explicitly provided locale:', { locale: params.locale });
+    return params.locale;
+  }
+
+  // Get recipient information for locale resolution
+  const baseInfo = params.recipientUserId
+    ? { email: params.to, userId: params.recipientUserId }
+    : await getUserInfoForEmail(params.tenantId, params.to) || { email: params.to };
+
+  // Merge in clientId if provided (for contacts without user accounts yet)
+  const recipientInfo = {
+    ...baseInfo,
+    ...(params.recipientClientId && { clientId: params.recipientClientId })
+  };
+
+  const recipientLocale = await resolveEmailLocale(params.tenantId, recipientInfo);
+  logger.debug('[SendEventEmail] Resolved recipient locale:', {
+    locale: recipientLocale,
+    email: params.to,
+    userId: recipientInfo.userId,
+    userType: recipientInfo.userType,
+    clientId: recipientInfo.clientId
+  });
+  return recipientLocale;
+}
+
 export async function sendEventEmail(params: SendEmailParams): Promise<void> {
   try {
     let sponsorRedactions: readonly string[] | null = null;
@@ -415,31 +446,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     });
 
     // Resolve recipient locale for language-aware email templates
-    let recipientLocale: SupportedLocale;
-    if (params.locale) {
-      recipientLocale = params.locale;
-      logger.debug('[SendEventEmail] Using explicitly provided locale:', { locale: recipientLocale });
-    } else {
-      // Get recipient information for locale resolution
-      const baseInfo = params.recipientUserId
-        ? { email: params.to, userId: params.recipientUserId }
-        : await getUserInfoForEmail(params.tenantId, params.to) || { email: params.to };
-
-      // Merge in clientId if provided (for contacts without user accounts yet)
-      const recipientInfo = {
-        ...baseInfo,
-        ...(params.recipientClientId && { clientId: params.recipientClientId })
-      };
-
-      recipientLocale = await resolveEmailLocale(params.tenantId, recipientInfo);
-      logger.debug('[SendEventEmail] Resolved recipient locale:', {
-        locale: recipientLocale,
-        email: params.to,
-        userId: recipientInfo.userId,
-        userType: recipientInfo.userType,
-        clientId: recipientInfo.clientId
-      });
-    }
+    const recipientLocale = await resolveEventEmailLocale(params);
 
     // Get the template content using tenant-aware connection
     const knex = await getConnection(params.tenantId);
@@ -604,8 +611,12 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
 
     // Plain-text fall-back: strip tags AND decode common HTML entities so
     // literal characters like `"` and `&` don't leak through as `&quot;` /
-    // `&amp;` in clients that show the text/plain alternative.
+    // `&amp;` in clients that show the text/plain alternative. Block and table-cell
+    // boundaries become spaces first so adjacent cells (an HTML table description)
+    // do not run together ("HostServer01StateDOWN").
+    // LEVERAGE: pattern html-to-text — same block-break set as htmlToVisibleText (shared/lib/email/replyParser.ts) plus td/th; one shared HTML-to-text helper would serve both.
     let text = html
+      .replace(/<(?:br|\/p|\/div|\/li|\/tr|\/td|\/th|\/h[1-6]|\/blockquote|\/table)\b[^>]*>/gi, ' ')
       .replace(/<[^>]*>/g, '')
       .replace(/&quot;/g, '"')
       .replace(/&#39;/g, "'")

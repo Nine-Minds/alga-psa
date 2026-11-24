@@ -15,8 +15,11 @@ const actions = vi.hoisted(() => ({
 }));
 
 vi.mock('@alga-psa/clients/actions', () => ({
-  getAllClients: vi.fn(async () => [{ client_id: 'client_1', client_name: 'Client One' }]),
   getAllContacts: vi.fn(async () => []),
+}));
+
+vi.mock('@alga-psa/clients/actions/clientPickerActions', () => ({
+  searchClientsForPicker: vi.fn(async () => ({ clients: [{ client_id: 'client_1', client_name: 'Client One' }], total: 1 })),
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
@@ -56,7 +59,6 @@ describe('TaniumIntegrationSettings UI flow', () => {
           auto_sync_assets: true,
         },
       ],
-      clients: [{ client_id: 'client_1', client_name: 'Client One' }],
     });
     actions.saveTaniumConfiguration.mockResolvedValue({ success: true });
     actions.testTaniumConnection.mockResolvedValue({ success: true });

@@ -334,7 +334,8 @@
     },
     "address": {
       "title": "Adresse de l'entreprise",
-      "description": "Préremplie à partir de vos informations de facturation — vérifiez et corrigez si nécessaire. Cette adresse figure sur vos factures et devis.",
+      "description": "Cette adresse figure sur vos factures et devis.",
+      "prefilledFromBilling": "Certaines de ces valeurs ont été renseignées à partir de vos informations de facturation. Veuillez les vérifier.",
       "fields": {
         "addressLine1": {
           "label": "Adresse ligne 1",
@@ -554,7 +555,8 @@
         "success": {
           "one": "1 tableau importé avec succès.",
           "other": "{{count}} tableaux importés avec succès."
-        }
+        },
+        "empty": "Tous les tableaux standard sont déjà importés."
       },
       "table": {
         "headers": {
@@ -584,7 +586,8 @@
           "placeholder": "Sélectionnez un tableau pour les catégories importées",
           "help": "Toutes les catégories importées seront assignées à ce tableau"
         },
-        "parentAutoSelectTitle": "La catégorie parente sera sélectionnée automatiquement"
+        "parentAutoSelectTitle": "La catégorie parente sera sélectionnée automatiquement",
+        "empty": "Ce tableau possède déjà toutes les catégories standard."
       },
       "errors": {
         "missingParents": "Impossible d'importer les sous-catégories sans leurs catégories parentes. Veuillez également sélectionner : {{parents}}",
@@ -702,7 +705,8 @@
         "success": {
           "one": "1 statut importé avec succès.",
           "other": "{{count}} statuts importés avec succès."
-        }
+        },
+        "empty": "Ce tableau possède déjà tous les statuts standard."
       },
       "table": {
         "headers": {
@@ -771,7 +775,8 @@
         "success": {
           "one": "1 priorité importée avec succès.",
           "other": "{{count}} priorités importées avec succès."
-        }
+        },
+        "empty": "Toutes les priorités standard sont déjà importées."
       },
       "table": {
         "headers": {
@@ -797,6 +802,9 @@
       },
       "table": {
         "actions": "Actions"
+      },
+      "import": {
+        "loading": "Chargement des éléments disponibles..."
       }
     },
     "header": {

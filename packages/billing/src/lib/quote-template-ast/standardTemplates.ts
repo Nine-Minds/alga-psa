@@ -383,7 +383,7 @@ const buildStandardQuoteDetailedAst = (): TemplateAst => ({
         columns: [
           withItemDescriptionLines({ id: 'description', header: { i18nKey: 'labels.description', defaultValue: 'Description' }, value: { type: 'path', path: 'description' }, style: { inline: { width: '36%' } } }),
           { id: 'phase', header: { i18nKey: 'labels.phase', defaultValue: 'Phase' }, value: { type: 'path', path: 'phase' }, style: { inline: { width: '14%' } } },
-          { id: 'optional', header: { i18nKey: 'labels.optional', defaultValue: 'Optional' }, value: { type: 'path', path: 'is_optional' }, style: { inline: { width: '8%', textAlign: 'center' } } },
+          { id: 'optional', header: { i18nKey: 'labels.optional', defaultValue: 'Optional' }, value: { type: 'path', path: 'optional_label' }, style: { inline: { width: '8%', textAlign: 'center' } } },
           { id: 'recurring', header: { i18nKey: 'labels.recurring', defaultValue: 'Recurring' }, value: { type: 'path', path: 'is_recurring' }, style: { inline: { width: '8%', textAlign: 'center' } } },
           { id: 'quantity', header: { i18nKey: 'labels.qty', defaultValue: 'Qty' }, value: { type: 'path', path: 'quantity' }, format: 'number', style: { inline: { textAlign: 'right', width: '8%' } } },
           { id: 'unit-price', header: { i18nKey: 'labels.rate', defaultValue: 'Rate' }, value: { type: 'path', path: 'unit_price' }, format: 'currency', style: { inline: { textAlign: 'right', width: '13%' } } },

@@ -89,6 +89,13 @@ type AccountingIntegrationAction =
   | 'exports_execute'
   | 'mappings_manage'
   | 'remote_mutate';
+const ACCOUNTING_INTEGRATION_ACTIONS: readonly AccountingIntegrationAction[] = [
+  'catalog_read',
+  'connections_manage',
+  'exports_execute',
+  'mappings_manage',
+  'remote_mutate',
+];
 
 export class ApiQuickBooksController {
   private qbService: QuickBooksService;
@@ -99,6 +106,10 @@ export class ApiQuickBooksController {
       undefined as any, // EventBusService - would be injected  
       undefined as any  // AuditLogService - would be injected
     );
+  }
+
+  getPermissionRequirements(): Array<{ resource: string; action: string }> {
+    return ACCOUNTING_INTEGRATION_ACTIONS.map((action) => ({ resource: 'accounting_integrations', action }));
   }
 
   /**

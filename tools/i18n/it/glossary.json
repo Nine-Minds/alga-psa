@@ -2207,6 +2207,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "true",
       "Layout",
       "1 asset",
       "Offline",
@@ -2382,7 +2383,10 @@
       "team",
       "{{actor}} • {{eventType}}",
       "Standard",
-      "Ticket {{number}}"
+      "Ticket {{number}}",
+      "MacBook Air 13\"",
+      "Dell Latitude 5450",
+      "Lenovo ThinkPad T14"
     ],
     "caseInsensitive": [
       "account",

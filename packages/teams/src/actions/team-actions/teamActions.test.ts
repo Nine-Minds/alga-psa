@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { USER_RESPONSE_FIELD_NAMES } from '@alga-psa/types';
 
 const createTenantKnexMock = vi.hoisted(() => vi.fn());
 const withTransactionMock = vi.hoisted(() => vi.fn());
@@ -12,6 +13,12 @@ vi.mock('@alga-psa/auth', () => ({
   hasPermission: hasPermissionMock,
 }));
 
+vi.mock('@alga-psa/types', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@alga-psa/types')>(),
+  // The seat-technician guard has its own suite; these tests pin the writer's own behaviour.
+  isSeatTechnicianGuardError: () => false,
+}));
+
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
   tenantDb: (conn: any) => ({
@@ -19,9 +26,7 @@ vi.mock('@alga-psa/db', () => ({
     tenantJoin: (query: any, table: string, first: string, second: string) => query.join(table, first, second),
   }),
   withTransaction: withTransactionMock,
-  // The seat-technician guard has its own suite; these tests pin the writer's own behaviour.
   assertSeatTechnicianWrite: async () => undefined,
-  isSeatTechnicianGuardError: () => false,
 }));
 
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
@@ -123,11 +128,142 @@ function deletedTables(ops: Op[]): string[] {
   return ops.filter((op) => op.op === 'del').map((op) => op.table);
 }
 
+const approvedTeamMemberKeys = [
+  'user_id',
+  'username',
+  'first_name',
+  'last_name',
+  'email',
+  'phone',
+  'timezone',
+  'user_type',
+  'contact_id',
+  'icon',
+  'created_at',
+  'updated_at',
+  'two_factor_enabled',
+  'two_factor_required_new_device',
+  'is_google_user',
+  'is_inactive',
+  'tenant',
+  'reports_to',
+  'last_login_at',
+  'last_login_method',
+  'roles',
+  'role',
+].sort();
+
+function teamReadFixtures(): Record<string, TableData> {
+  return {
+    teams: {
+      rows: [{ team_id: 'team-1', team_name: 'Support', manager_id: 'user-1', tenant: 'tenant-1' }],
+      first: { team_id: 'team-1', team_name: 'Support', manager_id: 'user-1', tenant: 'tenant-1' },
+    },
+    team_members: {
+      rows: [{ user_id: 'user-1', role: 'lead' }],
+    },
+    users: {
+      rows: [{
+        user_id: 'user-1',
+        username: 'alex',
+        first_name: 'Alex',
+        last_name: 'Morgan',
+        email: 'alex@example.test',
+        phone: '555-0100',
+        timezone: 'America/New_York',
+        user_type: 'internal',
+        contact_id: 'contact-1',
+        icon: 'avatar.png',
+        created_at: new Date('2025-01-01T00:00:00Z'),
+        updated_at: new Date('2025-01-02T00:00:00Z'),
+        two_factor_enabled: true,
+        two_factor_required_new_device: false,
+        is_google_user: false,
+        is_inactive: false,
+        tenant: 'tenant-1',
+        reports_to: null,
+        last_login_at: new Date('2025-01-03T00:00:00Z'),
+        last_login_method: 'password',
+        hashed_password: 'password-hash-secret',
+        two_factor_secret: 'totp-seed-secret',
+        unexpected_column: 'future-column-value',
+      }],
+    },
+    roles: { rows: [{
+      user_id: 'user-1',
+      role_id: 'role-1',
+      role_name: 'Technician',
+      description: 'Support technician',
+      msp: true,
+      client: false,
+      tenant: 'tenant-1',
+      unexpected_role_column: 'internal-role-value',
+    }] },
+  };
+}
+
+function expectSafeTeamMember(member: Record<string, any>): void {
+  expect(Object.keys(member).sort()).toEqual(approvedTeamMemberKeys);
+  expect(Object.keys(member)).not.toContain('hashed_password');
+  expect(Object.keys(member)).not.toContain('two_factor_secret');
+  expect(Object.keys(member)).not.toContain('unexpected_column');
+  expect(member.roles).toEqual([{
+    role_id: 'role-1',
+    role_name: 'Technician',
+    description: 'Support technician',
+    msp: true,
+    client: false,
+    tenant: 'tenant-1',
+  }]);
+  expect(member).toMatchObject({
+    user_id: 'user-1',
+    username: 'alex',
+    first_name: 'Alex',
+    last_name: 'Morgan',
+    email: 'alex@example.test',
+    two_factor_enabled: true,
+    tenant: 'tenant-1',
+    role: 'lead',
+    roles: [{ role_id: 'role-1', role_name: 'Technician', msp: true, client: false, tenant: 'tenant-1' }],
+  });
+  expect(USER_RESPONSE_FIELD_NAMES).toEqual(expect.arrayContaining(approvedTeamMemberKeys.filter((key) => key !== 'roles' && key !== 'role')));
+}
+
+function expectSafeUserProjection(ops: Op[]): void {
+  const userRead = ops.find((op) => op.table === 'users' && op.op === 'select');
+  expect(userRead?.clauses).toContainEqual(['select', USER_RESPONSE_FIELD_NAMES]);
+}
+
 describe('team actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(console, 'error').mockImplementation(() => {});
     hasPermissionMock.mockResolvedValue(true);
+  });
+
+  describe('safe team-member responses', () => {
+    it('returns only the approved member DTO from getTeams', async () => {
+      const { conn, ops } = createTrx(teamReadFixtures());
+      createTenantKnexMock.mockResolvedValue({ knex: conn });
+
+      const { getTeams } = await import('./teamActions');
+      const result = await getTeams();
+
+      expect(result).toHaveLength(1);
+      expectSafeTeamMember((result as any[])[0].members[0]);
+      expectSafeUserProjection(ops);
+    });
+
+    it('returns only the approved member DTO from getTeamById', async () => {
+      const { conn, ops } = createTrx(teamReadFixtures());
+      createTenantKnexMock.mockResolvedValue({ knex: conn });
+
+      const { getTeamById } = await import('./teamActions');
+      const result = await getTeamById('team-1');
+
+      expectSafeTeamMember((result as any).members[0]);
+      expectSafeUserProjection(ops);
+    });
   });
 
   describe('deleteTeam', () => {
@@ -172,6 +308,37 @@ describe('team actions', () => {
         expect.objectContaining({ type: 'ticket', count: 1 }),
       ]);
       expect(deletedTables(ops)).toEqual([]);
+    });
+  });
+
+  describe('getTeams', () => {
+    it('returns safe member fields, roles, and team role without credentials', async () => {
+      const { conn } = createTrx({
+        teams: { rows: [{ team_id: 'team-1', team_name: 'Alpha', manager_id: 'user-b', tenant: 'tenant-1' }] },
+        team_members: { rows: [{ team_id: 'team-1', user_id: 'user-b', role: 'lead' }] },
+        users: { rows: [{
+          user_id: 'user-b', username: 'b', first_name: 'Bea', last_name: 'Member',
+          email: 'bea@example.invalid', user_type: 'internal', is_inactive: false, tenant: 'tenant-1',
+          hashed_password: 'nonempty-hash', two_factor_secret: 'nonempty-secret',
+        }] },
+        roles: { rows: [{ user_id: 'user-b', role_id: 'role-1', role_name: 'Agent', msp: true, client: false }] },
+      });
+      createTenantKnexMock.mockResolvedValue({ knex: conn });
+
+      const { getTeams } = await import('./teamActions');
+      const result = await getTeams();
+
+      expect(result).toMatchObject([{
+        team_id: 'team-1',
+        members: [{
+          user_id: 'user-b', username: 'b', first_name: 'Bea', last_name: 'Member',
+          email: 'bea@example.invalid', role: 'lead',
+          roles: [{ role_id: 'role-1', role_name: 'Agent', msp: true, client: false }],
+        }],
+      }]);
+      expect(result[0].members[0]).not.toHaveProperty('hashed_password');
+      expect(result[0].members[0]).not.toHaveProperty('two_factor_secret');
+      expect(hasPermissionMock).toHaveBeenCalledWith(expect.anything(), 'user_settings', 'read', conn);
     });
   });
 

@@ -160,6 +160,15 @@ describe('sendEventEmail reply-marker layout', () => {
     );
   });
 
+  it('keeps table cells and block elements apart in the text part (table descriptions)', async () => {
+    const { text } = await sendHtml(
+      '<div>Description</div><table><tbody><tr><td><strong>Host</strong></td><td>web01</td></tr>' +
+        '<tr><td><strong>State</strong></td><td>DOWN</td></tr></tbody></table><p>Ack in Nagios</p>'
+    );
+    expect(text).toContain('Description Host web01 State DOWN Ack in Nagios');
+    expect(text).not.toMatch(/Hostweb01|web01State|StateDOWN/);
+  });
+
   describe('full document shaped like wrapEmailLayout', () => {
     const doc = `<!DOCTYPE html>
 <html lang="en">

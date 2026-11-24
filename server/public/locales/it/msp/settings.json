@@ -2717,7 +2717,8 @@
         "general": {
           "title": "Generale",
           "defaultClient": "Cliente predefinito per i record orfani",
-          "defaultClientHelp": "I contatti e gli asset la cui organizzazione non può essere identificata vengono associati a questo cliente."
+          "defaultClientHelp": "I contatti e gli asset la cui organizzazione non può essere identificata vengono associati a questo cliente.",
+          "clearDefaultClient": "Cancella"
         },
         "saved": "Configurazione salvata. Esegui la verifica preliminare per convalidarla rispetto ai record preparati.",
         "saving": "Salvataggio…",
@@ -4244,7 +4245,7 @@
   },
   "loginPolicy": {
     "title": "Criteri di accesso",
-    "description": "Controlla come il personale e gli utenti del portale clienti possono accedere con una password. Queste regole vengono applicate sul server.",
+    "description": "Controlla come il personale e gli utenti del portale clienti possono accedere, con una password o con il single sign-on. Queste regole vengono applicate sul server.",
     "requireSso": {
       "title": "Richiedi il Single Sign-On per il personale MSP",
       "body": "Gli utenti interni devono accedere con Google, Microsoft o il tuo provider Keycloak. L’accesso con password e il ripristino della password sono bloccati, tranne per gli amministratori di emergenza indicati sotto.",
@@ -4276,10 +4277,21 @@
         "not_found": "L'utente non esiste più."
       }
     },
+    "clientPortalSso": {
+      "title": "Opzioni di accesso del portale clienti",
+      "body": "Scegli quali provider di single sign-on compaiono nella pagina di accesso del portale clienti. Sono elencati solo i provider con cui la tua organizzazione può accedere. L’accesso con password non cambia.",
+      "providers": {
+        "google": "Google",
+        "azure-ad": "Microsoft",
+        "keycloak": "Keycloak"
+      },
+      "noneAvailable": "Nessun provider di single sign-on è configurato per la tua organizzazione. Configurane uno nelle impostazioni del single sign-on per offrirlo nel portale clienti."
+    },
     "guard": {
       "sso_provider_required": "Configura almeno un provider Single Sign-On prima di richiederlo.",
       "break_glass_required": "Seleziona almeno un amministratore di emergenza prima di richiedere il Single Sign-On.",
-      "break_glass_invalid_user": "Gli utenti di emergenza devono essere amministratori attivi con l’autenticazione a due fattori abilitata."
+      "break_glass_invalid_user": "Gli utenti di emergenza devono essere amministratori attivi con l’autenticazione a due fattori abilitata.",
+      "client_portal_sso_provider_invalid": "Scegli solo provider di single sign-on supportati."
     },
     "errors": {
       "load": "Impossibile caricare i criteri di accesso.",
@@ -4613,7 +4625,6 @@
       "title": "Numerazione degli asset",
       "description": "Un’unica sequenza per il tenant viene formattata con il prefisso di ciascun cliente. L’anteprima e la stampa non assegnano numeri. I numeri emessi e abbandonati lasciano intervalli e non vengono mai riutilizzati.",
       "clientPrefixes": "Prefissi dei clienti",
-      "noPrefix": "Nessun prefisso",
       "prefixSaved": "Prefisso del cliente salvato",
       "uniquenessEnabled": "L’unicità dei tag asset è attiva",
       "legacyAudit": "Verifica dei tag esistenti",
@@ -4627,7 +4638,25 @@
       "continuationReview": "La verifica dei dati esistenti ha esaminato {{scanned}} tag salvati; {{numeric}} hanno suffissi numerici. Il suffisso più alto è {{maximum}}; verifica un valore iniziale di {{next}}. È solo un suggerimento. Inserisci e salva sopra il valore di continuazione approvato; questa verifica non consuma alcun valore della sequenza.",
       "continuationExamples": "Esempi: {{examples}}",
       "blankTag": "(tag vuoto)",
-      "normalizedTag": "Normalizzato: {{tag}}"
+      "normalizedTag": "Normalizzato: {{tag}}",
+      "loadFailed": "Impossibile caricare le impostazioni di numerazione degli asset",
+      "readOnly": "Puoi visualizzare la numerazione degli asset. Per modificarla è necessaria l'autorizzazione ad aggiornare le impostazioni di sistema.",
+      "columns": {
+        "client": "Cliente",
+        "prefix": "Prefisso"
+      },
+      "addPrefix": "Aggiungi prefisso",
+      "addPrefixTitle": "Aggiungi prefisso cliente",
+      "editPrefixTitle": "Modifica prefisso cliente",
+      "prefixHelp": "Fino a 10 lettere, cifre o trattini.",
+      "edit": "Modifica",
+      "remove": "Rimuovi",
+      "removeTitle": "Rimuovere il prefisso?",
+      "removeMessage": "Rimuovere il prefisso per {{client}}? I nuovi numeri asset di questo cliente non avranno prefisso. I tag esistenti non vengono modificati.",
+      "prefixRemoved": "Prefisso cliente rimosso",
+      "noPrefixes": "Nessun prefisso cliente.",
+      "openMenu": "Apri menu",
+      "inactive": "Inattivo"
     }
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.6.19",
+  "version": "1.6.20",
   "private": true,
   "type": "module",
   "engines": {
@@ -180,12 +180,13 @@
     "mkdirp": "^3.0.1",
     "monaco-editor": "^0.52.2",
     "nestjs-knex": "^2.0.0",
-    "next": "16.4.2",
+    "next": "16.4.5",
     "next-auth": "^5.0.0-beta.32",
     "next-i18next": "^15.4.2",
     "next-themes": "^0.4.6",
     "node-vault": "^0.10.2",
     "nodemailer": "^10.0.13",
+    "pagedjs": "0.4.3",
     "papaparse": "^5.5.3",
     "parsimmon": "^1.18.1",
     "pdf-lib": "^1.17.1",

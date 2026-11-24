@@ -186,6 +186,10 @@ spec:
               {{- end }}
             - name: NEXT_PUBLIC_BASE_URL
               value: "{{ .Values.publicBaseUrl }}"
+            {{- if .Values.publicWebhookBaseUrl }}
+            - name: PUBLIC_WEBHOOK_BASE_URL
+              value: "{{ .Values.publicWebhookBaseUrl }}"
+            {{- end }}
             - name: NM_STORE_URL
               value: "{{ .Values.nm_store.baseUrl }}"
             {{- if .Values.sharedTenantSecrets.enabled }}

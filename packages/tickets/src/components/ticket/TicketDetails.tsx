@@ -123,6 +123,7 @@ import { isBoardLiveTicketTimerEnabled } from '../../lib/boardLiveTicketTimer';
 import { pickCloseRulePendingFields } from '../../lib/closeRuleConstants';
 import { hasAdminSettingsViewAccess } from './commentMetadataDebug';
 import { hasWorkflowManageAccess, type TicketScreenBootstrap } from '../../lib/ticketScreenBootstrap';
+import { buildTicketAssignmentKey } from '../../lib/ticketAssignmentKey';
 import { normalizeTicketLiveField, type TicketLiveConflictState } from './ticketLiveFields';
 import TicketResolutionDialog from './TicketResolutionDialog';
 import { persistResolutionComment } from './resolutionCommentPersistence';
@@ -1416,8 +1417,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }, [savedBoardId]);
 
     // Use pre-fetched options directly
-    const [userMap, setUserMap] = useState<Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>>(initialUserMap);
-    const conversationUserMap = liveUserMap ?? userMap;
+    // Read refreshed author maps from props so an in-place refresh resolves newly encountered authors.
+    const conversationUserMap = liveUserMap ?? initialUserMap;
 
     // Identity stamped into the "Updated … by" header after a local save. The drawer passes a
     // full currentUser; full-page callers do not, so derive one from the session (resolving the
@@ -1437,11 +1438,21 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             user_type: mapped?.user_type ?? 'internal',
         } as unknown as IUser;
     }, [currentUser, session?.user?.id, session?.user?.name, session?.user?.email, conversationUserMap]);
-    const [contactMap] = useState<Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>>(initialContactMap);
-    const conversationContactMap = liveContactMap ?? contactMap;
+    const conversationContactMap = liveContactMap ?? initialContactMap;
 
     const [availableAgents, setAvailableAgents] = useState<IUserWithRoles[]>(initialAvailableAgents);
     const [additionalAgents, setAdditionalAgents] = useState<ITicketResource[]>(initialAdditionalAgents);
+
+    // The bootstrap's "on my activities list" answer holds for the saved assignment the page loaded
+    // with. Once a save changes it, the answer is stale: hand the control nothing and let it re-check.
+    const loadedAssignmentKey = useRef(buildTicketAssignmentKey(
+        initialTicket.assigned_to,
+        initialAdditionalAgents.map((a) => a.additional_user_id || a.assigned_to),
+    )).current;
+    const initialOnMyActivityList = buildTicketAssignmentKey(
+        ticket.assigned_to,
+        additionalAgents.map((a) => a.additional_user_id || a.assigned_to),
+    ) === loadedAssignmentKey ? bootstrap?.onMyActivityList ?? null : null;
 
     const additionalAgentsForInfo = useMemo(() => {
         return additionalAgents.map(a => {
@@ -4631,6 +4642,7 @@ const handleClose = () => {
                     workflowLocked={bundleWorkflowLocked}
                     onOpenAllFields={() => setIsAllFieldsDrawerOpen(true)}
                     tags={tags}
+                    initialOnMyActivityList={initialOnMyActivityList}
                     onTagsChange={capabilities.tags ? handleTagsChange : undefined}
                     taskActions={effectiveRenderCreateProjectTask?.({ ticket, additionalAgents: additionalAgentsForInfo })}
                     quickInvoiceActions={effectiveRenderQuickInvoice?.({ ticket })}
@@ -4763,6 +4775,7 @@ const handleClose = () => {
                                     isSubmitting={isSubmitting}
                                     users={availableAgents}
                                     tags={tags}
+                                    initialOnMyActivityList={initialOnMyActivityList}
                                     allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
                                     onTagsChange={capabilities.tags ? handleTagsChange : undefined}
                                     isInDrawer={isInDrawer}
@@ -5005,6 +5018,7 @@ const handleClose = () => {
                             isSubmitting={isSubmitting}
                             users={availableAgents}
                             tags={tags}
+                            initialOnMyActivityList={initialOnMyActivityList}
                             allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
                             onTagsChange={capabilities.tags ? handleTagsChange : undefined}
                             isInDrawer

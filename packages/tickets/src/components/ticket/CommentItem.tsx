@@ -5,7 +5,7 @@ import { PartialBlock } from '@blocknote/core';
 import { ServiceAuthorBadge } from '@enterprise/components/service-principals/ServiceAuthorBadge';
 import { ViaPrincipalLabel } from '@enterprise/components/service-principals/ViaPrincipalLabel';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
-import { Pencil, Trash, Lock, CheckCircle, Check, Cog, Copy, CornerUpLeft, MessageCircle, SmilePlus } from 'lucide-react';
+import { Pencil, Trash, ChevronUp, Lock, CheckCircle, Check, Cog, Copy, CornerUpLeft, MessageCircle, SmilePlus } from 'lucide-react';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import SystemAvatar from '@alga-psa/ui/components/SystemAvatar';
@@ -38,6 +38,8 @@ import { readCommentEmailRecipients } from '@shared/lib/tickets/commentEmailReci
 import { parseTicketRichTextContent } from '../../lib/ticketRichText';
 import { extractTicketRichTextPlainText } from '../../lib/ticketRichText';
 import { extractTicketRichTextHtml } from '../../lib/ticketRichTextHtml';
+import { isTicketOpenerComment, getTicketOpenerAttachmentCount } from '../../lib/ticketOpenerComment';
+import { OpenerCommentRow } from './OpenerCommentRow';
 import { CommentMetadataDebugModal } from './CommentMetadataDebugModal';
 import { isNonEmptyCommentMetadata } from './commentMetadataDebug';
 import { dateToWallTimeString, getUserTimeZone, zonedWallTimeToUtc } from '@alga-psa/core';
@@ -203,12 +205,15 @@ const CommentItem: React.FC<CommentItemProps> = ({
   // toLocaleString() follows the browser; comment timestamps belong to the app locale.
   const { formatDate } = useFormatters();
   const [metadataDebugOpen, setMetadataDebugOpen] = useState(false);
+  // The comment that opened the ticket by email starts collapsed on every mount; never persisted.
+  const [openerExpanded, setOpenerExpanded] = useState(false);
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
   const copyResetTimeoutRef = useRef<number | null>(null);
   const [isInternalToggle, setIsInternalToggle] = useState(conversation.is_internal ?? false);
   const [isResolutionToggle, setIsResolutionToggle] = useState(conversation.is_resolution ?? false);
   const [isSearchHighlighted, setIsSearchHighlighted] = useState(false);
   const [isScheduleMutating, setIsScheduleMutating] = useState(false);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
   const [reschedulePublishAt, setReschedulePublishAt] = useState<Date | undefined>(undefined);
   const [rescheduleError, setRescheduleError] = useState<string | null>(null);
@@ -320,9 +325,18 @@ const CommentItem: React.FC<CommentItemProps> = ({
     // A co-managed collaborator's comment is owned by the sender's workspace; no local user may edit it.
     if (resolvedAuthor.source === 'collaborator') return false;
     // No handler means the host is showing the thread read-only.
-    if (!onEdit || !onDelete) return false;
+    if (!onEdit) return false;
+    // Portal projections deliberately remove user UUIDs. Their server-derived
+    // capability preserves ownership controls without exposing that identity.
+    if (conversation.portal_can_edit !== undefined) return conversation.portal_can_edit;
     return Boolean(currentUserId) && currentUserId === conversation.user_id;
-  }, [conversation.user_id, resolvedAuthor.source, currentUserId, isDeleted, onEdit, onDelete]);
+  }, [conversation.user_id, conversation.portal_can_edit, resolvedAuthor.source, currentUserId, isDeleted, onEdit, onDelete]);
+
+  const canDelete = useMemo(() => {
+    if (isDeleted || conversation.is_system_generated || resolvedAuthor.source === 'collaborator' || !onDelete) return false;
+    if (conversation.portal_can_delete !== undefined) return conversation.portal_can_delete;
+    return Boolean(currentUserId) && currentUserId === conversation.user_id;
+  }, [conversation.user_id, conversation.portal_can_delete, resolvedAuthor.source, currentUserId, isDeleted, onDelete]);
 
   const plainTextForCopy = useMemo(
     () => extractTicketRichTextPlainText(conversation.note),
@@ -389,13 +403,28 @@ const CommentItem: React.FC<CommentItemProps> = ({
       return;
     }
     setIsScheduleMutating(true);
-    try { await rescheduleScheduledComment(commentId, date.toISOString(), timeZone); runTicketRefresh(dataSource, 'reload'); } finally { setIsScheduleMutating(false); }
+    try {
+      await rescheduleScheduledComment(commentId, date.toISOString(), timeZone);
+      runTicketRefresh(dataSource, 'reload');
+    } catch {
+      setRescheduleError(t('conversation.scheduledCommentChangeFailed', 'Unable to change this scheduled comment. Refresh and try again.'));
+    } finally {
+      setIsScheduleMutating(false);
+    }
   };
   const handleCancelSchedule = async () => {
     if (!canEdit) return;
     if (!window.confirm(t('conversation.cancelScheduledCommentConfirm', 'Cancel this scheduled comment?'))) return;
+    setScheduleError(null);
     setIsScheduleMutating(true);
-    try { await cancelScheduledComment(commentId); runTicketRefresh(dataSource, 'reload'); } finally { setIsScheduleMutating(false); }
+    try {
+      await cancelScheduledComment(commentId);
+      runTicketRefresh(dataSource, 'reload');
+    } catch {
+      setScheduleError(t('conversation.scheduledCommentChangeFailed', 'Unable to change this scheduled comment. Refresh and try again.'));
+    } finally {
+      setIsScheduleMutating(false);
+    }
   };
 
   const editorContent = useMemo(() => {
@@ -487,6 +516,19 @@ const CommentItem: React.FC<CommentItemProps> = ({
     }
   }, [canEdit, isEditing, currentComment?.comment_id, conversation.comment_id, conversation.note, conversation.is_internal, conversation.is_resolution]);
 
+  // A #comment-<id> deep link (search, notification) to a collapsed opener opens it, so the
+  // linked comment is readable rather than a one-line stand-in.
+  useEffect(() => {
+    if (
+      conversation.comment_id &&
+      typeof window !== 'undefined' &&
+      window.location.hash === `#comment-${conversation.comment_id}` &&
+      isTicketOpenerComment(conversation)
+    ) {
+      setOpenerExpanded(true);
+    }
+  }, [conversation]);
+
   useEffect(() => {
     if (!conversation.comment_id || typeof window === 'undefined') {
       return;
@@ -520,6 +562,25 @@ const CommentItem: React.FC<CommentItemProps> = ({
       window.removeEventListener('keydown', dismiss);
     };
   }, [commentId, conversation.comment_id]);
+
+  const isOpenerComment = useMemo(() => isTicketOpenerComment(conversation), [conversation]);
+  if (isOpenerComment && !openerExpanded && !isEditingThisComment) {
+    // metadata.email is stripped for client principals, so its presence is what makes the
+    // sender address (and the original-email switcher) an MSP-only detail.
+    const hasEmailProvenance = Boolean(conversation.metadata?.email);
+    return (
+      <OpenerCommentRow
+        id={commentId}
+        senderName={getAuthorName()}
+        senderAddress={hasEmailProvenance ? authorEmail : null}
+        createdAt={conversation.created_at}
+        attachmentCount={getTicketOpenerAttachmentCount(conversation)}
+        variant={variant}
+        accentBorderClassName={accentBorderClassName}
+        onExpand={() => setOpenerExpanded(true)}
+      />
+    );
+  }
 
   return (
     <div
@@ -658,6 +719,20 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     }}
                   />
                 )}
+                {isOpenerComment && (
+                  <Button
+                    id={`${commentId}-opener-toggle`}
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="h-auto gap-1 p-0 text-sm font-medium"
+                    aria-expanded={true}
+                    onClick={() => setOpenerExpanded(false)}
+                  >
+                    <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
+                    {t('conversation.opener.hide', 'Hide original email')}
+                  </Button>
+                )}
                 {/* Compact: the Text/Email view switch appears on hover/focus only. */}
                 {emailView.switcher && isCompact ? (
                   <span className="opacity-0 transition-opacity group-hover/comment:opacity-100 focus-within:opacity-100">{emailView.switcher}</span>
@@ -763,7 +838,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 </div>
               )}
             </div>
-            {(canCopy || (onReply && !isDeleted) || canEdit || (isCompact && onToggleReaction)) && (
+            {(canCopy || (onReply && !isDeleted) || canEdit || canDelete || (isCompact && onToggleReaction)) && (
               <div className="c-actions space-x-2">
                 {/* Compact: with no reactions yet, React lives in the hover toolbar. */}
                 {isCompact && onToggleReaction && conversation.comment_id && (reactions?.length ?? 0) === 0 ? (
@@ -809,19 +884,20 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     <CornerUpLeft className="w-4 h-4" />
                   </Button>
                 )}
-                {canEdit && (
+                {(canEdit || canDelete) && (
                   <>
                     {conversation.publish_state === 'scheduled' && (
                       <>
-                        <Button id={`reschedule-comment-${conversation.comment_id}-button`} variant="ghost" size="sm" disabled={isScheduleMutating} onClick={() => { setReschedulePublishAt(undefined); setRescheduleError(null); setIsRescheduleOpen(true); }} aria-label={t('conversation.rescheduleComment', 'Reschedule comment')}>
+                        <Button id={`reschedule-comment-${conversation.comment_id}-button`} variant="ghost" size="sm" disabled={isScheduleMutating} onClick={() => { setScheduleError(null); setReschedulePublishAt(undefined); setRescheduleError(null); setIsRescheduleOpen(true); }} aria-label={t('conversation.rescheduleComment', 'Reschedule comment')}>
                           {t('conversation.reschedule', 'Reschedule')}
                         </Button>
                         <Button id={`cancel-scheduled-comment-${conversation.comment_id}-button`} variant="ghost" size="sm" disabled={isScheduleMutating} onClick={() => void handleCancelSchedule()} aria-label={t('conversation.cancelScheduledComment', 'Cancel scheduled comment')}>
                           {t('conversation.cancel', 'Cancel')}
                         </Button>
+                        {scheduleError && <p role="alert" className="text-sm text-[rgb(var(--color-accent-500))]">{scheduleError}</p>}
                       </>
                     )}
-                    <Button
+                    {canEdit && <Button
                       id={`edit-comment-${conversation.comment_id}-button`}
                       variant="ghost"
                       size="sm"
@@ -829,8 +905,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
                       aria-label={t('conversation.editCommentAriaLabel')}
                     >
                       <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button
+                    </Button>}
+                    {canDelete && <Button
                       id={`delete-comment-${conversation.comment_id}-button`}
                       variant="ghost"
                       size="sm"
@@ -838,7 +914,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                       aria-label={t('conversation.deleteCommentAriaLabel')}
                     >
                       <Trash className="w-4 h-4" />
-                    </Button>
+                    </Button>}
                   </>
                 )}
               </div>
@@ -910,7 +986,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
               minDate={new Date()}
               clearable
             />
-            {rescheduleError && <p className="text-sm text-[rgb(var(--color-accent-500))]">{rescheduleError}</p>}
+            {rescheduleError && <p role="alert" className="text-sm text-[rgb(var(--color-accent-500))]">{rescheduleError}</p>}
           </div>
         </DialogContent>
       </Dialog>

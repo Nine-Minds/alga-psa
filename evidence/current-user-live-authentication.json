@@ -1,0 +1,16 @@
+[
+  {
+    "type": "internal",
+    "missingCodeRejected": true,
+    "invalidCodeRejected": true,
+    "wrongPasswordRejected": true,
+    "validCredentialsAccepted": true
+  },
+  {
+    "type": "client",
+    "missingCodeRejected": true,
+    "invalidCodeRejected": true,
+    "wrongPasswordRejected": true,
+    "validCredentialsAccepted": true
+  }
+]

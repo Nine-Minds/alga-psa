@@ -18,6 +18,12 @@ export interface CompileOptions {
    * relation hop or reads a set attribute. Requires `schema.children`.
    */
   selfOrAnyChild?: boolean;
+  /**
+   * Tenant the surrounding query is scoped to. Every subquery is then filtered by this value as well
+   * as correlated on it: Citus routes to one shard only when each table is pinned by a constant, and
+   * a subquery under OR is not pinned by its correlation alone.
+   */
+  tenant?: string;
 }
 
 const TRUE: SqlFragment = { sql: 'TRUE', bindings: [] };
@@ -71,7 +77,11 @@ class Compiler {
     parentColumn: string,
   ): SqlFragment[] {
     const tenant = tenantColumnOf(this.schema);
+    const pinned: SqlFragment[] = this.options.tenant === undefined
+      ? []
+      : [{ sql: '?? = ?', bindings: [`${childAlias}.${tenant}`, this.options.tenant] }];
     return [
+      ...pinned,
       { sql: '?? = ??', bindings: [`${childAlias}.${tenant}`, `${parentAlias}.${tenant}`] },
       { sql: '?? = ??', bindings: [`${childAlias}.${childColumn}`, `${parentAlias}.${parentColumn}`] },
     ];
@@ -207,7 +217,7 @@ class Compiler {
         leaf = this.setPredicate(parentAlias, attribute, clause, operator);
         break;
       case 'computed':
-        leaf = attribute.resolve({ alias: parentAlias, operator, value: clause.value });
+        leaf = attribute.resolve({ alias: parentAlias, operator, value: clause.value, tenant: this.options.tenant });
         break;
     }
 
@@ -284,5 +294,5 @@ export const compilePredicate = (
   options: CompileOptions,
 ): Knex.Raw => {
   const fragment = compilePredicateFragment(schema, predicate, options);
-  return knex.raw(fragment.sql, fragment.bindings as Knex.RawBinding[]);
+  return knex.raw(fragment.sql, fragment.bindings);
 };

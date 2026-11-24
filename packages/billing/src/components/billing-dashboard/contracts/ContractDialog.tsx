@@ -19,7 +19,7 @@ import { IClient } from '@alga-psa/types';
 import { createClientContractForBilling, getClientByIdForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
-import { HelpCircle, Info, Coins } from 'lucide-react';
+import { HelpCircle, Coins } from 'lucide-react';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { BillingProfilePicker } from '@alga-psa/ui/components/BillingProfilePicker';
 import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/billingProfileActions';
@@ -741,21 +741,6 @@ export function ContractDialog({
                   onCheckedChange={setPoRequired}
                 />
               </div>
-
-              {/* Coming Soon Notice */}
-              {poRequired && (
-                <Alert variant="info">
-                  <Info className="h-4 w-4" />
-                  <AlertDescription className="text-xs">
-                    <span className="font-medium">
-                      {t('contractDialog.po.noteLabel', { defaultValue: 'Note:' })}
-                    </span>{' '}
-                    {t('contractDialog.po.comingSoon', {
-                      defaultValue: 'Invoice integration coming soon. Settings will be saved but PO enforcement won\'t be active until a future release.',
-                    })}
-                  </AlertDescription>
-                </Alert>
-              )}
 
               {/* PO Fields */}
               {poRequired && (

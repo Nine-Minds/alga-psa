@@ -17,7 +17,7 @@ export class BrowserMetricCollectionError extends Error {
 // Read-only remote evidence collection. Test identities come from GitHub, never
 // from the scorecard that is being reconciled against those identities.
 export async function collectBrowserMetricExecutions({ repository, runId, revision, sheetId,
-  githubToken, sheetsToken, revisionMode = 'operator', request = fetch, timeoutMs = 60_000, maxJobPages = 10, maxSheetRows = 200_000,
+  githubToken, sheetsToken, revisionMode = 'operator', request = fetch, timeoutMs = 60_000, maxJobPages = 10, maxSheetRows = 500_000,
 } = {}) {
   let phase = 'configuration';
   const require = (condition, code, details) => {
@@ -148,9 +148,11 @@ export async function collectBrowserMetricExecutions({ repository, runId, revisi
     require(tabs.length <= 1, 'duplicate-browser-tab');
     const missingTab = tabs.length === 0;
     const grid = missingTab ? { rowCount: 0, columnCount: 25 } : tabs[0].properties.gridProperties;
-    // The cap now bounds only the index scan below, and sits far above any tab
-    // the retention job leaves behind. Hitting it means retention stopped
-    // running; refuse loudly rather than overlook rows beyond a cap.
+    // The cap bounds only the index scan below. Retention keeps 90 days in
+    // whole ISO weeks and runs weekly, so the tab peaks near 105 days of rows:
+    // about 420,000 at the 4,000 rows a day measured in November 2026. Hitting
+    // the cap means retention stopped or volume outgrew it; refuse loudly
+    // rather than overlook rows beyond a cap.
     const gridDetails = { rowCount: grid?.rowCount, columnCount: grid?.columnCount, maxSheetRows };
     require(Number.isSafeInteger(grid?.rowCount) && (missingTab || grid.rowCount > 0), 'invalid-sheet-row-count', gridDetails);
     require(grid.rowCount <= maxSheetRows, 'sheet-row-limit-exceeded', gridDetails);

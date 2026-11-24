@@ -418,6 +418,7 @@
         "oauthStatus": "Status do OAuth",
         "connected": "Conectado",
         "notConnected": "Não conectado",
+        "reauthorizationRequired": "É necessária uma nova autorização",
         "reconnectOauth": "Reconectar OAuth",
         "authorizeUrl": "Autorizar URL",
         "tokenUrl": "URL do token",
@@ -574,6 +575,7 @@
       "statusLabel": "Status do OAuth",
       "connected": "Conectado",
       "notConnected": "Não conectado",
+      "reauthorizationRequired": "É necessária uma nova autorização",
       "authorizing": "Autorizando...",
       "reconnect": "Reconectar OAuth"
     },
@@ -1084,6 +1086,7 @@
       "noClient": "Nenhum cliente correspondente",
       "outcome": {
         "assignClient": "Ticket atribuído ao cliente \"{{client}}\"",
+        "matchedClient": "o cliente correspondente",
         "fallback": "Nenhum cliente correspondido — ticket roteado para o destino substituto",
         "none": "A regra não foi resolvida — o processamento normal continua",
         "setDestination": "Passagem encaminhada para o destino selecionado",
@@ -1129,7 +1132,8 @@
       "ticketingFromDomainMismatch": "O endereço de remetente dos tickets deve usar o domínio de saída configurado",
       "refreshFailed": "Falha ao obter as configurações atualizadas",
       "updateFailed": "Falha ao atualizar as configurações de email",
-      "mailboxesLoadFailed": "Falha ao carregar as caixas de correio do Microsoft 365"
+      "mailboxesLoadFailed": "Falha ao carregar as caixas de correio do Microsoft 365",
+      "secretRequiredAfterConnectionChange": "Introduza novamente a palavra-passe de {{provider}}: o endereço do servidor ou os dados de início de sessão foram alterados."
     },
     "inboundRules": {
       "notFound": "Regra de email de entrada não encontrada",

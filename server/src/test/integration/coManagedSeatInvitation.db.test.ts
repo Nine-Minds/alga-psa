@@ -188,6 +188,7 @@ describeDb('inviting a seat technician against the allocation', { shuffle: false
     const arrangement = await arrange(sponsor, 3);
     const otherTenant = await createTenant(db, `Other MSP ${randomUUID().slice(0, 8)}`, { productCode: 'psa' });
     const pending = (tenant: string, email: string, expiresAt: Date) => db('user_invitations').insert({ tenant, email,
+      email_normalized: email.trim().toLowerCase(),
       first_name: 'Team', last_name: 'Member', role_id: randomUUID(), token: randomUUID(), expires_at: expiresAt });
     const [here, there, lapsed] = [address('here'), address('there'), address('lapsed')];
     await pending(sponsor, here, new Date(Date.now() + DAY));
@@ -242,6 +243,8 @@ describeDb('inviting a seat technician against the allocation', { shuffle: false
     const technician = await createUser(db, sponsor, { user_type: 'internal' });
     // An active technician and a pending invitation each hold a seat; a revoked one holds none.
     await db.transaction((trx) => retainBuiltinResolverSubject(trx, { tenant: sponsor, userId: technician }, CO_MANAGED_SEAT_RESOLVER_ID));
+    // Bound rows need a marked user (20261113130000); Citus runs no marker trigger, so mark it as acceptance does.
+    await db('users').where({ tenant: sponsor, user_id: technician }).update({ seat_reader: true });
     await db('co_managed_seat_assignments').insert([
       { tenant: sponsor, assignment_id: randomUUID(), arrangement_id: arrangement.arrangement_id, user_id: technician, state: 'active' },
       { tenant: sponsor, assignment_id: randomUUID(), arrangement_id: arrangement.arrangement_id, state: 'revoked', revoked_at: new Date() },

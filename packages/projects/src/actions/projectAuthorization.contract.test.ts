@@ -11,7 +11,7 @@ describe('project authorization kernel contracts', () => {
   // The comment rules live in the shared service used by the web actions and the REST API.
   const commentActionsSource = readSource('../lib/taskComments/taskCommentService.ts');
   // The record-level project read decision has one implementation (C6 extracted the private copies).
-  const projectReadAuthorizationSource = readSource('../lib/projectReadAuthorization.ts');
+  const projectReadAuthorizationSource = readSource('../../../authorization/src/projectReadAuthorization.ts');
 
   it('T020: preserves own-comment/internal-user behavior and supports bundle narrowing on project list/detail', () => {
     // Ownership/record authorization now lives only in withTaskCommentAccess; the service grants no blanket edit/delete.
@@ -126,7 +126,7 @@ describe('project authorization kernel contracts', () => {
     const exportActionsSource = readSource('projectTaskExportActions.ts');
 
     expect(sharedAuthorizationSource).toContain('export async function assertProjectReadAllowed(');
-    expect(sharedAuthorizationSource).toContain("resource: { type: 'project', action, id: projectId },");
+    expect(projectReadAuthorizationSource).toContain("resource: { type: 'project', action, id: projectId },");
     expect(sharedAuthorizationSource).toContain("throw new Error('Permission denied: Cannot read project');");
 
     expect(importActionsSource).toContain("import { assertProjectReadAllowed } from '../lib/projectReadAuthorization';");

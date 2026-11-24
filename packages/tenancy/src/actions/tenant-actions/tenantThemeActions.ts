@@ -6,6 +6,7 @@ import { isEnterprise } from '@alga-psa/core/features';
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
+import { requireTenantSettingsUpdate } from './tenantSettingsAuthorization';
 import { isThemePairId } from '../../lib/themePairs';
 import { DEFAULT_TENANT_THEME, normalizeTenantTheme, type TenantTheme } from '../../lib/tenantTheme';
 import {
@@ -45,6 +46,7 @@ export const getTenantThemeAction = withOptionalAuth(
 
 export const updateTenantThemeAction = withAuth(
   async (user: IUserWithRoles, { tenant }: AuthContext, theme: TenantTheme) => {
+    await requireTenantSettingsUpdate(user, tenant);
     if (user.user_type !== 'internal') {
       throw new Error('Only internal users can update the tenant theme');
     }

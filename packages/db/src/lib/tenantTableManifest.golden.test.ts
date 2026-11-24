@@ -31,10 +31,10 @@ describe('tenant table manifest golden order', () => {
     expect(tenantDeletionOrder()).toEqual(computed.order);
   });
 
-  it('has 628 unique ordered names', () => {
+  it('has 633 unique ordered names', () => {
     const order = tenantDeletionOrder();
-    expect(order).toHaveLength(628);
-    expect(new Set(order).size).toBe(628);
+    expect(order).toHaveLength(633);
+    expect(new Set(order).size).toBe(633);
   });
 
   it('declares the eight breakCircularDependencies FKs as null-before-delete', () => {

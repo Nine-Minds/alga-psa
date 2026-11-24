@@ -10,7 +10,15 @@ import {
   TicketAssignedEvent,
   TicketCommentAddedEvent
 } from '@alga-psa/event-schemas';
-import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
+import { sendEventEmail, resolveEventEmailLocale, SendEmailParams } from '../../notifications/sendEventEmail';
+import {
+  buildTicketEmailDetailBlocksFromRows,
+  emptyTicketEmailDetailBlocks,
+  fetchTicketEmailDetailRows,
+  type TicketEmailDetailBlocks,
+  type TicketDetailRows,
+  type HourBlockMinutesResolver,
+} from '../../notifications/ticketEmailDetailBlocks';
 import { resolveCoManagedCommentStep, audienceRecipients, coManagedSendFields } from '../../notifications/coManagedCommentDelivery';
 import { projectCoManagedNotificationSnapshot } from '@alga-psa/co-managed/sharedWorkProjection';
 import { EventEmailRetryQueue } from '../../notifications/EventEmailRetryQueue';
@@ -30,6 +38,7 @@ import {
   type ResolvedRecipient,
 } from '@alga-psa/shared/lib/tickets/boardNotificationRules';
 import { getAllTicketAssignees } from '@alga-psa/shared/lib/tickets/ticketAssignees';
+import { getAvailableHourBlockMinutes } from '@alga-psa/shared/billingClients/hourBlockService';
 import { filterRecipientsWhoCanReadTicket } from '../../notifications/boardNotificationAudience';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
 import { TenantEmailService } from '@alga-psa/email';
@@ -42,6 +51,7 @@ import {
 } from '../../notifications/NotificationAccumulator';
 import { isValidEmail } from '@alga-psa/core';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
+import type { SupportedLocale } from '@alga-psa/core/i18n/config';
 import { resolveTenantDefaultCountry } from '@alga-psa/tenancy/lib/tenantDefaultCountry';
 import {
   countryDateFormat,
@@ -75,6 +85,7 @@ import {
   resolveTicketEmailTemplate,
   ticketEmailRecipientVariables,
 } from '@alga-psa/notifications/lib/templateVariables/ticketEmailAudience';
+import { sanitizeEmailHtml } from '@alga-psa/shared/lib/email/sanitizeEmailHtml';
 import { optionalEmailData } from '../../notifications/optionalEmailData';
 import type { CommentEmailRecipient, CommentEmailRecipients } from '@alga-psa/types';
 import type { EmailAddress } from '../../../types/email.types';
@@ -94,7 +105,12 @@ type TicketEmailAudience = ReadonlyArray<AudienceContent<Record<string, unknown>
  * copied address) or `msp` (staff). A send names the internal template and the person; the
  * template, the variables and `recipient.isInternal` follow in `sendTicketEmailMessage`.
  */
-type AudiencedSendEmailParams = SendEmailParams & { audienceContent?: TicketEmailAudience; addressedAs: TicketRendering };
+type TicketDetailsForLocale = (locale: SupportedLocale) => Promise<TicketEmailDetailBlocks>;
+type AudiencedSendEmailParams = SendEmailParams & {
+  audienceContent?: TicketEmailAudience;
+  addressedAs: TicketRendering;
+  detailBlocksForLocale?: TicketDetailsForLocale;
+};
 type TicketNotificationParams = Omit<AudiencedSendEmailParams, 'mailClass' | 'boardId'> & { boardId?: string };
 
 /** Stable ledger consumer id for the ticket email subscriber. */
@@ -692,7 +708,7 @@ async function sendTicketEmailMessage(
   recipientUserId?: string
 ): Promise<boolean> {
   // `audienceContent` and `addressedAs` are read here and never travel further (email service, retry queue).
-  const { audienceContent, addressedAs, ...unaudienced } = audiencedParams;
+  const { audienceContent, addressedAs, detailBlocksForLocale, ...unaudienced } = audiencedParams;
   let params: SendEmailParams = unaudienced;
   try {
     const scopedDb = tenantDb(knex, params.tenantId);
@@ -738,6 +754,24 @@ async function sendTicketEmailMessage(
             },
           },
         } : {}),
+      };
+    }
+
+    if (detailBlocksForLocale) {
+      const locale = await resolveEventEmailLocale({ ...params, recipientUserId });
+      const details = await detailBlocksForLocale(locale);
+      const ticketContext = params.context.ticket;
+      if (!ticketContext || typeof ticketContext !== 'object' || Array.isArray(ticketContext)) {
+        throw new Error('Ticket email details require a ticket context');
+      }
+      params = {
+        ...params,
+        locale,
+        recipientUserId,
+        context: {
+          ...params.context,
+          ticket: { ...ticketContext, ...toPortal(details) },
+        },
       };
     }
 
@@ -913,9 +947,9 @@ function escapeHtml(value: string): string {
 
 const CHANGE_LIST_STYLE = 'margin:0;padding:0;list-style:none;';
 const CHANGE_ITEM_STYLE = 'margin:0 0 10px 0;padding:0;';
-const CHANGE_FIELD_LABEL_STYLE = 'font-weight:600;color:#1f2933;';
-const CHANGE_OLD_VALUE_STYLE = 'color:#94595d;text-decoration:line-through;word-break:break-word;';
-const CHANGE_NEW_VALUE_STYLE = 'color:#0a7c3c;font-weight:600;word-break:break-word;';
+const CHANGE_FIELD_LABEL_STYLE = 'font-size:13px;font-weight:600;color:#475467;';
+const CHANGE_OLD_VALUE_STYLE = 'color:#667085;text-decoration:line-through;word-break:break-word;';
+const CHANGE_NEW_VALUE_STYLE = 'color:#1f2933;font-weight:600;word-break:break-word;';
 const CHANGE_SINGLE_VALUE_STYLE = 'color:#1f2933;word-break:break-word;';
 const CHANGE_SECTION_STYLE = 'margin:0 0 14px 0;padding:0 0 12px 0;border-bottom:1px solid rgba(146,64,14,0.15);';
 const CHANGE_SECTION_LAST_STYLE = 'margin:0;padding:0;';
@@ -923,42 +957,79 @@ const CHANGE_SECTION_HEADER_STYLE = 'font-size:13px;color:#92400e;font-weight:60
 const CHANGE_SECTION_TIMESTAMP_STYLE = 'color:#9a6c1f;font-weight:500;';
 
 /**
- * Render a single field change (old → new) as an HTML <li>.
+ * One field change, as stock templates lay it out with {{#each ticket.changeItems}}.
+ * Templates own the colors, so a tenant's email branding restyles the list; the
+ * pre-rendered `ticket.changes` HTML is kept for templates customized before this.
  */
-function renderChangeItemHtml(fieldLabel: string, oldValue: string | null, newValue: string): string {
-  const fieldHtml = `<div style="${CHANGE_FIELD_LABEL_STYLE}">${escapeHtml(fieldLabel)}</div>`;
-  if (oldValue === null) {
-    return `<li style="${CHANGE_ITEM_STYLE}">${fieldHtml}<div style="${CHANGE_SINGLE_VALUE_STYLE}">${escapeHtml(newValue)}</div></li>`;
-  }
-  return `<li style="${CHANGE_ITEM_STYLE}">${fieldHtml}<div style="${CHANGE_OLD_VALUE_STYLE}">${escapeHtml(oldValue)}</div><div style="${CHANGE_NEW_VALUE_STYLE}">${escapeHtml(newValue)}</div></li>`;
+interface EmailChangeItem {
+  label: string;
+  /** '' when the change carries no previous value: shown as a single value. */
+  oldValue: string;
+  newValue: string;
+  /** Bundled updates only: the updater on the first item of each update, '' otherwise. */
+  updatedBy: string;
+  /** Bundled updates only: when that update happened, on the same item as updatedBy. */
+  updatedAt: string;
+}
+
+interface EmailChangeGroup {
+  updatedBy: string;
+  updatedAt: string;
+  items: EmailChangeItem[];
+}
+
+function changeItem(label: string, oldValue: string | null, newValue: string): EmailChangeItem {
+  return { label, oldValue: oldValue ?? '', newValue, updatedBy: '', updatedAt: '' };
 }
 
 /**
- * Format changes record into an HTML fragment for use in the "Changes Made" email box.
+ * Render a single field change (old → new) as an HTML <li>.
  */
-async function formatChanges(db: any, changes: Record<string, unknown>, tenantId: string, timeZone: string = 'UTC', locale: string = 'en'): Promise<string> {
-  const items = await Promise.all(
-    Object.entries(changes).map(async ([field, value]): Promise<string> => {
+function renderChangeItemHtml(item: EmailChangeItem): string {
+  const fieldHtml = `<div style="${CHANGE_FIELD_LABEL_STYLE}">${escapeHtml(item.label)}</div>`;
+  if (!item.oldValue) {
+    return `<li style="${CHANGE_ITEM_STYLE}">${fieldHtml}<div style="${CHANGE_SINGLE_VALUE_STYLE}">${escapeHtml(item.newValue)}</div></li>`;
+  }
+  return `<li style="${CHANGE_ITEM_STYLE}">${fieldHtml}<div style="${CHANGE_OLD_VALUE_STYLE}">${escapeHtml(item.oldValue)}</div><div style="${CHANGE_NEW_VALUE_STYLE}">${escapeHtml(item.newValue)}</div></li>`;
+}
+
+/** The legacy `ticket.changes` fragment for one update. */
+function renderChangeItemsHtml(items: EmailChangeItem[]): string {
+  if (items.length === 0) {
+    return '';
+  }
+  return `<ul style="${CHANGE_LIST_STYLE}">${items.map(renderChangeItemHtml).join('')}</ul>`;
+}
+
+/**
+ * Resolve a changes record (ids → names, dates → local time) into change items.
+ */
+async function resolveChangeItems(db: any, changes: Record<string, unknown>, tenantId: string, timeZone: string = 'UTC', locale: string = 'en'): Promise<EmailChangeItem[]> {
+  return Promise.all(
+    Object.entries(changes).map(async ([field, value]): Promise<EmailChangeItem> => {
       const fieldLabel = formatFieldName(field);
       if (typeof value === 'object' && value !== null && ('old' in value || 'new' in value)) {
         const { old: oldVal, new: newVal } = value as { old?: unknown; new?: unknown };
         if (oldVal !== undefined && newVal !== undefined) {
           const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId, timeZone, locale);
           const resolvedNewValue = await resolveValue(db, field, newVal, tenantId, timeZone, locale);
-          return renderChangeItemHtml(fieldLabel, resolvedOldValue, resolvedNewValue);
+          return changeItem(fieldLabel, resolvedOldValue, resolvedNewValue);
         }
         const presentVal = newVal !== undefined ? newVal : oldVal;
         const resolvedValue = await resolveValue(db, field, presentVal, tenantId, timeZone, locale);
-        return renderChangeItemHtml(fieldLabel, null, resolvedValue);
+        return changeItem(fieldLabel, null, resolvedValue);
       }
       const resolvedValue = await resolveValue(db, field, value, tenantId, timeZone, locale);
-      return renderChangeItemHtml(fieldLabel, null, resolvedValue);
+      return changeItem(fieldLabel, null, resolvedValue);
     })
   );
-  if (items.length === 0) {
-    return '';
-  }
-  return `<ul style="${CHANGE_LIST_STYLE}">${items.join('')}</ul>`;
+}
+
+/**
+ * Format changes record into an HTML fragment for use in the "Changes Made" email box.
+ */
+async function formatChanges(db: any, changes: Record<string, unknown>, tenantId: string, timeZone: string = 'UTC', locale: string = 'en'): Promise<string> {
+  return renderChangeItemsHtml(await resolveChangeItems(db, changes, tenantId, timeZone, locale));
 }
 
 /**
@@ -1174,7 +1245,8 @@ function formatTicketDateTime(
  * Shared "ticket summary" email context (the ticket-created body variables).
  * Used by the ticket-created handler and the board status-entered handler.
  */
-async function buildTicketSummaryEmailContext(
+// Exported for unit tests of the description sanitising path.
+export async function buildTicketSummaryEmailContext(
   db: Knex,
   tenantId: string,
   ticket: NonNullable<TicketEmailRow>,
@@ -1298,9 +1370,13 @@ async function buildTicketSummaryEmailContext(
   const descriptionFormatting = formatBlockNoteContent(rawDescription);
   const descriptionText = descriptionFormatting.text.trim();
   const description = descriptionText || 'No description provided.';
+  // The HTML rendition derives from an untrusted inbound email body and is
+  // inserted unescaped ({{{ }}}) by the board-created template, so it goes
+  // through the shared email sanitiser. Fall back to the escaped paragraph.
+  const escapedDescriptionFallback = `<p>${escapeHtml(description)}</p>`;
   const descriptionHtml = descriptionText
-    ? descriptionFormatting.html
-    : `<p>${description}</p>`;
+    ? ((await sanitizeEmailHtml(descriptionFormatting.html)) || escapedDescriptionFallback)
+    : escapedDescriptionFallback;
 
   const requesterDetailsForText = requesterDetails;
   const assignedDetailsForText = assignedDetails;
@@ -1931,7 +2007,8 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     const description = descriptionText || 'No description provided.';
 
     // Format changes with database lookups
-    const formattedChanges = await formatChanges(db, payload.changes || {}, tenantId, emailTimeZone, emailLocale);
+    const changeItems = await resolveChangeItems(db, payload.changes || {}, tenantId, emailTimeZone, emailLocale);
+    const formattedChanges = renderChangeItemsHtml(changeItems);
 
     // Get updater's name
     const updater = updaterUserId
@@ -1965,6 +2042,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       categoryDetails,
       locationSummary,
       changes: formattedChanges,
+      changeItems,
       updatedBy: updater ? `${updater.first_name} ${updater.last_name}` : 'System'
     };
 
@@ -2117,31 +2195,30 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
 }
 
 /**
- * Format multiple accumulated changes into an HTML fragment.
- * Each updater gets a header (name · timestamp) followed by a list of field changes.
+ * Resolve bundled updates into one group per update: the updater (never a raw id),
+ * the local timestamp, and that update's change items.
  */
-async function formatAccumulatedChanges(
+async function resolveAccumulatedChangeGroups(
   db: any,
   accumulatedChanges: AccumulatedChange[],
   tenantId: string,
   timeZone: string = 'UTC',
   locale: string = 'en'
-): Promise<string> {
-  const formattedSections: string[] = [];
+): Promise<EmailChangeGroup[]> {
+  const groups: EmailChangeGroup[] = [];
 
-  for (let i = 0; i < accumulatedChanges.length; i += 1) {
-    const changeSet = accumulatedChanges[i];
+  for (const changeSet of accumulatedChanges) {
     const updater = changeSet.userId
       ? await tenantDb(db, tenantId).table('users')
           .where({ user_id: changeSet.userId })
           .first()
       : null;
     // Never render a raw id: no user row (or no userId at all) reads as System.
-    const updaterName = updater
+    const updatedBy = updater
       ? `${updater.first_name} ${updater.last_name}`
       : 'System';
 
-    const timestamp = new Date(changeSet.timestamp).toLocaleString(locale, {
+    const updatedAt = new Date(changeSet.timestamp).toLocaleString(locale, {
       month: 'short',
       day: '2-digit',
       year: 'numeric',
@@ -2151,33 +2228,48 @@ async function formatAccumulatedChanges(
       timeZoneName: 'short'
     });
 
-    const items = await Promise.all(
-      Object.entries(changeSet.changes).map(async ([field, value]): Promise<string> => {
-        const fieldLabel = formatFieldName(field);
-        if (typeof value === 'object' && value !== null && ('old' in value || 'new' in value)) {
-          const { old: oldVal, new: newVal } = value as { old?: unknown; new?: unknown };
-          if (oldVal !== undefined && newVal !== undefined) {
-            const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId, timeZone, locale);
-            const resolvedNewValue = await resolveValue(db, field, newVal, tenantId, timeZone, locale);
-            return renderChangeItemHtml(fieldLabel, resolvedOldValue, resolvedNewValue);
-          }
-          const presentVal = newVal !== undefined ? newVal : oldVal;
-          const resolvedValue = await resolveValue(db, field, presentVal, tenantId, timeZone);
-          return renderChangeItemHtml(fieldLabel, null, resolvedValue);
-        }
-        const resolvedValue = await resolveValue(db, field, value, tenantId, timeZone, locale);
-        return renderChangeItemHtml(fieldLabel, null, resolvedValue);
-      })
-    );
-
-    const isLast = i === accumulatedChanges.length - 1;
-    const sectionStyle = isLast ? CHANGE_SECTION_LAST_STYLE : CHANGE_SECTION_STYLE;
-    const header = `<div style="${CHANGE_SECTION_HEADER_STYLE}">${escapeHtml(updaterName)} <span style="${CHANGE_SECTION_TIMESTAMP_STYLE}">· ${escapeHtml(timestamp)}</span></div>`;
-    const list = items.length > 0 ? `<ul style="${CHANGE_LIST_STYLE}">${items.join('')}</ul>` : '';
-    formattedSections.push(`<div style="${sectionStyle}">${header}${list}</div>`);
+    const items = await resolveChangeItems(db, changeSet.changes, tenantId, timeZone, locale);
+    groups.push({ updatedBy, updatedAt, items });
   }
 
-  return formattedSections.join('');
+  return groups;
+}
+
+/**
+ * Flatten bundled updates for {{#each ticket.changeItems}}: the first item of each
+ * update carries its updater and time so a template can print a heading there.
+ */
+function flattenChangeGroups(groups: EmailChangeGroup[]): EmailChangeItem[] {
+  return groups.flatMap((group) =>
+    group.items.map((item, index) =>
+      index === 0 ? { ...item, updatedBy: group.updatedBy, updatedAt: group.updatedAt } : item
+    )
+  );
+}
+
+/**
+ * The legacy `ticket.changes` fragment for bundled updates: each updater gets a
+ * header (name · timestamp) followed by a list of field changes.
+ */
+function renderChangeGroupsHtml(groups: EmailChangeGroup[]): string {
+  return groups.map((group, i) => {
+    const sectionStyle = i === groups.length - 1 ? CHANGE_SECTION_LAST_STYLE : CHANGE_SECTION_STYLE;
+    const header = `<div style="${CHANGE_SECTION_HEADER_STYLE}">${escapeHtml(group.updatedBy)} <span style="${CHANGE_SECTION_TIMESTAMP_STYLE}">· ${escapeHtml(group.updatedAt)}</span></div>`;
+    return `<div style="${sectionStyle}">${header}${renderChangeItemsHtml(group.items)}</div>`;
+  }).join('');
+}
+
+/**
+ * Format multiple accumulated changes into the legacy `ticket.changes` HTML fragment.
+ */
+async function formatAccumulatedChanges(
+  db: any,
+  accumulatedChanges: AccumulatedChange[],
+  tenantId: string,
+  timeZone: string = 'UTC',
+  locale: string = 'en'
+): Promise<string> {
+  return renderChangeGroupsHtml(await resolveAccumulatedChangeGroups(db, accumulatedChanges, tenantId, timeZone, locale));
 }
 
 /** Display string for the "Updated By" row of an accumulated-update email. */
@@ -2365,7 +2457,9 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
     const emailLocale = await getTenantDefaultLocale(tenantId);
 
     // Format all accumulated changes
-    const formattedChanges = await formatAccumulatedChanges(db, accumulatedChanges, tenantId, emailTimeZone, emailLocale);
+    const changeGroups = await resolveAccumulatedChangeGroups(db, accumulatedChanges, tenantId, emailTimeZone, emailLocale);
+    const changeItems = flattenChangeGroups(changeGroups);
+    const formattedChanges = renderChangeGroupsHtml(changeGroups);
 
     const updatedByDisplay = await resolveUpdatedByDisplay(db, tenantId, accumulatedChanges);
 
@@ -2394,6 +2488,7 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
       categoryDetails,
       locationSummary,
       changes: formattedChanges,
+      changeItems,
       updatedBy: updatedByDisplay,
       updateCount: accumulatedChanges.length,
     };
@@ -3829,6 +3924,55 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
 
     const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
 
+    // One hour-block lookup per client per event, shared by the master ticket
+    // and every bundled child (bundle children normally share the master's client).
+    const hourBlockByClient = new Map<string, Promise<number>>();
+    const resolveHourBlockMinutes: HourBlockMinutesResolver = (clientId) => {
+      let lookup = hourBlockByClient.get(clientId);
+      if (!lookup) {
+        lookup = getAvailableHourBlockMinutes(db, tenantId, clientId);
+        hourBlockByClient.set(clientId, lookup);
+      }
+      return lookup;
+    };
+
+    // Fetch each ticket's data once; format it after the actual recipient and locale are known.
+    const masterDetailRows = await fetchTicketEmailDetailRows(
+      db, tenantId, [ticket.ticket_id],
+    ).catch((error): Map<string, TicketDetailRows> | null => {
+      logger.warn('[TicketEmailSubscriber] Failed to fetch ticket email detail rows; sending without details:', {
+        ticketId: ticket.ticket_id,
+        tenantId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return null;
+    });
+    const detailBlocksByTicketAndLocale = new Map<string, Promise<TicketEmailDetailBlocks>>();
+    const detailsForTicket = (
+      ticketId: string,
+      clientId: string | null | undefined,
+      rows: Map<string, TicketDetailRows> | null,
+    ): TicketDetailsForLocale => (locale) => {
+      const key = JSON.stringify([ticketId, locale]);
+      let blocks = detailBlocksByTicketAndLocale.get(key);
+      if (!blocks) {
+        blocks = rows
+          ? buildTicketEmailDetailBlocksFromRows(
+            ticketId, clientId, rows, emailTimeZone, locale, resolveHourBlockMinutes,
+          ).catch((error) => {
+            logger.warn('[TicketEmailSubscriber] Failed to build ticket email detail blocks; sending without details:', {
+              ticketId,
+              tenantId,
+              error: error instanceof Error ? error.message : 'Unknown error',
+            });
+            return emptyTicketEmailDetailBlocks(locale);
+          })
+          : Promise.resolve(emptyTicketEmailDetailBlocks(locale));
+        detailBlocksByTicketAndLocale.set(key, blocks);
+      }
+      return blocks;
+    };
+    const masterDetailsForLocale = detailsForTicket(ticket.ticket_id, ticket.client_id, masterDetailRows);
     const baseTicketContext = {
       id: ticket.ticket_number,
       title: ticket.title,
@@ -3853,6 +3997,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       locationSummary,
       changes,
       closedBy,
+      ...emptyTicketEmailDetailBlocks(emailLocale),
       // Client-safe by default: every context that spreads this base is
       // external except internalContext, which overrides the body below.
       resolution: externalResolutionHtml
@@ -3914,6 +4059,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       // fallback below never treats a gated send as "the requester was reached".
       return sendNotificationIfEnabled({
         ...params,
+        detailBlocksForLocale: params.detailBlocksForLocale ?? masterDetailsForLocale,
         audienceContent: params.context === internalContext ? internalCloseAudience : TICKET_FACTS_AUDIENCE,
         mailClass: 'ticket',
         boardId: params.boardId ?? ticket.board_id,
@@ -3961,6 +4107,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
         tenantId,
         ...emailEntityContext,
         contactId: primaryContactId,
+        recipientClientId: ticket.client_id || undefined,
         to: primaryEmail,
         addressedAs: 'client',
         subject: `Ticket Closed: ${ticket.title}`,
@@ -4026,6 +4173,18 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
 
       if (bundleChildren.length > 0) {
         const bundlePortalCtx = await resolvePortalLinkContext(db, tenantId);
+        // Same supplemental rule as the master: one batched fetch for every
+        // child; if it fails, children are still sent without details.
+        const childDetailRows = await fetchTicketEmailDetailRows(
+          db, tenantId, bundleChildren.map((child) => child.ticket_id),
+        ).catch((error): Map<string, TicketDetailRows> | null => {
+          logger.warn('[TicketEmailSubscriber] Failed to fetch bundled child detail rows; sending without details:', {
+            ticketIds: bundleChildren.map((child) => child.ticket_id),
+            tenantId,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+          return null;
+        });
         for (const child of bundleChildren) {
           const childPrimaryEmail = safeString(child.contact_email) || safeString(child.client_email);
           if (!childPrimaryEmail) continue;
@@ -4040,11 +4199,11 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
           }
 
           const { portalUrl: childPortalUrl } = buildTicketLinks(bundlePortalCtx, child.ticket_id);
-
           await sendIfUnique({
             tenantId,
             entityType: 'ticket',
             entityId: child.ticket_id,
+            detailBlocksForLocale: detailsForTicket(child.ticket_id, child.client_id, childDetailRows),
             to: childPrimaryEmail,
             addressedAs: 'client',
             subject: `Ticket Closed: ${ticket.title}`,
@@ -4282,6 +4441,9 @@ export const ticketEmailSubscriberTestHarness = {
   handleTicketClosed,
   handleTicketEvent,
   formatAccumulatedChanges,
+  resolveChangeItems,
+  resolveAccumulatedChangeGroups,
+  flattenChangeGroups,
   resolveUpdatedByDisplay,
 };
 

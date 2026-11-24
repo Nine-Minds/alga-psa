@@ -237,6 +237,7 @@
       "descriptionPlaceholder": "Podaj, czego oczekiwałeś, co się stało oraz którego klienta lub której faktury to dotyczy.",
       "replyTo": "Odpowiedzi trafią na adres {{email}}",
       "success": "Wysłano do pomocy technicznej Nine Minds. Odpowiedzi trafią na adres {{email}}.",
+      "successWithTicket": "Wysłano do pomocy technicznej Nine Minds jako zgłoszenie {{ticketNumber}}. Odpowiedzi trafią na adres {{email}}.",
       "submit": "Wyślij do Nine Minds",
       "sending": "Wysyłanie…",
       "cancel": "Anuluj",

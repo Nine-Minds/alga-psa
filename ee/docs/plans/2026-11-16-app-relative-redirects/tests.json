@@ -1,0 +1,9 @@
+[
+  {"id":"T001","description":"Unit (helper): returns the given status and a relative Location for a path with query and fragment; merges request query parameters without overriding existing ones; passes extra headers through.","implemented":false,"featureIds":["F001","F003"]},
+  {"id":"T002","description":"Unit (helper): rejects 'https://evil.example', '//evil.example', '/\\\\evil.example' and a path without a leading slash.","implemented":false,"featureIds":["F002"]},
+  {"id":"T003","description":"Unit (productNavDispatcher): with a request whose nextUrl origin is http://localhost:3000, /msp/go/mailbox, /msp/go/providers and /msp/go/calendar answer 307 with a relative Location for each product (psa, algadesk, co_managed), keep incoming query parameters, send Cache-Control: no-store, and unknown targets 404.","implemented":false,"featureIds":["F004"]},
+  {"id":"T004","description":"Unit: the OpenAPI metadata redirect, the mobile handoff sign-in redirect and the Teams auth callback redirect return a Location that does not contain the request's internal origin.","implemented":false,"featureIds":["F005"]},
+  {"id":"T005","description":"Unit (microsoftEmailSetupCallback): the admin consent callback's return redirect resolves to the provider setup page without an internal origin when the request origin is http://localhost:3000.","implemented":false,"featureIds":["F004","F005"]},
+  {"id":"T006","description":"Contract: scanning route handlers and controllers finds no redirect built from request.nextUrl.origin, req.url or an origin derived from them outside the allow-list; a fixture with the old go-route code makes the test fail.","implemented":false,"featureIds":["F007"]},
+  {"id":"T007","description":"Unit (authorizationMiddleware): the unauthorised redirect targets the resolved public origin when forwarded-host trust is on and the request URL carries the internal origin.","implemented":false,"featureIds":["F006"]}
+]

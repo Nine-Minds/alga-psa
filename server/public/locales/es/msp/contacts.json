@@ -288,7 +288,8 @@
     },
     "primary": {
       "title": "Correo electrónico principal",
-      "description": "Esta sigue siendo la dirección predeterminada almacenada en el registro del contacto"
+      "description": "Esta sigue siendo la dirección predeterminada almacenada en el registro del contacto",
+      "keepOldEmail": "Conservar {{email}} como correo adicional"
     },
     "row": {
       "title": "Correo adicional {{number}}",
@@ -457,6 +458,7 @@
         "contactMissingEmail": "El contacto no tiene dirección de correo electrónico. Agregue una dirección de correo al contacto antes de enviar una invitación.",
         "contactInvalidEmail": "El contacto tiene una dirección de correo electrónico no válida. Actualice el contacto con una dirección válida antes de enviar una invitación.",
         "userExistsForContact": "Ya existe una cuenta de usuario para este contacto. Use el restablecimiento de contraseña en lugar de enviar una invitación.",
+        "portalUserAlreadyExists": "Esta dirección de correo electrónico ya pertenece a otra cuenta de usuario de esta organización.",
         "noDefaultClient": "No hay un cliente predeterminado configurado para este tenant. Configure un cliente predeterminado en Configuración General.",
         "noDefaultLocation": "El cliente predeterminado debe tener una ubicación predeterminada configurada para enviar invitaciones al portal.",
         "noLocationEmail": "La ubicación del cliente predeterminado debe tener un correo electrónico de contacto configurado.",
@@ -653,12 +655,43 @@
     "actions": {
       "openMenu": "Abrir menú",
       "quickView": "Vista rápida",
-      "addNewContact": "Añadir nuevo contacto"
+      "addNewContact": "Añadir nuevo contacto",
+      "selectAll": "Seleccionar todos los contactos",
+      "selectContact": "Seleccionar a {{name}}",
+      "inviteSelected": "Invitar al portal ({{selected}})",
+      "inviteAllEligible": "Invitar a todos los elegibles"
     },
     "errors": {
       "loadFailed": "No se pudieron cargar los contactos.",
       "loadingTitle": "Error al cargar los contactos",
       "retryFailed": "No se pudieron cargar los contactos. Inténtelo de nuevo."
+    }
+  },
+  "bulkPortalInvitation": {
+    "title": "Invitar contactos al portal del cliente",
+    "description": "Confirmación de invitaciones masivas al portal con vista previa de elegibles y resultados por contacto",
+    "loading": "Verificando a quién se puede invitar...",
+    "inviteCount": "{{total}} contactos serán invitados al portal del cliente.",
+    "skipCount": "{{total}} se omitirán:",
+    "visibilityNote": "Cada invitación otorga el acceso que el contacto ya tiene: {{grouped}} están limitados a un grupo de visibilidad del portal y {{full}} obtienen acceso completo a los datos del portal de su cliente.",
+    "skipReasons": {
+      "alreadyHasPortalAccess": "ya tiene acceso al portal",
+      "missingEmail": "sin dirección de correo utilizable",
+      "sharedMailbox": "buzón compartido"
+    },
+    "actions": {
+      "send": "Enviar {{total}} invitaciones",
+      "sending": "Enviando..."
+    },
+    "results": {
+      "summary": "{{sent}} enviadas, {{skipped}} omitidas, {{failed}} fallidas.",
+      "sent": "Enviada",
+      "skipped": "Omitida",
+      "failed": "Fallida"
+    },
+    "errors": {
+      "loadFailed": "No se pudo determinar a quién invitar. Vuelva a intentarlo.",
+      "sendFailed": "No se pudieron enviar las invitaciones. Vuelva a intentarlo."
     }
   },
   "contactsLayout": {

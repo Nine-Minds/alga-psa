@@ -14,6 +14,7 @@
     "communityEditionDescription": "La Community Edition con hosting autonomo offre utenti illimitati senza restrizioni di licenza o costi aggiuntivi."
   },
   "purchaseSuccess": {
+    "unlimitedLicenses": "Illimitate",
     "metaTitle": "Acquisto completato",
     "scheduledTitle": "Modifica pianificata con successo!",
     "updatedTitle": "Aggiornamento completato con successo!",
@@ -395,9 +396,52 @@
   },
   "errors": {
     "notSignedIn": "Non autorizzato. Accedi per gestire le licenze.",
-    "accountManagementRead": "Autorizzazione negata: è richiesta l'autorizzazione di lettura per la gestione degli account"
+    "accountManagementRead": "Autorizzazione negata: è richiesta l'autorizzazione di lettura per la gestione degli account",
+    "accountManagementUpdate": "Autorizzazione negata: è richiesta l'autorizzazione di aggiornamento per la gestione degli account"
   },
   "coManaged": {
+    "trial": {
+      "title": "Prova di 15 giorni per una postazione cogestita",
+      "description": "Invita un tecnico del cliente a lavorare sulle bacheche che scegli. I 15 giorni decorrono dal suo primo accesso. Per accedere occorre un abbonamento di base attivo o una prova attiva del piano di base.",
+      "terms": "Una postazione a pagamento costa {{amount}} al mese. La prova termina senza addebiti, a meno che non confermi la capacità a pagamento.",
+      "status": {
+        "active": "Attiva",
+        "pending": "In attesa del primo accesso",
+        "base_paused": "Abbonamento di base in pausa",
+        "expired": "Prova scaduta",
+        "paid": "Postazione a pagamento in uso",
+        "ended": "Prova terminata",
+        "checkout_pending": "In attesa del pagamento"
+      },
+      "purchaseAwaitingVerification": "Acquisto in attesa di verifica",
+      "conversionFailed": "Il passaggio a una postazione a pagamento non è stato completato. Verifica la capacità a pagamento disponibile o riprova a effettuare l’acquisto.",
+      "deadline": "La prova della postazione termina il {{date}}.",
+      "baseUntil": "L’accesso di base attuale termina il {{date}}.",
+      "openSetup": "Apri la configurazione della postazione del cliente",
+      "invite": "Invita il tecnico per 15 giorni",
+      "resend": "Invia nuovamente l’invito",
+      "replace": "Sostituisci il tecnico",
+      "cancelInvitation": "Annulla l’invito",
+      "restoreBase": "Ripristina l’accesso di base in Account",
+      "resumePurchase": "Riprendi l’acquisto",
+      "cancelConversion": "Annulla la conversione della postazione",
+      "spareSeatTerms": "Usa subito una postazione a pagamento disponibile. Il totale delle postazioni del gruppo rimane invariato.",
+      "confirmSpareSeat": "Conferma l’uso di una postazione a pagamento",
+      "keepSeat": "Mantieni questa postazione",
+      "refresh": "Aggiorna lo stato della prova",
+      "returnToTrial": "Torna alla prova della postazione del cliente",
+      "notice": {
+        "invitationSaved": "Invito salvato. Riprova a inviarlo qui sotto.",
+        "deliveryFailed": "Invio non riuscito. Puoi riprovare.",
+        "replacementSent": "Invito inviato al tecnico sostitutivo.",
+        "replacementSaved": "Tecnico sostitutivo salvato. Riprova a inviare l’invito."
+      },
+      "error": {
+        "boardChoicesFailed": "Impossibile caricare le bacheche disponibili.",
+        "actionFailed": "Impossibile completare l’operazione. Aggiorna lo stato della prova e riprova.",
+        "paymentFailed": "Impossibile completare il pagamento. Controlla lo stato della prova."
+      }
+    },
     "seat": {
       "blocker": {
         "sponsorNotEligible": "Questo spazio di lavoro non ha un pool cogestito. Aggiungi postazioni cogestite per usarlo.",
@@ -409,6 +453,8 @@
       },
       "error": {
         "operationConflict": "Questa richiesta è già stata inviata con dettagli diversi. Aggiorna e ricomincia.",
+        "trialClaimUnavailable": "Questa prova è già in uso o è stata avviata per un altro cliente. Aggiorna e riprova.",
+        "trialSponsorNotEligible": "Questo spazio di lavoro non è idoneo a una prova Seat. Controlla il piano e lo stato di fatturazione dell’account.",
         "invalidSeats": "Inserisci un numero intero di postazioni, almeno 1.",
         "invalidInvitation": "Scegli un contatto da invitare.",
         "contactNotFound": "Questo contatto non è più disponibile. Scegli un altro contatto.",
@@ -461,8 +507,7 @@
         "save": "Salva impostazioni predefinite del passaggio"
       },
       "client": {
-        "seatArrangement": "Accordo di postazioni",
-        "summary": "Accordo di postazioni: {{used}} di {{count}} postazioni in uso"
+        "seatArrangement": "Accordo di postazioni"
       },
       "technicians": {
         "sent": "Invito inviato.",
@@ -523,17 +568,17 @@
     },
     "portableExport": {
       "title": "Esporta area di lavoro",
-      "description": "Scarica un archivio portabile e crittografato dei record e dei file della tua area di lavoro.",
-      "recovery": "Conserva la passphrase di recupero in un luogo sicuro. Senza di essa, l’archivio non può essere aperto.",
-      "connections": "L’archivio contiene i record della tua area di lavoro e i file in essa archiviati. I record e le associazioni dei documenti, così come la cronologia di tempi, pianificazioni, riunioni e conversazioni, non sono ancora inclusi e arriveranno in una versione successiva. Dati di fatturazione, dati privati dell’MSP e segreti delle integrazioni non sono inclusi.",
+      "description": "Scarica un archivio portabile e crittografato con i record e i file della tua area di lavoro.",
+      "recovery": "Conserva la passphrase di recupero in un luogo sicuro. Senza di essa, l'archivio non può essere aperto.",
+      "connections": "L'archivio contiene i record della tua area di lavoro e i file in essa archiviati. I record e le associazioni dei documenti, oltre alla cronologia di tempo, pianificazione, riunioni e conversazioni, non sono ancora inclusi e arriveranno in una versione successiva. Fatturazione, dati privati dell'MSP e segreti di integrazione non sono inclusi.",
       "passphrase": "Passphrase di recupero",
       "confirmPassphrase": "Conferma passphrase di recupero",
-      "download": "Prepara e scarica l’archivio",
+      "download": "Prepara e scarica archivio",
       "requested": "La richiesta si apre in una nuova scheda. La preparazione può richiedere alcuni minuti; il browser scaricherà il file quando sarà pronto.",
-      "loadError": "Non puoi esportare questa area di lavoro con il tuo accesso attuale.",
+      "loadError": "Non puoi esportare quest'area di lavoro con il tuo accesso attuale.",
       "lengthError": "Usa una passphrase compresa tra 16 e 1024 byte UTF-8.",
-      "matchError": "Le passphrase di recupero devono corrispondere.",
-      "unavailable": "L’esportazione dell’area di lavoro non è disponibile in questa edizione.",
+      "matchError": "Le passphrase di recupero devono coincidere.",
+      "unavailable": "L'esportazione dell'area di lavoro non è disponibile in questa edizione.",
       "loading": "Caricamento…"
     },
     "acceptance": {
@@ -562,8 +607,6 @@
     },
     "client": {
       "awaitingAcceptance": "L'amministratore del cliente deve accettare prima che venga concesso l'accesso.",
-      "chooseRelationship": "Scegli relazione",
-      "endedHint": "Questa relazione è terminata. La cronologia conservata e gli archivi restano disponibili.",
       "endedOn": "Terminata il {{date}}",
       "failedHint": "La configurazione non è stata completata. I posti restano riservati; riprova per continuarla oppure annulla la configurazione.",
       "forClient": "IT cogestita per {{name}}",
@@ -580,12 +623,11 @@
       "setupHint": "Abilita l'IT cogestita da questo cliente per riservare tecnici del cliente e invitare un amministratore.",
       "tab": "IT cogestita",
       "viewDetails": "Visualizza dettagli",
-      "viewHistory": "Visualizza cronologia",
       "workspace": "Area di lavoro del cliente",
       "seatUsage": "{{used}} di {{count}} postazioni tecnico",
       "seatAllocation": "{{count}} postazioni tecnico assegnate"
     },
-    "description": "Gestisci le postazioni per tecnici disponibili per gli spazi di lavoro dei tuoi clienti.",
+    "description": "La co-gestione IT consente al personale IT di un cliente di lavorare insieme al tuo team in AlgaPSA, sugli stessi ticket, con accesso limitato alla propria azienda. Ogni tecnico del cliente usa una postazione di un pool che acquisti qui.",
     "directory": {
       "empty": "Nessuna area di lavoro cogestita disponibile per la gestione.",
       "prompt": "Seleziona l'area di lavoro cogestita da gestire."
@@ -595,7 +637,7 @@
       "descriptionWith": "{{name}} non ha più accesso. La cronologia del lavoro condiviso è conservata in sola lettura.",
       "title": "IT co-gestito terminato il {{date}}"
     },
-    "loading": "Caricamento della capacità di postazioni per i clienti…",
+    "loading": "Caricamento della capacità di postazioni in co-gestione…",
     "overview": {
       "shape": "Formula",
       "state": "Stato",
@@ -676,15 +718,15 @@
       "description": "Questo spazio di lavoro non è disponibile al momento. Contatta il tuo fornitore IT se prevedevi di usarlo.",
       "title": "L’IT in co-gestione non è disponibile"
     },
-    "capacity": "Postazioni acquistate",
+    "capacity": "Acquistate",
     "allocated": "Assegnate ai clienti",
-    "available": "Postazioni disponibili",
-    "seatPool": "Postazioni tecnico per i clienti",
-    "seatDescription": "Assegna le postazioni da questo pool condiviso. I richiedenti sono gratuiti e i tecnici del tuo MSP non usano postazioni dei clienti.",
+    "available": "Disponibili",
+    "seatPool": "Postazioni in co-gestione",
+    "seatDescription": "Solo i tecnici dei tuoi clienti hanno bisogno di una postazione. I richiedenti e i tuoi tecnici no.",
     "quantity": "Totale postazioni nel tuo pool",
     "reviewPurchase": "Rivedi acquisto",
     "resumePurchase": "Riprendi acquisto",
-    "confirmTitle": "Rivedi l'acquisto di postazioni cliente",
+    "confirmTitle": "Rivedi l'acquisto di postazioni in co-gestione",
     "monthlyTotal_one": "{{count}} postazione · {{amount}} al mese",
     "monthlyTotal_other": "{{count}} postazioni · {{amount}} al mese",
     "dueNow": "Importo stimato dovuto ora: {{amount}}",
@@ -692,8 +734,10 @@
     "checkoutTitle": "Completa l'acquisto delle postazioni",
     "manageLicense": "Gestisci la tua licenza self-hosted",
     "proRequired": "Per sponsorizzare gli spazi di lavoro dei clienti è richiesto un abbonamento PSA Pro.",
-    "loadError": "Impossibile caricare la capacità delle postazioni cliente. Riprova.",
+    "loadError": "Impossibile caricare la capacità delle postazioni in co-gestione. Riprova.",
     "purchaseError": "Impossibile completare l'acquisto delle postazioni. Puoi riprenderlo in sicurezza.",
+    "termsChanged": "Il prezzo è cambiato dopo la verifica. Controlla le condizioni aggiornate prima di confermare.",
+    "offerUnavailable": "L’acquisto di nuovi posti è temporaneamente non disponibile. Non è stato addebitato alcun importo.",
     "checkoutExpired": "Questo checkout è scaduto. Avvia un nuovo acquisto per continuare.",
     "grace": "Rinnova la licenza o risolvi la carenza di capacità entro il {{date}} per mantenere modificabili gli spazi di lavoro dei clienti.",
     "readOnly": "Il periodo di tolleranza è terminato il {{date}}. Ripristina la capacità in licenza per riprendere le modifiche agli spazi di lavoro dei clienti.",
@@ -701,7 +745,16 @@
     "checkoutUnavailable": "Il checkout integrato non è disponibile. Riprova dopo aver ripristinato la configurazione dei pagamenti.",
     "pendingCapacity_one": "È in sospeso un acquisto di {{count}} postazione.",
     "pendingCapacity_other": "È in sospeso un acquisto di {{count}} postazioni.",
+    "buySeats": "Acquista posti in co-gestione",
+    "awaitingVerification_one": "Il tuo acquisto di {{count}} posto è in attesa della verifica del pagamento. Il posto comparirà qui dopo la conferma del pagamento.",
+    "awaitingVerification_other": "Il tuo acquisto di {{count}} posti è in attesa della verifica del pagamento. I posti compariranno qui dopo la conferma del pagamento.",
+    "refreshStatus": "Aggiorna stato",
     "previewError": "Impossibile calcolare il prezzo di questa modifica. Aggiorna e riprova.",
+    "billingCustomerUnlinked": "Impossibile verificare un account di fatturazione Stripe per questo spazio di lavoro. Contatta l’assistenza per collegarlo.",
+    "proSubscriptionRequired": "Le postazioni in cogestione richiedono un abbonamento Pro in corso. Verifica il tuo abbonamento in Gestione account.",
+    "offerPaused": "Gli acquisti di nuovi posti sono sospesi. Contatta il tuo account manager per aggiornamenti.",
+    "offerMisconfigured": "L’offerta di posti co-gestiti non è configurata correttamente. Contatta il supporto.",
+    "offerTemporarilyUnavailable": "Il servizio di determinazione dei prezzi è temporaneamente non disponibile. Riprova tra poco.",
     "purchaseNeedsAdmin": "Un amministratore dell'account deve aggiungere capacità co-gestita.",
     "purchaseProviderUnconfigured": "Il fornitore di pagamenti non è configurato.",
     "purchaseUnavailable": "L'acquisto di co-gestione ospitata non è disponibile in questa distribuzione.",
@@ -918,21 +971,6 @@
       "settings": "Gestisci le policy SLA",
       "mappingFor": "La priorità cliente {{name}} corrisponde a",
       "unmapped": "Non associata"
-    },
-    "portableExport": {
-      "title": "Esporta area di lavoro",
-      "description": "Scarica un archivio portabile e crittografato con i record e i file della tua area di lavoro.",
-      "recovery": "Conserva la passphrase di recupero in un luogo sicuro. Senza di essa, l'archivio non può essere aperto.",
-      "connections": "L'archivio contiene i record della tua area di lavoro e i file in essa archiviati. I record e le associazioni dei documenti, oltre alla cronologia di tempo, pianificazione, riunioni e conversazioni, non sono ancora inclusi e arriveranno in una versione successiva. Fatturazione, dati privati dell'MSP e segreti di integrazione non sono inclusi.",
-      "passphrase": "Passphrase di recupero",
-      "confirmPassphrase": "Conferma passphrase di recupero",
-      "download": "Prepara e scarica archivio",
-      "requested": "La richiesta si apre in una nuova scheda. La preparazione può richiedere alcuni minuti; il browser scaricherà il file quando sarà pronto.",
-      "loadError": "Non puoi esportare quest'area di lavoro con il tuo accesso attuale.",
-      "lengthError": "Usa una passphrase compresa tra 16 e 1024 byte UTF-8.",
-      "matchError": "Le passphrase di recupero devono coincidere.",
-      "unavailable": "L'esportazione dell'area di lavoro non è disponibile in questa edizione.",
-      "loading": "Caricamento…"
     },
     "section": {
       "title": "Cogestione",
@@ -1217,6 +1255,49 @@
       "reviewSeatChange": "Rivedi la modifica dei posti",
       "billingError": "Impossibile aprire la fatturazione. Aggiorna lo stato e riprova.",
       "purchaseUnconfigured": "Gli acquisti non sono configurati per questa distribuzione."
+    },
+    "howMany": "Quante postazioni vuoi?",
+    "noSeatsYet": "Non hai ancora postazioni.",
+    "perMonth": "al mese",
+    "priceBreakdown_one": "{{count}} postazione × {{unit}}",
+    "priceBreakdown_other": "{{count}} postazioni × {{unit}}",
+    "reviewHint": "Non viene addebitato nulla finché non confermi nel passaggio successivo.",
+    "changeTitle": "Modifica il numero di postazioni",
+    "adding_one": "Aggiunta di {{count}} postazione",
+    "adding_other": "Aggiunta di {{count}} postazioni",
+    "removing_one": "Rimozione di {{count}} postazione",
+    "removing_other": "Rimozione di {{count}} postazioni",
+    "fromTo": "{{from}} → {{to}} postazioni",
+    "monthlyWithDifference": "{{total}} al mese ({{difference}})",
+    "reviewChange": "Rivedi modifica",
+    "manageBilling": "Gestisci la fatturazione",
+    "freeToAllocate_one": "{{count}} postazione è libera da assegnare. Apri la scheda di un cliente per assegnarla.",
+    "freeToAllocate_other": "{{count}} postazioni sono libere da assegnare. Apri la scheda di un cliente per assegnarle.",
+    "noneFree": "Tutte le postazioni sono assegnate. Aggiungine qui sotto o liberane una da un cliente.",
+    "goToClients": "Vai ai clienti",
+    "belowAllocated_one": "Non puoi scendere sotto {{count}} postazione: è assegnata a un cliente. Liberala prima da quel cliente.",
+    "belowAllocated_other": "Non puoi scendere sotto {{count}} postazioni: sono assegnate ai clienti. Libera prima delle postazioni da un cliente.",
+    "decreaseSeats": "Riduci le postazioni",
+    "increaseSeats": "Aumenta le postazioni",
+    "usage": "{{allocated}} postazioni assegnate su {{purchased}}",
+    "howItWorks": {
+      "title": "Come funziona",
+      "buy": {
+        "title": "Acquista postazioni",
+        "body": "Le postazioni confluiscono in un unico pool condiviso per tutto il tuo MSP. Puoi cambiarne il numero in qualsiasi momento."
+      },
+      "enable": {
+        "title": "Attiva la co-gestione IT per un cliente",
+        "body": "Apri la scheda del cliente e scegli quante postazioni riceve."
+      },
+      "signIn": {
+        "title": "I loro tecnici accedono",
+        "body": "Ogni tecnico del cliente usa una postazione e vede solo il lavoro della propria azienda."
+      }
+    },
+    "whoNeedsSeat": {
+      "label": "Chi ha bisogno di una postazione?",
+      "answer": "Solo i tecnici dei tuoi clienti. Chi si limita a inviare ticket è gratuito e i tuoi tecnici sono coperti dalle tue licenze AlgaPSA."
     }
   },
   "common": {

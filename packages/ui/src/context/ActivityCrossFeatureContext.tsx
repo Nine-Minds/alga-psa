@@ -76,6 +76,13 @@ export interface ActivityGroupControlRenderProps {
   activityType: 'ticket' | 'projectTask';
   /** Changes whenever the record's saved assignment changes; re-runs the eligibility check. */
   assignmentKey: string;
+  /**
+   * The server's answer to "is this record on my list?" for the saved state the screen loaded with
+   * (e.g. the ticket page bootstrap). When given, the control renders it on first paint instead of
+   * popping in after a client check, which would shift the form below it under the pointer.
+   * null/undefined: unknown, so the control checks on mount.
+   */
+  initialOnMyList?: boolean | null;
 }
 
 export interface ActivityCrossFeatureCallbacks {
@@ -98,7 +105,6 @@ export interface ActivityCrossFeatureCallbacks {
   updateBlockContent: (documentId: string, data: any) => Promise<any>;
   getProjects: () => Promise<any>;
   getProjectsWithPhases: () => Promise<any>;
-  getAllClients: (includeInactive?: boolean) => Promise<any>;
   getAllContacts: (status?: 'active' | 'inactive' | 'all', sortBy?: string, sortDirection?: 'asc' | 'desc') => Promise<any>;
 
   // Workflow tasks are an EE-only activity source. These members are absent in CE and

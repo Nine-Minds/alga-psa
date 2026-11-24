@@ -418,6 +418,7 @@
         "oauthStatus": "Stan OAuth",
         "connected": "Połączony",
         "notConnected": "Nie podłączony",
+        "reauthorizationRequired": "Wymagana ponowna autoryzacja",
         "reconnectOauth": "Połącz ponownie OAuth",
         "authorizeUrl": "Autoryzuj adres URL",
         "tokenUrl": "Adres URL tokena",
@@ -494,6 +495,7 @@
       "statusLabel": "Stan OAuth",
       "connected": "Połączono",
       "notConnected": "Nie podłączono",
+      "reauthorizationRequired": "Wymagana ponowna autoryzacja",
       "authorizing": "Autoryzowanie...",
       "reconnect": "Połącz ponownie OAuth"
     },
@@ -1084,6 +1086,7 @@
       "noClient": "Nie dopasowano klienta",
       "outcome": {
         "assignClient": "Zgłoszenie przypisane do klienta „{{client}}”",
+        "matchedClient": "dopasowany klient",
         "fallback": "Nie dopasowano klienta — zgłoszenie przekierowano do awaryjnego miejsca docelowego",
         "none": "Reguła nie rozstrzygnęła — kontynuowane jest normalne przetwarzanie",
         "setDestination": "Zgłoszenie przekierowano do wybranego miejsca docelowego",
@@ -1129,7 +1132,8 @@
       "ticketingFromDomainMismatch": "Adres nadawcy zgłoszeń musi korzystać ze skonfigurowanej domeny wychodzącej",
       "refreshFailed": "Nie udało się pobrać zaktualizowanych ustawień",
       "updateFailed": "Nie udało się zaktualizować ustawień poczty e-mail",
-      "mailboxesLoadFailed": "Nie udało się wczytać skrzynek pocztowych Microsoft 365"
+      "mailboxesLoadFailed": "Nie udało się wczytać skrzynek pocztowych Microsoft 365",
+      "secretRequiredAfterConnectionChange": "Wprowadź ponownie hasło dla {{provider}}: adres serwera lub dane logowania uległy zmianie."
     },
     "inboundRules": {
       "notFound": "Nie znaleziono reguły poczty przychodzącej",

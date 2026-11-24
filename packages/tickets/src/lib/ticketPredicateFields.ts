@@ -42,7 +42,9 @@ export const TICKET_PREDICATE_FIELDS: readonly TicketPredicateField[] = [
   { ...field('category_id', 'Category', 'select', 'categories'), operators: ['equals'] },
   { ...field('subcategory_id', 'Subcategory', 'select', 'subcategories'), operators: ['equals'] },
   { ...field('priority_id', 'Priority', 'select', 'priorities'), operators: ['equals'] },
-  { ...field('client.id', 'Client', 'client'), ownerSensitive: true },
+  // Pinned like Board: the shared schema also allows `not_in` (the ticket list's "None of" client
+  // filter), but checklist rules only target clients, and the owner simplifier is not defined for it.
+  { ...field('client.id', 'Client', 'client'), operators: ['equals', 'in'], ownerSensitive: true },
   ...WHERE_TAG_FILTERS.map(
     (tag): TicketPredicateField => ({
       ...field(tag.path, tag.defaultLabel, 'tags', { tags: tag.taggedType }),

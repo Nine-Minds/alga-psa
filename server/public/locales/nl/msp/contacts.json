@@ -286,7 +286,8 @@
     },
     "primary": {
       "title": "Primair e-mailadres",
-      "description": "Dit blijft het standaardadres dat bij het contact is opgeslagen"
+      "description": "Dit blijft het standaardadres dat bij het contact is opgeslagen",
+      "keepOldEmail": "{{email}} als extra e-mailadres behouden"
     },
     "row": {
       "title": "Extra e-mailadres {{number}}",
@@ -455,6 +456,7 @@
         "contactMissingEmail": "Het contactpersoon heeft geen e-mailadres. Voeg een e-mailadres toe aan het contactpersoon voordat u een uitnodiging verstuurt.",
         "contactInvalidEmail": "Het contactpersoon heeft een ongeldig e-mailadres. Werk het contactpersoon bij met een geldig e-mailadres voordat u een uitnodiging verstuurt.",
         "userExistsForContact": "Er bestaat al een gebruikersaccount voor dit contactpersoon. Gebruik wachtwoord herstellen in plaats van een uitnodiging te versturen.",
+        "portalUserAlreadyExists": "Dit e-mailadres hoort al bij een ander gebruikersaccount in deze organisatie.",
         "noDefaultClient": "Geen standaardklant geconfigureerd voor deze tenant. Stel een standaardklant in bij Algemene instellingen.",
         "noDefaultLocation": "De standaardklant moet een standaardlocatie hebben om portaluitnodigingen te versturen.",
         "noLocationEmail": "De locatie van de standaardklant moet een contact-e-mailadres hebben geconfigureerd.",
@@ -649,12 +651,43 @@
     "actions": {
       "openMenu": "Menu openen",
       "quickView": "Snelle weergave",
-      "addNewContact": "Nieuwe contactpersoon toevoegen"
+      "addNewContact": "Nieuwe contactpersoon toevoegen",
+      "selectAll": "Alle contactpersonen selecteren",
+      "selectContact": "{{name}} selecteren",
+      "inviteSelected": "Uitnodigen voor portaal ({{selected}})",
+      "inviteAllEligible": "Alle in aanmerking komende uitnodigen"
     },
     "errors": {
       "loadFailed": "Contacten konden niet worden geladen.",
       "loadingTitle": "Fout bij laden van contacten",
       "retryFailed": "Contacten konden niet worden geladen. Probeer het opnieuw."
+    }
+  },
+  "bulkPortalInvitation": {
+    "title": "Contactpersonen uitnodigen voor het klantportaal",
+    "description": "Bevestiging van bulkuitnodigingen voor het portaal met voorbeeld van in aanmerking komende personen en resultaten per contactpersoon",
+    "loading": "Controleren wie kan worden uitgenodigd...",
+    "inviteCount": "{{total}} contactpersonen worden uitgenodigd voor het klantportaal.",
+    "skipCount": "{{total}} worden overgeslagen:",
+    "visibilityNote": "Elke uitnodiging geeft de toegang die de contactpersoon al heeft: {{grouped}} zijn beperkt tot een zichtbaarheidsgroep van het portaal, {{full}} krijgen volledige toegang tot de portaalgegevens van hun klant.",
+    "skipReasons": {
+      "alreadyHasPortalAccess": "heeft al portaaltoegang",
+      "missingEmail": "geen bruikbaar e-mailadres",
+      "sharedMailbox": "gedeelde postbus"
+    },
+    "actions": {
+      "send": "{{total}} uitnodigingen verzenden",
+      "sending": "Verzenden..."
+    },
+    "results": {
+      "summary": "{{sent}} verzonden, {{skipped}} overgeslagen, {{failed}} mislukt.",
+      "sent": "Verzonden",
+      "skipped": "Overgeslagen",
+      "failed": "Mislukt"
+    },
+    "errors": {
+      "loadFailed": "Kon niet bepalen wie kan worden uitgenodigd. Probeer het opnieuw.",
+      "sendFailed": "Kon de uitnodigingen niet verzenden. Probeer het opnieuw."
     }
   },
   "contactsLayout": {

@@ -510,8 +510,6 @@
     "po": {
       "amountLabel": "Valor do pedido de compra (opcional)",
       "amountPlaceholder": "0.00",
-      "comingSoon": "Integração de faturas em breve. As configurações serão salvas, mas a aplicação do pedido de compra não estará ativa até uma versão futura.",
-      "noteLabel": "Observação:",
       "numberLabel": "Número do pedido de compra *",
       "numberPlaceholder": "por exemplo, PO-2024-12345",
       "requirePurchaseOrder": "Exigir pedido de compra",
@@ -1442,6 +1440,8 @@
       "client": "Contexto do cliente",
       "hypothetical": "Perfil de cliente hipotético",
       "open": "Simular",
+      "pickClient": "Selecione um cliente",
+      "specificClient": "Um cliente específico",
       "title": "Simulação do modelo"
     },
     "pricing": {

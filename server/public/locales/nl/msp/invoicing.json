@@ -605,7 +605,9 @@
       "unfinalizeSelected": "Finaliseren geselecteerd",
       "downloadPdf": "PDF downloaden",
       "sendEmail": "E-mail verzenden",
-      "unfinalize": "Finaliseren ongedaan maken"
+      "unfinalize": "Finaliseren ongedaan maken",
+      "recordPayment": "Betaling vastleggen",
+      "viewPayments": "Betalingen"
     },
     "status": {
       "finalized": "Afgerond"
@@ -893,7 +895,9 @@
       "reasonPlaceholder": "Reden voor ongeldig maken...",
       "cancel": "Annuleren",
       "confirm": "Factuur ongeldig maken",
-      "voiding": "Ongeldig maken…"
+      "voiding": "Ongeldig maken…",
+      "algaOnly": "Alleen in AlgaPSA ongeldig maken (ontkoppelen van {{provider}})",
+      "algaOnlyWarning": "Het document in {{provider}} blijft precies zoals het is en deze factuur wordt ervan ontkoppeld, waardoor AlgaPSA en {{provider}} hierover niet meer overeenkomen."
     },
     "history": {
       "title": "Geschiedenis",
@@ -1163,7 +1167,9 @@
       "send_one": "Stuur {{count}} e-mail",
       "send_other": "Stuur {{count}} e-mails",
       "sending_one": "{{count}}-factuur verzenden...",
-      "sending_other": "{{count}}-facturen verzenden..."
+      "sending_other": "{{count}}-facturen verzenden...",
+      "schedule": "Plannen",
+      "scheduling": "Bezig met plannen..."
     },
     "toasts": {
       "noValidRecipients": "Geen geldige ontvangers gevonden",
@@ -1171,11 +1177,13 @@
       "sentSuccess_other": "{{count}} facturen succesvol verzonden",
       "sentFailure_one": "Kan {{count}}-factuur niet verzenden",
       "sentFailure_other": "Kan {{count}}-facturen niet verzenden",
-      "sentPartial": "{{successCount}} verzonden, {{failureCount}} mislukt"
+      "sentPartial": "{{successCount}} verzonden, {{failureCount}} mislukt",
+      "scheduled": "Factuure-mail ingepland"
     },
     "errors": {
       "loadRecipients": "Kan de gegevens van de ontvanger niet laden",
-      "sendFailed": "Het verzenden van e-mails is niet gelukt"
+      "sendFailed": "Het verzenden van e-mails is niet gelukt",
+      "scheduleFailed": "Factuure-mail inplannen mislukt"
     }
   },
   "generateTab": {
@@ -1785,7 +1793,9 @@
           "actual": "100%",
           "label": "Zoom voorbeeld",
           "fitWithScale": "Passend ({{percent}}%)"
-        }
+        },
+        "pageCaption": "Pagina {{page}} van {{total}}",
+        "frameTitle": "Factuurvoorbeeld"
       },
       "tabs": {
         "design": "Ontwerp",
@@ -1881,6 +1891,10 @@
       "spacer": {
         "label": "Tussenruimte",
         "description": "Lege ruimte voor lay-outaanpassing."
+      },
+      "page-break": {
+        "label": "Pagina-einde",
+        "description": "Begint het volgende blok op een nieuwe pagina."
       },
       "container": {
         "label": "Box-container",
@@ -2204,6 +2218,17 @@
               "label": "Kleur"
             }
           }
+        },
+        "pagination": {
+          "title": "Paginering",
+          "fields": {
+            "breakBefore": {
+              "label": "Op een nieuwe pagina beginnen"
+            },
+            "breakInside": {
+              "label": "Bij elkaar houden op één pagina"
+            }
+          }
         }
       }
     },
@@ -2317,6 +2342,8 @@
       "signatureLabel": "Handtekening",
       "attachmentsLabel": "Bijlagen",
       "spacerLabel": "Tussenruimte",
+      "pageBreakLabel": "Pagina-einde",
+      "pageBreakBefore": "Begint op een nieuwe pagina",
       "companyLogo": "Bedrijfslogo",
       "insertionMarker": "Het volgende blok dat u toevoegt, komt hier",
       "emptyContainer": "Leeg — selecteer het en voeg blokken toe vanuit het linkerpaneel",
@@ -2673,6 +2700,15 @@
         "clearLines": "Enkele regel",
         "stackedLinesHint": "Elke niet-lege regel wordt op een eigen rij weergegeven. Wanneer alle regels leeg zijn, wordt de hierboven vermelde bindingssleutel van de kolom weergegeven.",
         "removeLine": "Regel {{index}} verwijderen",
+        "valueLabels": "Tekst voor waarden",
+        "addKnownValues": "+ Bekende waarden",
+        "addValueLabel": "+ Waarde",
+        "valueLabelsHint": "Kies de woorden die voor een waarde worden afgedrukt, bijvoorbeeld true → Inbegrepen. Een leeg label drukt niets af.",
+        "valueLabelKey": "Waarde",
+        "valueLabelKeyPlaceholder": "true",
+        "valueLabelText": "Afgedrukte tekst",
+        "valueLabelTextPlaceholder": "Leeg",
+        "removeValueLabel": "Tekst verwijderen",
         "align": "Uitlijning",
         "widthPlaceholder": "auto | 50% | 120px"
       },
@@ -2799,29 +2835,24 @@
     "editor": {
       "titles": {
         "create": "Nieuwe indeling voor {{type}}",
-        "edit": "Indeling voor {{type}} bewerken"
-      },
-      "description": "Ontwerp de indeling voor {{type}} in de visuele editor en bekijk deze daarna met voorbeeldgegevens.",
-      "errorTitle": "Indelingseditor voor {{type}}",
-      "sections": {
-        "details": "Indelingsgegevens"
+        "edit": "Lay-out bewerken: {{name}}"
       },
       "fields": {
-        "version": "Versie",
+        "created": "Gemaakt {{time}}",
         "labelClass": "Labelklasse",
         "labelFields": "Velden die op het label worden getoond",
-        "labelFieldsHint": "De recordlink (QR-code) en de identificatie worden altijd getoond."
+        "labelFieldsHint": "De recordlink (QR-code) en de identificatie worden altijd getoond.",
+        "notSaved": "Nog niet opgeslagen",
+        "savedAt": "Opgeslagen {{time}}",
+        "version": "Versie"
       },
       "placeholders": {
         "templateName": "Sjabloon voor {{type}}"
       },
       "actions": {
-        "back": "Terug naar indelingen",
+        "back": "Terug naar {{type}}-indelingen",
+        "labelSettings": "Labelinstellingen",
         "save": "Indeling opslaan"
-      },
-      "labels": {
-        "created": "Gemaakt: {{date}}",
-        "lastUpdated": "Laatst bijgewerkt: {{date}}"
       },
       "preview": {
         "sampleNote": "Gegenereerd met representatieve voorbeeldgegevens voor {{type}}.",
@@ -2856,10 +2887,12 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "Toestemming geweigerd: bijwerkrechten voor facturen vereist",
+      "invoiceFinalize": "Toestemming geweigerd: finalisatierechten voor facturen vereist",
       "invoiceDelete": "Toestemming geweigerd: verwijderrechten voor facturen vereist",
       "invoiceAccess": "Toestemming geweigerd: toegang tot de factuur geweigerd",
       "otherClientInvoices": "Toestemming geweigerd: facturen van een andere klant zijn niet toegankelijk",
-      "invoiceRead": "Toegang geweigerd: leesrechten voor facturen vereist"
+      "invoiceRead": "Toegang geweigerd: leesrechten voor facturen vereist",
+      "invoiceSend": "Toestemming geweigerd: toestemming voor het verzenden van facturen is vereist"
     },
     "invoice": {
       "notFound": "Factuur niet gevonden",
@@ -2911,6 +2944,36 @@
       "missingField": "Er ontbreekt een verplicht veld van het factuursjabloon.",
       "missingFieldNamed": "Er ontbreekt een verplicht veld van het factuursjabloon: {{field}}.",
       "evaluationFailed": "Gegevensbinding van het sjabloon is mislukt: {{details}}"
+    },
+    "recordPayment": {
+      "permissionDenied": "Toegang geweigerd: voor het vastleggen van factuurbetalingen is de machtiging voor factuurbetalingen vereist.",
+      "invoiceNotFound": "Factuur niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "amountPositive": "Voer een betaalbedrag groter dan nul in.",
+      "methodRequired": "Kies een betaalmethode.",
+      "invalidDate": "Voer een geldige betaaldatum in.",
+      "noBalanceDue": "Deze factuur heeft geen openstaand bedrag.",
+      "statusNotPayable": "Kan geen betaling vastleggen voor een factuur met status: {{status}}.",
+      "overpaymentNotConfirmed": "Deze betaling is hoger dan het openstaande bedrag. Bevestig de overbetaling om deze vast te leggen.",
+      "recordFailed": "Het vastleggen van de betaling is mislukt. Probeer het opnieuw."
+    },
+    "void": {
+      "paymentsRecorded": "Draai de betalingen terug voordat u de factuur ongeldig maakt.",
+      "paymentsRecordedManual": "Draai de in AlgaPSA vastgelegde betalingen ({{sources}}) terug voordat u deze factuur ongeldig maakt.",
+      "paymentsRecordedIntegration": "Deze factuur heeft betalingen uit uw boekhoudsysteem ({{sources}}). Verwijder of bewerk ze daar, dan draait de volgende synchronisatie ze hier terug, of draai ze alleen in AlgaPSA terug.",
+      "paymentsRecordedGateway": "Deze factuur heeft betalingen die via een betaalaanbieder zijn geïnd ({{sources}}). Betaal ze daar terug voordat u de factuur ongeldig maakt.",
+      "paymentsRecordedMixed": "Draai de betalingen op deze factuur ({{sources}}) terug voordat u deze ongeldig maakt.",
+      "creditNoteCreditApplied": "Op deze creditnota is krediet toegepast. Maak de kredietverwerking ongedaan voordat u deze ongeldig maakt."
+    },
+    "reversePayment": {
+      "permissionDenied": "Toegang geweigerd: voor het terugdraaien van factuurbetalingen is de machtiging voor factuurbetalingen vereist.",
+      "reasonRequired": "Er is een reden vereist om een betaling terug te draaien.",
+      "paymentNotFound": "Betaling niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "notReversible": "Deze betaling kan niet worden teruggedraaid.",
+      "alreadyReversed": "Deze betaling is al teruggedraaid.",
+      "gatewayRefundRequired": "Deze betaling is via een betaalaanbieder geïnd ({{method}}). Betaal deze in plaats daarvan daar terug.",
+      "integrationOwned": "Deze betaling komt uit betaling {{reference}} van {{provider}}. Verwijder of bewerk deze in {{provider}}, dan draait de volgende synchronisatie deze hier terug.",
+      "remoteMutateRequired": "Toegang geweigerd: een gesynchroniseerde betaling alleen in AlgaPSA terugdraaien vereist de machtiging voor externe boekhoudwijzigingen.",
+      "reverseFailed": "Het terugdraaien van de betaling is mislukt. Probeer het opnieuw."
     }
   },
   "periodTotal": {
@@ -2933,6 +2996,74 @@
     "blocked": {
       "exported": "Deze factuur is gesynchroniseerd met een boekhoudsysteem. Maak haar ongeldig of geef een apart krediet uit in plaats van de regels te bewerken.",
       "exporting": "Er wordt een boekhoudingsexport voor deze factuur voorbereid. Wacht tot deze is voltooid voordat u de factuur wijzigt."
+    }
+  },
+  "recordPayment": {
+    "title": "Betaling vastleggen",
+    "titleForInvoice": "Betaling vastleggen — {{invoiceNumber}}",
+    "loading": "Factuursaldo laden...",
+    "summary": {
+      "balanceDue": "Openstaand bedrag",
+      "alreadyPaid": "Al betaald"
+    },
+    "fields": {
+      "amount": "Bedrag",
+      "paymentDate": "Betaaldatum",
+      "method": "Betaalmethode",
+      "reference": "Referentie",
+      "notes": "Notities"
+    },
+    "placeholders": {
+      "reference": "Cheque- of transactienummer"
+    },
+    "methods": {
+      "manual": "Handmatig",
+      "check": "Cheque",
+      "bank_transfer": "Bankoverschrijving",
+      "cash": "Contant",
+      "other": "Overig"
+    },
+    "overpayment": {
+      "warning": "Deze betaling is {{excess}} hoger dan het openstaande bedrag van {{balanceDue}}.",
+      "confirm": "Deze overbetaling toch vastleggen"
+    },
+    "actions": {
+      "cancel": "Annuleren",
+      "record": "Betaling vastleggen"
+    },
+    "toasts": {
+      "recorded": "Betaling vastgelegd"
+    }
+  },
+  "invoicePayments": {
+    "title": "Betalingen",
+    "titleForInvoice": "Betalingen — {{invoiceNumber}}",
+    "loading": "Betalingen laden...",
+    "empty": "Er zijn geen betalingen vastgelegd voor deze factuur.",
+    "sources": {
+      "manual": "Vastgelegd in AlgaPSA",
+      "quickbooks": "QuickBooks",
+      "xero": "Xero",
+      "gateway": "Betaalaanbieder"
+    },
+    "fields": {
+      "reason": "Reden"
+    },
+    "actions": {
+      "reverse": "Betaling terugdraaien",
+      "confirmReverse": "Betaling terugdraaien",
+      "algaOnly": "Alleen in AlgaPSA terugdraaien",
+      "cancel": "Annuleren",
+      "close": "Sluiten"
+    },
+    "notes": {
+      "gatewayRefund": "Geïnd via een betaalaanbieder ({{method}}): betaal deze daar terug.",
+      "alreadyReversed": "Al teruggedraaid.",
+      "providerOwned": "Deze betaling komt uit betaling {{reference}} van {{provider}}. Verwijder of bewerk deze daar, dan draait de volgende synchronisatie deze hier terug.",
+      "algaOnlyWarning": "AlgaPSA en {{provider}} komen hierover niet meer overeen: de registratie in {{provider}} blijft precies zoals deze is en de betaling wordt hier ontkoppeld."
+    },
+    "toasts": {
+      "reversed": "Betaling teruggedraaid"
     }
   }
 }

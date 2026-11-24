@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import AssetForm from './AssetForm';
+import { projectAssetReadFields } from '../lib/projectAssetReadFields';
 
 const mockGetAsset = vi.fn();
 const mockUpdateAsset = vi.fn();
@@ -33,6 +34,7 @@ vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
 vi.mock('../actions/clientLookupActions', () => ({
   getClientLocationsForAssets: vi.fn(async () => []),
   getClientContactsForAssets: vi.fn(async () => []),
+  getClientBillingProfilesForAssets: vi.fn(async () => []),
   getVendorOptionsForAssets: (...args: unknown[]) => mockGetVendors(...args),
 }));
 
@@ -233,5 +235,28 @@ describe('AssetForm make & purchase fields', () => {
     const [, payload] = mockUpdateAsset.mock.calls[0];
     expect(payload.manufacturer).toBeNull();
     expect(payload.purchase_cost).toBeNull();
+  });
+
+  it.each([
+    { label: 'cost only', hiddenFields: ['purchase_cost'] },
+    { label: 'all procurement fields', hiddenFields: ['purchase_cost', 'purchase_cost_currency', 'manufacturer', 'model', 'vendor_id', 'order_number'] },
+  ])('does not submit concealed procurement defaults on an unrelated save ($label)', async ({ hiddenFields }) => {
+    mockGetAsset.mockResolvedValue(projectAssetReadFields(asset, hiddenFields));
+    render(<AssetForm assetId={ASSET_ID} />);
+
+    await screen.findByLabelText('asset-purchase-cost-input');
+    expect((screen.getByLabelText('asset-purchase-cost-input') as HTMLInputElement).value).toBe('');
+    fireEvent.change(screen.getByDisplayValue('Reception PC'), {
+      target: { name: 'name', value: 'Renamed reception PC' },
+    });
+    fireEvent.submit(screen.getByRole('button', { name: /Save changes/i }).closest('form')!);
+
+    await waitFor(() => expect(mockUpdateAsset).toHaveBeenCalledTimes(1));
+    const [assetId, payload] = mockUpdateAsset.mock.calls[0];
+    expect(assetId).toBe(ASSET_ID);
+    expect(payload.name).toBe('Renamed reception PC');
+    for (const field of hiddenFields) expect(payload).not.toHaveProperty(field);
+    // A readable nullable field still travels through the normal save path.
+    if (!hiddenFields.includes('manufacturer')) expect(payload.manufacturer).toBe('Lenovo');
   });
 });

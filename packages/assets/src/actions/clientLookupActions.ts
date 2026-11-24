@@ -1,18 +1,17 @@
 'use server';
 
-import { projectClientForSubject, projectClientsForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
+import { projectClientForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { AuthorizationDecision } from '@alga-psa/authorization/kernel';
 import {
-  isClientUserType,
   type IClient,
   type IClientLocation,
   type IContact,
   type IUserWithRoles,
 } from '@alga-psa/types';
 import { hasPermission, withAuth } from '@alga-psa/auth';
-import { getClientLogoUrl, getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
+import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';
 import { createAssetReadContext } from '../lib/assetReadAuthorization';
 
@@ -87,49 +86,6 @@ async function assertClientReadAllowed(
     throw new Error('Permission denied: Client is outside the caller\'s asset read scope');
   }
 }
-
-export const getAllClientsForAssets = withAuth(async (
-  user,
-  { tenant },
-  includeInactive: boolean = true
-): Promise<IClient[]> => {
-  await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: user.user_id }, 'asset_rmm_actions');
-  if (!await assertAssetReadPermission(user)) {
-    throw new Error('Permission denied: Cannot read asset client options');
-  }
-  if (isClientUserType(user.user_type) && !user.clientId) return [];
-  const { knex } = await createTenantKnex();
-
-  const clients = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const authorizer = await createAssetClientReadAuthorizer(trx, tenant, user);
-    const clientIds = await tenantScopedTable(trx, tenant, 'clients')
-      .select('client_id') as Array<{ client_id: string }>;
-    const allowedClientIds = (await Promise.all(
-      clientIds.map(async ({ client_id }) => await authorizer(client_id) ? client_id : null)
-    )).filter((clientId): clientId is string => clientId !== null);
-
-    if (allowedClientIds.length === 0) return [];
-
-    const query = tenantScopedTable(trx, tenant, 'clients')
-      .select('*')
-      .whereIn('client_id', allowedClientIds)
-      .orderBy('client_name', 'asc');
-
-    if (!includeInactive) {
-      query.andWhere({ is_inactive: false });
-    }
-
-    return query;
-  }) as unknown as IClient[];
-
-  if (clients.length === 0) {
-    return clients;
-  }
-
-  // Batch-resolve logo URLs once (no N+1) so the assets table can show real logos.
-  const logoUrlsMap = await getClientLogoUrlsBatch(clients.map((c) => c.client_id), tenant);
-  return projectClientsForSubject(user, clients.map((c) => withClientSinceDateString({ ...c, logoUrl: logoUrlsMap.get(c.client_id) ?? null })));
-});
 
 export const getClientByIdForAssets = withAuth(async (
   user,

@@ -334,7 +334,8 @@
     },
     "address": {
       "title": "Company Address",
-      "description": "Prefilled from your billing details — review and correct if needed. This address appears on your invoices and quotes.",
+      "description": "This address appears on your invoices and quotes.",
+      "prefilledFromBilling": "Some of these values were filled in from your billing details. Please review them.",
       "fields": {
         "addressLine1": {
           "label": "Address Line 1",
@@ -554,7 +555,8 @@
         "success": {
           "one": "Successfully imported 1 board.",
           "other": "Successfully imported {{count}} boards."
-        }
+        },
+        "empty": "All standard boards are already imported."
       },
       "table": {
         "headers": {
@@ -584,7 +586,8 @@
           "placeholder": "Select a board for imported categories",
           "help": "All imported categories will be assigned to this board"
         },
-        "parentAutoSelectTitle": "Parent category will be automatically selected"
+        "parentAutoSelectTitle": "Parent category will be automatically selected",
+        "empty": "This board already has all the standard categories."
       },
       "errors": {
         "missingParents": "Cannot import subcategories without their parent categories. Please also select: {{parents}}",
@@ -702,7 +705,8 @@
         "success": {
           "one": "Successfully imported 1 status.",
           "other": "Successfully imported {{count}} statuses."
-        }
+        },
+        "empty": "This board already has all the standard statuses."
       },
       "table": {
         "headers": {
@@ -771,7 +775,8 @@
         "success": {
           "one": "Successfully imported 1 priority.",
           "other": "Successfully imported {{count}} priorities."
-        }
+        },
+        "empty": "All standard priorities are already imported."
       },
       "table": {
         "headers": {
@@ -797,6 +802,9 @@
       },
       "table": {
         "actions": "Actions"
+      },
+      "import": {
+        "loading": "Loading available items..."
       }
     },
     "header": {
