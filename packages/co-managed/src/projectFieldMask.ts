@@ -95,8 +95,8 @@ export const CO_MANAGED_PROJECT_COLUMNS: CoManagedColumnSpec = {
 /** The non-text `project_tasks` columns (and their joined display values) a candidate carries. */
 export const CO_MANAGED_TASK_COLUMNS: CoManagedColumnSpec = {
   due_date: [], updated_at: [], wbs_code: ['wbsCode'],
-  project_status_mapping_id: ['status', 'status_name', 'statuses', 'project_status_mappings', 'mapping_id', 'statusMappingId'],
-  priority_id: ['priority', 'priority_name', 'priority_color', 'priorityColor', 'priorityId'],
+  project_status_mapping_id: ['status', 'status_id', 'status_name', 'statuses', 'standard_statuses', 'project_status_mappings', 'mapping_id', 'statusMappingId'],
+  priority_id: ['priority', 'priorities', 'priority_name', 'priority_color', 'priorityColor', 'priorityId'],
   assigned_to: ['assignee', 'assignee_name', 'assigned_to_name', 'users', 'teams'],
   assigned_team_id: ['assignee', 'assigned_to_name', 'teams'],
   status_name: ['statusName', 'status'],

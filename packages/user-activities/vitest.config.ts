@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
+import { exportedSourceAliases } from '../../scripts/lib/vitest-exported-source-aliases.mjs';
 
 export default defineConfig({
   test: {
@@ -25,9 +26,10 @@ export default defineConfig({
       { find: /^next\/server$/, replacement: path.resolve(__dirname, '../../node_modules/next/server.js') },
       { find: /^@alga-psa\/types$/, replacement: path.resolve(__dirname, '../types/src/index.ts') },
       { find: /^@alga-psa\/types\/(.*)$/, replacement: `${path.resolve(__dirname, '../types/src')}/$1` },
-      { find: /^@alga-psa\/projects\/activityRead$/, replacement: path.resolve(__dirname, '../projects/src/lib/projectTaskActivityRead.ts') },
+      ...exportedSourceAliases('@alga-psa/projects', path.resolve(__dirname, '../projects')),
       { find: /^@alga-psa\/user-activities\/(.*)$/, replacement: `${path.resolve(__dirname, 'src')}/$1` },
       { find: /^@alga-psa\/ui$/, replacement: path.resolve(__dirname, '../ui/src/index.ts') },
+      ...exportedSourceAliases('@alga-psa/core', path.resolve(__dirname, '../core')),
       // @alga-psa/core's i18n exports live under src/lib, like @alga-psa/db's below.
       {
         find: /^@alga-psa\/core\/i18n\/(.*)$/,

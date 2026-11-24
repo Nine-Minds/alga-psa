@@ -10,9 +10,10 @@ const fixtures = {
   task: {
     tenant: 'tenant-1', task_id: 'task-1', phase_id: 'phase-1', project_status_mapping_id: 'mapping-1',
     priority_id: 'priority-1', task_name: 'Restore the network', description: 'Protected task description',
-    description_rich_text: null, assigned_to: 'owner-1', assigned_team_id: null, estimated_hours: 3,
+    description_rich_text: '<p>Protected task description</p>', assigned_to: 'owner-1', assigned_team_id: 'team-1', estimated_hours: 3,
     actual_hours: 1, created_at: new Date('2026-01-01T00:00:00Z'), updated_at: new Date('2026-01-02T00:00:00Z'),
-    wbs_code: '1.2', order_key: 'a', start_date: null, due_date: null, task_type_key: 'task', service_id: null,
+    wbs_code: '1.2', order_key: 'a', start_date: new Date('2026-01-03T00:00:00Z'),
+    due_date: new Date('2026-01-04T00:00:00Z'), task_type_key: 'task', service_id: 'service-1',
   },
   phase: {
     tenant: 'tenant-1', phase_id: 'phase-1', project_id: 'project-1', phase_name: 'Network work',
@@ -26,6 +27,11 @@ const fixtures = {
   user: { tenant: 'tenant-1', user_id: 'owner-1', first_name: 'Task', last_name: 'Owner' },
 };
 
+const tasks = [fixtures.task, { ...fixtures.task, task_id: 'task-2', phase_id: 'phase-2',
+  project_status_mapping_id: null, task_name: 'Review the firewall' }];
+const phases = [fixtures.phase, { ...fixtures.phase, phase_id: 'phase-2', project_id: 'project-2',
+  phase_name: 'Firewall work' }];
+
 function tableName(expression: string) {
   const [tableName, alias] = expression.split(/\s+as\s+/i);
   return { tableName, alias: alias ?? tableName };
@@ -35,6 +41,7 @@ function rawValue(selection: { sql: string; args?: unknown[] }, joined: Record<s
   const { sql, args = [] } = selection;
   const output = String(args.at(-1) ?? (sql.match(/\bas\s+([a-z_]+)$/i)?.[1] ?? ''));
   if (sql.startsWith('NULL::')) return [output, null];
+  if (sql.includes('?::text as task_name')) return ['task_name', args[0]];
   if (sql.includes('?::text as ??')) return [String(args[1]), args[0]];
   if (sql.includes('CASE WHEN FALSE')) return [output, null];
   if (sql.includes('CONCAT(users.first_name')) return ['assigned_to_name', `${joined.users?.first_name ?? ''} ${joined.users?.last_name ?? ''}`.trim()];
@@ -61,23 +68,23 @@ function makeQuery(rootExpression: string, tenant: string) {
     then(resolve: (rows: any[]) => unknown, reject?: (error: unknown) => unknown) { return Promise.resolve(execute()).then(resolve, reject); },
   };
   function execute() {
-    const rootRows = rootTable === 'project_tasks' ? [fixtures.task]
-      : rootTable === 'project_phases' ? [fixtures.phase] : [];
+    const rootRows = rootTable === 'project_tasks' ? tasks
+      : rootTable === 'project_phases' ? phases : [];
     return rootRows.filter((row) => row.tenant === tenant).flatMap((rootRow) => {
       const joined: Record<string, any> = { [rootAlias]: rootRow };
       let rows: Array<Record<string, any>> = [joined];
       for (const item of joins) {
         const { tableName: joinedTable, alias } = tableName(item.expression);
         const source = ({
-          project_phases: [fixtures.phase], users: [fixtures.user], project_status_mappings: [fixtures.mapping],
+          project_phases: phases, users: [fixtures.user], project_status_mappings: [fixtures.mapping],
           statuses: [fixtures.status], standard_statuses: [], priorities: [fixtures.priority],
         } as Record<string, any[]>)[joinedTable] ?? [];
         rows = rows.flatMap((current) => {
           const leftValue = current[item.left.split('.')[0]]?.[item.left.split('.')[1]];
           const matches = source.filter((candidate) => candidate.tenant === tenant
             && candidate[item.right.split('.')[1]] === leftValue
-            && (joinedTable !== 'project_status_mappings' || candidate.project_id === fixtures.phase.project_id)
-            && (joinedTable !== 'project_status_mappings' || candidate.phase_id == null || candidate.phase_id === fixtures.task.phase_id));
+            && (joinedTable !== 'project_status_mappings' || candidate.project_id === current.project_phases?.project_id)
+            && (joinedTable !== 'project_status_mappings' || candidate.phase_id == null || candidate.phase_id === current.project_tasks?.phase_id));
           if (matches.length) return matches.map((match) => ({ ...current, [alias]: match }));
           return item.type === 'left' ? [{ ...current, [alias]: null }] : [];
         });
@@ -99,7 +106,7 @@ function makeQuery(rootExpression: string, tenant: string) {
 
 vi.mock('@alga-psa/authorization/projectReadAuthorization', () => ({
   authorizeProjectsByIds: vi.fn(async (_trx: unknown, tenant: string, _reader: unknown, projectIds: string[]) => tenant === state.tenant
-    ? projectIds.map((project_id) => ({
+    ? projectIds.filter((projectId) => phases.some((phase) => phase.project_id === projectId)).map((project_id) => ({
       project: { project_id, client_id: 'client-1' },
       ...(state.decisions.get(project_id) ?? { allowed: true, redactedFields: [...state.redactedFields] }),
     }))
@@ -130,6 +137,43 @@ const trx = { raw: (sql: string, args?: unknown[]) => ({ sql, args }) } as any;
 beforeEach(() => { state.redactedFields = []; state.decisions.clear(); });
 
 describe('authorized project task activity projection', () => {
+  it.each([
+    'phase_id', 'description_rich_text', 'estimated_hours', 'actual_hours', 'created_at',
+    'order_key', 'start_date', 'due_date', 'task_type_key', 'service_id',
+  ] as const)('masks the selected task column %s through each supported field path', async (field) => {
+    const identities = [{ taskId: 'task-1', projectId: 'project-1' }];
+    const [allowed] = await loadAuthorizedProjectTaskActivities(trx, 'tenant-1', reader, identities);
+    expect(allowed.task[field]).toEqual(fixtures.task[field]);
+    expect(allowed.task[field]).not.toBeNull();
+
+    for (const path of [field, `project_tasks.${field}`, `values.${field}`, `fields.values.${field}`]) {
+      state.redactedFields = [path];
+      const [masked] = await loadAuthorizedProjectTaskActivities(trx, 'tenant-1', reader, identities);
+      expect(masked.task[field], path).toBeNull();
+      if (field === 'phase_id') expect(masked.phaseName).toBeNull();
+    }
+  });
+
+  it.each(['priorities', 'priorities.priority_name', 'values.priorities', 'fields.values.priorities.color'])(
+    'masks joined priority metadata when its source %s is hidden', async (redaction) => {
+      state.redactedFields = [redaction];
+      const [masked] = await loadAuthorizedProjectTaskActivities(trx, 'tenant-1', reader, [
+        { taskId: 'task-1', projectId: 'project-1' },
+      ]);
+      expect(masked).toMatchObject({ priorityName: null, priorityColor: null });
+    },
+  );
+
+  it.each(['standard_statuses', 'fields.values.standard_statuses.name', 'status_id'])(
+    'masks joined status metadata when its source %s is hidden', async (redaction) => {
+      state.redactedFields = [redaction];
+      const [masked] = await loadAuthorizedProjectTaskActivities(trx, 'tenant-1', reader, [
+        { taskId: 'task-1', projectId: 'project-1' },
+      ]);
+      expect(masked).toMatchObject({ statusName: null, statusColor: null, isClosed: false });
+    },
+  );
+
   it('uses real masked task and phase projections for populated status and priority data', async () => {
     const [allowed] = await loadAuthorizedProjectTaskActivities(trx, 'tenant-1', reader, [
       { taskId: 'task-1', projectId: 'project-1' },
@@ -177,11 +221,21 @@ describe('authorized project task activity projection', () => {
       { taskId: 'task-1', projectId: 'project-1' },
       { taskId: 'task-2', projectId: 'project-2' },
     ];
+    const allowed = await loadAuthorizedProjectTaskActivities(trx, 'tenant-1', reader, identities);
+    expect(allowed.map(({ task }) => task.task_id)).toEqual(['task-1', 'task-2']);
+
+    state.decisions.set('project-1', { allowed: true, redactedFields: ['task_name', 'phase_name', 'values.project_status_mapping_id'] });
+    const redacted = await loadAuthorizedProjectTaskActivities(trx, 'tenant-1', reader, identities);
+    expect(redacted).toHaveLength(2);
+    expect(redacted[0]).toMatchObject({ task: { task_name: 'Project task' }, phaseName: 'Project phase', statusName: null });
+    expect(redacted[1]).toMatchObject({ task: { task_name: 'Review the firewall' }, phaseName: 'Firewall work', priorityName: 'High' });
+
     state.decisions.set('project-2', { allowed: false, redactedFields: [] });
 
     const mixed = await loadAuthorizedProjectTaskActivities(trx, 'tenant-1', reader, identities);
     expect(mixed).toHaveLength(1);
-    expect(mixed[0]).toMatchObject({ task: { task_id: 'task-1' }, statusName: 'Blocked', priorityName: 'High' });
+    expect(mixed[0]).toMatchObject({ task: { task_id: 'task-1', task_name: 'Project task' },
+      phaseName: 'Project phase', statusName: null, priorityName: 'High' });
 
     state.decisions.set('project-1', { allowed: false, redactedFields: [] });
     expect(await loadAuthorizedProjectTaskActivities(trx, 'tenant-1', reader, identities)).toEqual([]);
@@ -190,5 +244,15 @@ describe('authorized project task activity projection', () => {
     const restored = await loadAuthorizedProjectTaskActivities(trx, 'tenant-1', reader, identities);
     expect(restored).toHaveLength(1);
     expect(restored[0]).toMatchObject({ task: { task_name: 'Restore the network' }, statusName: 'Blocked', statusColor: '#bb0000', priorityName: 'High' });
+  });
+
+  it('omits identities outside the tenant or authorized project', async () => {
+    expect(await loadAuthorizedProjectTaskActivities(trx, 'tenant-2', reader, [
+      { taskId: 'task-1', projectId: 'project-1' },
+    ])).toEqual([]);
+    expect(await loadAuthorizedProjectTaskActivities(trx, 'tenant-1', reader, [
+      { taskId: 'task-1', projectId: 'project-2' },
+      { taskId: 'task-1', projectId: 'missing-project' },
+    ])).toEqual([]);
   });
 });

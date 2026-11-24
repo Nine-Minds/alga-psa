@@ -30,17 +30,22 @@ export async function loadAuthorizedProjectTasks(
   priority_name: string | null;
   priority_color: string | null;
 }>> {
-  const effectiveRedactions = coManagedRedactionsWithDependencies(
-    redactedFields, 'project_tasks', CO_MANAGED_TASK_FIELD_DEPENDENCIES, CO_MANAGED_TASK_COLUMNS,
-  );
-  const mask = coManagedProjectFamilyMask(effectiveRedactions, 'project_task');
-  if (mask.dropRow) return [];
   const fields = [
     'tenant', 'task_id', 'phase_id', 'task_name', 'description', 'description_rich_text', 'assigned_to',
     'assigned_team_id', 'estimated_hours', 'actual_hours', 'project_status_mapping_id', 'created_at', 'updated_at',
     'wbs_code', 'order_key', 'start_date', 'due_date', 'priority_id', 'task_type_key', 'service_id',
   ];
-  const hidden = coManagedHiddenColumns(effectiveRedactions, 'project_tasks', CO_MANAGED_TASK_COLUMNS);
+  // Every selected column participates in masking, including columns without display aliases.
+  const columns = {
+    ...Object.fromEntries(fields.map((field) => [field, []])),
+    ...CO_MANAGED_TASK_COLUMNS,
+  };
+  const effectiveRedactions = coManagedRedactionsWithDependencies(
+    redactedFields, 'project_tasks', CO_MANAGED_TASK_FIELD_DEPENDENCIES, columns,
+  );
+  const mask = coManagedProjectFamilyMask(effectiveRedactions, 'project_task');
+  if (mask.dropRow) return [];
+  const hidden = coManagedHiddenColumns(effectiveRedactions, 'project_tasks', columns);
   if (mask.body) {
     hidden.add('description');
     hidden.add('description_rich_text');
