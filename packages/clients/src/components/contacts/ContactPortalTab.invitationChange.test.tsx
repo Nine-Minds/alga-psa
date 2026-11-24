@@ -197,7 +197,7 @@ describe('the contact drawer', () => {
  * and says why, so the MSP does not read "nothing to do" off a dead link.
  */
 describe('ContactPortalTab invitations refused at use time', () => {
-  it('explains an invitation whose contact email changed', async () => {
+  it('explains an invitation sent to an address the contact lost', async () => {
     getPortalInvitationsMock.mockResolvedValue([{
       invitation_id: 'invitation-1',
       email: 'old@example.com',
@@ -209,9 +209,9 @@ describe('ContactPortalTab invitations refused at use time', () => {
 
     render(<ContactPortalTab contact={contact} currentUserPermissions={permissions} />);
 
-    expect(await screen.findByText(/email address has changed/)).toBeInTheDocument();
+    expect(await screen.findByText(/an address the contact no longer has/)).toBeInTheDocument();
     // Expired, not pending, so no live expiry is promised for a dead link — and
-    // Resend (which re-points the address) is the offer, not Revoke.
+    // Resend (which replaces the dead link) is the offer, not Revoke.
     expect(screen.queryByText(/Expires:/)).not.toBeInTheDocument();
     expect(screen.getByText('Resend')).toBeInTheDocument();
     expect(screen.queryByText('Revoke')).not.toBeInTheDocument();

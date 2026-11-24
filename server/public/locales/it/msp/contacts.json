@@ -415,7 +415,7 @@
       "resendCount_other": "inviato di nuovo {{count}} volte",
       "unusable": {
         "contactInactive": "Questo contatto è inattivo, quindi il link non può essere usato. Riattiva il contatto e invia poi un nuovo invito.",
-        "emailChanged": "L'indirizzo e-mail del contatto è cambiato da quando questo invito è stato inviato, quindi il link non funziona più. Invialo di nuovo per far arrivare un link valido all'indirizzo attuale."
+        "emailChanged": "Questo invito è stato inviato a un indirizzo che il contatto non ha più, quindi il link non funziona più. Invialo di nuovo per far arrivare un nuovo link all'indirizzo attuale del contatto."
       }
     },
     "actions": {

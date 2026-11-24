@@ -413,7 +413,7 @@
       "resendCount_other": "{{count}}-mal erneut gesendet",
       "unusable": {
         "contactInactive": "Dieser Kontakt ist inaktiv, daher kann der Link nicht verwendet werden. Aktivieren Sie den Kontakt wieder und senden Sie dann eine neue Einladung.",
-        "emailChanged": "Die E-Mail-Adresse des Kontakts hat sich seit dem Versand dieser Einladung geändert, daher funktioniert der Link nicht mehr. Senden Sie die Einladung erneut, damit ein funktionierender Link an die aktuelle Adresse geht."
+        "emailChanged": "Diese Einladung ging an eine Adresse, die der Kontakt nicht mehr hat, daher funktioniert der Link nicht mehr. Senden Sie die Einladung erneut, damit ein neuer Link an die aktuelle Adresse des Kontakts geht."
       }
     },
     "actions": {

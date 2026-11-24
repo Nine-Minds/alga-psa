@@ -1306,7 +1306,7 @@ export function ContactPortalTab({
                                 defaultValue: 'This contact is inactive, so the link cannot be used. Reactivate the contact, then send a new invitation.',
                               })
                               : t('contactPortalTab.history.unusable.emailChanged', {
-                                defaultValue: 'The contact\'s email address has changed since this invitation was sent, so the link no longer works. Resend it to mail a working link to the current address.',
+                                defaultValue: 'This invitation was sent to an address the contact no longer has, so the link no longer works. Resend it to mail a new link to the contact\'s current address.',
                               })}
                           </div>
                         )}

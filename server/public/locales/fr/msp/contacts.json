@@ -415,7 +415,7 @@
       "resendCount_other": "renvoyée {{count}} fois",
       "unusable": {
         "contactInactive": "Ce contact est inactif, le lien ne peut donc pas être utilisé. Réactivez le contact, puis envoyez une nouvelle invitation.",
-        "emailChanged": "L'adresse e-mail du contact a changé depuis l'envoi de cette invitation, le lien ne fonctionne donc plus. Renvoyez-la pour qu'un lien valide parte vers l'adresse actuelle."
+        "emailChanged": "Cette invitation a été envoyée à une adresse que le contact n'a plus, le lien ne fonctionne donc plus. Renvoyez-la pour qu'un nouveau lien parte vers l'adresse actuelle du contact."
       }
     },
     "actions": {

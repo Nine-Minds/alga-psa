@@ -415,7 +415,7 @@
       "resendCount_other": "skickad igen {{count}} gånger",
       "unusable": {
         "contactInactive": "Den här kontakten är inaktiv, så länken kan inte användas. Aktivera kontakten igen och skicka sedan en ny inbjudan.",
-        "emailChanged": "Kontaktens e-postadress har ändrats sedan den här inbjudan skickades, så länken fungerar inte längre. Skicka om den så att en fungerande länk går till den aktuella adressen."
+        "emailChanged": "Den här inbjudan skickades till en adress som kontakten inte längre har, så länken fungerar inte längre. Skicka om den så att en ny länk går till kontaktens aktuella adress."
       }
     },
     "actions": {

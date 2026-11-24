@@ -417,7 +417,7 @@
       "resendCount_other": "wysłano ponownie {{count}} razy",
       "unusable": {
         "contactInactive": "Ten kontakt jest nieaktywny, więc linku nie można użyć. Aktywuj kontakt ponownie, a potem wyślij nowe zaproszenie.",
-        "emailChanged": "Adres e-mail kontaktu zmienił się od wysłania tego zaproszenia, więc link już nie działa. Wyślij je ponownie, aby działający link trafił na aktualny adres."
+        "emailChanged": "To zaproszenie zostało wysłane na adres, którego kontakt już nie ma, więc link już nie działa. Wyślij je ponownie, aby nowy link trafił na aktualny adres kontaktu."
       }
     },
     "actions": {

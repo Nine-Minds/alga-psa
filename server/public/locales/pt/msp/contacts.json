@@ -415,7 +415,7 @@
       "resendCount_other": "reenviado {{count}} vezes",
       "unusable": {
         "contactInactive": "Este contato está inativo, portanto o link não pode ser usado. Reative o contato e depois envie um novo convite.",
-        "emailChanged": "O endereço de e-mail do contato mudou desde o envio deste convite, portanto o link não funciona mais. Reenvie o convite para que um link válido chegue ao endereço atual."
+        "emailChanged": "Este convite foi enviado para um endereço que o contato já não tem, portanto o link não funciona mais. Reenvie o convite para que um novo link chegue ao endereço atual do contato."
       }
     },
     "actions": {

@@ -413,7 +413,7 @@
       "resendCount_other": "{{count}} keer opnieuw verzonden",
       "unusable": {
         "contactInactive": "Dit contact is inactief, dus de link kan niet worden gebruikt. Activeer het contact opnieuw en verstuur daarna een nieuwe uitnodiging.",
-        "emailChanged": "Het e-mailadres van het contact is gewijzigd sinds deze uitnodiging is verzonden, dus de link werkt niet meer. Verstuur de uitnodiging opnieuw zodat er een werkende link naar het huidige adres gaat."
+        "emailChanged": "Deze uitnodiging is naar een adres gestuurd dat het contact niet meer heeft, dus de link werkt niet meer. Verstuur de uitnodiging opnieuw zodat er een nieuwe link naar het huidige adres van het contact gaat."
       }
     },
     "actions": {
