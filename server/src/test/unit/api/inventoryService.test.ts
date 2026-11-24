@@ -28,7 +28,9 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
   return { ...actual, withTransaction: mocks.withTransaction };
 });
 
-vi.mock('@alga-psa/inventory', () => ({
+vi.mock('@alga-psa/inventory', async () => ({
+  // The service's error mapper checks `instanceof VendorCoreError`, so the real class is needed.
+  VendorCoreError: (await vi.importActual<typeof import('@alga-psa/inventory/lib/vendorErrors')>('@alga-psa/inventory/lib/vendorErrors')).VendorCoreError,
   queryStockLevelsForProduct: mocks.queryStockLevelsForProduct,
   queryStockUnits: mocks.queryStockUnits,
   queryStockLocations: mocks.queryStockLocations,
