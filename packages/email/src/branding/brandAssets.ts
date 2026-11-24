@@ -6,6 +6,8 @@
  * leaves exactly one logo and one footer.
  */
 
+import { layoutFooterRow } from './layoutFooter';
+import { LEGACY_BRAND_SLOGAN_PATTERN, stripOrphanedBrandFooter } from './orphanedSlogan';
 import type { EmailBrandingLogoArtwork, EmailBrandingLogoShape, EmailBrandingLogoVariant } from './types';
 
 export const BRAND_LOGO_MARKER = 'data-alga-brand-logo';
@@ -78,7 +80,7 @@ export interface BrandLogo {
   alt?: string;
 }
 
-export interface BrandDecorationOptions {
+export interface BrandDecorationOptions extends BrandAttributionStripOptions {
   logo?: BrandLogo;
   hideAttribution?: boolean;
 }
@@ -189,33 +191,124 @@ export function pickBrandLogoVariant(
   return uploaded.logoUrl ? 'default' : null;
 }
 
-const ATTRIBUTION = 'Powered by AlgaPSA';
+/**
+ * Every spelling the attribution has shipped in: the localized translations
+ * write their own, and the pre-rename templates spell the product "Alga PSA".
+ * None of them collide with a link or button label ("View in AlgaPSA").
+ */
+const ATTRIBUTION_PREFIXES = [
+  'Powered by',
+  'Drivs av',
+  'Propulsé par',
+  'Mogelijk gemaakt door',
+  'Desenvolvido por',
+  'Desarrollado por',
+  'Bereitgestellt von',
+];
+const ATTRIBUTION = `(?:${ATTRIBUTION_PREFIXES.join('|')}) Alga\\s?PSA`;
 const SEPARATOR = '(?:&middot;|&#183;|·|•)';
 
 /**
- * Drops the attribution line and whatever separator holds it to the rest of the
- * footer, in both shapes the templates ship: leading
- * "Powered by AlgaPSA &middot; Keeping teams aligned" and trailing
- * "&copy; 2026 Acme &middot; Powered by AlgaPSA", plus the standalone
- * <p>Powered by AlgaPSA</p> that portal-invitation carries.
+ * The layout's own footer row when the attribution opens it: the stock footer
+ * cell (see layoutFooter.ts) holding nothing but the attribution and, after the
+ * separator, whatever tail the mode allows.
  */
-export function stripBrandAttribution(html: string): string {
+const footerRow = (tail: string) =>
+  layoutFooterRow(`${ATTRIBUTION}(?:\\s*${SEPARATOR}\\s*${tail})?`);
+/**
+ * The same attribution-and-tail pair anywhere else — a footer cell the tenant
+ * laid out themselves, where the row stays and only our own words go. Takes both
+ * the separator that joined the attribution to the tail and the one that joined
+ * the tail to whatever follows, so a line the tenant wrote after our slogan is
+ * not left opening on a stray "&middot;".
+ */
+const attributionWithTail = (tail: string) =>
+  new RegExp(`${ATTRIBUTION}\\s*${SEPARATOR}\\s*${tail}(?:\\s*${SEPARATOR}\\s*)?`, 'gi');
+
+const ANY_TAIL_ROW = footerRow('[^<]*?');
+const ANY_TAIL = attributionWithTail('[^<]*');
+const SHIPPED_SLOGAN_ROW = footerRow(LEGACY_BRAND_SLOGAN_PATTERN);
+const SHIPPED_SLOGAN = attributionWithTail(LEGACY_BRAND_SLOGAN_PATTERN);
+const STANDALONE_PARAGRAPH = new RegExp(`<p>\\s*${ATTRIBUTION}\\s*</p>`, 'gi');
+const TRAILING_ATTRIBUTION = new RegExp(`\\s*${SEPARATOR}\\s*${ATTRIBUTION}`, 'gi');
+/**
+ * The attribution and the separator that only joined it to what follows. Takes
+ * the separator with it so a tail that stays — a line a tenant wrote beside the
+ * attribution, which `shipped-slogan` keeps — does not open on a stray "&middot;".
+ */
+const ATTRIBUTION_WITH_SEPARATOR = new RegExp(`${ATTRIBUTION}\\s*${SEPARATOR}\\s*`, 'gi');
+const BARE_ATTRIBUTION = new RegExp(ATTRIBUTION, 'gi');
+
+export interface BrandAttributionStripOptions {
+  /**
+   * Which footer row counts as ours.
+   * - `any-tail`, the default: the HTML being decorated is the standard
+   *   template — a clone, a rebuild, the settings preview — so a footer row the
+   *   attribution opens is ours by construction and goes whatever follows the
+   *   separator, wording we have not shipped yet included.
+   * - `shipped-slogan`, whenever the HTML passing through is a tenant's own row:
+   *   only the footers we have actually shipped go. A footer reworded around the
+   *   attribution ("Powered by AlgaPSA &middot; Acme MSP, your IT partner") then
+   *   survives, instead of collapsing to the same nothing our footer does. The
+   *   classifier reads it in this mode so such a row stays visibly the tenant's
+   *   edit, and the apply decorates a ticked `customized` row in it so the words
+   *   beside the attribution are not carried off with it.
+   */
+  footerRow?: 'any-tail' | 'shipped-slogan';
+}
+
+/**
+ * Drops the attribution and everything that only exists to carry it, in every
+ * shape the templates ship:
+ * - the layout's own footer row, "Powered by AlgaPSA &middot; Keeping teams
+ *   aligned" and its localized spellings, goes whole. The slogan is AlgaPSA's
+ *   line, not the tenant's, so hiding the attribution hides it too instead of
+ *   leaving an orphaned tagline; with the row gone there is no empty coloured
+ *   band left behind either.
+ * - a trailing "&copy; 2026 Acme &middot; Powered by AlgaPSA" loses only the
+ *   attribution: the copyright is the tenant's.
+ * - the standalone <p>Powered by AlgaPSA</p> older portal-invitation rows carry.
+ * - anything else the attribution sits in loses the attribution and the
+ *   separator behind it, and keeps the rest — a footer cell the tenant laid out
+ *   themselves is not the layout's row, so the row itself stays theirs.
+ *
+ * Idempotent: a second pass has nothing left to match.
+ */
+export function stripBrandAttribution(html: string, options: BrandAttributionStripOptions = {}): string {
   if (!html) return html;
 
+  const shippedOnly = options.footerRow === 'shipped-slogan';
+
   return html
-    .replace(new RegExp(`<p>\\s*${ATTRIBUTION}\\s*</p>`, 'gi'), '')
-    .replace(new RegExp(`\\s*${SEPARATOR}\\s*${ATTRIBUTION}`, 'gi'), '')
-    .replace(new RegExp(`${ATTRIBUTION}\\s*${SEPARATOR}\\s*`, 'gi'), '')
-    .replace(new RegExp(ATTRIBUTION, 'gi'), '');
+    .replace(STANDALONE_PARAGRAPH, '')
+    .replace(TRAILING_ATTRIBUTION, '')
+    .replace(shippedOnly ? SHIPPED_SLOGAN_ROW : ANY_TAIL_ROW, '')
+    .replace(shippedOnly ? SHIPPED_SLOGAN : ANY_TAIL, '')
+    .replace(ATTRIBUTION_WITH_SEPARATOR, '')
+    .replace(BARE_ATTRIBUTION, '');
 }
 
 export function containsBrandAttribution(html: string): boolean {
-  return !!html && html.includes(ATTRIBUTION);
+  return !!html && new RegExp(ATTRIBUTION, 'i').test(html);
 }
 
-/** The Enterprise pass the apply flow runs over every HTML it writes. */
+/**
+ * The Enterprise pass the apply flow runs over every HTML it writes.
+ *
+ * Hiding the attribution also repairs what an older strip left in a row this one
+ * is rewriting. That matters for the one row the apply does not rebuild from the
+ * standard template — a `customized` row the tenant ticked, recolored in place —
+ * because the leftover carries no attribution for `stripBrandAttribution` to
+ * recognize it by: the old strip took the attribution and kept the slogan. Left
+ * to itself the apply would repaint that orphaned tagline in the tenant's new
+ * palette and leave it standing (alga-2026-0003353). The repair is the same one
+ * the classifier normalizes such a row with, so what we write back is what it
+ * reads as ours.
+ */
 export function decorateBrandedHtml(html: string, options: BrandDecorationOptions): string {
   let result = options.logo ? applyBrandLogo(html, options.logo) : removeBrandLogo(html);
-  if (options.hideAttribution) result = stripBrandAttribution(result);
+  if (options.hideAttribution) {
+    result = stripOrphanedBrandFooter(stripBrandAttribution(result, { footerRow: options.footerRow }));
+  }
   return result;
 }
