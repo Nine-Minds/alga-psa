@@ -41,7 +41,8 @@ export const clientPortalInvitationRequestSchema = z
 
 /** POST /api/v1/portal-invitations/bulk */
 export const bulkPortalInvitationRequestSchema = z.object({
-  contact_ids: z.array(uuidSchema).min(1).max(MAX_BULK_PORTAL_INVITATIONS)
+  contact_ids: z.array(uuidSchema).min(1).max(MAX_BULK_PORTAL_INVITATIONS),
+  invitation_states: z.array(portalInvitationStateSchema).min(1).optional()
 });
 
 export const portalInvitationResultSchema = z.object({

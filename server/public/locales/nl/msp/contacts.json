@@ -732,7 +732,9 @@
     "errors": {
       "loadFailed": "Kon niet bepalen wie kan worden uitgenodigd. Probeer het opnieuw.",
       "sendFailed": "Kon de uitnodigingen niet verzenden. Probeer het opnieuw.",
-      "statesUnavailable": "Kon niet bepalen welke uitnodigingen voor deze klant openstaan."
+      "statesUnavailable": "Kon niet bepalen welke uitnodigingen voor deze klant openstaan.",
+      "batchLimitExceeded": "Nodig maximaal 500 contacten tegelijk uit.",
+      "noTargetsSelected": "Selecteer ten minste één contact om uit te nodigen."
     },
     "resendTitle": "Uitnodigingen voor het klantenportaal opnieuw verzenden",
     "resendCount_one": "{{count}} contactpersoon krijgt de uitnodiging opnieuw, met de volledige geldigheidsperiode.",

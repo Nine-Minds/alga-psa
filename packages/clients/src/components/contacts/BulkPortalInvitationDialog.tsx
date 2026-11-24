@@ -51,6 +51,18 @@ const BULK_INVITE_RESULT_KEYS: Partial<Record<PortalInvitationErrorCode, { key: 
   INVITATION_FAILED: { key: 'bulkPortalInvitation.results.reasons.invitationFailed', defaultValue: 'The invitation could not be sent' },
 };
 
+/** Batch failures have stable codes too; never display the server's English. */
+const BULK_INVITE_BATCH_KEYS: Partial<Record<PortalInvitationErrorCode, string>> = {
+  BATCH_LIMIT_EXCEEDED: 'bulkPortalInvitation.errors.batchLimitExceeded',
+  NO_TARGETS_SELECTED: 'bulkPortalInvitation.errors.noTargetsSelected',
+  PERMISSION_DENIED_INVITE: 'contactPortalTab.toast.errors.permissionDeniedInvite',
+  EMAIL_NOT_CONFIGURED: 'contactPortalTab.toast.errors.emailNotConfigured',
+  NO_DEFAULT_CLIENT: 'contactPortalTab.toast.errors.noDefaultClient',
+  NO_DEFAULT_LOCATION: 'contactPortalTab.toast.errors.noDefaultLocation',
+  NO_LOCATION_EMAIL: 'contactPortalTab.toast.errors.noLocationEmail',
+  BASE_URL_NOT_CONFIGURED: 'contactPortalTab.toast.errors.noBaseUrl',
+};
+
 interface BulkPortalInvitationDialogProps {
   isOpen: boolean;
   clientId: string;
@@ -336,9 +348,12 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
               failed: sendResult.failed,
             })}
           </p>
-          {sendResult.error && (
+          {!sendResult.success && (
             <Alert variant="destructive">
-              <AlertDescription>{sendResult.error}</AlertDescription>
+              <AlertDescription>{t(
+                (sendResult.errorCode && BULK_INVITE_BATCH_KEYS[sendResult.errorCode])
+                  || 'bulkPortalInvitation.errors.sendFailed'
+              )}</AlertDescription>
             </Alert>
           )}
           {sendResult.results.length > 0 && (

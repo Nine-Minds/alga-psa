@@ -736,7 +736,9 @@
     "errors": {
       "loadFailed": "Impossible de déterminer qui peut être invité. Veuillez réessayer.",
       "sendFailed": "Impossible d’envoyer les invitations. Veuillez réessayer.",
-      "statesUnavailable": "Impossible de déterminer quelles invitations sont en attente pour ce client."
+      "statesUnavailable": "Impossible de déterminer quelles invitations sont en attente pour ce client.",
+      "batchLimitExceeded": "Invitez au maximum 500 contacts à la fois.",
+      "noTargetsSelected": "Sélectionnez au moins un contact à inviter."
     },
     "resendTitle": "Renvoyer les invitations au portail client",
     "resendCount_one": "{{count}} contact recevra à nouveau son invitation, avec la durée de validité complète.",

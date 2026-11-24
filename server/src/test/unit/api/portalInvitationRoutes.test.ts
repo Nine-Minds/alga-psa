@@ -170,6 +170,24 @@ describe('POST /api/v1/portal-invitations/bulk', () => {
     expect(state.calls[0]).toEqual({ contactIds: [CONTACT_A, CONTACT_B] });
   });
 
+  it('preserves the invitation-state restriction for cross-client batches', async () => {
+    const res = await postBulk(request(bulkUrl, {
+      contact_ids: [CONTACT_A, CONTACT_B], invitation_states: ['expired'],
+    }));
+    expect(res.status).toBe(200);
+    expect(state.calls[0]).toEqual({
+      contactIds: [CONTACT_A, CONTACT_B], invitationStates: ['expired'],
+    });
+  });
+
+  it.each([{ states: [] }, { states: ['unknown'] }, { states: 'expired' }])('rejects invalid state selection $states', async ({ states }) => {
+    const res = await postBulk(request(bulkUrl, {
+      contact_ids: [CONTACT_A], invitation_states: states,
+    }));
+    expect(res.status).toBe(400);
+    expect(state.calls).toHaveLength(0);
+  });
+
   it('requires at least one contact id', async () => {
     const res = await postBulk(request(bulkUrl, { contact_ids: [] }));
     expect(res.status).toBe(400);

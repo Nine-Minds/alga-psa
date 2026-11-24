@@ -54,20 +54,22 @@ describe('portal invitation service tenant-scoped query contract', () => {
     expect(transactionalCreate).not.toContain("interval '24 hours'");
   });
 
-  it('only renews a link that is still going to one of the contact\'s own addresses', () => {
+  it('only renews a link going to the same delivery mailbox', () => {
     // Renewing a row whose stored address the contact lost would re-arm the
     // token in a stranger's mailbox for the tenant's whole validity, every time
-    // the MSP resends. Such a row is revoked and replaced with a new token, and
-    // "the contact's own address" is the product's rule: primary ∪ additional.
+    // the MSP resends. Any different delivery mailbox gets a new token,
+    // even while the old one remains additional, preserving provenance.
     const transactionalCreate = sectionBetween(
       'static async createInvitationWithTransaction',
       'static async verifyToken'
     );
 
     expect(transactionalCreate).toContain(
-      'if (invitationAddressBelongsToContact(existingInvitation.email, contactAddresses)) {'
+      'if (invitationAddressBelongsToContact(existingInvitation.email, [contact.email])) {'
     );
-    expect(transactionalCreate).toContain('this.resolveContactAddresses(trx, tenant, contactId, contact.email)');
+    expect(transactionalCreate).toContain(".orderBy('created_at', 'desc')");
+    expect(transactionalCreate).toContain(".orderBy('invitation_id', 'desc')");
+    expect(transactionalCreate).toContain('.forUpdate()');
     expect(transactionalCreate).toContain("revoked_reason: 'email_changed'");
     expect(transactionalCreate).toContain('used_at: trx.fn.now(),');
 

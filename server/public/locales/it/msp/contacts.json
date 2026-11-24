@@ -736,7 +736,9 @@
     "errors": {
       "loadFailed": "Non è stato possibile determinare chi invitare. Riprovare.",
       "sendFailed": "Non è stato possibile inviare gli inviti. Riprovare.",
-      "statesUnavailable": "Non è stato possibile determinare quali inviti sono in sospeso per questo cliente."
+      "statesUnavailable": "Non è stato possibile determinare quali inviti sono in sospeso per questo cliente.",
+      "batchLimitExceeded": "Invita al massimo 500 contatti alla volta.",
+      "noTargetsSelected": "Seleziona almeno un contatto da invitare."
     },
     "resendTitle": "Invia di nuovo gli inviti al portale clienti",
     "resendCount_one": "{{count}} contatto riceverà di nuovo il suo invito, con il periodo di validità completo.",

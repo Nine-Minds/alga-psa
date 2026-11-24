@@ -744,7 +744,9 @@
     "errors": {
       "loadFailed": "Nie udało się ustalić, kogo można zaprosić. Spróbuj ponownie.",
       "sendFailed": "Nie udało się wysłać zaproszeń. Spróbuj ponownie.",
-      "statesUnavailable": "Nie udało się ustalić, które zaproszenia są otwarte dla tego klienta."
+      "statesUnavailable": "Nie udało się ustalić, które zaproszenia są otwarte dla tego klienta.",
+      "batchLimitExceeded": "Można zaprosić maksymalnie 500 kontaktów jednocześnie.",
+      "noTargetsSelected": "Wybierz co najmniej jeden kontakt do zaproszenia."
     },
     "resendTitle": "Ponowne wysłanie zaproszeń do portalu klienta",
     "resendCount_one": "{{count}} kontakt otrzyma zaproszenie ponownie, z pełnym okresem ważności.",

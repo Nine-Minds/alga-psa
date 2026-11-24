@@ -254,6 +254,7 @@ export const getContactPortalSummary = withAuth(async (
       scopedTable(trx, tenant, 'portal_invitations')
         .where({ contact_id: contactId })
         .orderBy('created_at', 'desc')
+        .orderBy('invitation_id', 'desc')
         .select('created_at', 'expires_at', 'used_at', 'email', 'metadata')
         .first(),
       scopedTable(trx, tenant, 'contacts')

@@ -26,6 +26,7 @@ const state: {
   invitationEmail: string | null;
   /** The addresses the MSP kept on the contact besides its primary one. */
   additionalEmails: string[];
+  newerInvitation: boolean;
   deletes: number;
   /** Every tenant-scoped join the verify query asked for, in order. */
   joins: Array<{ table: string; on: string[] }>;
@@ -33,6 +34,7 @@ const state: {
   contact: { is_inactive: false, email: 'casey@acme.test', full_name: 'Casey Client' },
   invitationEmail: invitation.email,
   additionalEmails: [],
+  newerInvitation: false,
   deletes: 0,
   joins: [],
 };
@@ -60,14 +62,20 @@ function normalized(value: string | null): string | null {
  * NULL, never the whole set.
  */
 function invitationQueryBuilder() {
+  let latestOnly = false;
   const builder: any = {
     where(_column: unknown, _operator?: unknown, _value?: unknown) {
+      return builder;
+    },
+    whereNull(column: string) {
+      if (column === 'newer.invitation_id') latestOnly = true;
       return builder;
     },
     select() {
       return builder;
     },
     first() {
+      if (latestOnly && state.newerInvitation) return Promise.resolve(undefined);
       const mailedTo = normalized(state.invitationEmail);
       return Promise.resolve({
         ...invitation,
@@ -147,6 +155,7 @@ beforeEach(() => {
   state.contact = { is_inactive: false, email: 'casey@acme.test', full_name: 'Casey Client' };
   state.invitationEmail = invitation.email;
   state.additionalEmails = [];
+  state.newerInvitation = false;
   state.deletes = 0;
   state.joins = [];
 });
@@ -262,4 +271,14 @@ describe('PortalInvitationService.verifyToken', () => {
       errorCode: 'INVALID_OR_EXPIRED_TOKEN',
     });
   });
+});
+
+it('refuses an older live token when a newer invitation exists, including a revoked one', async () => {
+  state.newerInvitation = true;
+  await expect(PortalInvitationService.verifyToken('token-1')).resolves.toMatchObject({
+    valid: false, errorCode: 'INVALID_OR_EXPIRED_TOKEN',
+  });
+  expect(state.joins.find((join) => join.table === 'portal_invitations as newer')?.on).toEqual([
+    '(newer.created_at, newer.invitation_id) > (pi.created_at, pi.invitation_id)',
+  ]);
 });

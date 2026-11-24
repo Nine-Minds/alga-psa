@@ -42,6 +42,9 @@ export function registerPortalInvitationRoutes(registry: ApiOpenApiRegistry) {
       contact_ids: zOpenApi.array(zOpenApi.string().guid()).min(1).max(500).describe(
         'Contacts to invite, in any client. Each contact is authorized against its own client.',
       ),
+      invitation_states: zOpenApi.array(zOpenApi.enum(['expired', 'pending'])).min(1).optional().describe(
+        'Narrows the contacts to those whose latest invitation is expired and/or still pending — the chase-up case. A contact whose latest invitation was used or revoked is in neither state, whatever older invitations it has. A resend renews the link for the tenant\'s full invitation validity. It narrows contact_ids: an id whose invitation is no longer in one of these states comes back as skipped with INVITATION_STATE_MISMATCH.',
+      ),
     }),
   );
 
@@ -111,7 +114,7 @@ export function registerPortalInvitationRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/portal-invitations/bulk',
     summary: 'Invite contacts to the client portal in bulk',
     description:
-      'Sends client portal invitations for the named contacts, which may belong to different clients; each contact is authorized against its own client before anything is sent. Same per-contact result envelope as the client-scoped endpoint.',
+      'Sends client portal invitations for the named contacts, which may belong to different clients; each contact is authorized against its own client before anything is sent. Optional invitation_states narrows contact_ids to expired and/or pending invitations using the same latest-invitation rule as the client-scoped endpoint. Same per-contact result envelope as the client-scoped endpoint.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: { body: { schema: BulkRequestBody } },

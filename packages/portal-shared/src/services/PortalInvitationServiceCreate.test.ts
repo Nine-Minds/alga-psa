@@ -10,15 +10,23 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const CONTACT_EMAIL = 'casey@acme.test';
 
+type StoredInvitation = {
+  invitation_id: string;
+  token: string;
+  email?: string | null;
+  metadata?: Record<string, unknown>;
+  used_at?: Date;
+  is_active?: boolean;
+  created_at?: number;
+};
+
 const state: {
-  existingInvitation:
-    | { invitation_id: string; token: string; email?: string | null; metadata?: Record<string, unknown> }
-    | undefined;
-  /** The contact's additional email addresses, as the MSP kept them. */
+  existingInvitation: StoredInvitation | undefined;
+  olderInvitations: StoredInvitation[];
   additionalEmails: string[];
   updates: Array<{ where: Record<string, unknown>; values: Record<string, unknown> }>;
   inserts: Array<Record<string, unknown>>;
-} = { existingInvitation: undefined, additionalEmails: [], updates: [], inserts: [] };
+} = { existingInvitation: undefined, olderInvitations: [], additionalEmails: [], updates: [], inserts: [] };
 
 const trxStub = {
   raw: (sql: string, bindings?: unknown[]) => ({ sql, bindings }),
@@ -27,12 +35,24 @@ const trxStub = {
 
 function portalInvitationsBuilder() {
   let whereFilters: Record<string, unknown> = {};
+  let onlyUnexpired = false;
+  let latestFirst = false;
   const builder: any = {
     where(filters: Record<string, unknown> | string) {
+      if (filters === 'expires_at') onlyUnexpired = true;
       if (typeof filters === 'object') whereFilters = { ...whereFilters, ...filters };
       return builder;
     },
-    first: () => Promise.resolve(state.existingInvitation),
+    select: () => builder,
+    orderBy: () => { latestFirst = true; return builder; },
+    first: () => {
+      let rows = [...state.olderInvitations, ...(state.existingInvitation ? [state.existingInvitation] : [])];
+      if (whereFilters.used_at === null) rows = rows.filter((row) => !row.used_at);
+      if (onlyUnexpired) rows = rows.filter((row) => row.is_active !== false);
+      if (latestFirst) rows.sort((a, b) => (b.created_at ?? 1) - (a.created_at ?? 1));
+      const row = rows[0];
+      return Promise.resolve(row && { ...row, is_active: row.is_active ?? !row.used_at });
+    },
     update(values: Record<string, unknown>) {
       state.updates.push({ where: whereFilters, values });
       return Promise.resolve(1);
@@ -52,11 +72,12 @@ const scopedDb = {
     if (table === 'contacts') {
       return {
         where: () => ({
-          first: () => Promise.resolve({
+          forUpdate: () => ({ first: () => Promise.resolve({
             contact_name_id: 'contact-1',
             email: CONTACT_EMAIL,
             full_name: 'Casey Client',
-          }),
+          }) }),
+          first: () => Promise.resolve({ email: CONTACT_EMAIL, full_name: 'Casey Client' }),
         }),
       } as any;
     }
@@ -94,6 +115,7 @@ const { PortalInvitationService } = await import('./PortalInvitationService');
 
 beforeEach(() => {
   state.existingInvitation = undefined;
+  state.olderInvitations = [];
   state.additionalEmails = [];
   state.updates = [];
   state.inserts = [];
@@ -165,32 +187,34 @@ describe('PortalInvitationService.createInvitationWithTransaction', () => {
     expect(JSON.parse(metadata.bindings[0]).resend_count).toBe(3);
   });
 
-  it('re-points the stored address at where the resend is actually going', async () => {
-    // The old address is still on the contact, so the link in it is still
-    // theirs: the row is renewed and the stored address follows the address this
-    // send went to, the contact's current primary one.
+  it('rotates when delivery changes even if the previous mailbox remains additional', async () => {
     state.existingInvitation = { invitation_id: 'invitation-1', token: 'token-1', email: 'casey@old.test' };
     state.additionalEmails = ['casey@old.test'];
-
-    await PortalInvitationService.createInvitationWithTransaction('contact-1', trxStub as never, 7);
-
-    expect(state.inserts).toHaveLength(0);
-    expect(state.updates[0]?.values.email).toBe(CONTACT_EMAIL);
+    const result = await PortalInvitationService.createInvitationWithTransaction('contact-1', trxStub as never, 7);
+    expect(result.token).not.toBe('token-1');
+    expect(state.updates[0]?.values.used_at).toEqual({ sql: 'now()' });
+    expect(state.updates[0]?.values.email).toBeUndefined();
+    expect(state.inserts[0]?.email).toBe(CONTACT_EMAIL);
   });
 
-  it('renews a link that went to one of the contact\'s other addresses', async () => {
-    state.existingInvitation = { invitation_id: 'invitation-1', token: 'token-1', email: 'Casey@Old.test ' };
-    state.additionalEmails = ['casey@old.test'];
+  it('keeps the token when delivery differs only in case or whitespace', async () => {
+    state.existingInvitation = { invitation_id: 'invitation-1', token: 'token-1', email: ' Casey@Acme.test ' };
+    const result = await PortalInvitationService.createInvitationWithTransaction('contact-1', trxStub as never, 7);
+    expect(result.token).toBe('token-1');
+  });
 
-    const result = await PortalInvitationService.createInvitationWithTransaction(
-      'contact-1',
-      trxStub as never,
-      7
-    );
-
-    // Same mailbox, same contact: reissuing here would dead-link a perfectly
-    // good invitation during the very chase-up this feature exists for.
-    expect(result).toMatchObject({ invitationId: 'invitation-1', token: 'token-1' });
+  it.each([true, false])('does not resurrect an older live invitation under a closed or expired latest row (closed=%s)', async (closed) => {
+    state.olderInvitations = [{
+      invitation_id: 'older', token: 'older-token', email: CONTACT_EMAIL, created_at: 0,
+    }];
+    state.existingInvitation = {
+      invitation_id: 'latest', token: 'old-token', email: CONTACT_EMAIL,
+      used_at: closed ? new Date() : undefined, is_active: false,
+    };
+    const result = await PortalInvitationService.createInvitationWithTransaction('contact-1', trxStub as never, 7);
+    expect(result.token).not.toBe('old-token');
+    expect(result.token).not.toBe('older-token');
+    expect(state.inserts).toHaveLength(1);
   });
 
   it('revokes and replaces a link sent to an address the contact lost', async () => {

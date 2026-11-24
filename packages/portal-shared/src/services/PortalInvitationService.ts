@@ -115,10 +115,10 @@ export class PortalInvitationService {
    * `validityDays` is the tenant's resolved setting, and the expiry is computed
    * in the database (`now() + make_interval`) to avoid timezone/DST drift. A
    * resend reuses the active invitation's token but resets its expiry to the
-   * full period, so every link the contact was ever mailed stays valid and
-   * agrees with the period the email states — as long as the address it was
-   * mailed to is still the contact's. When it is not, the stale invitation is
-   * revoked and a fresh token is issued instead.
+   * full period, keeping earlier emails to the same mailbox usable for the
+   * period the new email states. A different delivery mailbox gets
+   * a fresh token: otherwise replacing the stored email would erase which old
+   * mailbox still holds the token and defeat the address check at use time.
    */
   static async createInvitationWithTransaction(
     contactId: string,
@@ -148,6 +148,9 @@ export class PortalInvitationService {
       // Verify contact exists and is a portal admin (using transaction)
       const contact = await tenantDb(trx, tenant).table('contacts')
         .where({ contact_name_id: contactId })
+        // Serialize sends for this contact so concurrent creates cannot both
+        // observe no invitation and mail different tokens.
+        .forUpdate()
         .first();
 
       if (!contact) {
@@ -160,32 +163,25 @@ export class PortalInvitationService {
       const token = this.generateSecureToken();
       const expiresAt = trx.raw('now() + make_interval(days => ?)', [validityDays]);
 
-      // Check if there's already an active invitation (using transaction)
+      // The same latest row the contact list classifies is the only row we
+      // may renew. Filtering to active rows first would resurrect an older
+      // token underneath a newer revoked or accepted invitation.
       const existingInvitation = await tenantDb(trx, tenant).table('portal_invitations')
-        .where({
-          contact_id: contactId,
-          used_at: null
-        })
-        .where('expires_at', '>', trx.fn.now())
+        .where({ contact_id: contactId })
+        .orderBy('created_at', 'desc')
+        .orderBy('invitation_id', 'desc')
+        .select('*', trx.raw('used_at is null and expires_at > now() as is_active'))
         .first();
 
-      if (existingInvitation) {
-        const contactAddresses = await this.resolveContactAddresses(trx, tenant, contactId, contact.email);
-
-        if (invitationAddressBelongsToContact(existingInvitation.email, contactAddresses)) {
-          // Resending renews the link the contact already holds: without this a
-          // resend on the last day would mail a link that dies within hours
-          // while the email promises the full period. The resend is recorded on
-          // the row it renews — otherwise the Portal tab's history would keep
-          // showing only the original send date — and the stored address follows
-          // the address this send is actually going to, which is the contact's
-          // current primary one.
+      if (existingInvitation?.is_active) {
+        if (invitationAddressBelongsToContact(existingInvitation.email, [contact.email])) {
+          // Same delivery mailbox, full validity again. Keep its provenance and
+          // record when and by whom the invitation was sent again.
           const resendCount = Number(existingInvitation.metadata?.resend_count ?? 0) + 1;
           await tenantDb(trx, tenant).table('portal_invitations')
             .where({ invitation_id: existingInvitation.invitation_id, used_at: null })
             .update({
               expires_at: expiresAt,
-              email: contact.email,
               metadata: trx.raw("coalesce(metadata, '{}'::jsonb) || ?::jsonb", [JSON.stringify({
                 last_sent_at: new Date().toISOString(),
                 last_sent_by: user.user_id,
@@ -200,13 +196,9 @@ export class PortalInvitationService {
           };
         }
 
-        // The address this invitation was mailed to is none of the contact's any
-        // more, so the copy of the link sitting in that mailbox is not theirs to
-        // open: a contact first entered as jon@acme.com and corrected to
-        // john@acme.com would otherwise have the original token renewed for the
-        // tenant's full validity on every resend, and whoever reads jon@ could
-        // set the password and own John's portal account. Revoke the stale row
-        // and issue a fresh token below, so only the new mail can be used.
+        // Even if the old mailbox is still an additional address, this send
+        // exposes the token to a different mailbox. Rotate rather than lose
+        // the old delivery provenance when that address is later removed.
         await tenantDb(trx, tenant).table('portal_invitations')
           .where({ invitation_id: existingInvitation.invitation_id, used_at: null })
           .update({
@@ -228,6 +220,9 @@ export class PortalInvitationService {
           token,
           email: contact.email,
           expires_at: expiresAt,
+          // now() is the transaction start, which can precede a concurrent
+          // sender we waited for. Preserve latest-row ordering after the lock.
+          created_at: trx.raw('clock_timestamp()'),
           metadata: {
             created_by: user.user_id,
             contact_name: contact.full_name
@@ -314,7 +309,18 @@ export class PortalInvitationService {
           }
         );
 
+        // A newer invitation supersedes every older token, even if the newer
+        // row was revoked or used. This agrees with the contact list's latest
+        // row rule and also covers duplicate rows created before serialization.
+        scopedDb.tenantJoin(invitationQuery, 'portal_invitations as newer', 'newer.contact_id', 'pi.contact_id', {
+          type: 'left',
+          on: (join) => {
+            join.andOn(trx.raw('(newer.created_at, newer.invitation_id) > (pi.created_at, pi.invitation_id)'));
+          }
+        });
+
         const invitation = await invitationQuery
+          .whereNull('newer.invitation_id')
           .where({
             'pi.token': token,
             'pi.used_at': null
@@ -445,6 +451,7 @@ export class PortalInvitationService {
       const invitations = await query
         .where('pi.contact_id', contactId)
         .orderBy('pi.created_at', 'desc')
+        .orderBy('pi.invitation_id', 'desc')
         .limit(PORTAL_INVITATION_HISTORY_LIMIT)
         .select('pi.*')
         .select('c.email as contact_email')

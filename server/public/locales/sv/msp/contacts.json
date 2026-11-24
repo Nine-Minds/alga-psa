@@ -736,7 +736,9 @@
     "errors": {
       "loadFailed": "Kunde inte avgöra vilka som kan bjudas in. Försök igen.",
       "sendFailed": "Kunde inte skicka inbjudningarna. Försök igen.",
-      "statesUnavailable": "Kunde inte avgöra vilka inbjudningar som är utestående för den här kunden."
+      "statesUnavailable": "Kunde inte avgöra vilka inbjudningar som är utestående för den här kunden.",
+      "batchLimitExceeded": "Bjud in högst 500 kontakter åt gången.",
+      "noTargetsSelected": "Välj minst en kontakt att bjuda in."
     },
     "resendTitle": "Skicka inbjudningar till kundportalen igen",
     "resendCount_one": "{{count}} kontakt får sin inbjudan igen, med hela giltighetsperioden.",

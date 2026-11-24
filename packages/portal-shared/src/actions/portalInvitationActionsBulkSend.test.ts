@@ -26,7 +26,7 @@ type ContactRow = {
   client_id: string | null;
   full_name: string;
   email: string | null;
-  is_inactive?: boolean;
+  is_inactive?: boolean | null;
   /** Addresses the MSP kept on the contact besides its primary one. */
   additionalEmails?: string[];
   /** Every invitation the contact ever had, newest or oldest first — no matter. */
@@ -100,6 +100,7 @@ const state: {
 
 function contactsBuilder() {
   let selectedIds: string[] | null = null;
+  let activeFilter: ((contact: ContactRow) => boolean) | null = null;
   let filterClientId: string | undefined;
   let singleId: string | undefined;
   let scopeIds: string[] | null = null;
@@ -119,9 +120,14 @@ function contactsBuilder() {
       return builder;
     },
     andWhere(column: string, value: unknown) {
+      if (column === 'c.is_inactive') activeFilter = (contact) => (contact.is_inactive === undefined ? false : contact.is_inactive) === value;
       if (column === 'client_id' || column === 'c.client_id') filterClientId = value as string;
       // Stands in for the compiled bundle predicate the real narrowing ANDs on.
       if (column === 'scope.visible_contacts') scopeIds = value as string[];
+      return builder;
+    },
+    whereRaw(sql: string) {
+      if (sql === 'coalesce(c.is_inactive, false) = false') activeFilter = (contact) => !contact.is_inactive;
       return builder;
     },
     whereNull() {
@@ -156,6 +162,7 @@ function contactsBuilder() {
     then(resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) {
       const visible = state.contacts.filter(
         (contact) =>
+          (!activeFilter || activeFilter(contact)) &&
           (!selectedIds || selectedIds.includes(contact.contact_name_id)) &&
           (filterClientId === undefined || contact.client_id === filterClientId) &&
           (scopeIds === null || scopeIds.includes(contact.contact_name_id)) &&
@@ -351,6 +358,16 @@ describe('sendBulkPortalInvitations', () => {
     state.scopedContactIds = null;
     state.scopedClientIds = null;
     state.tenantSettings = {};
+  });
+
+  it('state-only selection includes legacy NULL active flags just like explicit selection', async () => {
+    state.contacts = [{
+      contact_name_id: 'legacy', client_id: 'client-a', full_name: 'Legacy',
+      email: 'legacy@acme.test', is_inactive: null, invitations: [lapsedInvitation('2024-01-01')],
+    }];
+    const { sendBulkPortalInvitations } = await import('./portalInvitationActions');
+    const result = await sendBulkPortalInvitations({ clientId: 'client-a', invitationStates: ['expired'] });
+    expect(result.sent).toBe(1);
   });
 
   it('sends every invitation of the batch with the tenant\'s own validity', async () => {

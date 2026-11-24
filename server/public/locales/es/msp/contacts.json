@@ -736,7 +736,9 @@
     "errors": {
       "loadFailed": "No se pudo determinar a quién invitar. Vuelva a intentarlo.",
       "sendFailed": "No se pudieron enviar las invitaciones. Vuelva a intentarlo.",
-      "statesUnavailable": "No se pudo determinar qué invitaciones están pendientes para este cliente."
+      "statesUnavailable": "No se pudo determinar qué invitaciones están pendientes para este cliente.",
+      "batchLimitExceeded": "Puede invitar a un máximo de 500 contactos a la vez.",
+      "noTargetsSelected": "Seleccione al menos un contacto para invitar."
     },
     "resendTitle": "Reenviar invitaciones al portal del cliente",
     "resendCount_one": "{{count}} contacto recibirá su invitación de nuevo, con el período de validez completo.",

@@ -4,18 +4,19 @@ Notable, externally visible changes to the Alga PSA REST API, newest first.
 
 ## 2026-11-24 — Portal invitations: resend by invitation state, configurable validity
 
-**Affected endpoint:** `POST /api/v1/clients/{id}/portal-invitations`
+**Affected endpoints:** `POST /api/v1/clients/{id}/portal-invitations`, `POST /api/v1/portal-invitations/bulk`
 
 Invitations used to live for a fixed 24 hours, which made a rollout a manual chase. The validity is now a tenant setting (default 7 days, clamped to 1–30) and a batch can be aimed at the contacts whose invitation lapsed instead of listing their ids.
 
 **Changes:**
 
 - New optional `invitation_states`: an array of `expired` and/or `pending`, selecting the contacts of the client whose *latest* invitation is in one of those states. One of `contact_ids`, `all_eligible: true` or `invitation_states` is still required. Combined with `contact_ids` it narrows that list; combined with `all_eligible` it wins, because it is the narrower chase-up set.
-- Resending to a contact that already holds an unused, unexpired invitation now extends that invitation to the full validity and keeps the same token, so the link in the earlier email stays usable and matches the expiry the new email states. The exception is an invitation that went to an address the contact no longer has: that one is revoked and replaced by a new token, so correcting a mistyped address cannot leave the old mailbox holding a live link.
+- Resending to a contact that already holds an unused, unexpired invitation now extends that invitation to the full validity and keeps the same token, so the link in the earlier email stays usable and matches the expiry the new email states. A resend to a different primary mailbox revokes and replaces the token, even if the previous address remains additional, preserving delivery provenance when that address is later removed.
 - Invitation lifetime comes from the tenant's client portal settings (default 7 days). The setting itself is not exposed over REST — client portal settings have no API surface — so it is read and written in the MSP app only.
 - New per-contact `error_code` values in `results`: `CONTACT_INACTIVE` (the contact is deactivated, so a link mailed to it could never be used), `INVITATION_STATE_MISMATCH` (an explicitly listed contact is no longer in the state the batch was aimed at) and `RATE_LIMITED` (previously reported as `INVITATION_FAILED`). A deactivated contact that used to come back `sent` now comes back `skipped` with `CONTACT_INACTIVE`.
+- Only the latest invitation may be renewed or verified. A newer used or revoked row cannot expose an older usable token; superseded links show as revoked in history. Concurrent sends serialize on the contact.
 - A token is also refused at use time when the contact was deactivated or when the address the invitation was sent to is none of the contact's addresses any more — its primary one or any of its additional ones, the same set that decides whose address an incoming email is. A link sitting in an address the MSP kept on the contact therefore still works; resending repairs the rest. Lapsed invitations are now retained for 90 days instead of being deleted on the next completed setup, so they stay visible as expired.
-- `POST /api/v1/portal-invitations/bulk` is unchanged and still takes `contact_ids` only.
+- `POST /api/v1/portal-invitations/bulk` also accepts optional `invitation_states` alongside required `contact_ids`, with the same validation, narrowing and per-contact mismatch result.
 
 ## 2026-11-20 — Attaching a non-template contract line returns `400`, not `500`
 

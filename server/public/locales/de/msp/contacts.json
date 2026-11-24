@@ -732,7 +732,9 @@
     "errors": {
       "loadFailed": "Es konnte nicht ermittelt werden, wer eingeladen werden kann. Bitte erneut versuchen.",
       "sendFailed": "Die Einladungen konnten nicht gesendet werden. Bitte erneut versuchen.",
-      "statesUnavailable": "Es konnte nicht ermittelt werden, welche Einladungen für diesen Kunden offen sind."
+      "statesUnavailable": "Es konnte nicht ermittelt werden, welche Einladungen für diesen Kunden offen sind.",
+      "batchLimitExceeded": "Sie können höchstens 500 Kontakte auf einmal einladen.",
+      "noTargetsSelected": "Wählen Sie mindestens einen Kontakt aus, den Sie einladen möchten."
     },
     "resendTitle": "Einladungen zum Kundenportal erneut senden",
     "resendCount_one": "{{count}} Kontakt erhält seine Einladung erneut, mit dem vollen Gültigkeitszeitraum.",

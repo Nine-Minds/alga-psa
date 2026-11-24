@@ -736,7 +736,9 @@
     "errors": {
       "loadFailed": "Não foi possível determinar quem pode ser convidado. Tente novamente.",
       "sendFailed": "Não foi possível enviar os convites. Tente novamente.",
-      "statesUnavailable": "Não foi possível determinar quais convites estão pendentes para este cliente."
+      "statesUnavailable": "Não foi possível determinar quais convites estão pendentes para este cliente.",
+      "batchLimitExceeded": "Convide no máximo 500 contatos de cada vez.",
+      "noTargetsSelected": "Selecione pelo menos um contato para convidar."
     },
     "resendTitle": "Reenviar convites para o portal do cliente",
     "resendCount_one": "{{count}} contato receberá o convite novamente, com o período de validade completo.",

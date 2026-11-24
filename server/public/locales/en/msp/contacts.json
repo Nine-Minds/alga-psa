@@ -736,7 +736,9 @@
     "errors": {
       "loadFailed": "Could not work out who can be invited. Please try again.",
       "sendFailed": "Could not send the invitations. Please try again.",
-      "statesUnavailable": "Could not read which invitations are outstanding for this client."
+      "statesUnavailable": "Could not read which invitations are outstanding for this client.",
+      "batchLimitExceeded": "Invite at most 500 contacts at a time.",
+      "noTargetsSelected": "Select at least one contact to invite."
     },
     "resendTitle": "Resend client portal invitations",
     "resendCount_one": "{{count}} contact will get their invitation again, with the full validity period.",

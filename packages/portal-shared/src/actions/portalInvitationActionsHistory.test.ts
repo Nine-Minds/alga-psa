@@ -193,3 +193,12 @@ describe('getPortalInvitations', () => {
     expect(item.unusable_reason).toBeUndefined();
   });
 });
+
+it('does not show a superseded live link as pending below a revoked latest row', async () => {
+  getInvitationHistoryMock.mockResolvedValue([
+    row({ invitation_id: 'newer', used_at: new Date(), metadata: { revoked: true } }),
+    row({ invitation_id: 'older' }),
+  ]);
+  const history = await getPortalInvitations(CONTACT_ID);
+  expect(history.map((invitation) => invitation.status)).toEqual(['revoked', 'revoked']);
+});

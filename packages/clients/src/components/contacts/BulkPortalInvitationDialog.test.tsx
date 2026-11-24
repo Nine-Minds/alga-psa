@@ -12,6 +12,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import BulkPortalInvitationDialog from './BulkPortalInvitationDialog';
 
 const hoisted = vi.hoisted(() => ({
+  translations: {} as Record<string, string>,
   getContactsEligibleForInvitation: vi.fn(),
   getPortalInvitationStatesForClient: vi.fn(),
   sendBulkPortalInvitations: vi.fn(),
@@ -20,6 +21,7 @@ const hoisted = vi.hoisted(() => ({
 vi.mock('@alga-psa/ui/lib/i18n/client', () => {
   const t = (key: string, options?: { defaultValue?: string; [k: string]: unknown }) => {
     let text = String(
+      hoisted.translations[key] ??
       (typeof options?.count === 'number' && options.count === 1
         ? options?.defaultValue_one
         : options?.defaultValue_other)
@@ -62,6 +64,7 @@ const eligible = (id: string, email: string | null, extra: Record<string, unknow
 
 beforeEach(() => {
   vi.clearAllMocks();
+  hoisted.translations = {};
   hoisted.getContactsEligibleForInvitation.mockResolvedValue([
     eligible('fine', 'fine@acme.com', { portal_visibility_group_id: 'group-1' }),
     eligible('no-email', null),
@@ -420,4 +423,25 @@ describe('BulkPortalInvitationDialog', () => {
     expect(screen.queryByText('Checking who can be invited...')).not.toBeInTheDocument();
     expect(hoisted.sendBulkPortalInvitations).not.toHaveBeenCalled();
   });
+});
+
+it.each([
+  ['de', 'Sie können höchstens 500 Kontakte auf einmal einladen.'],
+  ['es', 'Puede invitar a un máximo de 500 contactos a la vez.'],
+])('translates a batch refusal on the %s resend screen', async (_locale, translated) => {
+  hoisted.translations['bulkPortalInvitation.errors.batchLimitExceeded'] = translated;
+  hoisted.getPortalInvitationStatesForClient.mockResolvedValue([
+    { contactId: 'fine', state: 'expired', emailConflict: false },
+  ]);
+  hoisted.sendBulkPortalInvitations.mockResolvedValue({
+    success: false, total: 0, sent: 0, skipped: 0, failed: 0, results: [],
+    errorCode: 'BATCH_LIMIT_EXCEEDED', error: 'Too many contacts in one request.',
+  });
+  render(<BulkPortalInvitationDialog isOpen clientId="acme"
+    target={{ mode: 'invitationState', states: ['expired'], contactIds: ['fine'] }}
+    statusFilter="active" contacts={[]} onClose={vi.fn()} onSent={vi.fn()} />);
+  fireEvent.click(await screen.findByText('Resend 1 expired invitation'));
+  await screen.findByText('Sent 0, skipped 0, failed 0.');
+  expect(screen.getByText(translated)).toBeInTheDocument();
+  expect(screen.queryByText('Too many contacts in one request.')).not.toBeInTheDocument();
 });

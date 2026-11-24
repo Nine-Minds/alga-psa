@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  */
 
 const assertMspPermissionMock = vi.fn();
+const invitationOrderMock = vi.fn();
 
 type Row = Record<string, unknown> | undefined;
 
@@ -30,7 +31,10 @@ function builderFor(table: string) {
       : state.contact;
   const builder: any = {
     where: () => builder,
-    orderBy: () => builder,
+    orderBy: (...args: unknown[]) => {
+      if (table === 'portal_invitations') invitationOrderMock(...args);
+      return builder;
+    },
     select: () => builder,
     first: async () => row,
     // The additional-address read awaits the query itself, like a knex select.
@@ -148,4 +152,11 @@ describe('getContactPortalSummary', () => {
     expect(summary.hasAccount).toBe(true);
     expect(summary.accountInactive).toBe(false);
   });
+});
+
+it('breaks latest-invitation ties the same way as token verification and the rollout list', async () => {
+  await getContactPortalSummary('contact-1');
+  expect(invitationOrderMock.mock.calls).toEqual([
+    ['created_at', 'desc'], ['invitation_id', 'desc'],
+  ]);
 });

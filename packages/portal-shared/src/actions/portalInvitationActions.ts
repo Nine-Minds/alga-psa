@@ -1056,7 +1056,7 @@ async function resolveEligibleContactIdsForInvitation(
     }
     query
       .whereNull('u.user_id')
-      .andWhere('c.is_inactive', false)
+      .whereRaw('coalesce(c.is_inactive, false) = false')
       .modify((qb: Knex.QueryBuilder) => {
         if (clientId) qb.andWhere('c.client_id', clientId);
         if (invitationStates.length > 0) {
@@ -1863,12 +1863,16 @@ export const getPortalInvitations = withAuth(async (
 
     const invitations = await PortalInvitationService.getInvitationHistory(contactId);
 
-    return invitations.map(invitation => {
+    return invitations.map((invitation, index) => {
       let status: 'pending' | 'expired' | 'used' | 'revoked' = 'pending';
       let unusableReason: InvitationUseTimeRefusal | undefined;
 
       if (invitation.used_at) {
         status = invitation.metadata?.revoked ? 'revoked' : 'used';
+      } else if (index > 0) {
+        // A newer row supersedes this token, whether that row is pending,
+        // expired, used or explicitly revoked. verifyToken applies the same rule.
+        status = 'revoked';
       } else if (new Date(invitation.expires_at) < new Date()) {
         status = 'expired';
       } else {

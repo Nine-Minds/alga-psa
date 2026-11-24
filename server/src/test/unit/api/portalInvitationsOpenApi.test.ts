@@ -28,11 +28,11 @@ describe('portal invitations OpenAPI', () => {
     }
   });
 
-  it('documents the invitation-state selection on the client-scoped endpoint', () => {
+  it.each(['ClientPortalInvitationRequest', 'BulkPortalInvitationRequest'])('documents invitation-state selection on %s', (schema) => {
     const registry = createRegistry();
     registerPortalInvitationRoutes(registry);
     const doc = registry.buildDocument({ title: 't', version: 'test', edition: 'ee' }) as any;
-    const body = doc.components.schemas.ClientPortalInvitationRequest;
+    const body = doc.components.schemas[schema];
 
     expect(body.properties.invitation_states.items.enum).toEqual(['expired', 'pending']);
     expect(body.properties.invitation_states.description).toMatch(/expired/i);
