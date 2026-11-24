@@ -48,6 +48,8 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { registerTicketActions } from '../businessOperations/tickets';
+import { registerAssetActions } from '../businessOperations/assets';
+import { createTicketForAlert } from '../../../../rmm/alerts/ticketCreator';
 
 function ctx() {
   return {
@@ -78,6 +80,7 @@ describe('tickets.find_linked_entities / tickets.link_entities (DB-backed)', () 
     runtimeState.tenantId = tenant;
     runtimeState.actorUserId = String((await db('users').where({ tenant }).first('user_id')).user_id);
     registerTicketActions();
+    registerAssetActions();
 
     clientId = uuidv4();
     await db('clients').insert({ tenant, client_id: clientId, client_name: 'Linked entities client', created_at: '2020-01-01T00:00:00Z', updated_at: '2020-01-01T00:00:00Z' });
@@ -124,7 +127,12 @@ describe('tickets.find_linked_entities / tickets.link_entities (DB-backed)', () 
 
   async function makeProject(name: string) {
     const projectId = uuidv4();
-    await db('projects').insert({ tenant, project_id: projectId, project_name: name, client_id: clientId, wbs_code: `P${projectId.slice(0, 4)}`, is_inactive: false });
+    let status = await db('statuses').where({ tenant, status_type: 'project' }).first('status_id');
+    if (!status) {
+      status = { status_id: uuidv4() };
+      await db('statuses').insert({ tenant, status_id: status.status_id, name: 'Project open', status_type: 'project', order_number: 1, is_closed: false, created_by: runtimeState.actorUserId });
+    }
+    await db('projects').insert({ tenant, project_id: projectId, project_name: name, client_id: clientId, wbs_code: `P${projectId.slice(0, 4)}`, is_inactive: false, status: status.status_id, project_number: `PRJ-${projectId.slice(0, 8).toUpperCase()}` });
     return projectId;
   }
 
@@ -244,5 +252,61 @@ describe('tickets.find_linked_entities / tickets.link_entities (DB-backed)', () 
     await invoke('tickets.link_entities', input);
     await expect(invoke('tickets.link_entities', input)).rejects.toMatchObject({ code: 'CONFLICT' });
     await expect(invoke('tickets.link_entities', { ...input, entity_type: 'asset', entity_id: uuidv4() })).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  it('limit is still filled when legacy rows duplicate canonical links (dedupe happens before the limit)', async () => {
+    const ticketId = await makeTicket();
+    const dupes: string[] = [];
+    for (let i = 0; i < 3; i += 1) {
+      const id = await makeAsset(`Dupe ${i}`);
+      dupes.push(id);
+      await associate(id, ticketId, 'affected', `2026-04-0${i + 1}T00:00:00Z`);
+      // Legacy copies are newer than the canonical rows, so they sort first if not excluded.
+      await db('ticket_entity_links').insert({ tenant, link_id: uuidv4(), ticket_id: ticketId, entity_type: 'asset', entity_id: id, link_type: 'affected', created_at: `2026-05-0${i + 1}T00:00:00Z` });
+    }
+    const legacyOnly = await makeAsset('Legacy only (limit)');
+    await db('ticket_entity_links').insert({ tenant, link_id: uuidv4(), ticket_id: ticketId, entity_type: 'asset', entity_id: legacyOnly, link_type: 'affected', created_at: '2026-01-01T00:00:00Z' });
+
+    const out = await invoke('tickets.find_linked_entities', { ticket_id: ticketId, entity_type: 'asset', limit: 4 });
+    expect(out.links).toHaveLength(4);
+    expect(new Set(out.links.map((l: any) => l.entity_id)).size).toBe(4);
+    expect(out.links.filter((l: any) => l.legacy)).toHaveLength(1);
+  });
+
+  it('parity: after tickets.link_entities {asset}, assets.find_associated_tickets sees the ticket', async () => {
+    const ticketId = await makeTicket();
+    const assetId = await makeAsset('Parity asset');
+    await invoke('tickets.link_entities', { ticket_id: ticketId, entity_type: 'asset', entity_id: assetId, link_type: 'affected' });
+    const out = await invoke('assets.find_associated_tickets', { asset_id: assetId });
+    expect(out.tickets.map((t: any) => t.ticket_id)).toEqual([ticketId]);
+    expect(out.tickets[0].relationship_type).toBe('affected');
+  });
+
+  it('RMM regression: a Level alert ticket carries an asset_associations row that find_linked_entities returns with its levelio device id', async () => {
+    const assetId = await makeAsset('Level device');
+    await mapExternal(assetId, 'levelio', 'level-device-77');
+    // Same lookup the Level webhook / processRmmAlertEvent performs to resolve the asset.
+    const mapping = await db('tenant_external_entity_mappings')
+      .where({ tenant, integration_type: 'levelio', alga_entity_type: 'asset', external_entity_id: 'level-device-77' })
+      .first('alga_entity_id');
+    await db('statuses').where({ tenant, board_id: boardId, status_type: 'ticket' }).update({ is_default: true });
+
+    const created = await db.transaction((trx) => createTicketForAlert(trx, {
+      event: {
+        tenantId: tenant, integrationId: uuidv4(), provider: 'levelio', kind: 'triggered', externalAlertId: `alert-${uuidv4()}`,
+        externalDeviceId: 'level-device-77', severity: 'critical', message: 'Disk almost full', deviceName: 'Level device',
+        occurredAt: new Date().toISOString(), raw: {},
+      } as any,
+      actions: { boardId } as any,
+      clientId,
+      assetId: mapping.alga_entity_id,
+    }));
+
+    const rows = await db('asset_associations').where({ tenant, entity_id: created.ticket_id, entity_type: 'ticket' });
+    expect(rows).toHaveLength(1);
+    const out = await invoke('tickets.find_linked_entities', { ticket_id: created.ticket_id });
+    expect(out.links).toHaveLength(1);
+    expect(out.links[0]).toMatchObject({ entity_id: assetId, name: 'Level device' });
+    expect(out.links[0].external_ids).toEqual([expect.objectContaining({ integration_type: 'levelio', external_entity_id: 'level-device-77' })]);
   });
 });

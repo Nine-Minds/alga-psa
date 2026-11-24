@@ -182,7 +182,17 @@ async function listLegacyAndEntityLinks(
   const q = db
     .table('ticket_entity_links')
     .where({ ticket_id: p.ticketId })
-    .whereIn('entity_type', types);
+    .whereIn('entity_type', types)
+    // Legacy asset rows already present in the canonical store are excluded in SQL (not after the
+    // LIMIT), so deduplication never makes the result under-fill `limit`.
+    .andWhereRaw(
+      `NOT (ticket_entity_links.entity_type = 'asset' AND EXISTS (
+        SELECT 1 FROM asset_associations aa
+        WHERE aa.tenant = ticket_entity_links.tenant
+          AND aa.entity_type = 'ticket'
+          AND aa.entity_id = ticket_entity_links.ticket_id
+          AND aa.asset_id = ticket_entity_links.entity_id))`
+    );
   if (p.relationshipType) q.andWhere('link_type', p.relationshipType);
   const rows = (await q.select('entity_type', 'entity_id', 'link_type', 'created_at')
     .orderBy('created_at', 'desc')
