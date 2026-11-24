@@ -27,7 +27,7 @@ import { BentoTile, BentoTileAddButton, BentoTileEmpty, BentoTileEmptyAction } f
 import { ContentCardVariantProvider } from '@alga-psa/ui/components/ContentCard';
 import { TagManager } from '@alga-psa/tags/components';
 import { useToast, useDrawer } from '@alga-psa/ui';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { updateContact, getInteractionsForEntity, getClientById, getContactPortalSummary } from '@alga-psa/clients/actions';
 import { useOptionalClientCrossFeature } from '../../../context/ClientCrossFeatureContext';
@@ -94,13 +94,6 @@ interface ContactBentoLayoutProps {
   onContactUpdated?: () => Promise<void> | void;
   onChangesSaved?: () => void;
   onDocumentCreated?: () => Promise<void>;
-}
-
-function formatDate(value?: string | Date | null): string {
-  if (!value) return '—';
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return '—';
-  return date.toLocaleDateString();
 }
 
 /** The slice of i18next's `t` the module-level formatters below need. */
@@ -245,6 +238,14 @@ export function ContactBentoLayout({
   onDocumentCreated,
 }: ContactBentoLayoutProps) {
   const { t } = useTranslation('msp/contacts');
+  const { formatDate: formatAppDate } = useFormatters();
+  function formatDate(value?: string | Date | null): string {
+    if (!value) return '—';
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '—';
+    return formatAppDate(value);
+  }
+
   // The loader reads the latest translator through a ref so a new `t` (namespace load,
   // language switch) never re-triggers the fetch.
   const tRef = useRef(t);

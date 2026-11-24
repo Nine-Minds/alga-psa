@@ -10,6 +10,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ContactBentoLayout from './ContactBentoLayout';
+import { DateFormatProvider } from '@alga-psa/ui/lib/dateFormat/useDateFormat';
 
 const hoisted = vi.hoisted(() => ({
   openDrawer: vi.fn(),
@@ -25,10 +26,10 @@ vi.mock('@alga-psa/ui', () => {
   const toastApi = { toast };
   return { useDrawer: () => drawer, useToast: () => toastApi };
 });
-vi.mock('@alga-psa/ui/lib/i18n/client', () => {
+vi.mock('@alga-psa/ui/lib/i18n/client', async (importOriginal) => {
   const t = (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key;
   const value = { t };
-  return { useTranslation: () => value };
+  return { ...await importOriginal<typeof import('@alga-psa/ui/lib/i18n/client')>(), useTranslation: () => value };
 });
 vi.mock('@alga-psa/core/context/DocumentsCrossFeatureContext', () => {
   const value = { renderDocuments: () => null, getDocumentsByEntity: vi.fn() };
@@ -120,6 +121,23 @@ describe('ContactBentoLayout full edit save', () => {
     expect(screen.getByText(chip)).toBeInTheDocument();
     expect(hoisted.getContactPortalSummary).toHaveBeenCalledWith('contact-1');
     expect(screen.queryByText('Invitation expired')).not.toBeInTheDocument();
+  });
+
+  it.each([false, true])('formats the refreshed resend date using the app country (quickView=%s)', async (quickView) => {
+    const summary = { hasAccount: false, lastSignIn: null, invitedAt: '2026-11-01T12:00:00.000Z', invitationState: 'expired' } as const;
+    hoisted.getContactPortalSummary.mockResolvedValue({
+      ...summary, invitationState: 'pending', invitedAt: '2026-12-01T12:00:00.000Z',
+    });
+    render(
+      <DateFormatProvider countryCode="DE">
+        <ContactBentoLayout contact={contact} clientName="Triage Co" quickView={quickView} portalSummary={summary} userPermissions={{ canRead: true, canInvite: true, canUpdateRoles: false }} />
+      </DateFormatProvider>,
+    );
+    expect(screen.getByText('Invited').nextElementSibling).toHaveTextContent('01.11.2026');
+    fireEvent.click(screen.getByRole('button', { name: 'Manage' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Complete invitation change' }));
+    await waitFor(() => expect(screen.getByText('Invited').nextElementSibling).toHaveTextContent('01.12.2026'));
+    expect(hoisted.getContactPortalSummary).toHaveBeenCalledWith('contact-1');
   });
 
   it('also notifies the contacts list after an invitation change in quick view', async () => {
