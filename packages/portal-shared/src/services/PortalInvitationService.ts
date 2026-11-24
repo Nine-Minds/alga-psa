@@ -122,10 +122,23 @@ export class PortalInvitationService {
       if (existingInvitation) {
         // Resending renews the link the contact already holds: without this a
         // resend on the last day would mail a link that dies within hours
-        // while the email promises the full period.
+        // while the email promises the full period. The resend is recorded on
+        // the row it renews — otherwise the Portal tab's history would keep
+        // showing only the original send date — and the stored address is
+        // re-pointed at wherever the invitation is going now, so a contact
+        // whose email changed gets a link their own address can use.
+        const resendCount = Number(existingInvitation.metadata?.resend_count ?? 0) + 1;
         await tenantDb(trx, tenant).table('portal_invitations')
           .where({ invitation_id: existingInvitation.invitation_id, used_at: null })
-          .update({ expires_at: expiresAt });
+          .update({
+            expires_at: expiresAt,
+            email: contact.email,
+            metadata: trx.raw("coalesce(metadata, '{}'::jsonb) || ?::jsonb", [JSON.stringify({
+              last_sent_at: new Date().toISOString(),
+              last_sent_by: user.user_id,
+              resend_count: resendCount
+            })])
+          });
 
         return {
           success: true,
@@ -212,6 +225,15 @@ export class PortalInvitationService {
             'pi.used_at': null
           })
           .where('pi.expires_at', '>', trx.fn.now())
+          // An unused link outlives the contact it was written for: with a
+          // multi-day validity it can still be in a mailbox after the contact
+          // was deactivated or moved to another address. Both are refused at
+          // use time rather than by rewriting stored rows, so the recipient
+          // sees the same generic invalid-or-expired message. A resend
+          // re-points the stored address, which is how a renamed mailbox gets
+          // a usable link again.
+          .where('c.is_inactive', false)
+          .whereRaw('lower(c.email) = lower(pi.email)')
           .select(
             'pi.*',
             'c.full_name',

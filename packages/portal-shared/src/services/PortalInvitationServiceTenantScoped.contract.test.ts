@@ -48,8 +48,9 @@ describe('portal invitation service tenant-scoped query contract', () => {
 
     expect(transactionalCreate).toContain("trx.raw('now() + make_interval(days => ?)', [validityDays])");
     // The resend renews the row it reuses, so the stored expiry and the period
-    // the email states cannot drift apart.
-    expect(transactionalCreate).toContain('.update({ expires_at: expiresAt });');
+    // the email states cannot drift apart, and it leaves a trace of its own.
+    expect(transactionalCreate).toContain('expires_at: expiresAt,');
+    expect(transactionalCreate).toContain('last_sent_at: new Date().toISOString(),');
     expect(transactionalCreate).not.toContain("interval '24 hours'");
   });
 
