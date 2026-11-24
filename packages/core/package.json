@@ -38,6 +38,10 @@
       "import": "./dist/lib/address.js",
       "types": "./src/lib/address.ts"
     },
+    "./redirectToAppPath": {
+      "import": "./dist/lib/redirectToAppPath.js",
+      "types": "./src/lib/redirectToAppPath.ts"
+    },
     "./net/safeFetch": {
       "import": "./dist/lib/net/safeFetch.js",
       "types": "./src/lib/net/safeFetch.ts"
