@@ -412,7 +412,11 @@
       },
       "lastSentPrefix": "Senast skickad:",
       "resendCount_one": "skickad igen en gång",
-      "resendCount_other": "skickad igen {{count}} gånger"
+      "resendCount_other": "skickad igen {{count}} gånger",
+      "unusable": {
+        "contactInactive": "Den här kontakten är inaktiv, så länken kan inte användas. Aktivera kontakten igen och skicka sedan en ny inbjudan.",
+        "emailChanged": "Kontaktens e-postadress har ändrats sedan den här inbjudan skickades, så länken fungerar inte längre. Skicka om den så att en fungerande länk går till den aktuella adressen."
+      }
     },
     "actions": {
       "sendInvitation": "Skicka portalinbjudan",
@@ -459,6 +463,7 @@
         "contactNotFound": "Kontakten hittades inte.",
         "contactMissingEmail": "Kontakten saknar e-postadress. Lägg till en e-postadress för kontakten innan du skickar en inbjudan.",
         "contactInvalidEmail": "Kontakten har en ogiltig e-postadress. Uppdatera kontakten med en giltig e-postadress innan du skickar en inbjudan.",
+        "contactInactive": "Den här kontakten är inaktiv. Aktivera kontakten igen innan du bjuder in den till kundportalen.",
         "userExistsForContact": "Ett användarkonto finns redan för den här kontakten. Använd lösenordsåterställning i stället för att skicka en inbjudan.",
         "portalUserAlreadyExists": "Den här e-postadressen tillhör redan ett annat användarkonto i den här organisationen.",
         "noDefaultClient": "Ingen standardkund har konfigurerats för den här organisationen. Ange en standardkund i Allmänna inställningar.",
@@ -859,6 +864,7 @@
       "signedIn": "Portal · inloggad {{when}}",
       "neverSignedIn": "Portal · aldrig inloggad",
       "invited": "Portal · inbjuden",
+      "invitationExpired": "Portal · inbjudan har gått ut",
       "noAccess": "Ingen portalåtkomst"
     },
     "portal": {
@@ -874,6 +880,7 @@
       "deactivated": "Inaktiverad",
       "activeAccount": "Aktivt konto",
       "invitationSent": "Inbjudan skickad",
+      "invitationExpired": "Inbjudan har gått ut",
       "noAccess": "Ingen åtkomst"
     },
     "tickets": {

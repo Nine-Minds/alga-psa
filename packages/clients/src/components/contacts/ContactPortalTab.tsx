@@ -61,6 +61,7 @@ const PORTAL_INVITE_ERROR_KEYS: Partial<Record<PortalInvitationErrorCode, string
   CONTACT_NOT_FOUND: 'contactPortalTab.toast.errors.contactNotFound',
   CONTACT_MISSING_EMAIL: 'contactPortalTab.toast.errors.contactMissingEmail',
   CONTACT_INVALID_EMAIL: 'contactPortalTab.toast.errors.contactInvalidEmail',
+  CONTACT_INACTIVE: 'contactPortalTab.toast.errors.contactInactive',
   USER_EXISTS_FOR_CONTACT: 'contactPortalTab.toast.errors.userExistsForContact',
   PORTAL_USER_ALREADY_EXISTS: 'contactPortalTab.toast.errors.portalUserAlreadyExists',
   NO_DEFAULT_CLIENT: 'contactPortalTab.toast.errors.noDefaultClient',
@@ -1294,6 +1295,21 @@ export function ContactPortalTab({
                             <span> • {t('contactPortalTab.history.usedPrefix', { defaultValue: 'Used:' })} {formatDate(invitation.used_at)}</span>
                           )}
                         </div>
+                        {/* The link is refused when it is opened even though
+                            its expiry has not passed, so the row says why
+                            instead of leaving the MSP to wonder why an
+                            invitation sent yesterday reads as expired. */}
+                        {invitation.unusable_reason && (
+                          <div className="text-xs text-[rgb(var(--color-status-warning))]">
+                            {invitation.unusable_reason === 'contact_inactive'
+                              ? t('contactPortalTab.history.unusable.contactInactive', {
+                                defaultValue: 'This contact is inactive, so the link cannot be used. Reactivate the contact, then send a new invitation.',
+                              })
+                              : t('contactPortalTab.history.unusable.emailChanged', {
+                                defaultValue: 'The contact\'s email address has changed since this invitation was sent, so the link no longer works. Resend it to mail a working link to the current address.',
+                              })}
+                          </div>
+                        )}
                       </div>
 
                       {currentUserPermissions.canInvite && (

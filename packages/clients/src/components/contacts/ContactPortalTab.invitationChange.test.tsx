@@ -189,3 +189,61 @@ describe('the contact drawer', () => {
     expect(source).toContain('onInvitationChanged={onChangesSaved}');
   });
 });
+
+/**
+ * A link can be dead well before its expiry: the setup page refuses an
+ * invitation whose contact was deactivated or whose address moved on. The
+ * history reports those as expired — never as "Pending • Expires <future>" —
+ * and says why, so the MSP does not read "nothing to do" off a dead link.
+ */
+describe('ContactPortalTab invitations refused at use time', () => {
+  it('explains an invitation whose contact email changed', async () => {
+    getPortalInvitationsMock.mockResolvedValue([{
+      invitation_id: 'invitation-1',
+      email: 'old@example.com',
+      created_at: '2026-01-01T00:00:00.000Z',
+      expires_at: '2099-01-08T00:00:00.000Z',
+      status: 'expired',
+      unusable_reason: 'email_changed',
+    }]);
+
+    render(<ContactPortalTab contact={contact} currentUserPermissions={permissions} />);
+
+    expect(await screen.findByText(/email address has changed/)).toBeInTheDocument();
+    // Expired, not pending, so no live expiry is promised for a dead link — and
+    // Resend (which re-points the address) is the offer, not Revoke.
+    expect(screen.queryByText(/Expires:/)).not.toBeInTheDocument();
+    expect(screen.getByText('Resend')).toBeInTheDocument();
+    expect(screen.queryByText('Revoke')).not.toBeInTheDocument();
+  });
+
+  it('explains an invitation held by a deactivated contact', async () => {
+    getPortalInvitationsMock.mockResolvedValue([{
+      invitation_id: 'invitation-1',
+      email: 'taylor@example.com',
+      created_at: '2026-01-01T00:00:00.000Z',
+      expires_at: '2099-01-08T00:00:00.000Z',
+      status: 'expired',
+      unusable_reason: 'contact_inactive',
+    }]);
+
+    render(<ContactPortalTab contact={contact} currentUserPermissions={permissions} />);
+
+    expect(await screen.findByText(/contact is inactive/)).toBeInTheDocument();
+  });
+
+  it('leaves a live invitation counting down its expiry', async () => {
+    getPortalInvitationsMock.mockResolvedValue([{
+      invitation_id: 'invitation-1',
+      email: 'taylor@example.com',
+      created_at: '2026-01-01T00:00:00.000Z',
+      expires_at: '2099-01-08T00:00:00.000Z',
+      status: 'pending',
+    }]);
+
+    render(<ContactPortalTab contact={contact} currentUserPermissions={permissions} />);
+
+    expect(await screen.findByText(/Expires:/)).toBeInTheDocument();
+    expect(screen.queryByText(/no longer works/)).not.toBeInTheDocument();
+  });
+});

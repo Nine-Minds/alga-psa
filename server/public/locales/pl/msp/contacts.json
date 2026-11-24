@@ -414,7 +414,11 @@
       "resendCount_one": "wysłano ponownie raz",
       "resendCount_few": "wysłano ponownie {{count}} razy",
       "resendCount_many": "wysłano ponownie {{count}} razy",
-      "resendCount_other": "wysłano ponownie {{count}} razy"
+      "resendCount_other": "wysłano ponownie {{count}} razy",
+      "unusable": {
+        "contactInactive": "Ten kontakt jest nieaktywny, więc linku nie można użyć. Aktywuj kontakt ponownie, a potem wyślij nowe zaproszenie.",
+        "emailChanged": "Adres e-mail kontaktu zmienił się od wysłania tego zaproszenia, więc link już nie działa. Wyślij je ponownie, aby działający link trafił na aktualny adres."
+      }
     },
     "actions": {
       "sendInvitation": "Wyślij zaproszenie do portalu",
@@ -461,6 +465,7 @@
         "contactNotFound": "Kontakt nie został znaleziony.",
         "contactMissingEmail": "Kontakt nie ma adresu e-mail. Przed wysłaniem zaproszenia dodaj adres e-mail do kontaktu.",
         "contactInvalidEmail": "Kontakt ma nieprawidłowy adres e-mail. Przed wysłaniem zaproszenia zaktualizuj kontakt, podając prawidłowy adres e-mail.",
+        "contactInactive": "Ten kontakt jest nieaktywny. Aktywuj kontakt ponownie, zanim zaprosisz go do portalu klienta.",
         "userExistsForContact": "Dla tego kontaktu istnieje już konto użytkownika. Zamiast wysyłać zaproszenie, skorzystaj z resetowania hasła.",
         "portalUserAlreadyExists": "Ten adres e-mail należy już do innego konta użytkownika w tej organizacji.",
         "noDefaultClient": "Brak domyślnego klienta skonfigurowanego dla tego tenanta. Ustaw domyślnego klienta w ustawieniach ogólnych.",
@@ -869,6 +874,7 @@
       "signedIn": "Portal · ostatnie logowanie {{when}}",
       "neverSignedIn": "Portal · brak logowań",
       "invited": "Portal · wysłano zaproszenie",
+      "invitationExpired": "Portal · zaproszenie wygasło",
       "noAccess": "Brak dostępu do portalu"
     },
     "portal": {
@@ -884,6 +890,7 @@
       "deactivated": "Konto dezaktywowane",
       "activeAccount": "Aktywne konto",
       "invitationSent": "Zaproszenie wysłane",
+      "invitationExpired": "Zaproszenie wygasło",
       "noAccess": "Brak dostępu"
     },
     "tickets": {

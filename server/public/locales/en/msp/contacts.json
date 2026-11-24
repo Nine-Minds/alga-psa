@@ -412,7 +412,11 @@
       },
       "lastSentPrefix": "Last sent:",
       "resendCount_one": "sent again once",
-      "resendCount_other": "sent again {{count}} times"
+      "resendCount_other": "sent again {{count}} times",
+      "unusable": {
+        "contactInactive": "This contact is inactive, so the link cannot be used. Reactivate the contact, then send a new invitation.",
+        "emailChanged": "The contact's email address has changed since this invitation was sent, so the link no longer works. Resend it to mail a working link to the current address."
+      }
     },
     "actions": {
       "sendInvitation": "Send Portal Invitation",
@@ -459,6 +463,7 @@
         "contactNotFound": "Contact not found.",
         "contactMissingEmail": "Contact does not have an email address. Please add an email address to the contact before sending an invitation.",
         "contactInvalidEmail": "Contact has an invalid email address. Please update the contact with a valid email address before sending an invitation.",
+        "contactInactive": "This contact is inactive. Reactivate the contact before inviting it to the client portal.",
         "userExistsForContact": "A user account already exists for this contact. Use password reset instead of sending an invitation.",
         "portalUserAlreadyExists": "This email address already belongs to another user account in this organization.",
         "noDefaultClient": "No default client configured for this tenant. Please set a default client in General Settings.",
@@ -859,6 +864,7 @@
       "signedIn": "Portal · signed in {{when}}",
       "neverSignedIn": "Portal · never signed in",
       "invited": "Portal · invited",
+      "invitationExpired": "Portal · invitation expired",
       "noAccess": "No portal access"
     },
     "portal": {
@@ -874,6 +880,7 @@
       "deactivated": "Deactivated",
       "activeAccount": "Active account",
       "invitationSent": "Invitation sent",
+      "invitationExpired": "Invitation expired",
       "noAccess": "No access"
     },
     "tickets": {

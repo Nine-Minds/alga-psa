@@ -412,7 +412,11 @@
       },
       "lastSentPrefix": "Dernier envoi :",
       "resendCount_one": "renvoyée une fois",
-      "resendCount_other": "renvoyée {{count}} fois"
+      "resendCount_other": "renvoyée {{count}} fois",
+      "unusable": {
+        "contactInactive": "Ce contact est inactif, le lien ne peut donc pas être utilisé. Réactivez le contact, puis envoyez une nouvelle invitation.",
+        "emailChanged": "L'adresse e-mail du contact a changé depuis l'envoi de cette invitation, le lien ne fonctionne donc plus. Renvoyez-la pour qu'un lien valide parte vers l'adresse actuelle."
+      }
     },
     "actions": {
       "sendInvitation": "Envoyer l’invitation au portail",
@@ -459,6 +463,7 @@
         "contactNotFound": "Contact introuvable.",
         "contactMissingEmail": "Le contact n'a pas d'adresse e-mail. Ajoutez une adresse e-mail au contact avant d'envoyer une invitation.",
         "contactInvalidEmail": "Le contact a une adresse e-mail invalide. Mettez à jour le contact avec une adresse e-mail valide avant d'envoyer une invitation.",
+        "contactInactive": "Ce contact est inactif. Réactivez le contact avant de l'inviter au portail client.",
         "userExistsForContact": "Un compte utilisateur existe déjà pour ce contact. Utilisez la réinitialisation de mot de passe au lieu d'envoyer une invitation.",
         "portalUserAlreadyExists": "Cette adresse e-mail appartient déjà à un autre compte utilisateur de cette organisation.",
         "noDefaultClient": "Aucun client par défaut n'est configuré pour ce tenant. Veuillez définir un client par défaut dans les paramètres généraux.",
@@ -859,6 +864,7 @@
       "signedIn": "Portail · connexion {{when}}",
       "neverSignedIn": "Portail · aucune connexion",
       "invited": "Portail · invité",
+      "invitationExpired": "Portail · invitation expirée",
       "noAccess": "Aucun accès au portail"
     },
     "portal": {
@@ -874,6 +880,7 @@
       "deactivated": "Désactivé",
       "activeAccount": "Compte actif",
       "invitationSent": "Invitation envoyée",
+      "invitationExpired": "Invitation expirée",
       "noAccess": "Aucun accès"
     },
     "tickets": {

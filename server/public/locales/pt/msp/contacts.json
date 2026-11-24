@@ -412,7 +412,11 @@
       },
       "lastSentPrefix": "Último envio:",
       "resendCount_one": "reenviado uma vez",
-      "resendCount_other": "reenviado {{count}} vezes"
+      "resendCount_other": "reenviado {{count}} vezes",
+      "unusable": {
+        "contactInactive": "Este contato está inativo, portanto o link não pode ser usado. Reative o contato e depois envie um novo convite.",
+        "emailChanged": "O endereço de e-mail do contato mudou desde o envio deste convite, portanto o link não funciona mais. Reenvie o convite para que um link válido chegue ao endereço atual."
+      }
     },
     "actions": {
       "sendInvitation": "Enviar convite do portal",
@@ -459,6 +463,7 @@
         "contactNotFound": "Contato não encontrado.",
         "contactMissingEmail": "O contato não possui um endereço de e-mail. Adicione um endereço de e-mail ao contato antes de enviar um convite.",
         "contactInvalidEmail": "O contato tem um endereço de e-mail inválido. Atualize o contato com um endereço de e-mail válido antes de enviar um convite.",
+        "contactInactive": "Este contato está inativo. Reative o contato antes de convidá-lo para o portal do cliente.",
         "userExistsForContact": "Já existe uma conta de usuário para este contato. Use a redefinição de senha em vez de enviar um convite.",
         "portalUserAlreadyExists": "Este endereço de e-mail já pertence a outra conta de usuário nesta organização.",
         "noDefaultClient": "Nenhum cliente padrão configurado para este locatário. Defina um cliente padrão nas Configurações Gerais.",
@@ -859,6 +864,7 @@
       "signedIn": "Portal · último acesso {{when}}",
       "neverSignedIn": "Portal · nunca acessado",
       "invited": "Portal · convite enviado",
+      "invitationExpired": "Portal · convite expirado",
       "noAccess": "Sem acesso ao portal"
     },
     "portal": {
@@ -874,6 +880,7 @@
       "deactivated": "Desativado",
       "activeAccount": "Conta ativa",
       "invitationSent": "Convite enviado",
+      "invitationExpired": "Convite expirado",
       "noAccess": "Sem acesso"
     },
     "tickets": {

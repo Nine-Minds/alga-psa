@@ -19,6 +19,7 @@ import {
 import { resolvePortalInvitationValidityDays } from '../lib/portalInvitationValidity';
 import {
   classifyPortalInvitationState,
+  invitationRefusedAtUseTime,
   invitationStateHaving,
   LATEST_INVITATION_EXPIRES_AT_SQL,
   LATEST_INVITATION_STATE_SQL,
@@ -30,6 +31,7 @@ import type {
   VerifyTokenResult,
   CompleteSetupResult,
   InvitationHistoryItem,
+  InvitationUseTimeRefusal,
   CreateClientPortalUserParams,
   PortalInvitationErrorCode,
   SendPortalInvitationOptions,
@@ -1851,11 +1853,28 @@ export const getPortalInvitations = withAuth(async (
 
     return invitations.map(invitation => {
       let status: 'pending' | 'expired' | 'used' | 'revoked' = 'pending';
+      let unusableReason: InvitationUseTimeRefusal | undefined;
 
       if (invitation.used_at) {
         status = invitation.metadata?.revoked ? 'revoked' : 'used';
       } else if (new Date(invitation.expires_at) < new Date()) {
         status = 'expired';
+      } else {
+        // The expiry is not the only thing that kills a link: verifyToken also
+        // refuses a deactivated contact and an address the contact no longer
+        // has, and with a multi-day validity such a row sits here looking
+        // perfectly live. Reporting it as pending with a future expiry would
+        // tell the MSP there is nothing to do about a link that cannot be
+        // opened, while the client's contact list already calls it expired.
+        // Same rule, one row at a time.
+        unusableReason = invitationRefusedAtUseTime({
+          contactInactive: invitation.contact_inactive,
+          contactEmail: invitation.contact_email,
+          invitationEmail: invitation.email,
+        }) ?? undefined;
+        if (unusableReason) {
+          status = 'expired';
+        }
       }
 
       // A resend reuses the row it renews, so "Sent" alone would still read as
@@ -1872,7 +1891,8 @@ export const getPortalInvitations = withAuth(async (
         used_at: invitation.used_at?.toISOString(),
         last_sent_at: typeof lastSentAt === 'string' ? lastSentAt : undefined,
         resend_count: resendCount > 0 ? resendCount : undefined,
-        status
+        status,
+        unusable_reason: unusableReason
       };
     });
 

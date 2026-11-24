@@ -1,4 +1,8 @@
-import type { PortalInvitationState, PortalInvitationStateTarget } from '../types';
+import type {
+  InvitationUseTimeRefusal,
+  PortalInvitationState,
+  PortalInvitationStateTarget,
+} from '../types';
 
 /**
  * One rule for a contact's invitation standing, shared by the state the MSP
@@ -60,6 +64,35 @@ export function invitationStateHaving(
     sql: `(${LATEST_INVITATION_STATE_SQL}) in (${wanted.map(() => '?').join(', ')})`,
     bindings: wanted,
   };
+}
+
+/**
+ * Why an unused, unexpired invitation would still be refused the moment its
+ * link is opened. `PortalInvitationService.verifyToken` applies exactly these
+ * two rules (a deactivated contact, and a stored address the contact no longer
+ * has), and `LATEST_INVITATION_STATE_SQL` above says the same thing in SQL for
+ * a whole client at once. This is the single-row twin, for the per-contact
+ * history: without it the contact's Portal tab would count down the expiry of a
+ * link the setup page refuses, and the MSP would read "nothing to do".
+ *
+ * Addresses are compared case-insensitively, like the verify query does; an
+ * address missing on either side cannot match, which is also how the SQL
+ * equality in verifyToken behaves.
+ */
+export function invitationRefusedAtUseTime(row: {
+  contactInactive?: boolean | null;
+  contactEmail?: string | null;
+  invitationEmail?: string | null;
+}): InvitationUseTimeRefusal | null {
+  if (row.contactInactive) {
+    return 'contact_inactive';
+  }
+  const contactEmail = row.contactEmail?.trim().toLowerCase();
+  const invitationEmail = row.invitationEmail?.trim().toLowerCase();
+  if (!contactEmail || !invitationEmail || contactEmail !== invitationEmail) {
+    return 'email_changed';
+  }
+  return null;
 }
 
 /**

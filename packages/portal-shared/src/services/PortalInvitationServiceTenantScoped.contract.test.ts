@@ -75,6 +75,21 @@ describe('portal invitation service tenant-scoped query contract', () => {
     expect(section).not.toContain(".where('pi.tenant', tokenTenant)");
   });
 
+  it('carries the contact\'s own standing on every history row', () => {
+    // The reader of the history applies the same refusals verifyToken applies
+    // (a deactivated contact, an address the contact no longer has), so the
+    // contact's current address and active flag travel with each row — joined
+    // tenant-scoped, like every other join in this service.
+    const section = sectionBetween('static async getInvitationHistory', 'static async revokeInvitation');
+
+    expect(section).toContain("tenantDb(knex, tenant)");
+    expect(section).toContain(".table('portal_invitations as pi')");
+    expect(section).toContain("scopedDb.tenantJoin(query, 'contacts as c', 'pi.contact_id', 'c.contact_name_id'");
+    expect(section).toContain("'c.email as contact_email'");
+    expect(section).toContain('coalesce(c.is_inactive, false) as contact_inactive');
+    expect(section).not.toMatch(/knex\('contacts'\)/);
+  });
+
   it('uses structural tenant scoping for invitation update and cleanup roots', () => {
     const section = sectionFrom('static async markTokenAsUsed');
 

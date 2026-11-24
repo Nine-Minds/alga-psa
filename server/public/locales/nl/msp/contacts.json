@@ -410,7 +410,11 @@
       },
       "lastSentPrefix": "Laatst verzonden:",
       "resendCount_one": "eenmaal opnieuw verzonden",
-      "resendCount_other": "{{count}} keer opnieuw verzonden"
+      "resendCount_other": "{{count}} keer opnieuw verzonden",
+      "unusable": {
+        "contactInactive": "Dit contact is inactief, dus de link kan niet worden gebruikt. Activeer het contact opnieuw en verstuur daarna een nieuwe uitnodiging.",
+        "emailChanged": "Het e-mailadres van het contact is gewijzigd sinds deze uitnodiging is verzonden, dus de link werkt niet meer. Verstuur de uitnodiging opnieuw zodat er een werkende link naar het huidige adres gaat."
+      }
     },
     "actions": {
       "sendInvitation": "Portaaluitnodiging verzenden",
@@ -457,6 +461,7 @@
         "contactNotFound": "Contactpersoon niet gevonden.",
         "contactMissingEmail": "Het contactpersoon heeft geen e-mailadres. Voeg een e-mailadres toe aan het contactpersoon voordat u een uitnodiging verstuurt.",
         "contactInvalidEmail": "Het contactpersoon heeft een ongeldig e-mailadres. Werk het contactpersoon bij met een geldig e-mailadres voordat u een uitnodiging verstuurt.",
+        "contactInactive": "Dit contact is inactief. Activeer het contact opnieuw voordat u het uitnodigt voor het klantenportaal.",
         "userExistsForContact": "Er bestaat al een gebruikersaccount voor dit contactpersoon. Gebruik wachtwoord herstellen in plaats van een uitnodiging te versturen.",
         "portalUserAlreadyExists": "Dit e-mailadres hoort al bij een ander gebruikersaccount in deze organisatie.",
         "noDefaultClient": "Geen standaardklant geconfigureerd voor deze tenant. Stel een standaardklant in bij Algemene instellingen.",
@@ -855,6 +860,7 @@
       "signedIn": "Portaal · aangemeld {{when}}",
       "neverSignedIn": "Portaal · nooit aangemeld",
       "invited": "Portaal · uitgenodigd",
+      "invitationExpired": "Portaal · uitnodiging verlopen",
       "noAccess": "Geen portaaltoegang"
     },
     "portal": {
@@ -870,6 +876,7 @@
       "deactivated": "Gedeactiveerd",
       "activeAccount": "Actief account",
       "invitationSent": "Uitnodiging verzonden",
+      "invitationExpired": "Uitnodiging verlopen",
       "noAccess": "Geen toegang"
     },
     "tickets": {

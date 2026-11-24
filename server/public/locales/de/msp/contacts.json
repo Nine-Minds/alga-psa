@@ -410,7 +410,11 @@
       },
       "lastSentPrefix": "Zuletzt gesendet:",
       "resendCount_one": "einmal erneut gesendet",
-      "resendCount_other": "{{count}}-mal erneut gesendet"
+      "resendCount_other": "{{count}}-mal erneut gesendet",
+      "unusable": {
+        "contactInactive": "Dieser Kontakt ist inaktiv, daher kann der Link nicht verwendet werden. Aktivieren Sie den Kontakt wieder und senden Sie dann eine neue Einladung.",
+        "emailChanged": "Die E-Mail-Adresse des Kontakts hat sich seit dem Versand dieser Einladung geändert, daher funktioniert der Link nicht mehr. Senden Sie die Einladung erneut, damit ein funktionierender Link an die aktuelle Adresse geht."
+      }
     },
     "actions": {
       "sendInvitation": "Portal-Einladung senden",
@@ -457,6 +461,7 @@
         "contactNotFound": "Kontakt nicht gefunden.",
         "contactMissingEmail": "Der Kontakt hat keine E-Mail-Adresse. Bitte fügen Sie dem Kontakt eine E-Mail-Adresse hinzu, bevor Sie eine Einladung senden.",
         "contactInvalidEmail": "Der Kontakt hat eine ungültige E-Mail-Adresse. Bitte aktualisieren Sie den Kontakt mit einer gültigen E-Mail-Adresse, bevor Sie eine Einladung senden.",
+        "contactInactive": "Dieser Kontakt ist inaktiv. Aktivieren Sie den Kontakt wieder, bevor Sie ihn zum Kundenportal einladen.",
         "userExistsForContact": "Für diesen Kontakt existiert bereits ein Benutzerkonto. Verwenden Sie die Passwort-Zurücksetzung anstatt eine Einladung zu senden.",
         "portalUserAlreadyExists": "Diese E-Mail-Adresse gehört bereits zu einem anderen Benutzerkonto in dieser Organisation.",
         "noDefaultClient": "Kein Standard-Client für diesen Mandanten konfiguriert. Bitte legen Sie in den allgemeinen Einstellungen einen Standard-Client fest.",
@@ -855,6 +860,7 @@
       "signedIn": "Portal · angemeldet: {{when}}",
       "neverSignedIn": "Portal · noch nie angemeldet",
       "invited": "Portal · eingeladen",
+      "invitationExpired": "Portal · Einladung abgelaufen",
       "noAccess": "Kein Portalzugriff"
     },
     "portal": {
@@ -870,6 +876,7 @@
       "deactivated": "Deaktiviert",
       "activeAccount": "Aktives Konto",
       "invitationSent": "Einladung gesendet",
+      "invitationExpired": "Einladung abgelaufen",
       "noAccess": "Kein Zugriff"
     },
     "tickets": {

@@ -168,6 +168,13 @@ export type ClientUserActionError =
   | { readonly actionError: string }
   | { readonly permissionError: string };
 
+/**
+ * Why a link that is neither used nor past its expiry would still be refused
+ * when it is opened: the contact was deactivated, or its email address moved on
+ * from the one the invitation was mailed to.
+ */
+export type InvitationUseTimeRefusal = 'contact_inactive' | 'email_changed';
+
 export interface InvitationHistoryItem {
   invitation_id: string;
   email: string;
@@ -179,6 +186,13 @@ export interface InvitationHistoryItem {
   /** How many times the invitation was mailed again after it was created. */
   resend_count?: number;
   status: 'pending' | 'expired' | 'used' | 'revoked';
+  /**
+   * Set when the stored link is refused at use time although its expiry has not
+   * passed. Such an invitation is reported as `expired` rather than `pending` —
+   * the link really is dead, and a resend is what repairs it — and the reason
+   * says which refusal it ran into.
+   */
+  unusable_reason?: InvitationUseTimeRefusal;
 }
 
 export interface CreateClientPortalUserParams {

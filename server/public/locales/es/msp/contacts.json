@@ -412,7 +412,11 @@
       },
       "lastSentPrefix": "Último envío:",
       "resendCount_one": "reenviada una vez",
-      "resendCount_other": "reenviada {{count}} veces"
+      "resendCount_other": "reenviada {{count}} veces",
+      "unusable": {
+        "contactInactive": "Este contacto está inactivo, por lo que el enlace no se puede usar. Reactive el contacto y envíe después una nueva invitación.",
+        "emailChanged": "La dirección de correo electrónico del contacto ha cambiado desde que se envió esta invitación, por lo que el enlace ya no funciona. Vuelva a enviarla para que un enlace válido llegue a la dirección actual."
+      }
     },
     "actions": {
       "sendInvitation": "Enviar invitación al portal",
@@ -459,6 +463,7 @@
         "contactNotFound": "Contacto no encontrado.",
         "contactMissingEmail": "El contacto no tiene dirección de correo electrónico. Agregue una dirección de correo al contacto antes de enviar una invitación.",
         "contactInvalidEmail": "El contacto tiene una dirección de correo electrónico no válida. Actualice el contacto con una dirección válida antes de enviar una invitación.",
+        "contactInactive": "Este contacto está inactivo. Reactive el contacto antes de invitarlo al portal de clientes.",
         "userExistsForContact": "Ya existe una cuenta de usuario para este contacto. Use el restablecimiento de contraseña en lugar de enviar una invitación.",
         "portalUserAlreadyExists": "Esta dirección de correo electrónico ya pertenece a otra cuenta de usuario de esta organización.",
         "noDefaultClient": "No hay un cliente predeterminado configurado para este tenant. Configure un cliente predeterminado en Configuración General.",
@@ -859,6 +864,7 @@
       "signedIn": "Portal · inició sesión {{when}}",
       "neverSignedIn": "Portal · nunca inició sesión",
       "invited": "Portal · invitado",
+      "invitationExpired": "Portal · invitación caducada",
       "noAccess": "Sin acceso al portal"
     },
     "portal": {
@@ -874,6 +880,7 @@
       "deactivated": "Desactivado",
       "activeAccount": "Cuenta activa",
       "invitationSent": "Invitación enviada",
+      "invitationExpired": "Invitación caducada",
       "noAccess": "Sin acceso"
     },
     "tickets": {

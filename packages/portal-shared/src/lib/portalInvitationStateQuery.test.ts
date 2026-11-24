@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   classifyPortalInvitationState,
+  invitationRefusedAtUseTime,
   invitationStateHaving,
   LATEST_INVITATION_EXPIRES_AT_SQL,
   LATEST_INVITATION_STATE_SQL,
@@ -78,5 +79,54 @@ describe('invitationStateHaving', () => {
     // And the mismatch is decided before anything is called pending.
     expect(LATEST_INVITATION_STATE_SQL.indexOf('is distinct from'))
       .toBeLessThan(LATEST_INVITATION_STATE_SQL.indexOf("else 'pending'"));
+  });
+});
+
+/**
+ * The single-row twin of the state SQL: the two refusals verifyToken applies to
+ * a link that is neither used nor past its expiry. The per-contact history is
+ * read one row at a time, and it has to reach the same verdict the client's
+ * contact list reaches for the same contact.
+ */
+describe('invitationRefusedAtUseTime', () => {
+  it('passes a live invitation whose address is still the contact\'s own', () => {
+    expect(invitationRefusedAtUseTime({
+      contactInactive: false,
+      contactEmail: 'ada@acme.test',
+      invitationEmail: 'ada@acme.test',
+    })).toBeNull();
+  });
+
+  it('ignores case and surrounding space, like the verify query does', () => {
+    expect(invitationRefusedAtUseTime({
+      contactEmail: ' Ada@Acme.test ',
+      invitationEmail: 'ada@acme.TEST',
+    })).toBeNull();
+  });
+
+  it('refuses a link mailed to an address the contact no longer has', () => {
+    expect(invitationRefusedAtUseTime({
+      contactEmail: 'ada@acme.test',
+      invitationEmail: 'ada@old.test',
+    })).toBe('email_changed');
+  });
+
+  it('refuses a deactivated contact before anything else', () => {
+    // The contact cannot sign in at all, so the address is beside the point.
+    expect(invitationRefusedAtUseTime({
+      contactInactive: true,
+      contactEmail: 'ada@acme.test',
+      invitationEmail: 'ada@acme.test',
+    })).toBe('contact_inactive');
+  });
+
+  it('refuses an invitation with no address on either side', () => {
+    // `lower(c.email) = lower(pi.email)` is never true when a side is NULL, so
+    // neither is this.
+    expect(invitationRefusedAtUseTime({ contactEmail: null, invitationEmail: 'ada@acme.test' }))
+      .toBe('email_changed');
+    expect(invitationRefusedAtUseTime({ contactEmail: 'ada@acme.test', invitationEmail: null }))
+      .toBe('email_changed');
+    expect(invitationRefusedAtUseTime({})).toBe('email_changed');
   });
 });

@@ -353,7 +353,12 @@ export function ContactBentoLayout({
         ? t('contactBento.portalChip.signedIn', { defaultValue: 'Portal · signed in {{when}}', when: formatDate(portalSummary.lastSignIn) })
         : t('contactBento.portalChip.neverSignedIn', { defaultValue: 'Portal · never signed in' });
     }
-    if (portalSummary.invitedAt) return t('contactBento.portalChip.invited', { defaultValue: 'Portal · invited' });
+    if (portalSummary.invitationState === 'expired') {
+      return t('contactBento.portalChip.invitationExpired', { defaultValue: 'Portal · invitation expired' });
+    }
+    if (portalSummary.invitationState === 'pending') {
+      return t('contactBento.portalChip.invited', { defaultValue: 'Portal · invited' });
+    }
     return t('contactBento.portalChip.noAccess', { defaultValue: 'No portal access' });
   })();
 
@@ -613,7 +618,14 @@ export function ContactBentoLayout({
         ? { label: t('contactBento.portal.deactivated', { defaultValue: 'Deactivated' }), positive: false }
         : { label: t('contactBento.portal.activeAccount', { defaultValue: 'Active account' }), positive: true };
     }
-    if (portalSummary.invitedAt) return { label: t('contactBento.portal.invitationSent', { defaultValue: 'Invitation sent' }), positive: false };
+    // An invitation that lapsed unused is kept on the contact, so "Invitation
+    // sent" would otherwise stand for ever next to a dead link.
+    if (portalSummary.invitationState === 'expired') {
+      return { label: t('contactBento.portal.invitationExpired', { defaultValue: 'Invitation expired' }), positive: false };
+    }
+    if (portalSummary.invitationState === 'pending') {
+      return { label: t('contactBento.portal.invitationSent', { defaultValue: 'Invitation sent' }), positive: false };
+    }
     return { label: t('contactBento.portal.noAccess', { defaultValue: 'No access' }), positive: false };
   })();
 

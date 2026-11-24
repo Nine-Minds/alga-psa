@@ -16,6 +16,15 @@ export interface PortalInvitation {
   metadata: Record<string, any>;
 }
 
+/**
+ * A history row with the contact's own standing attached, so the reader can
+ * apply the same refusals verifyToken applies to the link itself.
+ */
+export interface PortalInvitationHistoryRow extends PortalInvitation {
+  contact_email: string | null;
+  contact_inactive: boolean | null;
+}
+
 interface PortalInvitationVerificationRow extends PortalInvitation {
   tenant: string;
   full_name: string;
@@ -313,20 +322,31 @@ export class PortalInvitationService {
   }
 
   /**
-   * Get invitation history for a contact
+   * Get invitation history for a contact.
+   *
+   * Carries the contact's current address and active flag alongside each row:
+   * verifyToken refuses a link whose contact was deactivated or whose address
+   * moved on, and the history is where the MSP decides whether a contact still
+   * owes the portal a visit. Without these two columns the tab would count down
+   * the expiry of a link the setup page already refuses.
    */
-  static async getInvitationHistory(contactId: string): Promise<PortalInvitation[]> {
+  static async getInvitationHistory(contactId: string): Promise<PortalInvitationHistoryRow[]> {
     try {
       const { knex } = await createTenantKnex();
       const tenant = await requireTenantId(knex);
 
-      const invitations = await tenantDb(knex, tenant).table('portal_invitations')
-        .where({
-          contact_id: contactId
-        })
-        .orderBy('created_at', 'desc')
+      const scopedDb = tenantDb(knex, tenant);
+      const query = scopedDb.table('portal_invitations as pi');
+      scopedDb.tenantJoin(query, 'contacts as c', 'pi.contact_id', 'c.contact_name_id', { type: 'left' });
+
+      const invitations = await query
+        .where('pi.contact_id', contactId)
+        .orderBy('pi.created_at', 'desc')
         .limit(PORTAL_INVITATION_HISTORY_LIMIT)
-        .select('*') as PortalInvitation[];
+        .select('pi.*')
+        .select('c.email as contact_email')
+        // contacts.is_inactive is nullable, and a NULL row is an active contact.
+        .select(knex.raw('coalesce(c.is_inactive, false) as contact_inactive')) as PortalInvitationHistoryRow[];
 
       return invitations;
 
