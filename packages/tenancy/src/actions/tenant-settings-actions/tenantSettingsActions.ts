@@ -1,14 +1,15 @@
 'use server';
 
-import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions/userQueryActions';
-import { withAuth, type AuthContext } from '@alga-psa/auth';
+import { withAuth, hasPermission, type AuthContext } from '@alga-psa/auth';
 import { featureFlags } from '@alga-psa/core/server';
 import { validateStorableTimeZone } from '@alga-psa/core/timeZones';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { isLicensedUserType } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { WizardData } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { persistTenantOnboardingProgress } from '../../server/onboardingProgress';
+import { hasTenantSettingsUpdate } from '../tenant-actions/tenantSettingsAuthorization';
 import {
   actionError,
   permissionError,
@@ -69,6 +70,22 @@ function tenantSettingsActionErrorFrom(error: unknown): TenantSettingsActionErro
 }
 
 const AI_ASSISTANT_ACTIVATION_FLAG = 'ai-assistant-activation';
+const WIZARD_DATA_KEYS = new Set([
+  'firstName', 'lastName', 'tenantName', 'email', 'newPassword', 'confirmPassword', 'locale',
+  'companyLocationId', 'companyAddressLine1', 'companyAddressLine2', 'companyCity', 'companyStateProvince',
+  'companyPostalCode', 'companyCountryCode', 'companyCountryName', 'teamMembers', 'createdTeamMemberEmails',
+  'invitedTeamMemberEmails', 'clientName', 'clientEmail', 'clientPhone', 'clientUrl', 'clientId',
+  'contactName', 'contactEmail', 'contactRole', 'contactId', 'serviceName', 'serviceDescription',
+  'servicePrice', 'serviceBillingMode', 'contractLineName', 'serviceTypeId', 'serviceId', 'currencyCode',
+  'boardName', 'supportEmail', 'categories', 'priorities', 'ticketPrefix', 'ticketPaddingLength',
+  'ticketStartNumber', 'boardId', 'statusesImported', 'statuses', 'is_itil_compliant',
+  'importBoardItilSettings', 'currentStep',
+]);
+
+function isWizardDataPatch(value: unknown): value is Partial<WizardData> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value) &&
+    Object.keys(value).every((key) => WIZARD_DATA_KEYS.has(key));
+}
 
 // Keep the worker-safe implementation out of the client action module graph.
 // These imports are evaluated only when a server action executes.
@@ -104,9 +121,13 @@ async function canTenantActivateAiAssistant(
 }
 
 export const getTenantSettings = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   { tenant }: AuthContext
 ): Promise<TenantSettings | null> => {
+  if (!isLicensedUserType(user.user_type)) throw new Error('Permission denied: Internal user required');
+  const canRead = await hasPermission(user, 'settings', 'read');
+  const canRunSetup = await hasPermission(user, 'settings', 'update');
+  if (!canRead && !canRunSetup) throw new Error('Permission denied: Cannot read tenant settings');
   return getTenantSettingsForTenant(tenant);
 });
 
@@ -130,8 +151,12 @@ export const updateExperimentalFeatures = withAuth(async (
   features: Partial<ExperimentalFeatures>
 ): Promise<void | TenantSettingsActionError> => {
   try {
-    const permissions = await getCurrentUserPermissions();
-    if (!permissions.includes('settings:update')) {
+    if (!isLicensedUserType(user.user_type) || !features || typeof features !== 'object' || Array.isArray(features) ||
+      Object.keys(features).some((key) => key !== 'aiAssistant') ||
+      (features.aiAssistant !== undefined && typeof features.aiAssistant !== 'boolean')) {
+      return actionError('Invalid experimental feature settings.');
+    }
+    if (!(await hasTenantSettingsUpdate(user, tenant))) {
       return permissionError('Permission denied: Cannot update settings', 'msp/settings:errors.tenantSettings.permissions.update');
     }
 
@@ -166,14 +191,18 @@ export const isExperimentalFeatureEnabled = withAuth(async (
 });
 
 export const updateTenantOnboardingStatus = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   { tenant }: AuthContext,
   completed: boolean,
   wizardData?: WizardData,
   skipped: boolean = false
 ): Promise<void> => {
+  if (!isLicensedUserType(user.user_type) || !(await hasPermission(user, 'settings', 'update'))) throw new Error('Permission denied: Workspace setup access required');
+  if (typeof completed !== 'boolean' || typeof skipped !== 'boolean' || (wizardData !== undefined && !isWizardDataPatch(wizardData))) {
+    throw new Error('Invalid tenant onboarding update.');
+  }
   try {
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
 
     // Use a literal timestamp for Citus compatibility
     const now = new Date();
@@ -216,12 +245,14 @@ export const updateTenantOnboardingStatus = withAuth(async (
 });
 
 export const saveTenantOnboardingProgress = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   { tenant }: AuthContext,
   wizardData: Partial<WizardData>
 ): Promise<void> => {
+  if (!isLicensedUserType(user.user_type) || !(await hasPermission(user, 'settings', 'update'))) throw new Error('Permission denied: Workspace setup access required');
+  if (!isWizardDataPatch(wizardData)) throw new Error('Invalid tenant onboarding progress.');
   try {
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
     await persistTenantOnboardingProgress(knex, tenant, wizardData);
   } catch (error) {
     console.error('Error saving tenant onboarding progress:', error);
@@ -235,11 +266,11 @@ export const clearTenantOnboardingData = withAuth(async (
 ): Promise<void | TenantSettingsActionError> => {
   try {
     // Check if user has admin permissions
-    if (!user.roles.some((role: any) => role.role_name === 'admin')) {
+    if (!isLicensedUserType(user.user_type) || !(await hasTenantSettingsUpdate(user, tenant)) || !user.roles.some((role: any) => role.role_name === 'admin')) {
       return permissionError('Permission denied: Only admin users can clear onboarding data.', 'msp/settings:errors.tenantSettings.permissions.clearOnboarding');
     }
 
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
 
     // Use a literal timestamp for Citus compatibility
     const now = new Date();
@@ -340,32 +371,50 @@ const updateTenantAnalyticsSettingsInternal = withAuth(async (
 });
 
 export const updateTenantSettings = withAuth(async (
-  _user: IUserWithRoles,
-  _ctx: AuthContext,
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
   settings: Record<string, any>
-): Promise<void> => updateTenantSettingsInternal(settings));
+): Promise<void | TenantSettingsActionError> => {
+  if (!isLicensedUserType(user.user_type) || !(await hasTenantSettingsUpdate(user, tenant))) {
+    return permissionError('Permission denied: Cannot update settings', 'msp/settings:errors.tenantSettings.permissions.update');
+  }
+  if (!settings || typeof settings !== 'object' || Array.isArray(settings)) return actionError('Invalid tenant settings update.');
+  return updateTenantSettingsInternal(settings);
+});
 
 export const getTenantAnalyticsSettings = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   { tenant }: AuthContext
 ): Promise<any> => {
+  if (!isLicensedUserType(user.user_type) || (!(await hasPermission(user, 'settings', 'read')) && !(await hasPermission(user, 'settings', 'update')))) throw new Error('Permission denied: Cannot read tenant analytics settings');
   const settings = await getTenantSettingsForTenant(tenant);
   return settings?.settings?.analytics || null;
 });
 
 export const updateTenantAnalyticsSettings = withAuth(async (
-  _user: IUserWithRoles,
-  _ctx: AuthContext,
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
   analyticsSettings: Record<string, any>
-): Promise<void> => updateTenantAnalyticsSettingsInternal(analyticsSettings));
+): Promise<void | TenantSettingsActionError> => {
+  if (!isLicensedUserType(user.user_type) || !(await hasTenantSettingsUpdate(user, tenant))) {
+    return permissionError('Permission denied: Cannot update settings', 'msp/settings:errors.tenantSettings.permissions.update');
+  }
+  if (!analyticsSettings || typeof analyticsSettings !== 'object' || Array.isArray(analyticsSettings)) {
+    return actionError('Invalid tenant analytics settings update.');
+  }
+  return updateTenantAnalyticsSettingsInternal(analyticsSettings);
+});
 
 /**
  * Get tenant timezone (authenticated, for UI).
  */
 export const getTenantTimezoneAuth = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   { tenant }: AuthContext
 ): Promise<string | null> => {
+  if (!isLicensedUserType(user.user_type) || (!(await hasPermission(user, 'settings', 'read')) && !(await hasPermission(user, 'settings', 'update')))) {
+    throw new Error('Permission denied: Cannot read tenant timezone');
+  }
   return getTenantTimezone(tenant);
 });
 
@@ -373,10 +422,14 @@ export const getTenantTimezoneAuth = withAuth(async (
  * Set tenant timezone (authenticated, requires settings:update permission).
  */
 export const setTenantTimezone = withAuth(async (
-  _user: IUserWithRoles,
-  _ctx: AuthContext,
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
   timezone: string
 ): Promise<void | TenantSettingsActionError> => {
+  if (!isLicensedUserType(user.user_type) || !(await hasTenantSettingsUpdate(user, tenant))) {
+    return permissionError('Permission denied: Cannot update settings', 'msp/settings:errors.tenantSettings.permissions.update');
+  }
+  if (typeof timezone !== 'string') return actionError('Invalid timezone value.');
   // Tenant timezone saves are always explicit, so always validate. UTC aliases
   // come back mapped to "UTC"; non-city IDs (EST, Etc/GMT+5, US/Eastern) are rejected.
   // Both failures are returned as action errors with a messageKey, so they never

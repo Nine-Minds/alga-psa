@@ -10,6 +10,7 @@ const harness = vi.hoisted(() => ({
 }));
 
 vi.mock('@alga-psa/auth', () => ({
+  hasPermission: async () => true,
   withAuth: (action: (...args: any[]) => Promise<any>) => async (...args: any[]) => {
     if (!harness.user) throw new Error('user is not logged in');
     return action(harness.user, { tenant: harness.user.tenant }, ...args);
@@ -31,6 +32,7 @@ vi.mock('@alga-psa/db', () => {
     ignore: () => Promise.resolve(),
   });
   return {
+    getConnection: async () => ({}),
     createTenantKnex: async (tenant = 'missing') => ({ knex: { tenant } }),
     tenantDb: (_knex: { tenant: string }, tenant: string) => query(tenant),
     ensureMiscellaneousService: vi.fn(),
