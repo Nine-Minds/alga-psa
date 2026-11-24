@@ -1210,8 +1210,8 @@
           "description": "Encontre manutenções, associe tickets, conclua ou ignore ocorrências e pause ou retome planos."
         },
         "tags": {
-          "label": "Tags",
-          "description": "Adicione ou remova tags em tickets, clientes, contatos e outros registros com tags."
+          "label": "Etiquetas",
+          "description": "Adicione ou remova etiquetas em tickets, clientes, contatos e outros registros com etiquetas."
         }
       },
       "noMatches": {

@@ -1332,8 +1332,8 @@
           "description": "Zoek onderhoud, koppel tickets, voltooi of sla onderhoudsbeurten over en pauzeer of hervat plannen."
         },
         "tags": {
-          "label": "Tags",
-          "description": "Tags toevoegen aan of verwijderen van tickets, klanten, contactpersonen en andere records met tags."
+          "label": "Labels",
+          "description": "Labels toevoegen aan of verwijderen van tickets, klanten, contactpersonen en andere records met labels."
         }
       },
       "noMatches": {
