@@ -7,8 +7,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { SWRConfig } from 'swr';
 import ProjectQuickAdd from '../ProjectQuickAdd';
-import { ReferenceDataProvider } from '@alga-psa/ui/lib/referenceData';
-import { useActivityFilterOptions } from '../../../../user-activities/src/hooks/useActivityFilterOptions';
+import { ReferenceDataProvider, useReferenceLists } from '@alga-psa/ui/lib/referenceData';
 
 const addProjectPhaseMock = vi.fn();
 const createProjectMock = vi.fn();
@@ -155,12 +154,17 @@ vi.mock('react-hot-toast', () => ({
 }));
 
 
-/** The activities project filter's data source: the real option hook, listing project names. */
+/**
+ * Reads the shared cache key the activities project filter reads (useActivityFilterOptions consumes
+ * `projectsWithPhases` through the same hook). Kept to @alga-psa/ui so this package does not import
+ * user-activities: that import made Nx infer projects -> user-activities, a cycle through
+ * opportunities that broke `nx build-deps server`.
+ */
 function ActivitiesProjectFilter() {
-  const { projects, loading } = useActivityFilterOptions(undefined);
+  const { data, loading } = useReferenceLists(['projectsWithPhases']);
   return (
-    <ul data-testid="activities-project-filter" data-loading={String(loading.projects)}>
-      {projects.map((p) => (
+    <ul data-testid="activities-project-filter" data-loading={String(loading.projectsWithPhases)}>
+      {(data.projectsWithPhases ?? []).map((p) => (
         <li key={p.project_id}>{p.project_name}</li>
       ))}
     </ul>
