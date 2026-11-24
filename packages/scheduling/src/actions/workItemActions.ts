@@ -4,6 +4,7 @@
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { narrowTicketsToReadable } from '../lib/ticketReadNarrowing';
+import { RequestLocalAuthorizationCache } from '@alga-psa/authorization/kernel';
 import { isResolverGovernedUser } from '@alga-psa/authorization/recordCreateAuthorization';
 import { narrowQueryToReadable, resolveClosedFields } from '@alga-psa/authorization/operationScope';
 import { resolveClientReadScope } from '@alga-psa/authorization/clientReadScope';
@@ -394,15 +395,18 @@ export const searchPickerWorkItems = withAuth(async (
     // co-managed seat technician) is offered authorized tickets and tasks in shared projects only: interactions are
     // the MSP's own record of a client and ad hoc schedule entries are the MSP's scheduling, so neither branch is
     // built. The project's commercial columns the resolver closes (its service) are never selected.
-    const governed = await isResolverGovernedUser(db, { tenant, user });
-    const closedProjectFields = new Set(await resolveClosedFields(db, { tenant, user, resourceType: 'project' }));
+    // LEVERAGE: pattern branch-read-scope — each union branch (ticket, project task, interaction, ad hoc) applies its own resource's read scope by hand; a union builder taking (resource, adapter) per branch would own this.
+    // One request cache for every authorization read below, so the tenant probe runs once for the whole search.
+    const requestCache = new RequestLocalAuthorizationCache();
+    const governed = await isResolverGovernedUser(db, { tenant, user, requestCache });
+    const closedProjectFields = new Set(await resolveClosedFields(db, { tenant, user, resourceType: 'project', requestCache }));
     const taskServiceId = closedProjectFields.has('service_id') ? 'NULL::uuid' : effectiveServiceIdSql(PICKER_SERVICE_ALIASES);
     const taskServiceSource = closedProjectFields.has('service_id') ? 'NULL::text' : effectiveServiceSourceSql(PICKER_SERVICE_ALIASES);
 
     // A bundle parent is shown (its number, its id) only when this viewer may read the parent ticket itself: the
     // child is readable on its own, and its parent is a different record under the same read policy.
     const readableParents = tenantScopedDb.table('tickets as mt').select('mt.tenant', 'mt.ticket_id', 'mt.ticket_number');
-    await narrowTicketsToReadable(db, tenant, user, readableParents, 'mt');
+    await narrowTicketsToReadable(db, tenant, user, readableParents, 'mt', requestCache);
 
     let ticketsQuery = tenantScopedDb.table('tickets as t')
       .whereNotIn('t.ticket_id', availableWorkItemIds)
@@ -489,7 +493,7 @@ export const searchPickerWorkItems = withAuth(async (
         this.on('t.master_ticket_id', '=', 'mt.ticket_id').andOn('t.tenant', '=', 'mt.tenant');
       });
       tenantScopedDb.tenantJoin(ticketsQuery, 'users as u_assignee', 't.assigned_to', 'u_assignee.user_id', { type: 'left' });
-      await narrowTicketsToReadable(db, tenant, user, ticketsQuery);
+      await narrowTicketsToReadable(db, tenant, user, ticketsQuery, 't', requestCache);
 
       let projectTasksQuery = tenantScopedDb.table('project_tasks as pt')
       .whereNotIn('pt.task_id', availableWorkItemIds)
@@ -609,7 +613,7 @@ export const searchPickerWorkItems = withAuth(async (
       // The owning project's read policy (a seat technician: its client's explicitly shared projects), compiled
       // into this branch's query so its rows, its count and its page are all in scope before the union.
       await narrowQueryToReadable(db, {
-        tenant, user, resourceType: 'project', adapter: createProjectRelationshipSqlAdapter('p'),
+        tenant, user, resourceType: 'project', adapter: createProjectRelationshipSqlAdapter('p'), requestCache,
       }, projectTasksQuery);
 
 
@@ -714,7 +718,7 @@ export const searchPickerWorkItems = withAuth(async (
 
       // The interaction read policy of a viewer whose reads a bundle narrows by client.
       const interactionScope = await resolveClientReadScope(db, {
-        tenant, user, resourceType: 'interaction', createAdapter: () => createInteractionRelationshipSqlAdapter('i'),
+        tenant, user, resourceType: 'interaction', createAdapter: () => createInteractionRelationshipSqlAdapter('i'), requestCache,
       });
       interactionScope.apply(interactionsQuery);
 

@@ -1,0 +1,60 @@
+[
+  {
+    "id": "T001",
+    "featureIds": [
+      "F001"
+    ],
+    "description": "Verify a stock seat cannot create a board category, including through the server action, and that the database is unchanged. Verify a permitted administrator can create it.",
+    "implemented": true
+  },
+  {
+    "id": "T002",
+    "featureIds": [
+      "F002"
+    ],
+    "description": "Use two clients and multiple boards. Verify the filter and upload pickers return only permitted client, contact and ticket options, fields and totals through normal search and selection. Exercise a portal user as a control.",
+    "implemented": true
+  },
+  {
+    "id": "T003",
+    "featureIds": [
+      "F003"
+    ],
+    "description": "With shared and unshared projects, authorized and unauthorized tickets, interactions and schedule entries, check All and individual type searches, counts, paging, and field projection. Include a visible child ticket with an inaccessible parent.",
+    "implemented": true
+  },
+  {
+    "id": "T004",
+    "featureIds": [
+      "F004"
+    ],
+    "description": "Use one create-enabled board, one readable board without create and one excluded board. Compare create, filter and update choices against their respective server policies. Check dependent status and category reads.",
+    "implemented": true
+  },
+  {
+    "id": "T005",
+    "featureIds": [
+      "F005"
+    ],
+    "description": "For classic and Bento, verify an eligible peer can be assigned and a visible but ineligible MSP participant cannot be selected as an assignee. Confirm permitted mention suggestions and server-side assignment checks.",
+    "implemented": true
+  },
+  {
+    "id": "T006",
+    "featureIds": [
+      "F006"
+    ],
+    "description": "Check user-selected and default watchers on ticket creation. Confirm unauthorized selections are rejected, restricted email fields are absent from the seat response, and permitted notifications retain their recipients.",
+    "implemented": true
+  },
+  {
+    "id": "T007",
+    "featureIds": [
+      "F002",
+      "F003",
+      "F004"
+    ],
+    "description": "Run the representative seat paths without a bundle and with an additional narrowing bundle. Verify existing MSP visibility and loss of access after seat revocation on a fresh request.",
+    "implemented": true
+  }
+]

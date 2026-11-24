@@ -1,0 +1,32 @@
+[
+  {
+    "id": "F001",
+    "description": "Authorize category creation in the form and on the server for the target board.",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Scope document association options, contact fields and counts to authorized targets.",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "Scope all timesheet work-item search branches, counts and returned metadata.",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "description": "Use operation-specific board, status and category options in ticket forms and filters.",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "description": "Show assignable people in primary and additional assignee controls across ticket layouts.",
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "description": "Validate watcher selections and redact restricted recipient data from ticket creation responses.",
+    "implemented": true
+  }
+]

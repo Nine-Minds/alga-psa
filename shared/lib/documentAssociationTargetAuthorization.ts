@@ -112,6 +112,7 @@ async function clientOwns(conn: Knex.Transaction, tenant: string, user: IUser, c
     Boolean(isClientUserType(user.user_type) && user.clientId && clientId && user.clientId === clientId);
 }
 
+// LEVERAGE: pattern resource-sql-narrowing — resource → adapter → narrow the query, and the same predicate as an existence probe (isKernelReadable); clientScopeAuthorization's `permits` is the same shape, a per-resource "narrow / permits" layer in @alga-psa/authorization would absorb both.
 type KernelReadResource = 'client' | 'contact' | 'ticket';
 
 /**

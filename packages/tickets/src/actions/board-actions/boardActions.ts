@@ -219,6 +219,9 @@ export const getBoardsForOperation = withAuth(async (
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      // The operation's own RBAC permission first (a caller who may not create tickets is offered no board to
+      // create on), then the operation's board scope.
+      if (!await hasPermission(user, 'ticket', operation, trx)) return [];
       const boards = await listBoardsForOperation(trx, tenant, user as IUserWithRoles, operation, { includeInactive: includeAll });
       return boards.map((board) => normalizeBoardStopwatchSetting(board));
     });
