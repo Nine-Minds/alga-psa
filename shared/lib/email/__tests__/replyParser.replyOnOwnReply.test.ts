@@ -77,6 +77,62 @@ describe('Gmail reply to the contact’s own reply (alga-2026-0003353)', () => {
     expect(htmlText.replace(/^On Mon, .*wrote:$/m, '').trim()).toBe(AUTHORED);
   });
 
+  // Outlook, and Gmail for some mail, quote in plain divs: the HTML side gets neither the
+  // boundary attribute (absent from notifications sent before 2026-11-15) nor a blockquote,
+  // so it used to keep the whole notification while the text side cut at the banner. HTML is
+  // preferred over text, so that untrimmed HTML was what the comment stored.
+  describe('an old-layout notification quoted without a blockquote', () => {
+    const TOKEN = '[ALGA-REPLY-TOKEN OWNREPLY-TOKEN-11]';
+    const ATTRIBUTION = 'On Mon, Nov 17, 2026 at 7:15 AM MSP Support';
+    const QUOTED_TEXT = [
+      `${ATTRIBUTION} <support@msp.test> wrote:`,
+      '',
+      `> ${TOKEN}`,
+      '> --- Please reply above this line ---',
+      '>',
+      '> NEW COMMENT ADDED',
+      '> Comment from Dana Tech',
+      '> Here is where the deployment stands this morning.',
+    ].join('\n');
+    const QUOTED_HTML = [
+      '<div dir="ltr">ANSWER</div>',
+      `<div class="gmail_quote"><div dir="ltr" class="gmail_attr">${ATTRIBUTION} &lt;support@msp.test&gt; wrote:<br></div>`,
+      `<div style="display:none;max-height:0;overflow:hidden;">${TOKEN}</div>`,
+      '<p>--- Please reply above this line ---</p>',
+      '<p>New comment added</p><p>Comment from Dana Tech</p>',
+      '<p>Here is where the deployment stands this morning.</p></div>',
+    ].join('');
+    const leaks = ['[ALGA-REPLY-TOKEN', 'reply above this line', 'Comment from Dana Tech', 'deployment stands'];
+
+    const expectNoNotification = (result: { sanitizedText: string; sanitizedHtml?: string }) => {
+      for (const rendition of [result.sanitizedText, htmlToVisibleText(result.sanitizedHtml ?? '')]) {
+        for (const leaked of leaks) {
+          expect(rendition).not.toContain(leaked);
+        }
+      }
+    };
+
+    it('cuts the HTML at our own marker when there is nothing else to cut at', () => {
+      const result = parseEmailReply({
+        text: `Sounds good, go ahead.\n\n${QUOTED_TEXT}`,
+        html: QUOTED_HTML.replace('ANSWER', 'Sounds good, go ahead.'),
+      });
+
+      expect(result.appliedHeuristics).toContain('html-marker-boundary');
+      expect(htmlToVisibleText(result.sanitizedHtml ?? '')).toContain('Sounds good, go ahead.');
+      expect(result.sanitizedText).toBe('Sounds good, go ahead.');
+      expectNoNotification(result);
+    });
+
+    it('leaves nothing of the notification when the reply itself is empty', () => {
+      const html = QUOTED_HTML.replace('<div dir="ltr">ANSWER</div>', '<div dir="ltr"><br></div>');
+
+      for (const input of [{ text: QUOTED_TEXT, html }, { text: QUOTED_TEXT }, { text: '', html }]) {
+        expectNoNotification(parseEmailReply(input));
+      }
+    });
+  });
+
   it('keeps rejecting an HTML trim that genuinely destroys authored content', () => {
     const authored = [
       'Here is the full context the install team asked for this morning.',

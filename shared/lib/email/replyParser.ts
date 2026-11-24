@@ -526,7 +526,37 @@ function trimHtmlAtBoundary(html: string, config: ReplyParserConfig): TrimResult
     };
   }
 
+  // Last resort: our own markers as visible HTML. Notifications sent before the boundary
+  // attribute existed carry the hidden token and the reply banner as ordinary nodes, and a
+  // client that quotes in plain divs (Outlook, and Gmail for some mail) gives the HTML side
+  // neither an attribute nor a blockquote to cut at. The text side cuts at the same marker,
+  // so without this the HTML kept the whole quoted notification and, being preferred over
+  // the text, was what the comment stored (alga-2026-0003353).
+  const markerIndex = earliestMarkerIndex(html, config);
+  if (markerIndex >= 0) {
+    const tagStart = html.lastIndexOf('<', markerIndex);
+    return {
+      text: html.slice(0, tagStart >= 0 ? tagStart : markerIndex).trim(),
+      matched: 'alga-reply-marker',
+      heuristic: 'html-marker-boundary',
+    };
+  }
+
   return { text: html.trim() };
+}
+
+/**
+ * Index of the first Alga reply marker (hidden token or reply banner) in an HTML body,
+ * or -1. Only markers our own outbound mail writes, so authored content is never cut.
+ */
+function earliestMarkerIndex(html: string, config: ReplyParserConfig): number {
+  const haystack = html.toLowerCase();
+  const markers = ['[alga-reply-token', ...config.replyDelimiters.map((marker) => marker.toLowerCase())];
+  return markers.reduce((earliest, marker) => {
+    const index = haystack.indexOf(marker);
+    if (index < 0) return earliest;
+    return earliest < 0 ? index : Math.min(earliest, index);
+  }, -1);
 }
 
 function stripProviderHeaders(text: string, config: ReplyParserConfig): TrimResult {
