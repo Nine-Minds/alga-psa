@@ -66,7 +66,7 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
     <select id={id} aria-label={id} value={value ?? ''} onChange={(e) => onValueChange(e.target.value)}>
       <option value="">{placeholder ?? ''}</option>
       {(options ?? []).map((option: any) => (
-        <option key={option.value} value={option.value}>{option.label}</option>
+        <option key={option.value} value={option.value} disabled={option.disabled}>{option.label}</option>
       ))}
     </select>
   ),
@@ -136,6 +136,7 @@ function renderDialog(props: {
   currencyCode?: string;
   ambientCurrency?: string;
   eligibleLines?: PricingScheduleLineScope[];
+  currentLineName?: string;
   unitPricedLineCount?: number;
 }) {
   const onClose = vi.fn();
@@ -147,6 +148,7 @@ function renderDialog(props: {
         schedule={props.schedule}
         currencyCode={props.currencyCode}
         eligibleLines={props.eligibleLines ?? ONE_LINE}
+        currentLineName={props.currentLineName}
         unitPricedLineCount={props.unitPricedLineCount}
         onClose={onClose}
         onSave={onSave}
@@ -508,16 +510,22 @@ describe('PricingScheduleDialog scope', () => {
     ).toBeDisabled();
   });
 
-  it('keeps a stored schedule editable after its line stopped being repriceable', async () => {
+  it.each([
+    { eligibleLines: [] },
+    { eligibleLines: [fixedLine('line-2', 'Backup')] },
+  ])('shows the stored ineligible binding with $eligibleLines', async ({ eligibleLines }) => {
     // The line the row is scoped to now bills per unit, so it is not offered
     // any more — the row's dates still have to be correctable, and saving keeps
     // the scope it was stored with.
     const { onSave } = renderDialog({
       schedule: schedule({ contract_line_id: 'line-1', effective_date: '2026-01-01' }),
-      eligibleLines: [],
+      eligibleLines,
+      currentLineName: 'Managed Services',
       unitPricedLineCount: 1,
     });
 
+    expect(linePicker()).toHaveDisplayValue('Managed Services');
+    expect(screen.getByRole('option', { name: 'Managed Services' })).toBeDisabled();
     expect(
       (screen.getByText('Update Schedule').closest('button') as HTMLButtonElement)
     ).not.toBeDisabled();
@@ -530,6 +538,34 @@ describe('PricingScheduleDialog scope', () => {
       'schedule-1',
       expect.objectContaining({ contract_line_id: 'line-1', effective_date: '2026-02-01' })
     );
+  });
+
+  it('lets an existing ineligible binding be changed to an eligible line', async () => {
+    renderDialog({
+      schedule: schedule(),
+      currentLineName: 'Managed Services',
+      eligibleLines: [fixedLine('line-2', 'Backup')],
+    });
+
+    expect(linePicker()).toHaveDisplayValue('Managed Services');
+    fireEvent.change(linePicker(), { target: { value: 'line-2' } });
+    expect(linePicker()).toHaveDisplayValue('Backup');
+    submitForm();
+
+    await waitFor(() => expect(updatePricingScheduleMock).toHaveBeenCalledWith(
+      'schedule-1', expect.objectContaining({ contract_line_id: 'line-2' })
+    ));
+  });
+
+  it('never offers an ineligible binding for a new schedule', () => {
+    renderDialog({
+      schedule: null,
+      currentLineName: 'Managed Services',
+      eligibleLines: [fixedLine('line-2', 'Backup')],
+    });
+
+    expect(linePicker()).toHaveDisplayValue('Backup');
+    expect(screen.queryByRole('option', { name: 'Managed Services' })).not.toBeInTheDocument();
   });
 
   it('notes the unit-priced lines left out of the picker', () => {

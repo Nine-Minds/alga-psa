@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -33,15 +33,24 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
 }));
 
 vi.mock('./PricingScheduleDialog', () => ({
-  PricingScheduleDialog: () => null,
+  PricingScheduleDialog: ({ currentLineName, eligibleLines }: any) => (
+    <div role="dialog">
+      <span>{currentLineName}</span>
+      <select aria-label="eligible lines">
+        {eligibleLines.map((line: any) => (
+          <option key={line.contract_line_id}>{line.contract_line_name}</option>
+        ))}
+      </select>
+    </div>
+  ),
 }));
 
 vi.mock('@alga-psa/ui/components/DataTable', () => ({
-  DataTable: ({ data, columns }: any) => (
+  DataTable: ({ data, columns, onRowClick }: any) => (
     <table>
       <tbody>
         {data.map((row: any, rowIndex: number) => (
-          <tr key={rowIndex}>
+          <tr key={rowIndex} onClick={() => onRowClick(row)}>
             {columns.map((column: any, columnIndex: number) => (
               <td key={columnIndex}>
                 {column.render ? column.render(row[column.dataIndex], row) : row[column.dataIndex]}
@@ -158,6 +167,22 @@ describe('PricingSchedules contract-currency custom rate', () => {
     expect(await screen.findAllByText(
       'Whole contract — each of the 2 fixed-fee lines bills $900.00'
     )).toHaveLength(2);
+  });
+
+  it('passes the current ineligible line name to the editor without offering it as eligible', async () => {
+    getPricingSchedulesByContractMock.mockResolvedValue([schedule()]);
+    getPricingScheduleLineScopesMock.mockResolvedValue([
+      fixedLine('line-1', 'Seats', { has_bundle_fee: false, has_unit_priced_members: true }),
+      fixedLine('line-2', 'Backup'),
+    ]);
+
+    renderList();
+    const cell = await screen.findByRole('cell', { name: 'Seats' });
+    fireEvent.click(cell);
+
+    expect(screen.getByRole('dialog')).toHaveTextContent('Seats');
+    expect(screen.getByRole('option', { name: 'Backup' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Seats' })).not.toBeInTheDocument();
   });
 
   it('does not count unit-priced or product-only lines in the whole-contract effect', async () => {

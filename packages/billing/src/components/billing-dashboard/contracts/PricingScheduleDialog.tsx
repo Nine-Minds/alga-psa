@@ -46,6 +46,8 @@ interface PricingScheduleDialogProps {
    * so a schedule would change nothing on them.
    */
   eligibleLines: PricingScheduleLineScope[];
+  /** Stored binding's name, including lines no longer eligible for new schedules. */
+  currentLineName?: string;
   /** Fixed lines left out because every member bills per unit. */
   unitPricedLineCount?: number;
   onClose: () => void;
@@ -57,6 +59,7 @@ export function PricingScheduleDialog({
   schedule,
   currencyCode,
   eligibleLines,
+  currentLineName,
   unitPricedLineCount = 0,
   onClose,
   onSave
@@ -230,6 +233,16 @@ export function PricingScheduleDialog({
   };
 
   const scopeOptions = [
+    // Keep the saved binding visible without making it available for authoring.
+    ...(schedule?.schedule_id && schedule.contract_line_id
+      && !eligibleLines.some((line) => line.contract_line_id === schedule.contract_line_id)
+      ? [{
+        value: schedule.contract_line_id,
+        label: currentLineName
+          || t('pricingSchedules.dialog.values.unnamedLine', { defaultValue: 'Unnamed line' }),
+        disabled: true,
+      }]
+      : []),
     ...eligibleLines.map((line) => ({
       value: line.contract_line_id,
       label: line.contract_line_name

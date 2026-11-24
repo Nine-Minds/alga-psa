@@ -391,6 +391,9 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currenc
             schedule={editingSchedule}
             currencyCode={currencyCode}
             eligibleLines={bundleFeeLines}
+            currentLineName={editingSchedule?.contract_line_id
+              ? lineName(editingSchedule.contract_line_id)
+              : undefined}
             unitPricedLineCount={unitPricedLineCount}
             onClose={handleDialogClose}
             onSave={handleSaveSuccess}
