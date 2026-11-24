@@ -3,14 +3,11 @@ import type { IUserWithRoles } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
 import {
   RequestLocalAuthorizationCache,
-  compileResourceReadAuthorizationSql,
-  matchRulesForAction,
   type AuthorizationSubject,
-  type BundleNarrowingRule,
   type RelationshipSqlAdapter,
 } from './kernel/index';
+import { applyReadScope, resolveNarrowedReadScope, type NarrowedReadScope } from './readScope';
 import { probeTenantAuthorizationScope, resolveAuthorizationSubject } from './subject/index';
-import { resolveBundleNarrowingRulesForEvaluation } from './bundles/service';
 import type { AuthorizationResourceType } from './bundles/catalog';
 import {
   createClientRelationshipSqlAdapter,
@@ -26,9 +23,9 @@ import {
  * request cache is shared by every narrowing built from it.
  *
  * Fast path: the tenant probe runs first. A tenant with no published bundle
- * assignment has no rule that could narrow, so the subject is never resolved,
- * `apply` adds nothing and the query is exactly what it was before — the only
- * statement added is the one probe.
+ * assignment and no built-in resolver subject (co-managed seat) has no source that
+ * could narrow, so the subject is never resolved, `apply` adds nothing and the query
+ * is exactly what it was before — the only statement added is the one probe.
  */
 
 type ClientScopeResource = Extract<AuthorizationResourceType, 'client' | 'contact'>;
@@ -47,7 +44,7 @@ const RESOURCES: Record<
 };
 
 export interface ClientScopeNarrowing {
-  /** True when at least one bundle rule narrows this resource for the subject. */
+  /** True when a bundle rule or a built-in resolver (a co-managed seat) narrows this resource for the subject. */
   readonly narrowed: boolean;
   /** AND the narrowing predicate onto `query`. A no-op when not narrowed. */
   apply<T extends Knex.QueryBuilder>(query: T): T;
@@ -62,14 +59,11 @@ export interface ClientScopeContext {
   permits(resource: ClientScopeResource, id: string): Promise<boolean>;
 }
 
-/** Rules that only redact fields never narrow rows; the SQL compiler does not model them. */
-function rowNarrowingRule(rule: BundleNarrowingRule): BundleNarrowingRule {
-  return rule.constraintKey === 'hide_sensitive_fields' ? { ...rule, constraintKey: null } : rule;
-}
-
+// LEVERAGE: pattern resource-read-scope-context — client/contact scope here, tags (tagReadScope) and assets each build a per-request
+// context around resolveNarrowedReadScope + applyReadScope; a generic per-resource read-scope context would absorb them.
 const UNNARROWED: ClientScopeNarrowing = Object.freeze({ narrowed: false, apply: <T>(query: T) => query });
 
-/** No bundle can apply in this tenant: nothing narrows and every row is in scope. */
+/** No authorization source applies to this subject (no bundle, no built-in resolver subject): every row is in scope. */
 const UNNARROWED_CONTEXT: ClientScopeContext = Object.freeze({
   narrowing: async () => UNNARROWED,
   permits: async () => true,
@@ -81,15 +75,18 @@ export async function createClientScopeContext(
   user: IUserWithRoles,
   requestCache: RequestLocalAuthorizationCache = new RequestLocalAuthorizationCache()
 ): Promise<ClientScopeContext> {
-  // A probe that cannot be trusted reports the slow path, so this never skips rules a tenant has.
-  const scope = await probeTenantAuthorizationScope(conn, tenant, requestCache);
-  if (!scope.publishedAssignments) return UNNARROWED_CONTEXT;
+  // Fast path, one cached probe: only a tenant with neither a published bundle assignment nor a built-in resolver
+  // subject (a co-managed seat technician, say) is unrestricted for everyone. A probe that cannot be trusted
+  // reports the slow path, so this never skips a source a tenant has.
+  const probe = await probeTenantAuthorizationScope(conn, tenant, requestCache);
+  if (!probe.publishedAssignments && probe.resolverSubjects === false) return UNNARROWED_CONTEXT;
 
-  // A failed resolution propagates: a subject that cannot be resolved gets no rows.
+  // A failed resolution propagates: a subject that cannot be resolved gets no rows. Resolved fresh for each request
+  // (never across requests), once for every resource of this one.
   const subject: AuthorizationSubject = await resolveAuthorizationSubject(conn, { tenant, user, requestCache });
 
-  // Rules are resolved once per resource per request.
-  const rulesByResource = new Map<ClientScopeResource, Promise<BundleNarrowingRule[]>>();
+  // The evaluator combines the built-in (seat) and bundle rules as an intersection; resolved once per resource.
+  const scopes = new Map<ClientScopeResource, Promise<NarrowedReadScope | null>>();
 
   const context: ClientScopeContext = {
     async permits(resource, id) {
@@ -103,36 +100,20 @@ export async function createClientScopeContext(
     async narrowing(resource, alias) {
       const def = RESOURCES[resource];
       const columnAlias = alias ?? def.defaultAlias;
-      let pending = rulesByResource.get(resource);
+      let pending = scopes.get(resource);
       if (!pending) {
-        pending = resolveBundleNarrowingRulesForEvaluation(conn, {
-          subject,
-          resource: { type: resource, action: 'read' },
-          requestCache,
-          knex: conn,
-        }).then((resolved) => resolved.map(rowNarrowingRule));
-        rulesByResource.set(resource, pending);
+        pending = resolveNarrowedReadScope(conn, { tenant, user, resourceType: resource, action: 'read', requestCache, subject });
+        scopes.set(resource, pending);
       }
-      const rules = await pending;
-      const matching = matchRulesForAction(rules, resource, 'read');
-      if (matching.length === 0) return UNNARROWED;
+      const scope = await pending;
+      if (!scope) return UNNARROWED;
 
       const adapter = def.adapter(columnAlias);
       return {
         narrowed: true,
         apply(query) {
           query.andWhere(function narrowToScope(this: Knex.QueryBuilder) {
-            const result = compileResourceReadAuthorizationSql(this, {
-              resourceType: resource,
-              action: 'read',
-              builtinRules: [],
-              bundleRules: rules,
-              ctx: { subject, adapter },
-            });
-            if (!result.supported) {
-              // A rule SQL cannot express must not widen the answer: no rows.
-              this.whereRaw('1 = 0');
-            }
+            applyReadScope(this, scope, { resourceType: resource, action: 'read', adapter });
             if (def.clientRequired && adapter.clientColumn) this.whereNotNull(adapter.clientColumn);
           });
           return query;

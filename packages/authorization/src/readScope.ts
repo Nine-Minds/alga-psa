@@ -41,6 +41,8 @@ export interface ResolveNarrowedReadScopeInput {
   resourceType: string;
   action?: string;
   requestCache?: AuthorizationRequestCache;
+  /** The subject, when the caller already resolved it for this request; shared across resources instead of reloaded. */
+  subject?: AuthorizationSubject;
 }
 
 /** The subject's narrowing for `resourceType:action`, or null when nothing narrows it (add no clause). */
@@ -54,10 +56,10 @@ export async function resolveNarrowedReadScope(
   // Fast path: no published assignment in the tenant, so no subject has a bundle rule, and no built-in resolver
   // (a co-managed seat, say) has a subject here either. The probe answers both in the one statement.
   const tenantScope = await probeTenantAuthorizationScope(conn, input.tenant, requestCache);
-  if (!tenantScope.publishedAssignments && tenantScope.resolverSubjects === false) return null;
+  if (!input.subject && !tenantScope.publishedAssignments && tenantScope.resolverSubjects === false) return null;
 
   // A fault in either load propagates: a scope that cannot be resolved must not read as "unrestricted".
-  const subject = await resolveAuthorizationSubject(conn, { tenant: input.tenant, user: input.user, requestCache });
+  const subject = input.subject ?? (await resolveAuthorizationSubject(conn, { tenant: input.tenant, user: input.user, requestCache }));
   const bundleRules = await resolveBundleNarrowingRulesForEvaluation(conn, {
     subject,
     resource: { type: input.resourceType, action },
