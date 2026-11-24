@@ -73,6 +73,7 @@ function createCreditApplicationTrx() {
     invoice: {
       invoice_id: 'invoice-1',
       tenant: 'tenant-1',
+      client_id: 'client-1',
       credit_applied: 0,
       currency_code: 'USD',
       total_amount: 10000,
@@ -295,7 +296,9 @@ describe('credit application post-drop behavior', () => {
 
   it('applies client credit without querying client_contract_lines in a migrated schema', async () => {
     const { trx, state } = createCreditApplicationTrx();
-    mocks.createTenantKnex.mockResolvedValue({ knex: {} });
+    // The public action verifies invoice ownership before opening the
+    // transaction, so expose the same callable query double as the Knex pool.
+    mocks.createTenantKnex.mockResolvedValue({ knex: trx });
     mocks.withTransaction.mockImplementation(async (_knex: unknown, callback: (trx: unknown) => unknown) =>
       callback(trx),
     );
@@ -321,5 +324,25 @@ describe('credit application post-drop behavior', () => {
     expect(state.allocations).toHaveLength(1);
     expect(state.transactions).toHaveLength(1);
     expect(state.transactions[0].related_transaction_id).toBe('tx-credit-1');
+  });
+
+  it('rejects a client that does not own the invoice without applying credit', async () => {
+    const { trx, state } = createCreditApplicationTrx();
+    mocks.createTenantKnex.mockResolvedValue({ knex: trx });
+
+    await expect(
+      applyCreditToInvoice(
+        { user_id: 'user-1' } as any,
+        { tenant: 'tenant-1' } as any,
+        'another-client',
+        'invoice-1',
+        3000,
+      ),
+    ).rejects.toThrow('Credit client does not own the invoice');
+
+    expect(state.invoice.credit_applied).toBe(0);
+    expect(state.creditEntries[0].remaining_amount).toBe(5000);
+    expect(state.allocations).toHaveLength(0);
+    expect(state.transactions).toHaveLength(0);
   });
 });
