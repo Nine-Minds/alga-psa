@@ -433,7 +433,7 @@ const NinjaOneIntegrationSettings: React.FC = () => {
                     <p className="text-xs text-primary-700 mt-2">
                       {t('integrations.rmm.ninjaOne.setup.docsPrefix', { defaultValue: 'For detailed setup instructions, see' })}{' '}
                       <a
-                        href="https://nineminds.com/documentation?doc=1015-setting-up-ninjaone-integration-in-alga-psa"
+                        href="https://www.nineminds.com/documentation/setting-up-ninjaone-integration-in-alga-psa"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="underline hover:text-primary-800"

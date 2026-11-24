@@ -158,7 +158,7 @@ for (const defect of ['wrong-parent', 'wrong-job-head', 'wrong-workflow', 'wrong
     if (defect === 'duplicate-edition') state.jobs.push({ ...state.jobs[0], id: 42 });
     if (defect === 'truncated-page') state.total = 3;
     if (defect === 'page-cap') state.total = 2001;
-    if (defect === 'sheet-cap') state.metadata.sheets[0].properties.gridProperties.rowCount = 200_001;
+    if (defect === 'sheet-cap') state.metadata.sheets[0].properties.gridProperties.rowCount = 500_001;
     if (defect === 'missing-tab') state.metadata.sheets = [];
     if (defect === 'changing-attempt') state.after = { ...state.run, run_attempt: 3 };
     if (defect === 'changing-status') state.after = { ...state.run, status: 'in_progress' };
@@ -181,10 +181,10 @@ test('non-PR revision must equal the exact run head, independent of Sheets conte
 
 test('index-scan cap failure reports the allocated grid and limit without reading a row of it', async () => {
   const { state, collect } = fixture();
-  state.metadata.sheets[0].properties.gridProperties.rowCount = 200_001;
+  state.metadata.sheets[0].properties.gridProperties.rowCount = 500_001;
   await assert.rejects(collect, error => {
     assert.deepEqual(error.diagnostic, { phase: 'sheet-metadata', code: 'sheet-row-limit-exceeded',
-      rowCount: 200_001, columnCount: 26, maxSheetRows: 200_000 });
+      rowCount: 500_001, columnCount: 26, maxSheetRows: 500_000 });
     return true;
   });
   assert.equal(state.calls.filter(call => call.url.pathname.includes('/values')).length, 0);
@@ -258,18 +258,18 @@ async function fileFixture(t) {
 
 test('collection failure replaces stale reports, removes stale evidence and retains safe diagnostics', async t => {
   const { state, options } = await fileFixture(t);
-  state.metadata.sheets[0].properties.gridProperties.rowCount = 234_567;
+  state.metadata.sheets[0].properties.gridProperties.rowCount = 534_567;
   await writeFile(options.output, 'stale successful evidence');
   await writeFile(options.diagnostics, 'stale successful report');
   const result = await runBrowserMetricCollection(options);
   assert.equal(result.status, 'failed');
   assert.deepEqual(result.diagnostic, { phase: 'sheet-metadata', code: 'sheet-row-limit-exceeded',
-    rowCount: 234_567, columnCount: 26, maxSheetRows: 200_000 });
+    rowCount: 534_567, columnCount: 26, maxSheetRows: 500_000 });
   assert.deepEqual(JSON.parse(await readFile(options.diagnostics, 'utf8')), result);
   await assert.rejects(readFile(options.output), { code: 'ENOENT' });
   const summary = await readFile(options.env.GITHUB_STEP_SUMMARY, 'utf8');
   assert.match(summary, /sheet-row-limit-exceeded/);
-  assert.match(summary, /234567/);
+  assert.match(summary, /534567/);
   assert.ok(!summary.includes('secret') && !summary.includes('PRIVATE KEY'));
 });
 
