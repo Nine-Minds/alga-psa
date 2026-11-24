@@ -8,6 +8,9 @@ vi.mock('@alga-psa/core/logger', () => ({
   },
 }));
 
+const trialAdmission = vi.hoisted(() => vi.fn(async () => true));
+vi.mock('@enterprise/lib/co-managed/seatTrialSession', () => ({ admitSeatTrialSession: trialAdmission }));
+
 const requestHeaders = vi.hoisted(() => ({ current: new Headers({ 'x-request-id': 'req-safe-1' }) }));
 vi.mock('next/headers', () => ({
   headers: vi.fn(async () => requestHeaders.current),
@@ -25,6 +28,7 @@ vi.mock('@alga-psa/db/models/UserSession', () => ({
   UserSession: {
     isRevokedOrIdentityMismatch: vi.fn(),
     getRejectionReason: vi.fn(),
+    logLifecycle: vi.fn(),
   },
 }));
 
@@ -53,10 +57,12 @@ const trackedSession = {
 const envSnapshot = { ...process.env };
 
 beforeEach(() => {
+  trialAdmission.mockReset().mockResolvedValue(true);
   vi.mocked(edgeAuth).mockReset();
   vi.mocked(fullAuth).mockReset();
   vi.mocked(UserSession.isRevokedOrIdentityMismatch).mockReset();
   vi.mocked(UserSession.getRejectionReason).mockReset();
+  vi.mocked(UserSession.logLifecycle).mockReset();
   vi.mocked(logger.warn).mockReset();
   loadTenantAuthPolicy.mockReset();
   loadTenantAuthPolicy.mockResolvedValue({
@@ -104,6 +110,7 @@ describe('getSession', () => {
     expect(logger.warn).toHaveBeenCalledWith('[auth] session_rejected', {
       reason: 'durable_session_revoked', requestId: 'req-safe-1',
     });
+    expect(UserSession.logLifecycle).toHaveBeenCalledWith('rejected', 'session-1', 'durable_session_revoked');
   });
 
   it('rejects a session with no tracked session identifier without querying the database', async () => {
@@ -264,4 +271,17 @@ describe('getSession login policy (SSO required)', () => {
 
     expect(await getSession()).toBe(session);
   });
+});
+
+it('checks Seat access on each request by a live session and skips admission on failed authentication', async () => {
+  vi.mocked(edgeAuth).mockResolvedValue(trackedSession);
+  vi.mocked(UserSession.getRejectionReason).mockResolvedValue(null);
+  expect(await getSession()).toBe(trackedSession);
+  trialAdmission.mockResolvedValue(false);
+  expect(await getSession()).toBeNull();
+  expect(trialAdmission).toHaveBeenLastCalledWith('tenant-1', 'user-1', 'session-1');
+  vi.mocked(edgeAuth).mockResolvedValue(null);
+  vi.mocked(fullAuth).mockResolvedValue(null);
+  expect(await getSession()).toBeNull();
+  expect(trialAdmission).toHaveBeenCalledTimes(2);
 });

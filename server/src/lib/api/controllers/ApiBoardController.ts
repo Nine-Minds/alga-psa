@@ -18,6 +18,7 @@ export class ApiBoardController extends ApiBaseController {
 
     super(boardService, {
       resource: 'board',
+      permissionResource: 'ticket',
       createSchema: createBoardSchema,
       updateSchema: updateBoardSchema,
       querySchema: boardListQuerySchema,
@@ -40,14 +41,11 @@ export class ApiBoardController extends ApiBaseController {
    * Reads stay on ticket permissions, as boards are ticket reference data.
    */
   protected async checkPermission(req: AuthenticatedApiRequest, action: string): Promise<void> {
-    const { hasPermission } = await import('@/lib/auth/rbac');
     const { getConnection } = await import('@/lib/db/db');
     const { ForbiddenError, UnauthorizedError } = await import('../middleware/apiMiddleware');
-
     if (!req.context?.user) {
       throw new UnauthorizedError('User context required');
     }
-
     const knex = await getConnection(req.context.tenant);
     if (action === 'create' || action === 'update' || action === 'delete') {
       const decision = await evaluateBoardMutationPolicy(

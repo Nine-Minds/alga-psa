@@ -13,6 +13,7 @@ import {
 import { persistIngressPointer } from './inboundEmailProducer';
 import { enqueueUnifiedInboundEmailQueueJob } from './unifiedInboundEmailQueue';
 import { refreshImapAccessToken } from './imapOauthToken';
+import { assertImapOauthCredentialIssuerBound, assertSafeImapHost } from './imapOutboundTarget';
 import { recordAuthFailure, recordAutoPause } from './inboundEmailMetrics';
 
 export type InboundPauseReason = 'manual' | 'tenant_cancelled' | 'auth_failure';
@@ -699,13 +700,21 @@ export class EmailProviderLifecycleService {
       throw new Error('IMAP provider config not found');
     }
 
+    const imapTarget = await assertSafeImapHost(imapConfig.host, Number(imapConfig.port));
+    if (imapConfig.auth_type === 'oauth2') {
+      assertImapOauthCredentialIssuerBound(imapConfig);
+    }
+
     const knex = await getAdminConnection();
     let accessToken = typeof imapConfig.access_token === 'string' && imapConfig.access_token.trim()
       ? imapConfig.access_token
       : null;
 
     if (imapConfig.auth_type === 'oauth2' && (!accessToken || isImapTokenExpired(imapConfig.token_expires_at))) {
-      accessToken = await refreshImapAccessToken({ provider: imapConfig, db: knex });
+      accessToken = await refreshImapAccessToken({
+        provider: { ...imapConfig, id: providerId, tenant },
+        db: knex,
+      });
     }
 
     const auth: any = { user: imapConfig.username };
@@ -728,12 +737,17 @@ export class EmailProviderLifecycleService {
       port: Number(imapConfig.port),
       secure: Boolean(imapConfig.secure),
       auth,
+      tls: {
+        lookup: imapTarget.lookup as any,
+        ...(imapConfig.secure || imapConfig.allow_starttls
+          ? { rejectUnauthorized: (process.env.IMAP_TLS_REJECT_UNAUTHORIZED || 'true') !== 'false' }
+          : {}),
+      },
       disableAutoIdle: true,
       logger: false,
       connectionTimeout: IMAP_VALIDATION_CONNECTION_TIMEOUT_MS,
       greetingTimeout: IMAP_VALIDATION_CONNECTION_TIMEOUT_MS,
       socketTimeout: IMAP_VALIDATION_SOCKET_TIMEOUT_MS,
-      tls: imapConfig.secure || imapConfig.allow_starttls ? { rejectUnauthorized: (process.env.IMAP_TLS_REJECT_UNAUTHORIZED || 'true') !== 'false' } : undefined,
     });
 
     try {

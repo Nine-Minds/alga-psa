@@ -11,7 +11,8 @@
       "oneTime": "Único",
       "other": "Otro",
       "quarterly": "Trimestral",
-      "semiAnnually": "Semestral"
+      "semiAnnually": "Semestral",
+      "weekly": "Semanal"
     },
     "cadenceTotal": "Total {{cadence}}",
     "currency": "Moneda",
@@ -141,7 +142,9 @@
     "replacementSerial": "Número de serie del reemplazo",
     "shipping": "Envío",
     "returnBy": "Devolver antes de",
-    "returnShipTo": "Enviar devolución a"
+    "returnShipTo": "Enviar devolución a",
+    "yes": "Sí",
+    "no": "No"
   },
   "errors": {
     "permissions": {

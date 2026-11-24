@@ -498,7 +498,13 @@ describe('Microsoft email setup callback', () => {
       expect(hop.pathname).toBe(PROVIDER_SETUP_ENTRY_PATH);
 
       const res = await dispatchProductNav(new NextRequest(hop), { params: Promise.resolve({ target: 'providers' }) });
-      const landed = new URL(res.headers.get('location')!);
+      const location = res.headers.get('location')!;
+      // Relative Location: the round trip stays on whatever host the browser used.
+      expect(location.startsWith('/')).toBe(true);
+      expect(location.startsWith('//')).toBe(false);
+      expect(location).not.toContain('://');
+      expect(location).not.toContain('psa.example.com');
+      const landed = new URL(location, 'http://public.example');
       expect(landed.pathname).toBe(path);
       if (category) expect(landed.searchParams.get('category')).toBe('providers');
       expect(landed.searchParams.get('microsoft_email_setup')).toBe('error');

@@ -97,6 +97,9 @@ vi.mock('../src/components/time-management/time-entry/time-sheet/SingleTimeEntry
         value={props.entry.notes ?? ''}
         onChange={(event) => props.onUpdateEntry(0, { ...props.entry, notes: event.target.value, isDirty: true })}
       />
+      {props.showErrors && props.errors?.service && (
+        <span data-testid="dialog-service-error">{props.errors.service}</span>
+      )}
     </div>
   ),
 }));
@@ -229,9 +232,10 @@ describe('TimeEntryDialog save lifecycle (real dialog)', () => {
       expect(mocks.toast.success).toHaveBeenCalledTimes(1);
       expect(alertMock).not.toHaveBeenCalled();
     } else {
-      await waitFor(() => expect(mocks.toast.error).toHaveBeenCalled());
-      expect(alertMock).toHaveBeenCalledWith('Time entry must end on the same day');
-      expect(mocks.saveTimeEntry).not.toHaveBeenCalled();
+      // Refused inline (the form shows the field errors): no alert, no toast, nothing sent.
+      await waitFor(() => expect(mocks.saveTimeEntry).not.toHaveBeenCalled());
+      expect(alertMock).not.toHaveBeenCalled();
+      expect(mocks.toast.error).not.toHaveBeenCalled();
       expect(onComplete).not.toHaveBeenCalled();
       expect(onClose).not.toHaveBeenCalled();
       expect(mocks.toast.success).not.toHaveBeenCalled();
@@ -354,8 +358,9 @@ describe('TimeEntryDialog save lifecycle (real dialog)', () => {
     expect(screen.getByTestId('dialog-service-select')).toHaveValue('');
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    await waitFor(() => expect(mocks.toast.error).toHaveBeenCalledWith('messages.serviceRequired'));
-    expect(mocks.toast.error).not.toHaveBeenCalledWith('messages.invalidService');
+    // Field errors render inline in the service slot; no toast.
+    expect(await screen.findByTestId('dialog-service-error')).toHaveTextContent('Service is required for time entries');
+    expect(mocks.toast.error).not.toHaveBeenCalled();
     expect(onSave).not.toHaveBeenCalled();
   });
 

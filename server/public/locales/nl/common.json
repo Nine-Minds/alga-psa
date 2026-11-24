@@ -1459,6 +1459,7 @@
   },
   "pickers": {
     "addNewClient": "Nieuwe klant toevoegen",
+    "clientsSelectedCount": "{{count}} klanten",
     "addNewContact": "Nieuwe contactpersoon toevoegen",
     "loadingUsers": "Gebruikers laden...",
     "errorLoadingUsers": "Fout bij laden van gebruikers",
@@ -1684,6 +1685,7 @@
       "printing": "Voorbereiden…",
       "print": "Afdrukken",
       "reason": "Reden",
+      "sizeMismatch": "Deze indeling is kleiner dan het label waarvoor dit sjabloon is ontworpen. Druk in plaats daarvan af op het eigen formaat van het sjabloon.",
       "skipFailures": "Deze overslaan en de rest afdrukken",
       "skipped_one": "{{count}} record is overgeslagen omdat het niet kon worden geopend.",
       "skipped_other": "{{count}} records zijn overgeslagen omdat ze niet konden worden geopend.",
@@ -1694,6 +1696,9 @@
       "useTemplate": "{{template}} gebruiken",
       "copiesPerAsset": "Exemplaren per asset",
       "adjacentCopies": "De exemplaren van elke asset worden samen afgedrukt."
+    },
+    "layout": {
+      "template-preferred": "Sjabloonformaat gebruiken"
     }
   },
   "deleteEntity": {
@@ -2299,5 +2304,11 @@
   },
   "entityChip": {
     "moreTags": "{{count}} meer tags: {{names}}"
+  },
+  "designer": {
+    "focusMode": {
+      "enter": "Focusmodus",
+      "exit": "Focusmodus verlaten"
+    }
   }
 }

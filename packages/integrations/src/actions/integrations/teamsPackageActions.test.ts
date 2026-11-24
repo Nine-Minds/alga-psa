@@ -228,8 +228,8 @@ describe('Teams app package actions', () => {
       selectedProfileId: 'profile-1',
       appId: 'teams-client-id',
       botId: 'teams-client-id',
-      manifestVersion: '1.24',
-      packageVersion: '1.0.0',
+      manifestVersion: '1.25',
+      packageVersion: '1.2.0',
       fileName: 'alga-psa-teams-tenant-1.zip',
       baseUrl: 'https://tenant.example.com',
       validDomains: ['tenant.example.com', 'token.botframework.com'],
@@ -247,6 +247,11 @@ describe('Teams app package actions', () => {
       },
     });
 
+    expect(result.package?.manifest).toMatchObject({
+      $schema: 'https://developer.microsoft.com/json-schemas/teams/v1.25/MicrosoftTeams.schema.json',
+      manifestVersion: '1.25',
+      supportsChannelFeatures: 'tier1',
+    });
     expect(result.package?.manifest.staticTabs[0]).toMatchObject({
       entityId: 'alga-psa-personal-tab',
       scopes: ['personal'],
@@ -292,8 +297,8 @@ describe('Teams app package actions', () => {
       app_id: 'teams-client-id',
       bot_id: 'teams-client-id',
       package_metadata: {
-        manifestVersion: '1.24',
-        packageVersion: '1.0.0',
+        manifestVersion: '1.25',
+        packageVersion: '1.2.0',
         fileName: 'alga-psa-teams-tenant-1.zip',
         baseUrl: 'https://tenant.example.com',
         validDomains: ['tenant.example.com', 'token.botframework.com'],

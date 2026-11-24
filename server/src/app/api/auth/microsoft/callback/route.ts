@@ -608,7 +608,7 @@ export async function GET(request: NextRequest) {
                 const { provider, config: msConfig } = ctx;
                 if (!provider || !msConfig) return;
 
-                const baseUrl = getWebhookBaseUrl();
+                const baseUrl = getWebhookBaseUrl(undefined, 'https://algapsa.com');
                 const webhookUrl = `${baseUrl}/api/email/webhooks/microsoft`;
 
                 // Determine folder to monitor from saved config (first folder if multiple)

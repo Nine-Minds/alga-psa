@@ -82,7 +82,7 @@ export function daysUntil(due: Date, now: Date): number {
 
 // Shared category label resolver, used by both the category column and the
 // category subtitle folded under the title cell.
-export function formatCategoryLabel(record: ITicketListItem, categories: ITicketCategory[]): string {
+export function formatCategoryLabel(record: Pick<ITicketListItem, 'category_id' | 'subcategory_id'>, categories: ITicketCategory[]): string {
   const categoryId = record.category_id || null;
   if (!categoryId && !record.subcategory_id) return 'No Category';
   if (record.subcategory_id) {

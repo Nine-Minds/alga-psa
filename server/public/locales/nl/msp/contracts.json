@@ -510,8 +510,6 @@
     "po": {
       "amountLabel": "PO-bedrag (optioneel)",
       "amountPlaceholder": "0.00",
-      "comingSoon": "Factuurintegratie komt binnenkort. Instellingen worden opgeslagen, maar PO-handhaving wordt pas actief in een toekomstige release.",
-      "noteLabel": "Opmerking:",
       "numberLabel": "PO-nummer *",
       "numberPlaceholder": "bijv. PO-2024-12345",
       "requirePurchaseOrder": "Inkooporder verplicht stellen",
@@ -1442,6 +1440,8 @@
       "client": "Klantcontext",
       "hypothetical": "Hypothetisch klantprofiel",
       "open": "Simuleren",
+      "pickClient": "Selecteer een klant",
+      "specificClient": "Een specifieke klant",
       "title": "Sjabloonsimulatie"
     },
     "pricing": {

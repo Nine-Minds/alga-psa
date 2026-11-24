@@ -4,7 +4,11 @@ import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { resolveMicrosoftConsumerProfileConfig } from '../microsoftConsumerProfileResolution';
 
-export type MspSsoProviderId = 'google' | 'azure-ad' | 'keycloak';
+import { SSO_PROVIDER_IDS, isSupportedProvider, type SsoProviderId } from './types';
+
+export { isSupportedProvider };
+export type { SsoProviderId };
+export type MspSsoProviderId = SsoProviderId;
 export type MspSsoSource = 'tenant' | 'app';
 export type MspSsoDomainClaimStatus =
   | 'advisory'
@@ -31,7 +35,7 @@ export const MSP_SSO_CLAIM_STATUS_VALUES: MspSsoDomainClaimStatus[] = [
   'revoked',
 ];
 
-const PROVIDER_ORDER: MspSsoProviderId[] = ['google', 'azure-ad', 'keycloak'];
+const PROVIDER_ORDER: readonly MspSsoProviderId[] = SSO_PROVIDER_IDS;
 export const KEYCLOAK_APP_SECRET_KEYS = [
   'KEYCLOAK_CLIENT_ID',
   'KEYCLOAK_CLIENT_SECRET',
@@ -150,10 +154,6 @@ function fromBase64Url(value: string): string {
 
 function computeCookieSignature(payloadEncoded: string, secret: string): string {
   return toBase64Url(createHmac('sha256', secret).update(payloadEncoded).digest());
-}
-
-export function isSupportedProvider(provider: string): provider is MspSsoProviderId {
-  return provider === 'google' || provider === 'azure-ad' || provider === 'keycloak';
 }
 
 // Community Edition offers Keycloak only; Google and Microsoft sign-in are Enterprise.

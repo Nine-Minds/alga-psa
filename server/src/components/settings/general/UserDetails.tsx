@@ -28,7 +28,7 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import { Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import CollapsiblePasswordChangeForm from './CollapsiblePasswordChangeForm';
-import { getLicenseUsageAction } from '@alga-psa/licensing/actions/license-actions';
+import { getLicenseUsageAction } from '@/lib/actions/licensingActions';
 import toast from 'react-hot-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {

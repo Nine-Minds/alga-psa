@@ -214,12 +214,15 @@
   "resetFilters": "Reimposta",
   "filters": {
     "allStatuses": "Tutti gli stati",
+    "allClients": "Tutti i clienti",
+    "unknownClient": "Cliente sconosciuto",
     "allOpen": "Tutti i ticket aperti",
     "allClosed": "Tutti i ticket chiusi",
     "allPriorities": "Tutte le priorità",
     "search": "Cerca ticket e commenti...",
     "button": "Filtri",
     "unassigned": "Non assegnato",
+    "me": "Io",
     "category": "Filtra per categoria",
     "removeFilterChip": "Rimuovi filtro: {{label}}",
     "assignee": "Assegnatario",
@@ -253,6 +256,8 @@
     "clientTags": "Tag del cliente",
     "tagModeAny": "Almeno uno tra",
     "tagModeNone": "Nessuno tra",
+    "matchMode": "Corrispondenza",
+    "excludingLabel": "Escludi {{label}}",
     "droppedFromLink": "Alcuni filtri di questo link non sono validi e sono stati ignorati.",
     "clearFilters": "Pulisci filtri",
     "location": "Sede",
@@ -573,6 +578,7 @@
     "deleteCommentOnly": "Elimina solo il commento",
     "cancelScheduledComment": "Annulla commento pianificato",
     "cancelScheduledCommentConfirm": "Annullare questo commento pianificato?",
+    "scheduledCommentChangeFailed": "Impossibile modificare questo commento programmato. Aggiorna la pagina e riprova.",
     "invalidScheduleTime": "Scegli un orario futuro non ambiguo in questo fuso orario.",
     "publishAt": "Pubblica il",
     "publishes": "Pubblica",
@@ -611,6 +617,13 @@
       },
       "unavailable": "Questo ticket non è disponibile.",
       "back": "Torna ai ticket dei clienti"
+    },
+    "opener": {
+      "openedBy": "Aperto tramite e-mail da {{sender}}",
+      "attachments_one": "{{count}} allegato",
+      "attachments_other": "{{count}} allegati",
+      "show": "Mostra e-mail originale",
+      "hide": "Nascondi e-mail originale"
     }
   },
   "responseState": {
@@ -2513,6 +2526,7 @@
       "addHelp": "Seleziona un cliente per aggiungerlo. La finestra resta aperta, così puoi aggiungerne altri.",
       "alreadyAdded": "Già aggiunto",
       "pickerPlaceholder": "Seleziona un cliente da aggiungere",
+      "unnamedClient": "Cliente",
       "addedHeading": "Aggiunti in questa finestra",
       "columns": {
         "client": "Cliente",

@@ -422,6 +422,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
               <td className="py-2">
                 <ContactEmailAddressesEditor
                   id={`${id}-email`}
+                  savedPrimaryEmail={initialContact.email}
                   value={contact}
                   onChange={(value) => setContact((previousContact) => ({ ...previousContact, ...value }))}
                   customTypeSuggestions={[]}

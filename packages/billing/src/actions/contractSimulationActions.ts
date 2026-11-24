@@ -19,7 +19,7 @@ import {
   simulationRefusalToDiagnostic,
   isLicensedUserType,
 } from "@alga-psa/types";
-import { createTenantKnex, tenantDb } from "@alga-psa/db";
+import { createTenantKnex } from "@alga-psa/db";
 import { withAuth } from "@alga-psa/auth/withAuth";
 import { hasPermission } from "@alga-psa/auth/rbac";
 import { assertTenantTierAccess } from "@alga-psa/licensing";
@@ -268,29 +268,5 @@ export const getContractSimulationReplayAssumptions = withAuth(
     return refusalAware("replay assumptions", () =>
       ee.loadReplayAssumptions(knex, tenant, scenario, startDate, endDateExclusive),
     );
-  },
-);
-
-/**
- * Lightweight client list for the template simulator's client-context picker.
- * Lives in billing so the picker does not need a cross-feature import of
- * @alga-psa/clients.
- */
-export const listContractSimulationClients = withAuth(
-  async (
-    user,
-    { tenant },
-  ): Promise<Array<{ client_id: string; client_name: string }>> => {
-    await assertContractSimulatorAccess(user, tenant);
-    if (!(await hasPermission(user, "client", "read"))) {
-      throw new Error("Permission denied: Cannot read clients");
-    }
-
-    const { knex } = await createTenantKnex();
-    return tenantDb(knex, tenant)
-      .table("clients")
-      .where({ is_inactive: false })
-      .orderBy("client_name", "asc")
-      .select("client_id", "client_name");
   },
 );

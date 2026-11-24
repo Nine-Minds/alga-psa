@@ -62,6 +62,11 @@ export interface BuiltinResolverPrincipalKind {
   kind: string;
   /** Whether a member may be issued or authenticate with an API key, REST or MCP. */
   apiCredentials: 'allowed' | 'refused';
+  /**
+   * Key purposes a member may still hold when `apiCredentials` is 'refused'. Such a key is issued with the kind's
+   * prefix (`principalApiKeyPrefix`) and the edge holds it to the kind's API surface in the surface registry.
+   */
+  credentialPurposes?: readonly string[];
 }
 
 export interface BuiltinRuleResolver {

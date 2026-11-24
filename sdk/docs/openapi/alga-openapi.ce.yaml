@@ -47,6 +47,7 @@ tags:
   - name: Mobile v1
   - name: Notifications
   - name: Opportunities v1
+  - name: Portal Invitations
   - name: Priorities
   - name: Products
   - name: Project Templates
@@ -1441,6 +1442,54 @@ components:
             type: string
             format: uuid
           minItems: 1
+    AccessBulkCreateUsersBodyV1:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccessCreateUserBodyV1"
+          minItems: 1
+          maxItems: 100
+        options:
+          type: object
+          properties:
+            send_welcome_email:
+              type: boolean
+              description: Default true. Mails each created user a link to set their own
+                password.
+            force_password_reset:
+              type: boolean
+              description: Default false. Records the must_change_password preference on each
+                account, the same flag an admin-initiated password reset sets.
+                Nothing enforces it at sign-in yet, so pair it with
+                send_welcome_email to make the owner choose their own password.
+            skip_invalid:
+              type: boolean
+              description: "Default true: a rejected user is reported in errors[] and the rest
+                are still created. Set false to roll the whole batch back on the
+                first failure."
+            dry_run:
+              type: boolean
+              description: Validates every user and creates nothing.
+      required:
+        - users
+    AccessBulkDeactivateUsersBodyV1:
+      type: object
+      properties:
+        user_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          maxItems: 100
+        deactivate:
+          type: boolean
+          description: Default true; false reactivates the listed users (subject to seat
+            limits).
+      required:
+        - user_ids
     AccessChangePasswordBodyV1:
       type: object
       properties:
@@ -8067,6 +8116,122 @@ components:
           additionalProperties: {}
       required:
         - data
+    PortalInvitationClientParams:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Client UUID from clients.client_id.
+      required:
+        - id
+    PortalInvitationApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details: {}
+          required:
+            - code
+            - message
+      required:
+        - error
+    ClientPortalInvitationRequest:
+      type: object
+      properties:
+        contact_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          maxItems: 500
+          description: Contacts to invite. Ids that do not belong to the client in the
+            path come back as skipped, never invited.
+        all_eligible:
+          type: boolean
+          description: Invite every active contact of the client that has no client portal
+            user yet. Ignored when contact_ids is given.
+      description: Supply contact_ids, or all_eligible=true. One of the two is required.
+    BulkPortalInvitationRequest:
+      type: object
+      properties:
+        contact_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          maxItems: 500
+          description: Contacts to invite, in any client. Each contact is authorized
+            against its own client.
+      required:
+        - contact_ids
+    PortalInvitationResult:
+      type: object
+      properties:
+        contact_id:
+          type: string
+          description: contacts.contact_name_id.
+        email:
+          type: string
+          description: Address the invitation went to, when the contact has one.
+        status:
+          type: string
+          enum:
+            - sent
+            - skipped
+            - failed
+          description: "sent: an invitation email went out. skipped: the contact is not
+            invitable as it stands (no email, invalid email, already a portal
+            user, shared mailbox, not in this client). failed: the invitation
+            could not be delivered."
+        invitation_id:
+          type: string
+          description: portal_invitations.invitation_id of the invitation created.
+        error_code:
+          type: string
+          description: Stable code for a skip or failure, e.g. USER_EXISTS_FOR_CONTACT.
+        message:
+          type: string
+      required:
+        - contact_id
+        - status
+    BulkPortalInvitationEnvelope:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            total:
+              type: integer
+              description: Contacts considered by this request.
+            sent:
+              type: integer
+            skipped:
+              type: integer
+            failed:
+              type: integer
+            results:
+              type: array
+              items:
+                $ref: "#/components/schemas/PortalInvitationResult"
+          required:
+            - total
+            - sent
+            - skipped
+            - failed
+            - results
+        meta:
+          type: object
+          additionalProperties: {}
+      required:
+        - data
     ContractLineIdParam:
       type: object
       properties:
@@ -8859,6 +9024,13 @@ components:
           description: Declared MIME type. The server sniffs the bytes and a recognised
             type overrides this; the storage allowlist is applied to the
             resolved type.
+        is_client_visible:
+          type: boolean
+          description: Whether the client portal can show the document. Default false
+            (internal only). Only ticket, project_task and client support true;
+            contact and asset get 400. true also needs the document:update
+            permission. The created document in the response carries the
+            resulting is_client_visible.
       required:
         - entity_type
         - entity_id
@@ -13131,6 +13303,11 @@ components:
             - string
             - "null"
           format: uuid
+        default_assigned_team_id:
+          type:
+            - string
+            - "null"
+          format: uuid
         inbound_reply_reopen_enabled:
           type: boolean
         inbound_reply_reopen_cutoff_hours:
@@ -13168,6 +13345,7 @@ components:
         - display_itil_impact
         - display_itil_urgency
         - default_assigned_to
+        - default_assigned_team_id
         - enable_live_ticket_timer
         - client_portal_visible
         - tenant
@@ -13271,6 +13449,11 @@ components:
             already running keeps running. Defaults to true.
         client_portal_visible:
           type: boolean
+        default_assigned_team_id:
+          type:
+            - string
+            - "null"
+          format: uuid
       additionalProperties: false
       description: Payload for updating a board. All fields are optional.
     StatusIdParams:
@@ -17336,6 +17519,166 @@ components:
         project_status_mapping_id as a UUID from the project task status
         mappings endpoint. The phaseId path parameter selects which phase will
         receive the task.
+    ProjectMaterialParams:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Project UUID.
+        materialId:
+          type: string
+          format: uuid
+          description: Project material UUID.
+      required:
+        - id
+        - materialId
+    ProjectMaterialResource:
+      type: object
+      properties:
+        project_material_id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        client_id:
+          type: string
+          format: uuid
+        service_id:
+          type: string
+          format: uuid
+        service_name:
+          type:
+            - string
+            - "null"
+        sku:
+          type:
+            - string
+            - "null"
+        quantity:
+          type: number
+        rate:
+          type: number
+          description: Integer minor units (cents).
+        currency_code:
+          type: string
+        description:
+          type:
+            - string
+            - "null"
+        is_billed:
+          type: boolean
+        billed_invoice_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        billed_at:
+          type:
+            - string
+            - "null"
+        billing_destination:
+          type: string
+          enum:
+            - next_project_invoice
+            - schedule_entry
+            - separate
+            - project_completion
+            - on_hold
+        billing_schedule_entry_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        from_staging_line_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        created_at:
+          type:
+            - string
+            - "null"
+        updated_at:
+          type:
+            - string
+            - "null"
+      required:
+        - project_material_id
+        - project_id
+        - client_id
+        - service_id
+        - quantity
+        - rate
+        - currency_code
+        - is_billed
+        - billing_destination
+    ProjectMaterialEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/ProjectMaterialResource"
+      required:
+        - data
+    ProjectMaterialListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectMaterialResource"
+      required:
+        - data
+    ProjectMaterialCreateBody:
+      type: object
+      properties:
+        service_id:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          exclusiveMinimum: 0
+        rate:
+          type: number
+          minimum: 0
+        currency_code:
+          type: string
+          minLength: 3
+          maxLength: 3
+        description:
+          type:
+            - string
+            - "null"
+          maxLength: 1000
+        unit_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        billing_destination:
+          type: string
+          enum:
+            - next_project_invoice
+            - schedule_entry
+            - separate
+            - project_completion
+            - on_hold
+        billing_schedule_entry_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+      required:
+        - service_id
+        - quantity
+        - rate
+        - currency_code
+      additionalProperties: false
+      description: Material to add to a project. client_id is taken from the project
+        and is rejected if sent; allow_reserved_override is not accepted. rate
+        is integer minor units. unit_id is required for serialized stock-tracked
+        products.
     ProjectTaskCommentParams:
       type: object
       properties:
@@ -19313,6 +19656,13 @@ components:
             - string
             - "null"
           format: uuid
+          description: The first time entry the session was logged as.
+        time_entry_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Every time entry the session was logged as, one per work day.
         closed_at:
           type:
             - string
@@ -19382,6 +19732,7 @@ components:
         - notes
         - status
         - time_entry_id
+        - time_entry_ids
         - closed_at
         - created_at
         - updated_at
@@ -19423,10 +19774,18 @@ components:
             time_entry:
               type: object
               additionalProperties: {}
-              description: The persisted time entry.
+              description: The persisted time entry (the first one when the session spans
+                several work days).
+            time_entries:
+              type: array
+              items:
+                type: object
+                additionalProperties: {}
+              description: Every persisted time entry, one per work day with active time.
           required:
             - session
             - time_entry
+            - time_entries
       required:
         - data
     WorkV1StopwatchConflictError:
@@ -28907,9 +29266,16 @@ paths:
                 $ref: "#/components/schemas/AccessApiErrorV1"
   /api/v1/users/bulk/create:
     post:
-      summary: Bulk create users (route currently mapped to single create)
-      description: Route currently delegates to ApiUserController.create(), so
-        behavior is single-user create schema rather than bulk payload handling.
+      summary: Bulk create users
+      description: "Creates up to 100 users in one transaction. Each user is created
+        under its own savepoint: with skip_invalid (the default) a rejected user
+        is reported in errors[] by index and the rest are still created; with
+        skip_invalid false the first failure rolls the whole batch back.
+        options.force_password_reset records the must_change_password preference
+        on each account (not yet enforced at sign-in),
+        options.send_welcome_email (default true) mails each new user a link to
+        set their own password, and options.dry_run validates every user and
+        creates nothing."
       tags:
         - Access Control & Users v1
       security:
@@ -28921,8 +29287,7 @@ paths:
         x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
           equivalent controller-specific auth path
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-controller-handler: bulkCreateUsersRouteMismatch
-        x-route-controller-mismatch: true
+        x-controller-handler: bulkCreateUsers
       x-alga-products:
         - psa
         - algadesk
@@ -28931,10 +29296,11 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AccessCreateUserBodyV1"
+              $ref: "#/components/schemas/AccessBulkCreateUsersBodyV1"
       responses:
-        "200":
-          description: Operation succeeded.
+        "201":
+          description: Batch processed; body reports total_processed, successful, failed,
+            per-index errors and the created users.
           content:
             application/json:
               schema:
@@ -28957,6 +29323,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AccessApiErrorV1"
+        "409":
+          description: "Only with skip_invalid false: a user in the batch duplicates an
+            existing email, and the whole batch was rolled back."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessApiErrorV1"
         "500":
           description: Unexpected controller/service failure.
           content:
@@ -28965,9 +29338,11 @@ paths:
                 $ref: "#/components/schemas/AccessApiErrorV1"
   /api/v1/users/bulk/deactivate:
     put:
-      summary: Bulk deactivate users (route currently mapped to update-by-id)
-      description: Route currently delegates to ApiUserController.update(); id
-        extraction reads "bulk" from path and fails UUID validation.
+      summary: Bulk deactivate users
+      description: Deactivates (or, with deactivate false, reactivates) up to 100
+        users by UUID. Role floors refuse a request that would leave the tenant
+        without an active MSP admin, and reactivation is admitted one user at a
+        time against the seat limit.
       tags:
         - Access Control & Users v1
       security:
@@ -28979,8 +29354,7 @@ paths:
         x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
           equivalent controller-specific auth path
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-controller-handler: bulkDeactivateUsersRouteMismatch
-        x-route-controller-mismatch: true
+        x-controller-handler: bulkDeactivateUsers
       x-alga-products:
         - psa
         - algadesk
@@ -28989,7 +29363,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AccessUpdateUserBodyV1"
+              $ref: "#/components/schemas/AccessBulkDeactivateUsersBodyV1"
       responses:
         "200":
           description: Operation succeeded.
@@ -28998,8 +29372,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AccessApiSuccessV1"
         "400":
-          description: Current route fails UUID extraction because
-            ApiBaseController.update() treats path segment "bulk" as {id}.
+          description: Validation failed (payload/query/path parsing).
           content:
             application/json:
               schema:
@@ -37156,7 +37529,13 @@ paths:
       description: Inherited ApiBaseController update route for one contact_name_id.
         work_arrangement and locations[] behave as on create; locations omitted
         leaves the links untouched, an empty array removes them all, and
-        changing client_id removes them (a location never crosses clients).
+        changing client_id removes them (a location never crosses clients). A
+        different email replaces the primary address and drops the old one
+        unless it is re-sent in additional_email_addresses (sending one of the
+        contact's own additional addresses with no additional_email_addresses in
+        the body promotes it and keeps the old primary as an additional row,
+        leaving the contact's other addresses alone); an address already used by
+        another contact is refused.
       tags:
         - Contacts
       security:
@@ -37984,6 +38363,131 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ClientBillingProfileApiError"
+  /api/v1/clients/{id}/portal-invitations:
+    post:
+      summary: Invite a client's contacts to the client portal
+      description: "Sends client portal invitations for one client: either every
+        eligible contact (all_eligible) or a named subset (contact_ids)
+        validated against the client in the path. Invitations go out one at a
+        time, so a contact that cannot be invited never costs the rest of the
+        batch theirs; the response reports each contact's outcome and the
+        request is a 200 even when some were skipped or failed."
+      tags:
+        - Portal Invitations
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: user
+        x-rbac-action: invite
+        x-chat-approval-required: true
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Client UUID from clients.client_id.
+          required: true
+          description: Client UUID from clients.client_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientPortalInvitationRequest"
+      responses:
+        "200":
+          description: Per-contact invitation outcomes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkPortalInvitationEnvelope"
+        "400":
+          description: Invalid payload, no targets selected, more than 500 contacts, or
+            the tenant is not configured to send invitations.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortalInvitationApiError"
+        "401":
+          description: API key missing/invalid or key user not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortalInvitationApiError"
+        "403":
+          description: Permission denied for user invite.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortalInvitationApiError"
+        "500":
+          description: Unexpected invitation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortalInvitationApiError"
+  /api/v1/portal-invitations/bulk:
+    post:
+      summary: Invite contacts to the client portal in bulk
+      description: Sends client portal invitations for the named contacts, which may
+        belong to different clients; each contact is authorized against its own
+        client before anything is sent. Same per-contact result envelope as the
+        client-scoped endpoint.
+      tags:
+        - Portal Invitations
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: user
+        x-rbac-action: invite
+        x-chat-approval-required: true
+      x-alga-products:
+        - psa
+        - algadesk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkPortalInvitationRequest"
+      responses:
+        "200":
+          description: Per-contact invitation outcomes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkPortalInvitationEnvelope"
+        "400":
+          description: Invalid payload, no targets selected, more than 500 contacts, or
+            the tenant is not configured to send invitations.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortalInvitationApiError"
+        "401":
+          description: API key missing/invalid or key user not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortalInvitationApiError"
+        "403":
+          description: Permission denied for user invite.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortalInvitationApiError"
+        "500":
+          description: Unexpected invitation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortalInvitationApiError"
   /api/v1/contract-lines:
     get:
       summary: List contract lines
@@ -39857,12 +40361,12 @@ paths:
         endpoint, not only MCP. Validation (size, MIME type allowlist), storage,
         the document row, the association, previews and DOCUMENT_ASSOCIATED
         events run in one shared upload core; ticket attachments also write a
-        ticket activity entry. Requires document:create and <entity>:update.
-        Errors: 400 invalid source, host not allowed (code
-        FETCH_HOST_NOT_ALLOWED; nothing is fetched and no document is created),
-        unsafe or unreachable URL (a remote error status is reported in the
-        message, never as our status), oversize, or disallowed type; 403
-        permission denied; 404 entity not found."
+        ticket activity entry. Requires document:create and <entity>:update,
+        plus document:update when is_client_visible is true. Errors: 400 invalid
+        source, host not allowed (code FETCH_HOST_NOT_ALLOWED; nothing is
+        fetched and no document is created), unsafe or unreachable URL (a remote
+        error status is reported in the message, never as our status), oversize,
+        or disallowed type; 403 permission denied; 404 entity not found."
       tags:
         - Documents
       security:
@@ -65793,6 +66297,204 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/projects/{id}/materials:
+    get:
+      summary: List project materials
+      description: Returns the materials (products) recorded against a project, newest
+        first, with product name and SKU. Requires project:read and read access
+        to the project.
+      tags:
+        - Projects
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: project
+        x-rbac-action: read
+        x-chat-callable: true
+        x-chat-display-name: List Project Materials
+        x-chat-rbac-resource: project
+        x-chat-approval-required: false
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Project UUID.
+          required: true
+          description: Project UUID.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Project materials returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectMaterialListEnvelope"
+        "400":
+          description: Invalid project identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks project read permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Project not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: Add a project material
+      description: Adds a product to a project with quantity, rate and currency. A
+        stock-tracked product consumes stock and a serialized product delivers
+        the picked unit_id. Insufficient stock, or stock reserved or held for a
+        sales order, is refused with 400 on quantity and nothing is written.
+        Requires project:update. Returns the created material.
+      tags:
+        - Projects
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: project
+        x-rbac-action: update
+        x-chat-callable: true
+        x-chat-display-name: Add Project Material
+        x-chat-rbac-resource: project
+        x-chat-approval-required: true
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Project UUID.
+          required: true
+          description: Project UUID.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectMaterialCreateBody"
+      responses:
+        "201":
+          description: Material added.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectMaterialEnvelope"
+        "400":
+          description: "Invalid body (field path reported), insufficient or reserved stock
+            (path: quantity)."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks project update permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Project not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/projects/{id}/materials/{materialId}:
+    delete:
+      summary: Delete a project material
+      description: Deletes an unbilled material from the project and restores the
+        stock it consumed. Returns 404 if the material does not belong to the
+        project, and 409 if it has been billed. Requires project:update.
+      tags:
+        - Projects
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: project
+        x-rbac-action: update
+        x-chat-callable: true
+        x-chat-display-name: Delete Project Material
+        x-chat-rbac-resource: project
+        x-chat-approval-required: true
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Project UUID.
+          required: true
+          description: Project UUID.
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: uuid
+            description: Project material UUID.
+          required: true
+          description: Project material UUID.
+          name: materialId
+          in: path
+      responses:
+        "204":
+          description: Material deleted and stock restored.
+        "400":
+          description: Invalid identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks project update permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Project not found, or the material does not belong to it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: The material has been billed and cannot be deleted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/projects/tasks/{taskId}/comments:
     get:
       summary: List project task comments
@@ -74845,10 +75547,14 @@ paths:
   /api/v1/stopwatch/{id}/log:
     post:
       summary: Log stopwatch as time entry
-      description: "Logs the session as exactly one time entry: start = first segment
-        start (to the minute), end = start + active duration, billable_duration
-        = active minutes (min 1). Any body field overrides the derived value.
-        The time sheet is resolved server-side from the start date; a locked
+      description: "Logs the session as one time entry per work day (in the entry user
+        timezone) that has active time: each entry starts at the first active
+        instant of that day (to the minute) and lasts the active minutes of that
+        day, ending no later than 23:59; paused time is never booked. A session
+        within one day is one entry (billable_duration = active minutes, min 1).
+        An explicit start_time/end_time in the body produces exactly one entry
+        over that span. Other body fields override the derived value. The time
+        sheet is resolved server-side from the start date; a locked
         (submitted/approved) sheet returns 409 and the session is left
         untouched."
       tags:
@@ -74926,7 +75632,9 @@ paths:
   /api/v1/tickets/priorities:
     get:
       summary: List ticket priorities
-      description: Returns the tenant ticket priorities (item_type=ticket), ordered by name.
+      description: Returns the tenant ticket priorities (item_type=ticket), ordered by
+        name, each with is_from_itil_standard. A board whose priority_type is
+        itil accepts only ITIL priorities; any other board only the custom ones.
       tags:
         - Work Management v1
       security:
@@ -75372,9 +76080,12 @@ paths:
     post:
       summary: Upload a ticket document
       description: "Uploads a file as a document attachment to a ticket. Send
-        multipart/form-data with a `file` field. Returns the created document.
-        Multipart only: MCP and JSON clients should use `POST /api/v1/documents`
-        (or the `attach_file` MCP tool) instead."
+        multipart/form-data with a `file` field and, optionally,
+        `is_client_visible` (`true` or `false`, default `false`: internal only).
+        Client-visible needs document:update in addition to the ticket update
+        permission, and the returned document shows `is_client_visible`. Returns
+        the created document. Multipart only: MCP and JSON clients should use
+        `POST /api/v1/documents` (or the `attach_file` MCP tool) instead."
       tags:
         - Work Management v1
       security:

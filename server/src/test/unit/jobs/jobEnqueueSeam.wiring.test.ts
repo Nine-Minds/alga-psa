@@ -129,6 +129,13 @@ function workerHandledJobNames(source: string): string[] {
     const value = literals.get(m[1]);
     if (value) handled.push(value);
   }
+  // Forwarded jobs are registered through the shared helper so the worker can
+  // apply forwarded execution semantics consistently. Treat those registrations
+  // as real worker handlers too.
+  for (const m of source.matchAll(/registerForwardedJobHandler\(\s*([A-Za-z0-9_]+|'([^']+)')/g)) {
+    const value = m[2] ?? literals.get(m[1]);
+    if (value) handled.push(value);
+  }
   return [...new Set(handled)];
 }
 

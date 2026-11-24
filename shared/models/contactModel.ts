@@ -8,6 +8,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { tenantDb } from '@alga-psa/db';
+import { isEnterprise } from '@alga-psa/core';
 import { closeOpenAssignmentsForContact } from './assetAssignmentModel';
 import { clearGroupContactLinksForContact } from './assetGroupContactModel';
 import {
@@ -25,6 +26,7 @@ import {
   type UpdateContactInput,
 } from '../interfaces/contact.interfaces';
 import { ValidationResult } from '../interfaces/validation.interfaces';
+import { checkContactPhoneNumberValue, normalizePhoneForSearch } from './contactPhoneValue';
 
 const canonicalPhoneTypeSchema = z.enum(CONTACT_PHONE_CANONICAL_TYPES);
 const canonicalEmailTypeSchema = z.enum(CONTACT_EMAIL_CANONICAL_TYPES);
@@ -82,6 +84,93 @@ export async function clearContactLinksBeforeDelete(
   // FR-E6: the contact stops being a workspace user; a deleted bundle owner
   // leaves its members unassigned.
   await clearGroupContactLinksForContact(db, tenant, contactId);
+}
+
+export interface DeleteContactCascadeOptions {
+  /** Tag cleanup lives in @alga-psa/tags, which shared cannot depend on; callers inject it. */
+  deleteTags?: (trx: Knex.Transaction, contactId: string) => Promise<unknown>;
+}
+
+/** Nulls the Entra reconciliation queue's pointer at a contact about to be deleted. */
+async function cleanupEntraReferencesBeforeContactDelete(
+  trx: Knex.Transaction,
+  tenant: string,
+  contactId: string
+): Promise<void> {
+  if (!isEnterprise) {
+    return;
+  }
+
+  const queueTableExists = await trx('information_schema.tables')
+    .where({ table_schema: 'public', table_name: 'entra_contact_reconciliation_queue' })
+    .first('table_name');
+
+  if (!queueTableExists) {
+    return;
+  }
+
+  await tenantScopedTable(trx, 'entra_contact_reconciliation_queue', tenant)
+    .where({ resolved_contact_id: contactId })
+    .update({
+      resolved_contact_id: null,
+      updated_at: trx.fn.now(),
+    });
+}
+
+/**
+ * The whole hard-delete cascade for one contact, run inside the caller's transaction.
+ * Every delete path (MSP action, REST API) shares it so none of them can quietly
+ * skip a child table and leave orphans — a portal user stranded on a deleted
+ * contact can neither sign in nor be invited again.
+ *
+ * Returns the number of contact rows removed (0 when the contact was already gone).
+ */
+export async function deleteContactCascade(
+  trx: Knex.Transaction,
+  tenant: string,
+  contactId: string,
+  options: DeleteContactCascadeOptions = {}
+): Promise<number> {
+  await options.deleteTags?.(trx, contactId);
+
+  // Child records owned by the contact
+  await tenantScopedTable(trx, 'contact_phone_numbers', tenant).where({ contact_name_id: contactId }).delete();
+  await tenantScopedTable(trx, 'contact_additional_email_addresses', tenant).where({ contact_name_id: contactId }).delete();
+  await tenantScopedTable(trx, 'comments', tenant).where({ contact_id: contactId }).delete();
+  await tenantScopedTable(trx, 'portal_invitations', tenant).where({ contact_id: contactId }).delete();
+
+  await clearContactLinksBeforeDelete(trx, tenant, contactId);
+
+  // Unlink from any RMM org mapping using this contact as its default
+  // notification contact (no FK; Citus rejects ON DELETE SET NULL).
+  await tenantScopedTable(trx, 'rmm_organization_mappings', tenant)
+    .where({ default_contact_id: contactId })
+    .update({ default_contact_id: null, updated_at: new Date().toISOString() });
+
+  const contactRecord = await tenantScopedTable(trx, 'contacts', tenant)
+    .where({ contact_name_id: contactId })
+    .select('notes_document_id')
+    .first();
+
+  if (contactRecord?.notes_document_id) {
+    await tenantScopedTable(trx, 'document_block_content', tenant)
+      .where({ document_id: contactRecord.notes_document_id })
+      .delete();
+
+    await tenantScopedTable(trx, 'document_associations', tenant)
+      .where({ document_id: contactRecord.notes_document_id })
+      .delete();
+
+    await tenantScopedTable(trx, 'documents', tenant)
+      .where({ document_id: contactRecord.notes_document_id })
+      .delete();
+  }
+
+  await cleanupEntraReferencesBeforeContactDelete(trx, tenant, contactId);
+
+  return tenantScopedTable(trx, 'contacts', tenant)
+    .where({ contact_name_id: contactId })
+    .delete();
 }
 
 /**
@@ -354,7 +443,6 @@ type PreparedPrimaryEmailTypeInput = {
 
 type ContactWithPhones = ContactRecord & Pick<IContact, 'phone_numbers' | 'default_phone_number' | 'default_phone_type'>;
 
-const phonePattern = /^[0-9A-Za-z+().\-#\s/]+$/;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function tenantScopedTable(trx: Knex.Transaction, table: string, tenant: string): Knex.QueryBuilder {
@@ -423,10 +511,6 @@ export function parseFullName(fullName: string): { firstName: string; lastName: 
 
 function normalizeCustomTypeLabel(label: string): string {
   return label.trim().replace(/\s+/g, ' ').toLowerCase();
-}
-
-function normalizePhoneForSearch(phoneNumber: string): string {
-  return phoneNumber.replace(/\D/g, '');
 }
 
 function normalizeEmailAddress(emailAddress: string): string {
@@ -626,14 +710,12 @@ export class ContactModel {
         };
       }
 
-      const trimmedPhoneNumber = parsedRow.data.phone_number.trim();
+      const phoneValueCheck = checkContactPhoneNumberValue(parsedRow.data.phone_number);
+      if (phoneValueCheck.valid === false) {
+        return { valid: false, errors: [`phone_numbers.${index}.phone_number: ${phoneValueCheck.message}`] };
+      }
+      const trimmedPhoneNumber = phoneValueCheck.phoneNumber;
       const normalizedDigits = normalizePhoneForSearch(trimmedPhoneNumber);
-      if (!normalizedDigits) {
-        return { valid: false, errors: [`phone_numbers.${index}.phone_number: Phone number must contain at least one digit`] };
-      }
-      if (!phonePattern.test(trimmedPhoneNumber)) {
-        return { valid: false, errors: [`phone_numbers.${index}.phone_number: Phone number contains unsupported characters`] };
-      }
 
       const canonicalType = parsedRow.data.canonical_type ?? null;
       const customType = parsedRow.data.custom_type?.trim() || null;
@@ -990,10 +1072,16 @@ export class ContactModel {
     }
 
     let promotedEmailRow: PreparedEmailAddressInput | null = null;
+    // Set only for a bare promotion, where the caller sent no rows at all and the contact's
+    // stored rows therefore have to be carried over instead of being wiped.
+    let promotionBaseRows: PreparedEmailAddressInput[] | null = null;
+    let primaryEmailChanged = false;
 
     if (updateData.email?.trim()) {
       const normalizedEmail = updateData.email.trim().toLowerCase();
       if (normalizedEmail !== existingContact.email?.toLowerCase()) {
+        primaryEmailChanged = true;
+        const incomingRowsOmitted = updateData.additional_email_addresses === undefined;
         const incomingAdditionalRows = updateData.additional_email_addresses ?? [];
         const normalizedExistingPrimaryEmail = normalizeEmailAddress(existingContact.email || '');
         const hasDemotedPrimaryRow = incomingAdditionalRows.some((row) => {
@@ -1005,6 +1093,10 @@ export class ContactModel {
           updateData.primary_email_custom_type !== undefined ||
           updateData.primary_email_custom_type_id !== undefined;
 
+        // The arms below promote an address the contact already has (or one the caller re-sends)
+        // and keep the old primary as an additional row. When none applies the new address
+        // replaces the primary one: overwriting a wrong address is a correction, not a swap, so
+        // the old address is dropped and the primary label only changes when the caller sent one.
         const matchingAdditional = incomingAdditionalRows.find((row) => {
           const normalizedRowEmail = row.normalized_email_address ?? normalizeEmailAddress(row.email_address || '');
           return normalizedRowEmail === normalizedEmail;
@@ -1015,8 +1107,16 @@ export class ContactModel {
           const existingAdditionalRows = await this.getAdditionalEmailAddressesForContact(contactId, tenant, trx);
           const existingPromotedRow = existingAdditionalRows.find((row) => row.normalized_email_address === normalizedEmail);
 
-          if (existingPromotedRow && hasDemotedPrimaryRow) {
+          if (existingPromotedRow && (incomingRowsOmitted || hasDemotedPrimaryRow)) {
+            // One of this contact's own stored addresses becomes the default. A caller that sent
+            // no rows at all (`{ email: <own additional address> }`) means exactly that, so the
+            // contact's other stored rows are carried over. When rows *are* sent they are the
+            // caller's full intent: without the old primary among them this is a replace, and
+            // the old address must not be re-added behind the caller's back.
             promotedEmailRow = toPreparedEmailAddressInput(existingPromotedRow);
+            if (incomingRowsOmitted) {
+              promotionBaseRows = existingAdditionalRows.map(toPreparedEmailAddressInput);
+            }
           } else if (hasDemotedPrimaryRow && hasIncomingPrimaryType) {
             const customType = updateData.primary_email_custom_type?.trim() || null;
             promotedEmailRow = {
@@ -1030,10 +1130,6 @@ export class ContactModel {
             };
           }
         }
-
-        if (!promotedEmailRow) {
-          throw new Error('VALIDATION_ERROR: Changing primary email requires promote an additional email first');
-        }
       }
       const emailExists = await this.checkEmailExists(normalizedEmail, tenant, trx, contactId);
       if (emailExists) {
@@ -1045,10 +1141,12 @@ export class ContactModel {
         updateData.primary_email_custom_type = promotedEmailRow.custom_type ?? null;
         updateData.primary_email_custom_type_id = promotedEmailRow.custom_email_type_id ?? null;
 
-        const remainingRows = (updateData.additional_email_addresses ?? []).filter((row) => {
-          const normalizedRowEmail = row.normalized_email_address ?? normalizeEmailAddress(row.email_address || '');
-          return normalizedRowEmail !== normalizedEmail;
-        });
+        const remainingRows = (promotionBaseRows ?? updateData.additional_email_addresses ?? [])
+          .filter((row) => {
+            const normalizedRowEmail = row.normalized_email_address ?? normalizeEmailAddress(row.email_address || '');
+            return normalizedRowEmail !== normalizedEmail;
+          })
+          .map((row, index) => ({ ...row, display_order: index }));
 
         const hasDemotedPrimaryRow = remainingRows.some((row) => {
           const normalizedRowEmail = row.normalized_email_address ?? normalizeEmailAddress(row.email_address || '');
@@ -1067,10 +1165,7 @@ export class ContactModel {
           };
           updateData.additional_email_addresses = [...remainingRows, demotedPrimaryRow];
         } else {
-          updateData.additional_email_addresses = remainingRows.map((row, index) => ({
-            ...row,
-            display_order: index,
-          }));
+          updateData.additional_email_addresses = remainingRows;
         }
       }
     } else if (updateData.email === null) {
@@ -1131,7 +1226,7 @@ export class ContactModel {
       updateData.primary_email_custom_type_id = primaryEmailCustomTypeId;
     }
     const shouldClearAdditionalEmailAddressesBeforePrimarySwap =
-      promotedEmailRow !== null &&
+      primaryEmailChanged &&
       updateData.additional_email_addresses !== undefined;
 
     const dbData: Record<string, unknown> = {
@@ -1153,9 +1248,10 @@ export class ContactModel {
     }
 
     if (shouldClearAdditionalEmailAddressesBeforePrimarySwap) {
-      // During a primary-email promotion, clear the existing additional rows before
-      // updating contacts.email so immediate uniqueness triggers never see both
-      // the old and new primary addresses in conflicting locations at once.
+      // Whenever the primary email changes (promotion or replacement) and the rows are being
+      // rewritten anyway, clear the stored additional rows before updating contacts.email so
+      // immediate uniqueness triggers never see both the old and new primary addresses in
+      // conflicting locations at once.
       await tenantScopedTable(trx, 'contact_additional_email_addresses', tenant)
         .where('contact_name_id', contactId)
         .delete();

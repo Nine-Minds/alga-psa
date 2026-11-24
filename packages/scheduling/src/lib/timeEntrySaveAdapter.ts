@@ -1,7 +1,7 @@
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { translate } from '@alga-psa/ui/lib/i18n/client';
 import type { ITimeEntry } from '@alga-psa/types';
-import { fetchOrCreateTimeSheet, saveTimeEntry } from '../actions/timeEntryActions';
+import { fetchOrCreateTimeSheet, logStopwatchSession, saveTimeEntry } from '../actions/timeEntryActions';
 import {
   isEditableSheetStatus,
   periodForWorkDate,
@@ -86,6 +86,12 @@ export function createCatalogSheetResolver(params: {
   };
 }
 
+/** Saves one entry, or (stopwatch only) all of a session's per-day entries atomically. */
+export interface TimeEntrySaveHandler {
+  (timeEntry: SaveableEntry): Promise<void>;
+  (timeEntries: SaveableEntry[]): Promise<void>;
+}
+
 /**
  * Adapter between the entry dialog's save contract and the save action.
  *
@@ -95,18 +101,35 @@ export function createCatalogSheetResolver(params: {
  * new-entry and anchored existing-entry launchers so both paths behave
  * identically. When a resolver is given, it supplies the sheet from the
  * entry's date instead of a sheet fixed when the form opened.
+ *
+ * Given an array (a stopwatch session split into one entry per work day), a sheet is resolved for
+ * EACH entry and the session is logged with all of them in one transaction.
  */
-export const createTimeEntrySaveHandler =
-  (
-    onComplete?: () => void,
-    resolveTimeSheetId?: TimeSheetResolver,
-    /** When set, saving also logs this stopwatch session in the same transaction (plan D4). */
-    options?: { stopwatchSessionId?: string | null },
-  ) =>
-  async (timeEntry: SaveableEntry): Promise<void> => {
-    const resolvedEntry = resolveTimeSheetId
-      ? { ...timeEntry, time_sheet_id: await resolveTimeSheetId(timeEntry) }
-      : timeEntry;
+export const createTimeEntrySaveHandler = (
+  onComplete?: () => void,
+  resolveTimeSheetId?: TimeSheetResolver,
+  /** When set, saving also logs this stopwatch session in the same transaction (plan D4). */
+  options?: { stopwatchSessionId?: string | null },
+): TimeEntrySaveHandler => {
+  const withSheet = async (timeEntry: SaveableEntry): Promise<SaveableEntry> =>
+    resolveTimeSheetId ? { ...timeEntry, time_sheet_id: await resolveTimeSheetId(timeEntry) } : timeEntry;
+
+  const saveAll = async (timeEntries: SaveableEntry[]): Promise<void> => {
+    if (!options?.stopwatchSessionId) {
+      throw new Error('Saving several time entries requires a stopwatch session');
+    }
+    const resolved: SaveableEntry[] = [];
+    for (const timeEntry of timeEntries) {
+      resolved.push(await withSheet(timeEntry));
+    }
+    const saved = await logStopwatchSession(options.stopwatchSessionId, resolved);
+    if (isActionMessageError(saved) || isActionPermissionError(saved)) {
+      throw new TimeEntrySaveRejectedError(getErrorMessage(saved));
+    }
+  };
+
+  const saveOne = async (timeEntry: SaveableEntry): Promise<void> => {
+    const resolvedEntry = await withSheet(timeEntry);
     const entryToSave = options?.stopwatchSessionId
       ? { ...resolvedEntry, stopwatch_session_id: options.stopwatchSessionId }
       : resolvedEntry;
@@ -114,7 +137,16 @@ export const createTimeEntrySaveHandler =
     if (isActionMessageError(savedEntry) || isActionPermissionError(savedEntry)) {
       throw new TimeEntrySaveRejectedError(getErrorMessage(savedEntry));
     }
+  };
+
+  return (async (timeEntry: SaveableEntry | SaveableEntry[]): Promise<void> => {
+    if (Array.isArray(timeEntry)) {
+      await saveAll(timeEntry);
+    } else {
+      await saveOne(timeEntry);
+    }
     if (onComplete) {
       onComplete();
     }
-  };
+  }) as TimeEntrySaveHandler;
+};

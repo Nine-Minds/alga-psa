@@ -6,6 +6,11 @@ import type { SearchObjectType } from '@alga-psa/types';
 
 const MAX_SEARCH_QUERY_CHARS = 200;
 const IDENTIFIER_QUERY_PATTERN = /^[A-Z]+-?\d+$/i;
+// LEVERAGE: pattern search-identifier-derivation — same partial first-chunk identifier derivation as
+// shared/ticketClients/searchIdentifier.ts (list searches). Global search also keeps this for
+// `normalized`/`isIdentifierLike` semantics, and its LIKE q.identifier || '%' still widens a full
+// hyphenated number (ALGA-2026-0002826 -> alga-2026%). Left unchanged here; migrate when global search
+// semantics are revisited.
 const IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
 const HEADLINE_START_SENTINEL = '__SEARCH_MARK_START__';
 const HEADLINE_STOP_SENTINEL = '__SEARCH_MARK_STOP__';

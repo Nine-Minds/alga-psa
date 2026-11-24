@@ -1,3 +1,6 @@
+import type { AllowlistedUserField } from '../lib/userResponse';
+export type { AllowlistedUserField } from '../lib/userResponse';
+
 /**
  * Canonical User Interfaces
  * These are the canonical definitions for user-related types used across the codebase.
@@ -38,6 +41,9 @@ export interface IUser {
   last_login_at?: Date | string;
   last_login_method?: string;
 }
+
+/** Browser-safe fields used by user directory pickers and dropdowns. */
+export type IUserBasic = Pick<IUser, AllowlistedUserField>;
 
 /**
  * Role entity interface

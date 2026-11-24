@@ -15,30 +15,36 @@ function tokenFor(variable: VariableDef): string {
     : `{{${variable.path}}}`;
 }
 
+const CATEGORY_HEADINGS: Record<string, string> = {
+  auth: "Authentication",
+  sla: "SLA",
+};
+
+function categoryHeading(category: string): string {
+  return (
+    CATEGORY_HEADINGS[category] ??
+    category.charAt(0).toUpperCase() + category.slice(1)
+  );
+}
+
+const OUTPUT_PATH = "docs/email/template-variable-reference.md";
+
 function generateMarkdown(): string {
   const lines = [
-    "---",
-    'title: "10.7. Customize Email Templates with Variables"',
-    "slug: email-template-variables",
-    "category: 10. Settings",
-    "order: 10.07",
-    'description: "Find, insert, and safely use the variables available in each AlgaPSA system email template."',
-    "---",
-    "Email template variables let your MSP reuse live ticket, client, invoice, appointment, and other operational details in custom messages. AlgaPSA limits the available variables to the selected system template so a token from one workflow is not accidentally used in another.",
+    "# Email Template Variable Reference",
     "",
-    "Open **Settings > Notifications > Email Templates**. Select **Variable reference** to search every template across ticketing, billing, projects, appointments, and other areas.",
+    `<!-- Generated from the template variable registry. Do not edit by hand. Regenerate with: npx tsx packages/notifications/scripts/generate-variable-docs.ts --output=${OUTPUT_PATH} -->`,
     "",
-    "![The email template variable reference filtered to ticket title variables](/docs-images/email-template-variable-reference.png)",
-    "*Figure 1: Search every documented variable and see which templates can use it.*",
+    "Every variable each AlgaPSA system email template can use, with its type, meaning, and an example value. It is the same list the in-app **Variable reference** searches, laid out one table per template.",
     "",
-    "Customize a template to see only the variables available in that message. Type `{{` in the subject, HTML, or plain-text editor to open suggestions at the cursor. Keep typing to filter the list, then press Enter or Tab to complete the token. You can also select a variable in the side panel to insert it at the last cursor position. The copy action puts the complete Handlebars token on your clipboard.",
+    "The customer-facing guide is in the website docs: [Customize Email Templates with Variables](https://www.nineminds.com/documentation/email-template-variables).",
     "",
-    "![The custom email template editor showing its variable panel and a suggestion at the subject cursor](/docs-images/email-template-variable-editor.png)",
-    "*Figure 2: The editor limits variables and autocomplete suggestions to the selected template.*",
+    "## How to read this reference",
     "",
-    "Use double braces for ordinary values, such as `{{ticket.title}}`. Variables marked `raw-html` use triple braces, such as `{{{ticket.changes}}}`, because their value contains markup prepared by AlgaPSA. Only use triple braces for variables explicitly marked `raw-html`.",
-    "",
-    "After editing a template, preview it with sample data and send a test email. Check the subject, links, optional sections, and plain-text version before saving it for production use.",
+    "- Each section is one area, and each table is one system template, named as the in-app reference shows it under **Used by**.",
+    "- A variable works only in the templates that list it. An invoice variable is empty in a ticket email.",
+    "- Ordinary values use double braces, such as `{{ticket.title}}`. Variables of type `raw-html` use triple braces, such as `{{{ticket.changes}}}`, because their value is markup prepared by AlgaPSA.",
+    "- A template marked **Not currently sent** can be customized, but AlgaPSA does not dispatch that email today.",
     "",
   ];
 
@@ -48,7 +54,7 @@ function generateMarkdown(): string {
     ),
   ].sort();
   for (const category of categories) {
-    lines.push(`## ${category}`, "");
+    lines.push(`## ${categoryHeading(category)}`, "");
     for (const [templateName, entry] of Object.entries(
       templateVariableRegistry,
     )) {
@@ -74,7 +80,7 @@ function generateMarkdown(): string {
   }
 
   lines.push(
-    "## Operational checks",
+    "## Notes",
     "",
     "- A value called `ticket.id` or `project.id` is the human-readable ticket or project number, not a database UUID.",
     "- Some URL variables open the client portal for external recipients and the MSP workspace for internal recipients. Do not assume the hostname from the example value.",

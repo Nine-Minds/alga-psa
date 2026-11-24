@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const dbMocks = vi.hoisted(() => ({ tenantDb: vi.fn() }));
 
 vi.mock('@alga-psa/db', () => ({ tenantDb: dbMocks.tenantDb }));
-vi.mock('@alga-psa/tenancy/actions', () => ({
+vi.mock('@alga-psa/tenancy/server/tenantSettings', () => ({
   getExperimentalFeaturesForTenant: vi.fn(),
 }));
 vi.mock('server/src/lib/tier-gating/assertAddOnAccess', () => ({

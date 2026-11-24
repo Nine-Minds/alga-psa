@@ -60,12 +60,23 @@ describe('co-managed Stripe entitlement adapter', () => {
     });
 
   it.each([
-    { id: 'different-price' }, { type: 'one_time' }, { unit_amount: 0 }, { billing_scheme: 'tiered' },
+    { type: 'one_time' }, { unit_amount: 0 }, { billing_scheme: 'tiered' },
     { recurring: { interval: 'year', interval_count: 1, usage_type: 'licensed' } },
     { recurring: { interval: 'month', interval_count: 2, usage_type: 'licensed' } },
     { recurring: { interval: 'month', interval_count: 1, usage_type: 'metered' } },
   ])('rejects a price that is not a simple monthly per-seat price %j', (changes) => {
     expect(() => assertCoManagedPrice(price(changes) as unknown as Stripe.Price, 'price_co_managed')).toThrow('monthly licensed per-seat');
+  });
+
+  it('recognises any price the catalog ever bound (retired included) and nothing else', () => {
+    const recognized = ['price_retired', 'price_co_managed'];
+    expect(() => assertCoManagedPrice(price({ id: 'price_retired', active: false }) as unknown as Stripe.Price, recognized)).not.toThrow();
+    expect(isCoManagedSubscription(subscription({ metadata: {}, items: { data: [{ price: { id: 'price_retired' }, quantity: 2 }] } }), recognized)).toBe(true);
+  });
+
+  it('leaves capacity unchanged with an actionable error for an unmapped price', () => {
+    expect(() => assertCoManagedPrice(price({ id: 'different-price' }) as unknown as Stripe.Price, ['price_co_managed'])).toThrow(/different-price is not bound/);
+    expect(() => coManagedSnapshotFromStripe({ ...input(subscription({ items: { data: [{ price: price({ id: 'different-price' }), quantity: 2 }] } })) })).toThrow(/not bound to any co-managed offer/);
   });
 
   it('is inactive without a paid latest invoice or a live Pro subscription', () => {

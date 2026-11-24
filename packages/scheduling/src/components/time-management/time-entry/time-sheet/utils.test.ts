@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   contractLineFieldsForWrite,
@@ -5,10 +6,11 @@ import {
   getSameDayDurationLimit,
   getTimeEntryWorkDate,
   isTimeEntryOnWorkDate,
-  validateTimeEntry,
+  getTimeEntryValidationErrors,
 } from './utils';
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
@@ -52,16 +54,84 @@ describe('time entry same-day duration helpers', () => {
     expect(result.endTime.getMinutes()).toBe(59);
   });
 
-  it('rejects saved entries that spill into another day', () => {
+  describe('getTimeEntryValidationErrors', () => {
     const alertMock = vi.fn();
-    vi.stubGlobal('alert', alertMock);
+    const stubAlert = () => {
+      alertMock.mockClear();
+      vi.spyOn(window, 'alert').mockImplementation(alertMock);
+    };
 
-    expect(validateTimeEntry({
-      start_time: new Date(2026, 3, 23, 23, 0, 0, 0).toISOString(),
-      end_time: new Date(2026, 3, 24, 0, 30, 0, 0).toISOString(),
-      billable_duration: 90,
-    } as any)).toBe(false);
-    expect(alertMock).toHaveBeenCalledWith('Time entry must end on the same day');
+    it('returns no errors for a valid same-day span', () => {
+      stubAlert();
+      expect(getTimeEntryValidationErrors({
+        start_time: '2026-04-23T13:00:00.000Z',
+        end_time: '2026-04-23T14:30:00.000Z',
+        billable_duration: 90,
+      }, 'UTC')).toEqual({});
+      expect(alertMock).not.toHaveBeenCalled();
+    });
+
+    it('flags start >= end on start and end without alerting', () => {
+      stubAlert();
+      const errors = getTimeEntryValidationErrors({
+        start_time: '2026-04-23T14:00:00.000Z',
+        end_time: '2026-04-23T14:00:00.000Z',
+        billable_duration: 0,
+      }, 'UTC');
+      expect(errors.startTime).toBe('Start time must be earlier than end time');
+      expect(errors.endTime).toBe('End time must be later than start time');
+      expect(errors.duration).toBe('Duration must be at least 1 minute');
+      expect(alertMock).not.toHaveBeenCalled();
+    });
+
+    it('flags a span that crosses midnight in the subject zone', () => {
+      stubAlert();
+      // 22:00 -> 01:00 in New York, which is a single UTC day (02:00Z -> 05:00Z on the 24th).
+      const crossing = {
+        start_time: '2026-04-24T02:00:00.000Z',
+        end_time: '2026-04-24T05:00:00.000Z',
+        billable_duration: 180,
+      };
+      const errors = getTimeEntryValidationErrors(crossing, 'America/New_York');
+      expect(errors.endTime).toBe('End time must be on the same day as start time');
+      expect(errors.duration).toBe('Duration must end on the same day');
+      // Same instants are one day in UTC.
+      expect(getTimeEntryValidationErrors(crossing, 'UTC')).toEqual({});
+      expect(alertMock).not.toHaveBeenCalled();
+    });
+
+    it('falls back to browser-local days without a zone', () => {
+      stubAlert();
+      const errors = getTimeEntryValidationErrors({
+        start_time: new Date(2026, 3, 23, 23, 0, 0, 0).toISOString(),
+        end_time: new Date(2026, 3, 24, 0, 30, 0, 0).toISOString(),
+        billable_duration: 90,
+      });
+      expect(errors.endTime).toBeTruthy();
+      expect(alertMock).not.toHaveBeenCalled();
+    });
+
+    it('flags billable minutes above the duration', () => {
+      stubAlert();
+      const errors = getTimeEntryValidationErrors({
+        start_time: '2026-04-23T13:00:00.000Z',
+        end_time: '2026-04-23T14:00:00.000Z',
+        billable_duration: 90,
+      }, 'UTC');
+      expect(errors.duration).toBe('Billable duration cannot exceed total duration');
+      expect(errors.startTime).toBeUndefined();
+      expect(alertMock).not.toHaveBeenCalled();
+    });
+
+    it('skips the billable check when no billable duration is given and flags unparsable times', () => {
+      stubAlert();
+      expect(getTimeEntryValidationErrors({
+        start_time: '2026-04-23T13:00:00.000Z',
+        end_time: '2026-04-23T14:00:00.000Z',
+      }, 'UTC')).toEqual({});
+      expect(getTimeEntryValidationErrors({ start_time: 'nope', end_time: 'nah' }, 'UTC').duration).toBe('Enter a valid time range');
+      expect(alertMock).not.toHaveBeenCalled();
+    });
   });
 
   it('T003: prefers work_date for timezone-boundary display grouping', () => {

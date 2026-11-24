@@ -1555,7 +1555,9 @@ export class InvoiceService extends BaseService<IInvoice> {
     // authoritative consumed-credit re-check runs under lock in the core.
     const blocker = await findLocalVoidBlocker(knex, tenant, invoice);
     if (blocker) {
-      throw new ConflictError(blocker);
+      // The message names where the payments came from (manual / QuickBooks
+      // payment #… / Xero / Stripe) and what to do about each.
+      throw new ConflictError(blocker.message);
     }
 
     let actorCanRemoteMutateUnderLock = actorCanRemoteMutate;

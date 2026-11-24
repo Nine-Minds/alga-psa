@@ -418,6 +418,7 @@
         "oauthStatus": "OAuth-Status",
         "connected": "Verbunden",
         "notConnected": "Nicht verbunden",
+        "reauthorizationRequired": "Erneute Autorisierung erforderlich",
         "reconnectOauth": "OAuth erneut verbinden",
         "authorizeUrl": "URL autorisieren",
         "tokenUrl": "Token-URL",
@@ -574,6 +575,7 @@
       "statusLabel": "OAuth-Status",
       "connected": "Verbunden",
       "notConnected": "Nicht verbunden",
+      "reauthorizationRequired": "Erneute Autorisierung erforderlich",
       "authorizing": "Wird autorisiert...",
       "reconnect": "OAuth erneut verbinden"
     },
@@ -1084,6 +1086,7 @@
       "noClient": "Kein Kunde zugeordnet",
       "outcome": {
         "assignClient": "Ticket dem Kunden \"{{client}}\" zugewiesen",
+        "matchedClient": "der zugeordnete Kunde",
         "fallback": "Kein Kunde zugeordnet — Ticket wurde an das Fallback-Ziel weitergeleitet",
         "none": "Regel hat keine Zuordnung ergeben — die normale Verarbeitung wird fortgesetzt",
         "setDestination": "Ticket an das ausgewählte Ziel weitergeleitet",
@@ -1129,7 +1132,8 @@
       "ticketingFromDomainMismatch": "Die Absenderadresse für Tickets muss die konfigurierte Versanddomain verwenden",
       "refreshFailed": "Die aktualisierten Einstellungen konnten nicht abgerufen werden",
       "updateFailed": "Die E-Mail-Einstellungen konnten nicht aktualisiert werden",
-      "mailboxesLoadFailed": "Die Microsoft-365-Postfächer konnten nicht geladen werden"
+      "mailboxesLoadFailed": "Die Microsoft-365-Postfächer konnten nicht geladen werden",
+      "secretRequiredAfterConnectionChange": "Geben Sie das Passwort für {{provider}} erneut ein: Die Serveradresse oder Anmeldedaten wurden geändert."
     },
     "inboundRules": {
       "notFound": "Regel für eingehende E-Mails nicht gefunden",

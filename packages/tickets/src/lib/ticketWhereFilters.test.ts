@@ -7,6 +7,10 @@ import {
   WHERE_FILTERS,
   WHERE_LOCATION_FILTERS,
   WHERE_TAG_FILTERS,
+  WHERE_CLIENT_FILTER,
+  flipWhereMode,
+  getSingleClientScope,
+  whereFiltersFor,
 } from './ticketWhereFilters';
 
 const group = (...clauses: any[]) => ({ join: 'and' as const, clauses });
@@ -72,7 +76,7 @@ describe('ticket where location filters (descriptor table)', () => {
       ['location_id', 'ticket', 'filters.location', 'Location'],
       ['contact.locations', 'contact', 'filters.requesterLocation', 'Requester location'],
     ]);
-    expect(WHERE_FILTERS).toHaveLength(4);
+    expect(WHERE_FILTERS).toHaveLength(5);
   });
 
   it('writes, reads and clears a location selection the same way a tag selection works', () => {
@@ -124,5 +128,54 @@ describe('ticket where location filters (descriptor table)', () => {
     );
     const chips = whereTagFilterChips(where, () => 'VIP', (descriptor) => descriptor.defaultLabel);
     expect(chips.map((chip) => chip.path)).toEqual(['contact.tags']);
+  });
+});
+
+describe('ticket where client filter (T007)', () => {
+  const A = '11111111-1111-4111-8111-111111111111';
+  const B = '22222222-2222-4222-8222-222222222222';
+  const names: Record<string, string> = { [A]: 'Acme', [B]: 'Birch' };
+  const label = (d: { defaultLabel: string }) => d.defaultLabel;
+  const chips = (where: any) =>
+    whereFilterChips(where, (_d, id) => names[id], label, [WHERE_CLIENT_FILTER]);
+
+  it('is a primary-placement row on client.id with a server-searched source', () => {
+    expect(WHERE_CLIENT_FILTER).toMatchObject({ path: 'client.id', options: { clients: 'search' }, labelKey: 'fields.client', placement: 'primary' });
+    expect(whereFiltersFor('primary').map((d) => d.path)).toEqual(['client.id']);
+    expect(whereFiltersFor('secondary').map((d) => d.path)).not.toContain('client.id');
+  });
+
+  it('reads and writes the selection, and flipping the mode keeps the ids', () => {
+    const where = setWhereTagSelection(undefined, 'client.id', { mode: 'in', ids: [A, B] });
+    expect(where).toEqual(group({ path: 'client.id', operator: 'in', value: [A, B] }));
+    const flipped = flipWhereMode(getWhereTagSelection(where, 'client.id')!);
+    expect(flipped).toEqual({ mode: 'not_in', ids: [A, B] });
+    expect(setWhereTagSelection(where, 'client.id', flipped)).toEqual(group({ path: 'client.id', operator: 'not_in', value: [A, B] }));
+  });
+
+  it('renders one chip per client, = for Any of and ≠ for None of', () => {
+    expect(chips(group({ path: 'client.id', operator: 'in', value: [A, B] })).map((c) => c.label)).toEqual(['Client = Acme', 'Client = Birch']);
+    expect(chips(group({ path: 'client.id', operator: 'not_in', value: [A] })).map((c) => c.label)).toEqual(['Client ≠ Acme']);
+  });
+
+  it('clearing one chip leaves the others, and the last one removes the row', () => {
+    const where = group({ path: 'client.id', operator: 'in', value: [A, B] });
+    const [first] = chips(where);
+    expect(first.clear()).toEqual(group({ path: 'client.id', operator: 'in', value: [B] }));
+    expect(chips(first.clear())[0].clear()).toBeUndefined();
+  });
+
+  it('shows the Unknown client label, never the id, for an unresolved client', () => {
+    const where = group({ path: 'client.id', operator: 'in', value: [A] });
+    const [chip] = whereFilterChips(where, () => undefined, label, [WHERE_CLIENT_FILTER]);
+    expect(chip.label).toBe('Client = Unknown client');
+    expect(chip.label).not.toContain(A);
+  });
+
+  it('scopes contacts and locations only for Any of exactly one client', () => {
+    expect(getSingleClientScope(group({ path: 'client.id', operator: 'in', value: [A] }))).toBe(A);
+    expect(getSingleClientScope(group({ path: 'client.id', operator: 'in', value: [A, B] }))).toBeNull();
+    expect(getSingleClientScope(group({ path: 'client.id', operator: 'not_in', value: [A] }))).toBeNull();
+    expect(getSingleClientScope(undefined)).toBeNull();
   });
 });

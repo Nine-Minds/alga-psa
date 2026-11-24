@@ -51,9 +51,12 @@ import { getEligibleContractLines } from '@alga-psa/scheduling/lib/contractLineD
 import { resolveDeterministicContractLineSelection } from '@alga-psa/scheduling/lib/contractLineDisambiguation.shared';
 import { saveTimeEntryParamsSchema, type SaveTimeEntryParams } from '@alga-psa/scheduling/actions/timeEntrySchemas';
 import { resolveTimeEntryReadScope } from '@alga-psa/scheduling/lib/timeEntryAuthorizationSql';
+import { resolveTimeEntryMode } from '@alga-psa/scheduling/lib/timeEntryMode';
+import { RequestLocalAuthorizationCache } from '@alga-psa/authorization/kernel';
 import { subjectFromServiceContext } from './serviceContextSubject';
 import {
   CONTRACT_LINE_SOURCE_BY_SELECTION_REASON,
+  operationalTimeEntriesOnly,
   type ContractLineSource,
 } from '@alga-psa/types';
 
@@ -64,6 +67,27 @@ function narrowToReadScope<Q extends Knex.QueryBuilder>(
 ): Q {
   readScope.apply(query);
   return query;
+}
+
+/**
+ * The read scope of a REST time-entry read. A seat technician reads only their own operational entries (S28 /
+ * F070, as `seatTimeAccess` holds the server actions to); the bundle read scope does not know the seat resolver.
+ */
+async function resolveRestTimeEntryReadScope(
+  knex: Knex,
+  context: ServiceContext,
+): Promise<{ apply(builder: Knex.QueryBuilder): void }> {
+  const [readScope, mode] = await Promise.all([
+    resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), 'time_entries'),
+    resolveTimeEntryMode(knex, context.tenant, context.userId, new RequestLocalAuthorizationCache()),
+  ]);
+  if (mode !== 'operational') return readScope;
+  return {
+    apply(builder) {
+      readScope.apply(builder);
+      operationalTimeEntriesOnly(builder.where('time_entries.user_id', context.userId));
+    },
+  };
 }
 
 export class TimeEntryService extends BaseService<any> {
@@ -198,7 +222,7 @@ export class TimeEntryService extends BaseService<any> {
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'list', [options, context]);
     if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
-    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
+    const readScope = await resolveRestTimeEntryReadScope(knex, context);
     const query = narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context));
 
     // Extract filters from options
@@ -254,7 +278,7 @@ export class TimeEntryService extends BaseService<any> {
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'getById', [id, context]);
     if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
-    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
+    const readScope = await resolveRestTimeEntryReadScope(knex, context);
     const scopedDb = tenantDb(knex, context.tenant);
     const query = narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context));
     scopedDb.tenantJoin(query, 'users', 'time_entries.user_id', 'users.user_id', { type: 'left' });
@@ -768,9 +792,12 @@ export class TimeEntryService extends BaseService<any> {
       throw mapStopwatchError(error);
     }
 
-    await publishLoggedSessionEvents(result.persisted, context);
+    for (const persisted of result.persisted) {
+      await publishLoggedSessionEvents(persisted, context);
+    }
 
-    return this.getById(result.persisted.entry.entry_id, context);
+    // The first entry, as before; a multi-day session's other entries are reachable via the session.
+    return this.getById(result.persisted[0].entry.entry_id, context);
   }
 
   /** Abandon the caller's own timer without writing effort (REST cancel-tracking). */
@@ -848,7 +875,7 @@ export class TimeEntryService extends BaseService<any> {
 
     // Only the entries the caller may read: entries on work items of clients outside their scope are not exported,
     // and an entry on client-less work (ad hoc) is exported to its own user only. Free for a caller nothing narrows.
-    (await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName)).apply(query);
+    (await resolveRestTimeEntryReadScope(knex, context)).apply(query);
     
     // Add joins for complete data
     const scopedDb = tenantDb(knex, context.tenant);
@@ -932,7 +959,7 @@ export class TimeEntryService extends BaseService<any> {
     // Human-work guard: approval requires a human approver. Checked before the per-entry
     // loop, whose catch would otherwise swallow the error into a per-entry failure.
     await assertHumanWorkOwner(knex, context.tenant, context.userId, 'approved_by');
-    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
+    const readScope = await resolveRestTimeEntryReadScope(knex, context);
 
     for (const entryId of data.entry_ids) {
       try {
@@ -1020,7 +1047,7 @@ export class TimeEntryService extends BaseService<any> {
     if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
     const results: { success: boolean; error?: string; entry_id: string }[] = [];
-    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
+    const readScope = await resolveRestTimeEntryReadScope(knex, context);
     
     for (const entryId of data.entry_ids) {
       try {
@@ -1060,7 +1087,7 @@ export class TimeEntryService extends BaseService<any> {
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'searchTimeEntries', [searchData, context]);
     if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
-    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
+    const readScope = await resolveRestTimeEntryReadScope(knex, context);
     const query = narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context));
 
     // Build search query
@@ -1130,7 +1157,7 @@ export class TimeEntryService extends BaseService<any> {
   
   async search(searchData: TimeEntrySearchData, context: ServiceContext): Promise<any[]> {
     const { knex } = await this.getKnex();
-    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
+    const readScope = await resolveRestTimeEntryReadScope(knex, context);
     const query = narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context));
 
     // Build search query
@@ -1207,7 +1234,7 @@ export class TimeEntryService extends BaseService<any> {
   
   async getStatistics(context: ServiceContext, filters?: TimeEntryFilterData): Promise<any> {
     const { knex } = await this.getKnex();
-    const readScope = await resolveTimeEntryReadScope(knex, context.tenant, subjectFromServiceContext(context), this.tableName);
+    const readScope = await resolveRestTimeEntryReadScope(knex, context);
     let query = narrowToReadScope(readScope, this.buildTenantScopedQuery(knex, context));
 
     // Apply date filters if provided

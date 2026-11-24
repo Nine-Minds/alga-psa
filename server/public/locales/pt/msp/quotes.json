@@ -796,7 +796,7 @@
   },
   "templateEditor": {
     "actions": {
-      "backToLayouts": "Voltar para Layouts",
+      "back": "Voltar para Layouts de cotação",
       "rerun": "Executar novamente",
       "saveLayout": "Salvar layout"
     },
@@ -805,8 +805,6 @@
       "copyOf": "Cópia de {{name}}",
       "standardTemplate": "Modelo padrão"
     },
-    "title": "Editor de layout de cotação",
-    "description": "Projete o layout da cotação usando o editor visual e visualize-o com dados de amostra.",
     "errors": {
       "exportAst": "Falha ao exportar o modelo AST do espaço de trabalho visual: {{message}}",
       "load": "Falha ao carregar o editor de modelo de cotação",
@@ -819,16 +817,13 @@
       "quoteDetailLoad": "Falha ao carregar os detalhes da cotação."
     },
     "fields": {
-      "layoutDetails": "Detalhes do layout",
+      "created": "Criado {{time}}",
+      "notSaved": "Ainda não salvo",
+      "savedAt": "Salvo {{time}}",
       "templateName": "Nome do modelo",
       "version": "Versão"
     },
-    "footer": {
-      "created": "Criado:",
-      "lastUpdated": "Última atualização:"
-    },
     "headings": {
-      "editLayout": "Editar layout de cotação",
       "newLayout": "Novo layout de cotação"
     },
     "placeholders": {
@@ -850,7 +845,14 @@
       "noQuotesFound": "Nenhuma cotação encontrada.",
       "selectQuote": "Selecione a cotação",
       "selectQuoteHint": "Selecione uma cotação para visualizar a saída vinculada a dados.",
-      "loadingQuoteDetails": "Carregando detalhes da cotação..."
+      "loadingQuoteDetails": "Carregando detalhes da cotação...",
+      "frameTitle": "Pré-visualização do orçamento",
+      "zoom": {
+        "fit": "Ajustar",
+        "actual": "100 %",
+        "label": "Zoom da pré-visualização",
+        "fitWithScale": "Ajustar ({{percent}} %)"
+      }
     },
     "pipeline": {
       "render": "Renderizar",
@@ -865,6 +867,9 @@
       "preview": "Visualização",
       "transforms": "Transformações",
       "visual": "Visual"
+    },
+    "titles": {
+      "edit": "Editar layout: {{name}}"
     }
   },
   "templatesPage": {

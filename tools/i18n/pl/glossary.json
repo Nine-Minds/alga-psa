@@ -2216,6 +2216,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "true",
       "{{field}}: {{from}} → {{to}}",
       "{{from}} → {{to}}",
       "RMA {{id}}",
@@ -2366,7 +2367,10 @@
       "Plan",
       "Workflow",
       "status",
-      "{{actor}} • {{eventType}}"
+      "{{actor}} • {{eventType}}",
+      "MacBook Air 13\"",
+      "Dell Latitude 5450",
+      "Lenovo ThinkPad T14"
     ],
     "caseInsensitive": [
       "api",

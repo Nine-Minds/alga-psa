@@ -190,7 +190,9 @@ describeDb('seat technicians do not consume MSP licences', { shuffle: false }, (
     for (let seat = 0; seat < 2; seat += 1) await createUser(db, plain, { user_type: 'internal' });
     await createUser(db, plain, { user_type: 'internal', is_inactive: true });
     await createUser(db, plain, { user_type: 'client' });
-    await db('user_invitations').insert({ tenant: plain, email: address(), first_name: 'P', last_name: 'I', role_id: null,
+    const pendingEmail = address();
+    await db('user_invitations').insert({ tenant: plain, email: pendingEmail, email_normalized: pendingEmail.trim().toLowerCase(),
+      first_name: 'P', last_name: 'I', role_id: null,
       token: randomUUID(), expires_at: new Date(Date.now() + DAY) });
     // Room on the limit: the appliance seat check sees the same count as every other site.
     await db('tenants').where({ tenant: plain }).update({ licensed_user_count: 5 });

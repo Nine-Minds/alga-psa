@@ -211,6 +211,13 @@ export const PORTAL_ROUTE_RULES: readonly RouteRule[] = [
 
 export const API_RULES: readonly ApiRule[] = [
   {
+    // The storefront and platform operators authenticate with the master-tenant gate in each route.
+    group: 'api_billing_catalog',
+    staticPrefixes: ['/api/v1/billing-catalog'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied', co_managed: 'denied' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
+  },
+  {
     // Bearer-link quote review belongs to billing, outside the public v1 API.
     group: 'api_public_quote',
     staticPrefixes: ['/api/quote'],
@@ -310,6 +317,9 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/email/oauth',
       '/api/email/imap',
       '/api/v1/users',
+      // Client portal invitations follow the client portal itself, which every
+      // product serves: the contacts and users they invite are already here.
+      '/api/v1/portal-invitations',
       '/api/v1/teams',
       '/api/v1/interactions',
       '/api/v1/interaction-types',

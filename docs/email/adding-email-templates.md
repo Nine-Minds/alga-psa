@@ -30,6 +30,21 @@ A send path names the person, not the template. Each send in `ticketEmailSubscri
 3. `projectTicketEmailContext()` removes every variable that is not client-safe from a `client` context.
 4. `recipient.isInternal` is added to the context.
 
+### Which ticket emails have a client template
+
+`TICKET_EMAIL_CLIENT_VARIANTS` maps each internal template to its client template and notification subtype:
+
+| Internal template | Client template | Client subtype |
+|---|---|---|
+| `ticket-created` | `ticket-created-client` | Ticket Created Client |
+| `ticket-updated` | `ticket-updated-client` | Ticket Updated Client |
+| `ticket-comment-added` | `ticket-comment-added-client` | Ticket Comment Added Client |
+| `ticket-closed` | `ticket-closed-client` | Ticket Closed Client |
+
+`ticket-agent-assigned-client` and `ticket-auto-close-warning` only ever go to clients. Together with the client templates above, they make up `CLIENT_TICKET_EMAIL_TEMPLATES`, the set the template editor's Variables panel labels as sent to clients. In that panel, variables that are not client-safe carry an **MSP only** badge.
+
+A client template and its internal template are separate emails. `lookupEmailTemplate()` in `server/src/lib/notifications/emailTemplateLookup.ts` resolves a template by its exact name: the tenant's own row, then the stock system row. Within each, it tries the recipient's language, then English, then a row with no language. It never falls back to the internal template for a client send. A tenant's edit to one template, a switched-off subtype, or a user's opt-out applies to that email only.
+
 ### Branching one template by audience
 
 Every ticket email carries `recipient.isInternal`. A template that goes to both audiences can branch on it:
@@ -47,6 +62,7 @@ Every ticket email carries `recipient.isInternal`. A template that goes to both 
 1. Add the value to the context the handler builds in `ticketEmailSubscriber.ts`. Pass data, not markup: a string, a number, or a plain array of objects. Labels and table markup belong in the template, in each language.
 2. Classify the path in `TICKET_EMAIL_VARIABLE_AUDIENCE`. Mark it `client` only when a requester may see it. An entry covers its subtree, so `ticket.assets` also covers `ticket.assets[].name`.
 3. Add the variable to the template's entry in `packages/notifications/src/lib/templateVariables/seed.ts` and in the inventory at `docs/plans/2026-07-17-email-template-variables-inventory.json`. The registry test renders every template listed in the inventory with the registry's example data, so both files must list the variable.
+4. Regenerate the published list: `npx tsx packages/notifications/scripts/generate-variable-docs.ts --output=docs/email/template-variable-reference.md`. The website guide links to that file.
 
 A path with no entry is MSP-only. The client rendering drops it, and `ticketEmailAudience.test.ts` fails until you classify it.
 

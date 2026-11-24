@@ -26,7 +26,8 @@ import CreditApplicationUI from '../CreditApplicationUI';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
-import { voidInvoice } from '../../../actions/voidInvoiceActions';
+import { voidInvoice, voidInvoiceInAlgaOnly } from '../../../actions/voidInvoiceActions';
+import { useAccountingCapabilities } from '@alga-psa/auth/hooks/useAccountingCapabilities';
 import { getEffectiveTaxSourceForClient, updateInvoiceTaxSource } from '@alga-psa/billing/actions/taxSourceActions';
 import { InvoiceTaxSourceBadge } from '../../invoices/InvoiceTaxSourceBadge';
 import { InvoiceSyncBadge, qboInvoiceDeepLink, xeroInvoiceDeepLink } from '../../invoices/InvoiceSyncBadge';
@@ -127,6 +128,9 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const [voidReason, setVoidReason] = useState('');
   const [voidError, setVoidError] = useState<string | null>(null);
   const [voidLoading, setVoidLoading] = useState(false);
+  // "Void in AlgaPSA only": leaves the accounting system's copy untouched and
+  // unlinks this invoice from it.
+  const [voidAlgaOnly, setVoidAlgaOnly] = useState(false);
   // Set once this panel voids the invoice: the listing row (invoiceSummary) is
   // the status source and stays stale until the parent reloads it.
   const [voidedHere, setVoidedHere] = useState(false);
@@ -185,11 +189,16 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
     }
   };
 
+  const accountingCapabilities = useAccountingCapabilities();
+
   // QBO sync status for this invoice
   const syncIds = invoiceId ? [invoiceId] : [];
   const { statuses: syncStatuses, hidden: syncHidden } = useInvoiceSyncStatuses(syncIds);
   const syncStatus = invoiceId ? syncStatuses[invoiceId] : undefined;
   const syncProviderLabel = syncStatus?.provider === 'xero' ? 'Xero' : 'QuickBooks';
+  // A remote document exists for this invoice: it carries an external id, so a
+  // normal void would be pushed to the provider.
+  const isInvoiceMappedToAccounting = Boolean(syncStatus?.externalId);
   const invoiceStatus = voidedHere
     ? 'cancelled'
     : invoiceSummary?.status ?? (detailedInvoiceData as any)?.status ?? null;
@@ -467,13 +476,18 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
     setVoidError(null);
     setVoidLoading(true);
     try {
-      const result = await voidInvoice(invoiceId, voidReason);
+      const result = voidAlgaOnly
+        ? await voidInvoiceInAlgaOnly(invoiceId, voidReason)
+        : await voidInvoice(invoiceId, voidReason);
       if (!result.success) {
+        // Already in the caller's locale: structured refusals carry a
+        // messageKey that withAuth rewrites on the way out.
         setVoidError((result as { error?: string }).error ?? null);
         return;
       }
       setVoidDialogOpen(false);
       setVoidReason('');
+      setVoidAlgaOnly(false);
       setVoidedHere(true);
       setSyncActionFeedback(null);
       setPreviewRefreshCounter((c) => c + 1);
@@ -951,6 +965,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                   onClick={() => {
                     setVoidReason('');
                     setVoidError(null);
+                    setVoidAlgaOnly(false);
                     setVoidDialogOpen(true);
                   }}
                   disabled={isActionLoading}
@@ -1037,6 +1052,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                   })}
                 </p>
                 <textarea
+                  id="void-invoice-reason"
                   className="w-full rounded border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   rows={3}
                   placeholder={t('invoicePreview.voidDialog.reasonPlaceholder', { defaultValue: 'Reason for voiding...' })}
@@ -1044,6 +1060,39 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                   onChange={(e) => setVoidReason(e.target.value)}
                   disabled={voidLoading}
                 />
+                {/* An invoice linked to the accounting system normally carries
+                    its void into those books. A test invoice, or one the
+                    onboarding wizard matched to the wrong remote document,
+                    must not — so unlinking is offered explicitly, to the same
+                    admin-level capability that may change remote records. */}
+                {isInvoiceMappedToAccounting && accountingCapabilities.remoteMutate && (
+                  <div className="space-y-2 rounded border border-border p-3">
+                    <label htmlFor="void-invoice-alga-only" className="flex items-start gap-2 text-sm">
+                      <input
+                        id="void-invoice-alga-only"
+                        type="checkbox"
+                        className="mt-1"
+                        checked={voidAlgaOnly}
+                        onChange={(e) => setVoidAlgaOnly(e.target.checked)}
+                        disabled={voidLoading}
+                      />
+                      <span>
+                        {t('invoicePreview.voidDialog.algaOnly', {
+                          defaultValue: 'Void in AlgaPSA only (unlink from {{provider}})',
+                          provider: syncProviderLabel,
+                        })}
+                      </span>
+                    </label>
+                    {voidAlgaOnly && (
+                      <p className="text-xs text-muted-foreground" id="void-invoice-alga-only-warning">
+                        {t('invoicePreview.voidDialog.algaOnlyWarning', {
+                          defaultValue: 'The {{provider}} document is left exactly as it is and this invoice is unlinked from it, so AlgaPSA and {{provider}} will disagree about it.',
+                          provider: syncProviderLabel,
+                        })}
+                      </p>
+                    )}
+                  </div>
+                )}
                 {voidError && (
                   <Alert variant="destructive">
                     <AlertDescription className="text-sm">{voidError}</AlertDescription>
@@ -1109,21 +1158,28 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                   );
                 })}
               </div>
-              <div
-                style={{
-                  zoom: scale,
-                  width: `${baseInvoiceWidth}px`,
-                  transition: 'zoom 0.2s ease-out'
-                }}
-              >
-                <PaperInvoice templateAst={selectedTemplate?.templateAst ?? null}>
-                  <TemplateRenderer
-                    template={selectedTemplate}
-                    invoiceData={detailedInvoiceData}
-                    invoiceId={invoiceId}
-                  />
-                </PaperInvoice>
-              </div>
+              {/* The pages this invoice prints as: a layout with page breaks is read as the
+                  separate sheets it will be read on. The renderer falls back to the single
+                  roll (framed by PaperInvoice below) when the chunking pass cannot run. */}
+              <TemplateRenderer
+                template={selectedTemplate}
+                invoiceData={detailedInvoiceData}
+                invoiceId={invoiceId}
+                paginated
+                fallbackWrapper={(children) => (
+                  <div
+                    style={{
+                      zoom: scale,
+                      width: `${baseInvoiceWidth}px`,
+                      transition: 'zoom 0.2s ease-out'
+                    }}
+                  >
+                    <PaperInvoice templateAst={selectedTemplate?.templateAst ?? null}>
+                      {children}
+                    </PaperInvoice>
+                  </div>
+                )}
+              />
             </div>
 
             {creditApplied > 0 && (

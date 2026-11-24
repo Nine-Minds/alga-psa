@@ -1,4 +1,5 @@
 import { addMinutes, formatISO, isSameDay, parseISO, setHours, setMinutes } from 'date-fns';
+import { translate } from '@alga-psa/ui/lib/i18n/client';
 import { ITimeEntryWithNew } from './types';
 import { endOfZonedDay, workDateInTimeZone } from '../../../../lib/timeEntryPeriodSelection';
 
@@ -22,35 +23,59 @@ export function calculateDuration(startTime: Date, endTime: Date): number {
   return Math.max(0, Math.round((endTime.getTime() - startTime.getTime()) / 60000));
 }
 
-export function validateTimeEntry(timeEntry: ITimeEntryWithNew, workTimeZone?: string): boolean {
+export interface TimeEntryValidationErrors {
+  startTime?: string;
+  endTime?: string;
+  duration?: string;
+}
+
+const tv = (key: string, defaultValue: string): string =>
+  translate('msp/time-entry', `timeEntryForm.validation.${key}`, { defaultValue });
+
+/**
+ * Pure field validation of a time entry's span: no alerts, no toasts. The messages are the
+ * `timeEntryForm.validation.*` copy, keyed to the form slots they render in.
+ *
+ * Rules: valid times, start before end, at least one minute, start and end on the same work day
+ * (the subject's calendar day when `workTimeZone` is given, otherwise the browser's), and billable
+ * minutes within the duration (only checked when `billable_duration` is supplied).
+ */
+export function getTimeEntryValidationErrors(
+  timeEntry: Pick<ITimeEntryWithNew, 'start_time' | 'end_time'> & { billable_duration?: number },
+  workTimeZone?: string,
+): TimeEntryValidationErrors {
+  const errors: TimeEntryValidationErrors = {};
   const startTime = parseISO(timeEntry.start_time);
   const endTime = parseISO(timeEntry.end_time);
 
   if (Number.isNaN(startTime.getTime()) || Number.isNaN(endTime.getTime())) {
-    return false;
+    errors.duration = tv('invalidTimeRange', 'Enter a valid time range');
+    return errors;
   }
-  if (startTime >= endTime) {
-    alert('Start time must be before end time');
-    return false;
-  }
+
   // Match the calendar day shown by the entry form; fixed-sheet callers that
   // omit a subject timezone retain their browser-local validation.
   const sameWorkDay = workTimeZone
     ? workDateInTimeZone(startTime, workTimeZone) === workDateInTimeZone(endTime, workTimeZone)
     : isSameDay(startTime, endTime);
   if (!sameWorkDay) {
-    alert('Time entry must end on the same day');
-    return false;
+    errors.duration = tv('durationSameDay', 'Duration must end on the same day');
+    errors.endTime = tv('endSameDay', 'End time must be on the same day as start time');
   }
-  const duration = calculateDuration(
-    startTime,
-    endTime
-  );
-  if (timeEntry.billable_duration > duration) {
-    alert('Billable duration cannot exceed total duration');
-    return false;
+
+  if (startTime >= endTime) {
+    errors.startTime = tv('startBeforeEnd', 'Start time must be earlier than end time');
+    errors.endTime = tv('endAfterStart', 'End time must be later than start time');
   }
-  return true;
+
+  const duration = calculateDuration(startTime, endTime);
+  if (duration <= 0) {
+    errors.duration = tv('durationMinimum', 'Duration must be at least 1 minute');
+  } else if (typeof timeEntry.billable_duration === 'number' && timeEntry.billable_duration > duration) {
+    errors.duration = tv('billableExceedsDuration', 'Billable duration cannot exceed total duration');
+  }
+
+  return errors;
 }
 
 export function getServiceById(services: { id: string; name: string }[], serviceId: string | undefined) {

@@ -50,8 +50,6 @@ import {
   updateRmmAlertPollingSettings,
   type RmmAlertRuleFormOptions,
 } from "../../../actions/integrations/rmmAlertRuleActions";
-import type { IClient } from "@alga-psa/types";
-import { getIntegrationClients } from "../../../actions/clientLookupActions";
 import {
   ChevronUp,
   ChevronDown,
@@ -803,8 +801,6 @@ interface WindowEditorDialogProps {
   setFormState: React.Dispatch<React.SetStateAction<WindowFormState>>;
   onSave: () => Promise<void>;
   saving: boolean;
-  clients: IClient[];
-  clientsLoading: boolean;
   clientFilterState: "all" | "active" | "inactive";
   setClientFilterState: React.Dispatch<
     React.SetStateAction<"all" | "active" | "inactive">
@@ -823,8 +819,6 @@ function WindowEditorDialog({
   setFormState: setF,
   onSave,
   saving,
-  clients,
-  clientsLoading,
   clientFilterState,
   setClientFilterState,
   clientTypeFilter,
@@ -945,18 +939,13 @@ function WindowEditorDialog({
             </Label>
             <ClientPicker
               id="win-client-picker"
-              clients={clients}
               selectedClientId={f.clientId}
               onSelect={(id) => setF((p) => ({ ...p, clientId: id }))}
               filterState={clientFilterState}
               onFilterStateChange={setClientFilterState}
               clientTypeFilter={clientTypeFilter}
               onClientTypeFilterChange={setClientTypeFilter}
-              placeholder={
-                clientsLoading
-                  ? t("integrations.rmm.alertAutomation.scope.loadingClients")
-                  : t("integrations.rmm.alertAutomation.scope.allClients")
-              }
+              placeholder={t("integrations.rmm.alertAutomation.scope.allClients")}
               fitContent
               triggerVariant="outline"
               triggerSize="sm"
@@ -1156,8 +1145,6 @@ export function RmmAlertAutomationSettings({
   >(null);
   const [deletingWindow, setDeletingWindow] = React.useState(false);
 
-  const [clients, setClients] = React.useState<IClient[]>([]);
-  const [clientsLoading, setClientsLoading] = React.useState(false);
   const [clientFilterState, setClientFilterState] = React.useState<
     "all" | "active" | "inactive"
   >("active");
@@ -1230,22 +1217,6 @@ export function RmmAlertAutomationSettings({
   React.useEffect(() => {
     void load();
   }, [load]);
-
-  // Load clients for window scope picker
-  React.useEffect(() => {
-    const run = async () => {
-      setClientsLoading(true);
-      try {
-        const data = await getIntegrationClients(true);
-        setClients(data as IClient[]);
-      } catch {
-        setClients([]);
-      } finally {
-        setClientsLoading(false);
-      }
-    };
-    void run();
-  }, []);
 
   // ── rule CRUD ─────────────────────────────────────────────────────────────
   const openAddRule = () => {
@@ -1951,8 +1922,6 @@ export function RmmAlertAutomationSettings({
         setFormState={setWindowForm}
         onSave={handleSaveWindow}
         saving={savingWindow}
-        clients={clients}
-        clientsLoading={clientsLoading}
         clientFilterState={clientFilterState}
         setClientFilterState={setClientFilterState}
         clientTypeFilter={clientTypeFilter}

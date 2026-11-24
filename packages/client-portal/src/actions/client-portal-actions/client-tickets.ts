@@ -16,9 +16,8 @@ import Comment from '@alga-psa/tickets/models/comment';
 import { canWriteAttachmentTicket, reconcileCommentAttachments, filterReadableCommentAttachments, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import { redactCommentForClient, tombstoneCommentForClient } from '@alga-psa/tickets/lib/commentVisibility';
 import { isUuidShaped, validateData } from '@alga-psa/validation';
-import { COMMENT_RESPONSE_SOURCES, IComment, IStatus, ITicket, ITicketListItem, ITicketWithDetails, TICKET_ORIGINS } from '@alga-psa/types';
-import { isClientUserType } from '@alga-psa/types';
-import { IDocument } from '@alga-psa/types';
+import { COMMENT_RESPONSE_SOURCES, IComment, IStatus, ITicket, TICKET_ORIGINS } from '@alga-psa/types';
+import { isClientUserType, isInteractiveUserType } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import { z } from 'zod';
 import { Knex } from 'knex';
@@ -58,8 +57,9 @@ import {
 } from '@alga-psa/authorization/portal/visibility';
 import { resolveAssetBillingProfileId } from '@shared/models/assetBillingProfileModel';
 import { publishTicketUpdate } from '@alga-psa/tickets/lib/liveUpdates';
-import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@alga-psa/user-composition/actions/avatarActions';
+import { getUserAvatarUrlsBatchAction, getContactAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { coManagedRefusalMessageKey, isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
+import { projectClientTicketDetail, projectClientTicketDocument, projectClientTicketList, type ClientTicketDetailResponse, type ClientTicketDocument, type ClientTicketListResponse } from './clientTicketProjection';
 
 const clientTicketSchema = z.object({
   title: z.string().min(1),
@@ -75,6 +75,28 @@ const clientTicketDescriptionSchema = clientTicketSchema.pick({ description: tru
 
 const VISIBILITY_NOT_FOUND_ERROR =
   'Visibility group assignment is invalid for this contact.';
+
+async function loadUserAvatarUrls(userIds: Array<string | null | undefined>, tenant: string): Promise<Map<string, string | null>> {
+  const uniqueIds = [...new Set(userIds.filter((userId): userId is string => Boolean(userId)))];
+  if (uniqueIds.length === 0) return new Map();
+
+  try {
+    return await getUserAvatarUrlsBatchAction(uniqueIds, tenant);
+  } catch {
+    return new Map(uniqueIds.map((userId) => [userId, null]));
+  }
+}
+
+function ticketAvatarUserIds(ticket: Record<string, any>): string[] {
+  return [ticket.assigned_to, ...(ticket.additional_agents ?? []).map((agent: any) => agent.user_id)]
+    .filter((userId): userId is string => typeof userId === 'string' && userId.length > 0);
+}
+
+function avatarUrlFromJoinedUser(user: Record<string, any>): string | null {
+  if (typeof user.avatar_file_id !== 'string' || !user.avatar_mime_type?.startsWith('image/')) return null;
+  const timestamp = user.avatar_updated_at ? new Date(user.avatar_updated_at).getTime() : 0;
+  return `/api/documents/view/${user.avatar_file_id}?t=${timestamp}`;
+}
 
 export type ClientTicketActionError = ActionMessageError | ActionPermissionError;
 export type ClientTicketActionResult<T> = T | ClientTicketActionError;
@@ -191,7 +213,11 @@ async function resolveVisibleTicket(
   const visibility = await getClientContactVisibilityContext(trx, tenant, userContactId);
 
   const ticket = await tenantDb(trx, tenant).table('tickets as t')
-    .select('t.*')
+    .select(
+      't.ticket_id', 't.client_id', 't.board_id', 't.contact_name_id', 't.billing_profile_id',
+      't.attributes', 't.is_closed', 't.category_id', 't.subcategory_id', 't.priority_id',
+      't.assigned_to', 't.status_id', 't.response_state', 't.tenant', 't.master_ticket_id',
+    )
     .where({
       't.ticket_id': ticketId,
       't.client_id': visibility.clientId
@@ -215,7 +241,7 @@ async function resolveVisibleTicket(
   return ticket;
 }
 
-export const getClientTickets = withAuth(async (user, { tenant }, status: string): Promise<ClientTicketActionResult<ITicketListItem[]>> => {
+export const getClientTickets = withAuth(async (user, { tenant }, status: string): Promise<ClientTicketActionResult<ClientTicketListResponse[]>> => {
   try {
     const userId = clientPortalUserIdOrError(user);
     if (typeof userId !== 'string') {
@@ -253,7 +279,7 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
       scopedDb.tenantJoin(additionalAgentsSubquery, 'users as uu', 'tr2.additional_user_id', 'uu.user_id');
       additionalAgentsSubquery
         .whereRaw('tr2.ticket_id = t.ticket_id')
-        .select(trx.raw("COALESCE(json_agg(json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))), '[]'::json)"))
+        .select(trx.raw("COALESCE(json_agg(json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name), 'role', 'staff')), '[]'::json)"))
         .as('additional_agents');
 
       let query = scopedDb.table('tickets as t');
@@ -276,17 +302,14 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
         't.status_id',
         't.category_id',
         't.subcategory_id',
-        't.entered_by',
-        't.updated_by',
-        't.closed_by',
         't.assigned_to',
+        't.assigned_team_id',
+        't.tenant',
         't.entered_at',
         't.updated_at',
         't.closed_at',
         't.due_date',
-        't.attributes',
         't.priority_id',
-        't.tenant',
         't.response_state',
         's.name as status_name',
         'p.priority_name',
@@ -295,7 +318,6 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
         'cat.category_name',
         db.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
         db.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
-        't.assigned_team_id',
         'tm.team_name as assigned_team_name',
         additionalAgentCountSubquery,
         additionalAgentsSubquery.as('additional_agents')
@@ -304,7 +326,7 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
         't.client_id': visibility.clientId
       });
 
-      applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', tenantColumn: 't.tenant', closedColumn: 't.is_closed' } });
+      applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', closedColumn: 't.is_closed' } });
 
     // Filter by status
     if (parsedStatusFilter.kind === 'all') {
@@ -319,23 +341,27 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
       query = query.where('t.status_id', parsedStatusFilter.statusId);
     }
 
-      const tickets = await query.orderBy('t.entered_at', 'desc') as ITicketListItem[];
+      const tickets = await query.orderBy('t.entered_at', 'desc') as any[];
 
       return tickets;
     }) as any[];
 
-    return result.map((ticket: any): ITicketListItem => ({
-      ...ticket,
-      entered_at: ticket.entered_at instanceof Date ? ticket.entered_at.toISOString() : ticket.entered_at,
-      updated_at: ticket.updated_at instanceof Date ? ticket.updated_at.toISOString() : ticket.updated_at,
-      closed_at: ticket.closed_at instanceof Date ? ticket.closed_at.toISOString() : ticket.closed_at,
-    }));
+    const avatarUrls = await loadUserAvatarUrls(result.flatMap((ticket: any) => ticketAvatarUserIds(ticket)), tenant);
+    return result.map((ticket: any) => {
+      const agents = (ticket.additional_agents ?? []).map((agent: any) => ({
+        name: agent.name,
+        role: 'staff' as const,
+        avatar_url: avatarUrls.get(agent.user_id) ?? null,
+      }));
+      const assignedAvatar = ticket.assigned_to ? avatarUrls.get(ticket.assigned_to) ?? null : null;
+      return projectClientTicketList({ ...ticket, additional_agents: agents, assigned_to_avatar_url: assignedAvatar });
+    });
   } catch (error) {
     return expectedOrThrow(error, 'Failed to fetch client tickets:');
   }
 });
 
-export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId: string): Promise<ClientTicketActionResult<ITicketWithDetails>> => {
+export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId: string): Promise<ClientTicketActionResult<ClientTicketDetailResponse>> => {
   try {
     const userId = clientPortalUserIdOrError(user);
     if (typeof userId !== 'string') {
@@ -357,6 +383,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
     if (!canRead) {
       return permissionError('Insufficient permissions to view ticket details', 'common:errors.permissions.tickets.readDetails');
     }
+    const canUpdateComments = await hasPermission(userForPermission, 'ticket', 'update', db);
 
     // A malformed id gets the same response as a hidden ticket, and never reaches the database.
     if (!isUuidShaped(ticketId)) {
@@ -372,20 +399,26 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       scopedDb.tenantJoin(ticketAdditionalAgentsSubquery, 'users as uu', 'tr2.additional_user_id', 'uu.user_id');
       ticketAdditionalAgentsSubquery
         .whereRaw('tr2.ticket_id = t.ticket_id')
-        .select(trx.raw("COALESCE(json_agg(json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))), '[]'::json)"));
+        .select(trx.raw("COALESCE(json_agg(json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name), 'role', 'staff')), '[]'::json)"));
 
       const ticketQuery = scopedDb.table('tickets as t');
       scopedDb.tenantJoin(ticketQuery, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
       scopedDb.tenantJoin(ticketQuery, 'priorities as p', 't.priority_id', 'p.priority_id', { type: 'left' });
       scopedDb.tenantJoin(ticketQuery, 'users as u_creator', 't.entered_by', 'u_creator.user_id', { type: 'left' });
+      scopedDb.tenantJoin(ticketQuery, 'users as u_assignee', 't.assigned_to', 'u_assignee.user_id', { type: 'left' });
       scopedDb.tenantJoin(ticketQuery, 'teams as tm', 't.assigned_team_id', 'tm.team_id', { type: 'left' });
       ticketQuery
         .select(
-          't.*',
+          't.ticket_id', 't.ticket_number', 't.title', 't.url', 't.board_id', 't.client_id',
+          't.contact_name_id', 't.status_id', 't.category_id', 't.subcategory_id',
+          't.entered_at', 't.updated_at', 't.closed_at', 't.due_date', 't.response_state',
+          't.priority_id', 't.assigned_to', 't.assigned_team_id', 't.tenant', 't.billing_profile_id', 't.attributes',
+          't.is_closed', 't.email_metadata', 't.source', 't.ticket_origin',
           's.name as status_name',
           'p.priority_name',
           'p.color as priority_color',
           'u_creator.user_type as entered_by_user_type',
+          db.raw("CONCAT(u_assignee.first_name, ' ', u_assignee.last_name) as assigned_to_name"),
           'tm.team_name as assigned_team_name',
           ticketAdditionalAgentsSubquery.as('additional_agents')
         )
@@ -394,11 +427,15 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
           't.client_id': visibility.clientId
         })
         .modify((ticketQuery: Knex.QueryBuilder) => {
-          applyTicketVisibilityFilter(ticketQuery, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', tenantColumn: 't.tenant', closedColumn: 't.is_closed' } });
+          applyTicketVisibilityFilter(ticketQuery, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', closedColumn: 't.is_closed' } });
         })
         .first();
 
-      const documentsQuery = scopedDb.table('documents as d').select('d.*');
+      const documentsQuery = scopedDb.table('documents as d').select(
+        'd.document_id', 'd.document_name', 'd.type_id', 'da.entity_id as ticket_id',
+        'd.order_number', 'd.entered_at', 'd.updated_at', 'd.file_id', 'd.mime_type',
+        'd.file_size', 'd.folder_path', 'd.is_client_visible',
+      );
       scopedDb.tenantJoin(documentsQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
       documentsQuery.where({
         'da.entity_id': ticketId,
@@ -434,17 +471,21 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
           'u.user_id',
           'u.first_name',
           'u.last_name',
-          'u.email',
+          'u.contact_id',
           'u.user_type',
-          'd.file_id as avatar_file_id'
+          'd.file_id as avatar_file_id',
+          'ef.mime_type as avatar_mime_type',
+          'd.updated_at as avatar_updated_at'
         );
       scopedDb.tenantJoin(usersQuery, 'document_associations as da', 'da.entity_id', 'u.user_id', {
         type: 'left',
         on: (join) => {
           join.andOn('da.entity_type', '=', trx.raw('?', ['user']));
+          join.andOn('da.is_entity_logo', '=', trx.raw('?', [true]));
         },
       });
       scopedDb.tenantJoin(usersQuery, 'documents as d', 'd.document_id', 'da.document_id', { type: 'left' });
+      scopedDb.tenantJoin(usersQuery, 'external_files as ef', 'd.file_id', 'ef.file_id', { type: 'left' });
       usersQuery.where(function(this: Knex.QueryBuilder) {
         this.whereIn('u.user_id', commentUserIdsSubquery)
           .orWhereIn('u.user_id', assignedUserIdSubquery)
@@ -541,42 +582,57 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
             visibility
           )
         : false;
-      return { ticket, canInteract, portalExternalLinks, conversations, documents: await filterReadableCommentAttachments(trx, tenant, user, documents), users, linkedAssets };
+      return {
+        ticket,
+        canInteract,
+        portalExternalLinks,
+        conversations,
+        // documents has no client_id after associations were normalized. The
+        // ticket relationship comes from document_associations; client_id is
+        // inherited only from the already-authorized ticket row.
+        documents: await filterReadableCommentAttachments(trx, tenant, user, documents),
+        users,
+        linkedAssets,
+      };
     }) as any;
 
     if (!result.ticket) {
       return ticketNotFoundError();
     }
 
+    // `usersQuery` already joins the avatar document for every commenter,
+    // assignee and additional agent. Use that row rather than issuing another
+    // association lookup for each ticket view.
+    const userAvatarUrls = new Map<string, string | null>(result.users.map((u: any) => [
+      u.user_id,
+      u.user_type === 'internal' ? avatarUrlFromJoinedUser(u) : null,
+    ]));
+    const contactIds: string[] = [...new Set<string>(result.users
+      .filter((u: any) => u.user_type === 'client' && typeof u.contact_id === 'string')
+      .map((u: any) => u.contact_id as string))];
+    let contactAvatarUrls = new Map<string, string | null>();
+    if (contactIds.length > 0) {
+      try {
+        contactAvatarUrls = await getContactAvatarUrlsBatchAction(contactIds, tenant);
+      } catch {
+        contactAvatarUrls = new Map<string, string | null>(contactIds.map((contactId) => [contactId, null]));
+      }
+    }
+
     // Create user map, including avatar URLs
     const usersWithAvatars = await Promise.all(result.users.map(async (userRecord: any) => {
-      let avatarUrl: string | null = null;
+      let avatarUrl: string | null = userAvatarUrls.get(userRecord.user_id) ?? null;
 
-      // For internal users, use getUserAvatarUrlAction
-      if (userRecord.user_type === 'internal') {
-        try {
-          avatarUrl = await getUserAvatarUrlAction(userRecord.user_id, tenant);
-        } catch (error) {
-          console.error(`Error fetching avatar URL for internal user ${userRecord.user_id}:`, error);
-        }
-      }
       // For client users, get their contact avatar
-      else if (userRecord.user_type === 'client') {
-        try {
-          // First, get the user's contact_id
-          const userDbRecord = await tenantDb(db, tenant).table('users')
-            .where({ user_id: userRecord.user_id })
-            .first();
-
-          if (userDbRecord?.contact_id) {
-            avatarUrl = await getContactAvatarUrlAction(userDbRecord.contact_id, tenant);
-          }
-        } catch (error) {
-          console.error(`Error fetching avatar URL for client user ${userRecord.user_id}:`, error);
-        }
+      if (userRecord.user_type === 'client') {
+        avatarUrl = contactAvatarUrls.get(userRecord.contact_id) ?? null;
       }
 
-      const { avatar_file_id, ...userData } = userRecord;
+      const userData = { ...userRecord };
+      delete userData.avatar_file_id;
+      delete userData.avatar_mime_type;
+      delete userData.avatar_updated_at;
+      delete userData.contact_id;
       return {
         ...userData,
         avatarUrl,
@@ -589,11 +645,10 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         first_name: userRecord.first_name,
         last_name: userRecord.last_name,
         user_id: userRecord.user_id,
-        email: userRecord.email,
         user_type: userRecord.user_type,
         avatarUrl: userRecord.avatarUrl
       }
-    }), {} as Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>);
+    }), {} as Record<string, { user_id: string; first_name: string; last_name: string; user_type: string; avatarUrl: string | null }>);
 
     const commentContactIds = Array.from(
       new Set(
@@ -605,7 +660,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
 
     const commentContacts = commentContactIds.length > 0
       ? await tenantDb(db, tenant).table('contacts')
-        .select('contact_name_id', 'full_name', 'email')
+        .select('contact_name_id', 'full_name')
         .whereIn('contact_name_id', commentContactIds)
       : [];
 
@@ -614,12 +669,14 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       [contactRecord.contact_name_id]: {
         contact_id: contactRecord.contact_name_id,
         full_name: contactRecord.full_name || '',
-        email: contactRecord.email || undefined,
         avatarUrl: null as string | null,
       }
-    }), {} as Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>);
+    }), {} as Record<string, { contact_id: string; full_name: string; avatarUrl: string | null }>);
 
-    const { entered_by_user_type, ...ticketWithoutCreatorType } = result.ticket as any;
+    const ticketRow = result.ticket as any;
+    const agentsWithAvatars = (ticketRow.additional_agents ?? []).map((agent: any) => ({ name: agent.name, role: 'staff' as const, avatar_url: userAvatarUrls.get(agent.user_id) ?? null }));
+    const assignedAvatar = ticketRow.assigned_to ? userAvatarUrls.get(ticketRow.assigned_to) ?? null : null;
+    const safeTicket = projectClientTicketDetail({ ...ticketRow, additional_agents: agentsWithAvatars, assigned_to_avatar_url: assignedAvatar, ticket_origin: getTicketOrigin(ticketRow), has_original_email: Boolean(ticketRow.email_metadata?.messageId || ticketRow.email_metadata?.originalEmailId) });
 
     // Every portal comment goes through the shared client projection: deleted rows become an
     // allowlisted tombstone, all others are redacted (scheduling columns, Bcc, metadata.email).
@@ -635,31 +692,46 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       if (projected.parent_comment_id && !servedIds.has(projected.parent_comment_id)) {
         projected.parent_comment_id = null;
       }
+      const authorUser = commentRow.user_id ? userMap[commentRow.user_id] : undefined;
+      const authorContact = commentRow.contact_id ? contactMap[commentRow.contact_id] : undefined;
+      const safeAuthor = projected.actor_display_name && projected.actor_organization_name
+        ? { name: `${projected.actor_display_name} (${projected.actor_organization_name})`, role: 'collaborator' as const, avatarUrl: null }
+        : authorUser
+        ? { name: `${authorUser.first_name} ${authorUser.last_name}`.trim(), role: authorUser.user_type === 'internal' ? 'staff' as const : isInteractiveUserType(authorUser.user_type) ? 'client' as const : 'service' as const, avatarUrl: authorUser.avatarUrl }
+        : authorContact
+          ? { name: authorContact.full_name, role: 'contact' as const, avatarUrl: authorContact.avatarUrl }
+          : projected.is_system_generated ? { name: 'System', role: 'system' as const, avatarUrl: null } : null;
+      const commentWithoutPrivateIdentity = { ...projected };
+      delete commentWithoutPrivateIdentity.user_id;
+      delete commentWithoutPrivateIdentity.contact_id;
+      delete commentWithoutPrivateIdentity.actor_reference_id;
       return {
-        ...projected,
+        ...commentWithoutPrivateIdentity,
+        ...(safeAuthor ? { portal_author: safeAuthor } : {}),
+        ...(!projected.deleted_at ? {
+          portal_can_edit: Boolean(canUpdateComments && result.canInteract && !projected.is_system_generated && !projected.actor_display_name && commentRow.user_id === userId),
+          portal_can_delete: Boolean(canUpdateComments && result.canInteract && !projected.is_system_generated && !projected.actor_display_name && commentRow.user_id === userId),
+        } : {}),
         bundle_mirror_source: bundle_mirror_source_comment_id
           ? { source_comment_id: bundle_mirror_source_comment_id }
           : null,
-      };
+      } as IComment & { portal_author?: { name: string; role: 'staff' | 'client' | 'contact' | 'service' | 'collaborator' | 'system'; avatarUrl?: string | null }; portal_can_edit?: boolean; portal_can_delete?: boolean; bundle_mirror_source: { source_comment_id: string } | null };
     });
 
     return {
-      ...ticketWithoutCreatorType,
+      ...safeTicket,
       /** False for a ticket visible only through a shared workspace. */
       can_interact: result.canInteract,
-      ticket_origin: getTicketOrigin(result.ticket as any),
-      entered_at: result.ticket.entered_at instanceof Date ? result.ticket.entered_at.toISOString() : result.ticket.entered_at,
-      updated_at: result.ticket.updated_at instanceof Date ? result.ticket.updated_at.toISOString() : result.ticket.updated_at,
-      closed_at: result.ticket.closed_at instanceof Date ? result.ticket.closed_at.toISOString() : result.ticket.closed_at,
       conversations: conversationsWithProvenance,
-      documents: result.documents,
+      documents: result.documents.map((document: any) => projectClientTicketDocument({
+        ...document,
+        client_id: ticketRow.client_id,
+      })),
       // Linked assets joined from asset_associations; the type is broadened on
       // the consumer side via a small augmentation since ITicketWithDetails
       // doesn't model this today.
       linkedAssets: result.linkedAssets,
       portalExternalLinks: result.portalExternalLinks,
-      userMap,
-      contactMap
     };
   } catch (error) {
     return expectedOrThrow(error, 'Failed to fetch ticket details:');
@@ -848,8 +920,12 @@ export const updateClientTicketComment = withAuth(async (
       const comment = await tenantDb(trx, tenant).table('comments')
         .where({
           comment_id: commentId,
-          user_id: userId
+          user_id: userId,
+          is_internal: false,
+          is_system_generated: false,
         })
+        .whereNull('deleted_at')
+        .whereNull('actor_display_name')
         .first();
 
       if (!comment) {
@@ -1252,9 +1328,9 @@ export const deleteClientTicketComment = withAuth(async (user, { tenant }, comme
       is_inactive: false,
       tenant
     } as IUser;
-    const canDelete = await hasPermission(userForPermission, 'ticket', 'delete', db);
-    if (!canDelete) {
-      return permissionError('Insufficient permissions to delete comments', 'common:errors.permissions.tickets.deleteComments');
+    const canUpdate = await hasPermission(userForPermission, 'ticket', 'update', db);
+    if (!canUpdate) {
+      return permissionError('Insufficient permissions to delete comments', 'common:errors.permissions.tickets.updateComments');
     }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1272,8 +1348,12 @@ export const deleteClientTicketComment = withAuth(async (user, { tenant }, comme
       const comment = await tenantDb(trx, tenant).table('comments')
         .where({
           comment_id: commentId,
-          user_id: userId
+          user_id: userId,
+          is_internal: false,
+          is_system_generated: false,
         })
+        .whereNull('deleted_at')
+        .whereNull('actor_display_name')
         .first();
 
       if (!comment) {
@@ -1283,6 +1363,11 @@ export const deleteClientTicketComment = withAuth(async (user, { tenant }, comme
       await resolveVisibleTicket(trx, tenant, userRecord.contact_id, comment.ticket_id);
 
       await withdrawCommentAttachments(trx, tenant, commentId);
+      // email_reply_tokens has a non-cascading FK to comments. Preserve valid
+      // reply tokens while detaching them from a comment the client removed.
+      await tenantDb(trx, tenant).table('email_reply_tokens')
+        .where({ comment_id: commentId })
+        .update({ comment_id: null });
       await tenantDb(trx, tenant).table('comments')
         .where({
           comment_id: commentId
@@ -1305,7 +1390,7 @@ export const deleteClientTicketComment = withAuth(async (user, { tenant }, comme
   }
 });
 
-export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticketId: string): Promise<ClientTicketActionResult<IDocument[]>> => {
+export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticketId: string): Promise<ClientTicketActionResult<ClientTicketDocument[]>> => {
   try {
     const userId = clientPortalUserIdOrError(user);
     if (typeof userId !== 'string') {
@@ -1342,7 +1427,7 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
           client_id: visibility.clientId
         })
         .modify((queryBuilder: Knex.QueryBuilder) => {
-          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id', watchListColumn: 'tickets.attributes', sharedWorkspaceTickets: { ticketIdColumn: 'tickets.ticket_id', tenantColumn: 'tickets.tenant', closedColumn: 'tickets.is_closed' } });
+          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id', watchListColumn: 'tickets.attributes', sharedWorkspaceTickets: { ticketIdColumn: 'tickets.ticket_id', closedColumn: 'tickets.is_closed' } });
         })
         .first();
 
@@ -1355,7 +1440,11 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
 
       // Get client-visible documents for the ticket
       const scopedDb = tenantDb(trx, tenant);
-      const documentsQuery = scopedDb.table('documents as d').select('d.*');
+      const documentsQuery = scopedDb.table('documents as d').select(
+        'd.document_id', 'd.document_name', 'd.type_id', 'da.entity_id as ticket_id',
+        'd.order_number', 'd.entered_at', 'd.updated_at', 'd.file_id', 'd.mime_type',
+        'd.file_size', 'd.folder_path', 'd.is_client_visible',
+      );
       scopedDb.tenantJoin(documentsQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
 
       const rows = await documentsQuery
@@ -1364,7 +1453,11 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
           'da.entity_type': 'ticket',
           'd.is_client_visible': true,
         });
-      return filterReadableCommentAttachments(trx, tenant, user, rows) as Promise<IDocument[]>;
+      const readableRows = await filterReadableCommentAttachments(trx, tenant, user, rows);
+      return readableRows.map((document) => projectClientTicketDocument({
+        ...document,
+        client_id: ticket.client_id,
+      }));
     });
 
     return documents;
@@ -1556,7 +1649,7 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
             clientColumn: 'assets.client_id',
             contactColumn: 'assets.contact_name_id',
             // FR-E7b: a workspace user can raise a ticket on any workspace asset.
-            sharedWorkspace: { assetIdColumn: 'assets.asset_id', tenantColumn: 'assets.tenant' },
+            sharedWorkspace: { sharedWorkspaceIdColumn: 'assets.asset_id' },
           }
         )
           .select('asset_id')

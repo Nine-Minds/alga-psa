@@ -11,15 +11,16 @@ import {
   handleApiError,
   isServerActionErrorResult,
 } from 'server/src/lib/api/middleware/apiMiddleware';
+import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-export async function POST(_request: Request, context: RouteContext) {
+export async function POST(request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
-    const result = await rotateInboundWebhookSecret(id);
+    const result = await runWithApiKeyOrSession(request, () => rotateInboundWebhookSecret(id));
     if (isServerActionErrorResult(result)) {
       return createServerActionErrorResponse(result);
     }

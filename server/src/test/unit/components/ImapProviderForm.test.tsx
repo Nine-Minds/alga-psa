@@ -86,6 +86,27 @@ describe('ImapProviderForm', () => {
     expect(screen.getByRole('button', { name: /update provider/i })).toBeInTheDocument();
   });
 
+  it.each([
+    ['connected', 'Connected'],
+    ['reauthorization_required', 'Reauthorization required'],
+  ] as const)('shows the safe OAuth status %s without token fields', (status, label) => {
+    const provider = {
+      ...pausedImapProvider,
+      imapConfig: {
+        ...pausedImapProvider.imapConfig,
+        auth_type: 'oauth2' as const,
+        oauth_authorization_status: status,
+      },
+    };
+
+    renderWithProviders(<ImapProviderForm {...defaultProps} provider={provider as any} />);
+
+    expect(screen.getByText(label)).toBeInTheDocument();
+    expect(provider.imapConfig).not.toHaveProperty('refresh_token');
+    expect(provider.imapConfig).not.toHaveProperty('access_token');
+    expect(provider.imapConfig).not.toHaveProperty('oauth_client_secret');
+  });
+
   it('should pass the fresh provider through on a successful reconnect save', async () => {
     vi.mocked(emailProviderActions.updateEmailProvider).mockResolvedValueOnce({
       provider: {

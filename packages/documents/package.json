@@ -58,6 +58,10 @@
       "import": "./src/lib/collabPersistence.ts",
       "types": "./src/lib/collabPersistence.ts"
     },
+    "./lib/documentRoomConnection": {
+      "import": "./src/lib/documentRoomConnection.ts",
+      "types": "./src/lib/documentRoomConnection.ts"
+    },
     "./lib/documentPreviewJob": {
       "import": "./src/lib/documentPreviewJob.ts",
       "types": "./src/lib/documentPreviewJob.ts"
@@ -65,6 +69,10 @@
     "./lib/documentPreviewGenerator": {
       "import": "./src/lib/documentPreviewGenerator.ts",
       "types": "./src/lib/documentPreviewGenerator.ts"
+    },
+    "./lib/secureHtmlPage": {
+      "import": "./src/lib/secureHtmlPage.ts",
+      "types": "./src/lib/secureHtmlPage.ts"
     },
     "./lib/renderHtmlToPng": {
       "import": "./src/lib/renderHtmlToPng.ts",

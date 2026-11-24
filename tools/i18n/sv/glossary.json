@@ -533,6 +533,10 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "true",
+      "MacBook Air 13\"",
+      "Dell Latitude 5450",
+      "Lenovo ThinkPad T14",
       "{{actor}} • {{eventType}}",
       "Markdown",
       "{{from}} → {{to}}",
@@ -752,7 +756,7 @@
       "Presentation"
     ],
     "caseInsensitive": [
-      "adapter", "budget", "fax", "filter", "kanban", "layout", "offline", "online", "router", "server", "status", "support", "team", "webhook"
+      "adapter", "budget", "fax", "filter", "kanban", "layout", "offline", "online", "prefix", "router", "server", "status", "support", "team", "webhook"
     ],
     "patterns": [
       "^\\s*$",

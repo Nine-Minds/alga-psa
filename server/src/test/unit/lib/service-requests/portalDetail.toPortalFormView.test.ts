@@ -43,11 +43,58 @@ describe('toPortalFormView', () => {
     expect(view.initialValues).toEqual({ vpn: false, requester_ref: 'user-uuid' });
   });
 
-  it('returns no rules for non-advanced providers', () => {
+  it('returns no rules for non-advanced providers without element conditions', () => {
     const view = toPortalFormView(
       detail({ formBehaviorProvider: 'basic', formBehaviorConfig: {} })
     );
     expect(view.visibilityRules).toEqual([]);
+  });
+
+  it('assembles element conditions on every provider, advanced rules last', () => {
+    const view = toPortalFormView(
+      detail({
+        formSchema: {
+          fields: [
+            { key: 'vpn', type: 'checkbox', label: 'VPN' },
+            {
+              key: 'reason',
+              type: 'short-text',
+              label: 'Reason',
+              visibleWhen: [{ source: 'vpn', operator: 'is-true' }],
+            },
+          ],
+        },
+      })
+    );
+
+    expect(view.visibilityRules).toEqual([
+      { fieldKey: 'reason', source: 'vpn', operator: 'is-true' },
+      { fieldKey: 'reason', source: 'vpn', operator: 'is-true' },
+    ]);
+  });
+
+  it('carries element conditions for a basic provider too', () => {
+    const view = toPortalFormView(
+      detail({
+        formBehaviorProvider: 'basic',
+        formBehaviorConfig: {},
+        formSchema: {
+          fields: [
+            { key: 'vpn', type: 'checkbox', label: 'VPN' },
+            {
+              key: 'reason',
+              type: 'short-text',
+              label: 'Reason',
+              visibleWhen: [{ source: 'vpn', operator: 'is-true' }],
+            },
+          ],
+        },
+      })
+    );
+
+    expect(view.visibilityRules).toEqual([
+      { fieldKey: 'reason', source: 'vpn', operator: 'is-true' },
+    ]);
   });
 });
 

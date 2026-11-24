@@ -219,18 +219,19 @@ describe('Ticket bundling client portal author resolution', () => {
     await db?.destroy().catch(() => undefined);
   });
 
-  it('returns the mirrored child comment with the agent in the portal user map', async () => {
+  it('returns the mirrored child comment with a safe portal author identity', async () => {
     mockCurrentUser = clientUser;
     const result = await getClientTicketDetails(childId);
 
     expect(result?.conversations).toBeTruthy();
     const mirrored = (result.conversations as any[]).find((c) => c.is_system_generated);
     expect(mirrored).toBeTruthy();
-    expect(mirrored.user_id).toBe(internalUser.user_id);
+    expect(mirrored).not.toHaveProperty('user_id');
+    expect(mirrored.portal_author).toMatchObject({ name: 'Agent Sender', role: 'staff' });
 
     const resolved = resolveCommentAuthor(mirrored, {
-      userMap: result.userMap,
-      contactMap: result.contactMap,
+      userMap: {},
+      contactMap: {},
     });
     expect(resolved.source).toBe('user');
     expect(resolved.displayName).toBe('Agent Sender');

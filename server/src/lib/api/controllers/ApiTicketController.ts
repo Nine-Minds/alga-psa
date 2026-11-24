@@ -3,6 +3,7 @@
  * Simplified version with proper API key authentication
  */
 
+import { parseClientVisibleFormField } from '../schemas/documentAttach';
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController, AuthenticatedApiRequest } from './ApiBaseController';
 import { TicketService, type TicketDocumentVariant } from '../services/TicketService';
@@ -1554,7 +1555,12 @@ export class ApiTicketController extends ApiBaseController {
             ]);
           }
 
-          const document = await this.ticketService.uploadTicketDocument(ticketId, file, apiRequest.context!, formData.get('commentAttachmentDraft') === 'true');
+          const isClientVisible = parseClientVisibleFormField(formData.get('is_client_visible'));
+
+          const document = await this.ticketService.uploadTicketDocument(ticketId, file, apiRequest.context!, {
+            commentAttachmentDraft: formData.get('commentAttachmentDraft') === 'true',
+            isClientVisible,
+          });
 
           const projection = reprojectUnderDecision(ticketGate, document, TICKET_DOCUMENT_SOURCE);
 

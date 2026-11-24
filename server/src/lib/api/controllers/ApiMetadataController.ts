@@ -3,6 +3,7 @@
  * Simplified version with proper API key authentication
  */
 
+import { redirectToAppPath } from '@alga-psa/core/redirectToAppPath';
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController } from './ApiBaseController';
 import { MetadataService } from '../services/MetadataService';
@@ -51,9 +52,6 @@ export class ApiMetadataController extends ApiBaseController {
       permissions: {
         list: 'read',
         read: 'read',
-        create: 'create',
-        update: 'update',
-        delete: 'delete'
       }
     });
 
@@ -615,7 +613,7 @@ export class ApiMetadataController extends ApiBaseController {
             });
           } else {
             // Redirect to OpenAPI spec for other formats
-            return NextResponse.redirect(new URL('/api/v1/meta/openapi', apiRequest.nextUrl.origin));
+            return redirectToAppPath('/api/v1/meta/openapi');
           }
         });
       } catch (error) {

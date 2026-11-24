@@ -97,8 +97,10 @@ describe('isCoManagedTaskResourceHidden', () => {
     expect(isCoManagedTaskResourceHidden(['task_name'])).toBe(false);
     expect(isCoManagedTaskResourceHidden([])).toBe(false);
   });
-  it('is built into the task-name aliases from one definition', () => {
-    for (const alias of CO_MANAGED_TASK_RESOURCE_ALIASES) expect(CO_MANAGED_TASK_NAME_ALIASES).toContain(alias);
+  it('hides names for whole-resource policies but preserves unrelated fields', () => {
+    for (const alias of CO_MANAGED_TASK_RESOURCE_ALIASES) expect(maskCoManagedSnapshot([alias], row, spec).taskName).toBeNull();
+    expect(maskCoManagedSnapshot(['tasks.description'], row, spec)).toEqual(row);
+    expect(maskCoManagedSnapshot(['tasks.task_name'], row, spec).taskName).toBeNull();
   });
 });
 

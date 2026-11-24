@@ -5,11 +5,12 @@ import type { PredicateClause } from '@alga-psa/predicates';
  *
  *   v1  legacy keys only (`tags` holds ticket tag TEXT; PR #3858's `requester_vip` / `client_vip`).
  *   v2  legacy keys plus `where`, a flat `and` group of predicate clauses on the ticket query schema.
+ *   v3  the single `clientId` key is folded into `where` as a `client.id in [id]` clause.
  *
  * The same pure function migrates named views (schema_version on the row), board default views and
  * the tenant default view (a `schemaVersion` field inside the stored document).
  */
-export const TICKET_FILTERS_SCHEMA_VERSION = 2;
+export const TICKET_FILTERS_SCHEMA_VERSION = 3;
 
 /**
  * Renamed or removed predicate paths: `oldPath -> newPath`. A path is a persisted contract from its
@@ -53,8 +54,16 @@ export function legacyTagTexts(filters: unknown): string[] {
   return Array.isArray(tags) ? tags.filter((t): t is string => typeof t === 'string') : [];
 }
 
+const isClientRowClause = (clause: unknown): boolean => {
+  const candidate = clause as Partial<PredicateClause> | null;
+  return !!candidate && typeof candidate === 'object'
+    && candidate.path === 'client.id' && (candidate.operator === 'in' || candidate.operator === 'not_in');
+};
+
 /**
- * Brings a stored filters object up to v2. Idempotent for v2 input. Never throws on odd input:
+ * Brings a stored filters object up to the current version (v3). Idempotent for v3 input.
+ * A URL is a v2 filter document, so URL parsers call this with `fromVersion` 2 to fold a legacy
+ * `?clientId=` the same way stored views do. Never throws on odd input:
  * unknown shapes are passed through for the read-side sanitizer to drop.
  */
 export function migrateTicketFilters(
@@ -88,6 +97,22 @@ export function migrateTicketFilters(
   }
 
   if (out.where !== undefined) out.where = applyTicketPathAliases(out.where);
+
+  if (fromVersion < 3 && typeof out.clientId === 'string') {
+    const clientId = out.clientId;
+    delete out.clientId;
+    const where = out.where as { join?: unknown; clauses?: unknown } | undefined;
+    const existing = Array.isArray(where?.clauses) ? (where!.clauses as unknown[]) : [];
+    // An explicit client row wins over the legacy key (as `boardIds` wins over `boardId`).
+    // An empty string never restricted the list, so it adds nothing.
+    if (clientId && !existing.some(isClientRowClause)) {
+      out.where = {
+        ...(where && typeof where === 'object' ? where : {}),
+        join: 'and',
+        clauses: [...existing, { path: 'client.id', operator: 'in', value: [clientId] }],
+      };
+    }
+  }
   return out;
 }
 

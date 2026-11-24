@@ -390,6 +390,37 @@ export function resolveDeliveryClaim(
   return null;
 }
 
+/** The locale an event email is rendered in; exported so callers can format values to match. */
+export async function resolveEventEmailLocale(
+  params: Pick<SendEmailParams, 'tenantId' | 'to' | 'locale' | 'recipientUserId' | 'recipientClientId'>,
+): Promise<SupportedLocale> {
+  if (params.locale) {
+    logger.debug('[SendEventEmail] Using explicitly provided locale:', { locale: params.locale });
+    return params.locale;
+  }
+
+  // Get recipient information for locale resolution
+  const baseInfo = params.recipientUserId
+    ? { email: params.to, userId: params.recipientUserId }
+    : await getUserInfoForEmail(params.tenantId, params.to) || { email: params.to };
+
+  // Merge in clientId if provided (for contacts without user accounts yet)
+  const recipientInfo = {
+    ...baseInfo,
+    ...(params.recipientClientId && { clientId: params.recipientClientId })
+  };
+
+  const recipientLocale = await resolveEmailLocale(params.tenantId, recipientInfo);
+  logger.debug('[SendEventEmail] Resolved recipient locale:', {
+    locale: recipientLocale,
+    email: params.to,
+    userId: recipientInfo.userId,
+    userType: recipientInfo.userType,
+    clientId: recipientInfo.clientId
+  });
+  return recipientLocale;
+}
+
 export async function sendEventEmail(params: SendEmailParams): Promise<void> {
   try {
     let sponsorRedactions: readonly string[] | null = null;
@@ -415,31 +446,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     });
 
     // Resolve recipient locale for language-aware email templates
-    let recipientLocale: SupportedLocale;
-    if (params.locale) {
-      recipientLocale = params.locale;
-      logger.debug('[SendEventEmail] Using explicitly provided locale:', { locale: recipientLocale });
-    } else {
-      // Get recipient information for locale resolution
-      const baseInfo = params.recipientUserId
-        ? { email: params.to, userId: params.recipientUserId }
-        : await getUserInfoForEmail(params.tenantId, params.to) || { email: params.to };
-
-      // Merge in clientId if provided (for contacts without user accounts yet)
-      const recipientInfo = {
-        ...baseInfo,
-        ...(params.recipientClientId && { clientId: params.recipientClientId })
-      };
-
-      recipientLocale = await resolveEmailLocale(params.tenantId, recipientInfo);
-      logger.debug('[SendEventEmail] Resolved recipient locale:', {
-        locale: recipientLocale,
-        email: params.to,
-        userId: recipientInfo.userId,
-        userType: recipientInfo.userType,
-        clientId: recipientInfo.clientId
-      });
-    }
+    const recipientLocale = await resolveEventEmailLocale(params);
 
     // Get the template content using tenant-aware connection
     const knex = await getConnection(params.tenantId);

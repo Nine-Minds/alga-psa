@@ -6,7 +6,7 @@ import { ITicket } from '@alga-psa/types';
 import { isClientUserType } from '@alga-psa/types';
 import { PolicyEngine } from '../lib/policy/PolicyEngine';
 import { USER_ATTRIBUTES, TICKET_ATTRIBUTES } from '../lib/attributes/EntityAttributes';
-import { assertSeatTechnicianWrite, assertUserRoleFloor, createTenantKnex, isSeatTechnicianGuardError, isUserRoleFloorRejected, tenantDb, withTransaction, type UserRoleFloorViolation } from '@alga-psa/db';
+import { assertSeatTechnicianWrite, assertUserRoleFloor, createTenantKnex, isSeatTechnicianGuardError, isUserRoleFloorRejected, syncContactClientAdminFlag, tenantDb, withTransaction, type UserRoleFloorViolation } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '../lib/withAuth';
 import { filterPermissionsByServedCapabilities, filterRolesByServedCapabilities } from '../lib/permissionCapabilities';
@@ -490,6 +490,11 @@ export const assignRoleToUser = withAuth(async (currentUser, { tenant }, userId:
         const [userRole] = await tenantScopedTable(trx, 'user_roles', tenant)
             .insert({ user_id: userId, role_id: roleId, tenant })
             .returning('*');
+
+        // contacts.is_client_admin mirrors the portal 'Admin' role; re-derive it
+        // in the same transaction as the role write (client users only).
+        await syncContactClientAdminFlag(trx, tenant, userId);
+
         return userRole;
     });
     } catch (error) {
@@ -536,6 +541,10 @@ export const removeRoleFromUser = withAuth(async (currentUser, { tenant }, userI
         }
 
         await tenantScopedTable(trx, 'user_roles', tenant).where({ user_id: userId, role_id: roleId }).del();
+
+        // contacts.is_client_admin mirrors the portal 'Admin' role; re-derive it
+        // in the same transaction as the role write (client users only).
+        await syncContactClientAdminFlag(trx, tenant, userId);
     });
     } catch (error) {
         const expected = authActionErrorFrom(error);

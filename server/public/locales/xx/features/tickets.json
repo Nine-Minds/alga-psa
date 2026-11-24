@@ -214,12 +214,15 @@
   "resetFilters": "⟦Řḗşḗŧ⟧",
   "filters": {
     "allStatuses": "⟦Ȧŀŀ Şŧȧŧŭşḗş⟧",
+    "allClients": "⟦Ȧŀŀ Ƈŀīḗƞŧş⟧",
+    "unknownClient": "⟦Ŭƞķƞȯẇƞ ƈŀīḗƞŧ⟧",
     "allOpen": "⟦Ȧŀŀ Ȯƥḗƞ Ŧīƈķḗŧş⟧",
     "allClosed": "⟦Ȧŀŀ Ƈŀȯşḗḓ Ŧīƈķḗŧş⟧",
     "allPriorities": "⟦Ȧŀŀ Ƥřīȯřīŧīḗş⟧",
     "search": "⟦Şḗȧřƈħ ŧīƈķḗŧş ȧƞḓ ƈȯḿḿḗƞŧş...⟧",
     "button": "⟦Ƒīŀŧḗřş⟧",
     "unassigned": "⟦Ŭƞȧşşīɠƞḗḓ⟧",
+    "me": "⟦Ḿḗ⟧",
     "category": "⟦Ƒīŀŧḗř ƀẏ ƈȧŧḗɠȯřẏ⟧",
     "removeFilterChip": "⟦Řḗḿȯṽḗ ƒīŀŧḗř: {{label}}⟧",
     "assignee": "⟦Ȧşşīɠƞḗḗ⟧",
@@ -253,6 +256,8 @@
     "clientTags": "⟦Ƈŀīḗƞŧ ŧȧɠş⟧",
     "tagModeAny": "⟦Ȧƞẏ ȯƒ⟧",
     "tagModeNone": "⟦Ƞȯƞḗ ȯƒ⟧",
+    "matchMode": "⟦Ḿȧŧƈħ⟧",
+    "excludingLabel": "⟦Ḗẋƈŀŭḓīƞɠ {{label}}⟧",
     "droppedFromLink": "⟦Şȯḿḗ ƒīŀŧḗřş īƞ ŧħīş ŀīƞķ ȧřḗ ƞȯŧ ṽȧŀīḓ ȧƞḓ ẇḗřḗ īɠƞȯřḗḓ.⟧",
     "clearFilters": "⟦Ƈŀḗȧř ƒīŀŧḗřş⟧",
     "location": "⟦Ŀȯƈȧŧīȯƞ⟧",
@@ -573,6 +578,7 @@
     "deleteCommentOnly": "⟦Ḓḗŀḗŧḗ Ƈȯḿḿḗƞŧ Ȯƞŀẏ⟧",
     "cancelScheduledComment": "⟦Ƈȧƞƈḗŀ şƈħḗḓŭŀḗḓ ƈȯḿḿḗƞŧ⟧",
     "cancelScheduledCommentConfirm": "⟦Ƈȧƞƈḗŀ ŧħīş şƈħḗḓŭŀḗḓ ƈȯḿḿḗƞŧ?⟧",
+    "scheduledCommentChangeFailed": "⟦Ŭƞȧƀŀḗ ŧȯ ƈħȧƞɠḗ ŧħīş şƈħḗḓŭŀḗḓ ƈȯḿḿḗƞŧ. Řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
     "invalidScheduleTime": "⟦Ƈħȯȯşḗ ȧƞ ŭƞȧḿƀīɠŭȯŭş ƒŭŧŭřḗ ŧīḿḗ īƞ ŧħīş ŧīḿḗ ẑȯƞḗ.⟧",
     "publishAt": "⟦Ƥŭƀŀīşħ ȧŧ⟧",
     "publishes": "⟦Ƥŭƀŀīşħḗş⟧",
@@ -611,6 +617,13 @@
       },
       "unavailable": "⟦Ŧħīş ŧīƈķḗŧ īş ƞȯŧ ȧṽȧīŀȧƀŀḗ.⟧",
       "back": "⟦Ɓȧƈķ ŧȯ Ƈŭşŧȯḿḗř Ŧīƈķḗŧş⟧"
+    },
+    "opener": {
+      "openedBy": "⟦Ȯƥḗƞḗḓ ƀẏ ḗḿȧīŀ ƒřȯḿ {{sender}}⟧",
+      "attachments_one": "⟦{{count}} ȧŧŧȧƈħḿḗƞŧ⟧",
+      "attachments_other": "⟦{{count}} ȧŧŧȧƈħḿḗƞŧş⟧",
+      "show": "⟦Şħȯẇ ȯřīɠīƞȧŀ ḗḿȧīŀ⟧",
+      "hide": "⟦Ħīḓḗ ȯřīɠīƞȧŀ ḗḿȧīŀ⟧"
     }
   },
   "responseState": {
@@ -2513,6 +2526,7 @@
       "addHelp": "⟦Ƥīƈķ ȧ ƈŀīḗƞŧ ŧȯ ȧḓḓ īŧ. Ŧħḗ ḓīȧŀȯɠ şŧȧẏş ȯƥḗƞ şȯ ẏȯŭ ƈȧƞ ȧḓḓ ḿȯřḗ.⟧",
       "alreadyAdded": "⟦Ȧŀřḗȧḓẏ ȧḓḓḗḓ⟧",
       "pickerPlaceholder": "⟦Şḗŀḗƈŧ ȧ ƈŀīḗƞŧ ŧȯ ȧḓḓ⟧",
+      "unnamedClient": "⟦Ƈŀīḗƞŧ⟧",
       "addedHeading": "⟦Ȧḓḓḗḓ īƞ ŧħīş ḓīȧŀȯɠ⟧",
       "columns": {
         "client": "⟦Ƈŀīḗƞŧ⟧",

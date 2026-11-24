@@ -63,6 +63,21 @@ export interface EntraSyncRunSummary {
   ambiguous: number;
   inactivated: number;
   skipped: number;
+  /** Contacts that failed to sync, across tenants. */
+  failed: number;
+}
+
+// LEVERAGE: pattern entra-user-issue-shape — same issue DTO declared in server sync/types.ts, temporal types/entra-sync.ts and integrations entraActions.ts; no shared package spans the workflow sandbox, server and UI
+export interface EntraSyncUserIssue {
+  /** 'failure': the user was not (fully) synced. 'notice': synced, but a field value was changed or left out. */
+  severity: 'failure' | 'notice';
+  stage: 'match' | 'link' | 'create';
+  entraObjectId: string;
+  userPrincipalName: string | null;
+  displayName: string | null;
+  contactNameId?: string | null;
+  field?: 'phone_numbers';
+  message: string;
 }
 
 export interface EntraTenantSyncResult {
@@ -82,6 +97,10 @@ export interface EntraTenantSyncResult {
   ambiguous: number;
   inactivated: number;
   skipped: number;
+  /** Contacts that failed to sync for this client. */
+  failed: number;
+  /** Per-user failures and notices. Persisted capped at 100 entries. */
+  userIssues?: EntraSyncUserIssue[];
   warnings?: string[];
   errorMessage?: string | null;
 }

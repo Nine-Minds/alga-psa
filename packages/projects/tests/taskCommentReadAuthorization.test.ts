@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   hasPermission: vi.fn(),
   listTaskCommentsWithDb: vi.fn(),
   createProjectActionDecider: vi.fn(),
+  decideProject: vi.fn(),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -49,7 +50,9 @@ describe('getTaskComments read authorization', () => {
     mocks.hasPermission.mockReset();
     mocks.listTaskCommentsWithDb.mockReset();
     mocks.createProjectActionDecider.mockReset();
-    mocks.createProjectActionDecider.mockResolvedValue(async () => ({ allowed: true, redactedFields: [], governed: false }));
+    mocks.decideProject.mockReset();
+    mocks.decideProject.mockResolvedValue({ allowed: true, redactedFields: [], governed: false });
+    mocks.createProjectActionDecider.mockResolvedValue(mocks.decideProject);
   });
 
   it('returns a permission error and never reads comments without project_task:read', async () => {
@@ -62,7 +65,7 @@ describe('getTaskComments read authorization', () => {
     expect(mocks.listTaskCommentsWithDb).not.toHaveBeenCalled();
   });
 
-  it('returns the comments when the caller has project_task:read', async () => {
+  it('returns comments for an authorized session caller without an API key identity', async () => {
     const comments = [{ task_comment_id: 'c1', note: 'hello' }];
     mocks.hasPermission.mockResolvedValue(true);
     mocks.listTaskCommentsWithDb.mockResolvedValue(comments);
@@ -70,13 +73,16 @@ describe('getTaskComments read authorization', () => {
     const result = await (getTaskComments as any)('task-1');
 
     expect(mocks.hasPermission).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-1' }), 'project_task', 'read', expect.anything());
-    expect(mocks.createProjectActionDecider).toHaveBeenCalledWith(expect.anything(), 'tenant-1', expect.objectContaining({ user_id: 'user-1' }), 'read');
+    expect(mocks.createProjectActionDecider).toHaveBeenCalledWith(
+      expect.anything(), 'tenant-1', expect.objectContaining({ user_id: 'user-1' }), 'read', undefined,
+    );
+    expect(mocks.decideProject).toHaveBeenCalledWith({ project_id: 'project-1' });
     expect(result).toEqual(comments);
   });
 
   it('never reads comments when the project record decision denies the caller', async () => {
     mocks.hasPermission.mockResolvedValue(true);
-    mocks.createProjectActionDecider.mockResolvedValue(async () => ({ allowed: false, redactedFields: [], governed: false }));
+    mocks.decideProject.mockResolvedValue({ allowed: false, redactedFields: [], governed: false });
     mocks.listTaskCommentsWithDb.mockResolvedValue([{ task_comment_id: 'c1', note: 'hidden' }]);
 
     const result = await (getTaskComments as any)('task-1');
