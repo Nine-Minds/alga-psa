@@ -74,6 +74,19 @@ describe('inbound reply body', () => {
     expect(replyBodyForComment(parsedEmail, body)).toEqual({ html: parsedEmail.sanitizedHtml, text: '' });
   });
 
+  it('keeps a body whose trim consumed everything, so the reply is not dropped as empty', async () => {
+    // The parser restores the original HTML when its own trim leaves nothing (no text part to
+    // fall back to). Without that, the token-only gate read an empty body and skipped the
+    // message outright — no comment row, so nothing to recover the mail from either.
+    const body = {
+      html: '<blockquote type="cite"><p>Our invoice 1234 is wrong, please check the hours.</p></blockquote>',
+    };
+    const parsedEmail = parseEmailReply({ text: '', html: body.html });
+
+    expect(hasSubstantiveReplyContent(parsedEmail, body)).toBe(true);
+    expect(await storedBody(body)).toContain('invoice 1234 is wrong');
+  });
+
   it('falls back to the raw body only when there is no parse result', () => {
     expect(replyBodyForComment(null, { text: 'raw text', html: '<p>raw</p>' })).toEqual({
       text: 'raw text',

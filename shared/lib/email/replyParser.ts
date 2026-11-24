@@ -903,7 +903,10 @@ export function parseEmailReply(input: ReplyParserInput, config: Partial<ReplyPa
     // Compare like with like: the text side may still carry a quote level the HTML trim
     // already removed, so measure against the text with provider attributions and quoted
     // lines stripped. Otherwise a short reply above a long quote always trips the ratio.
-    if (sanitizedHtml && appliedHeuristics.includes('html-blockquote-trim')) {
+    if (
+      sanitizedHtml
+      && (appliedHeuristics.includes('html-blockquote-trim') || appliedHeuristics.includes('html-marker-boundary'))
+    ) {
       const htmlVisibleLength = htmlToVisibleText(sanitizedHtml).replace(/\s+/g, ' ').trim().length;
       const baselineText = stripProviderHeaders(trimmedText, mergedConfig).text;
       const textLength = baselineText.replace(/\s+/g, ' ').trim().length;
@@ -918,6 +921,20 @@ export function parseEmailReply(input: ReplyParserInput, config: Partial<ReplyPa
 
     if (!sanitizedHtml) {
       sanitizedHtml = undefined;
+    }
+
+    // Never hand back a parse with nothing in it for mail that carried content. The consumer
+    // builds the comment from this result alone (shared/services/email/inboundReplyBody.ts), and
+    // the text fallback above can only restore a text part — HTML-only mail has none, so a trim
+    // that swallowed the whole body (a reply delivered inside a quote, an answer below an
+    // old-layout notification) would otherwise store a blank comment. An empty reply above our
+    // own boundary still stays empty, and preserving too much remains the safe failure mode.
+    if (!sanitizedHtml && !trimmedText && !emptyAlgaReply) {
+      sanitizedHtml = originalHtml.trim() || undefined;
+      if (sanitizedHtml) {
+        appliedHeuristics.push('html-restore-original');
+        warnings.push('Reply heuristics yielded empty body; using original HTML.');
+      }
     }
   }
 
