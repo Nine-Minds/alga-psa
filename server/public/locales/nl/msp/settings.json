@@ -4663,11 +4663,11 @@
   "managedRole": {
     "badge": "Beheerd door Co-managed IT",
     "readOnlyNotice": "Alga beheert deze rol. De naam, rechten en leden kunnen hier niet worden gewijzigd.",
-    "scopeHint": "Om te wijzigen tot welke boards en projecten een technicus toegang heeft, bewerkt u de co-managed afspraak van de klant.",
+    "scopeHint": "Om te wijzigen tot welke borden en projecten een technicus toegang heeft, bewerkt u de co-managed overeenkomst van de klant.",
     "openArrangement": "Co-managed IT openen",
     "permissionsLocked": "De rechten van {{role}} worden beheerd door Co-managed IT en kunnen hier niet worden gewijzigd.",
     "viewDetails": "Rechten bekijken",
     "detailsTitle": "{{role}} (alleen-lezen)",
-    "assignedHint": "Toegewezen via een co-managed plek. Toegangswijzigingen doet u in de afspraak van de klant."
+    "assignedHint": "Toegewezen via een co-managed plek. Toegangswijzigingen doet u in de overeenkomst van de klant."
   }
 }
