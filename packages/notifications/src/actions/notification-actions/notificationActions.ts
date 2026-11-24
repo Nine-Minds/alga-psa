@@ -11,12 +11,22 @@ import {
   NotificationSettings,
   SystemEmailTemplate,
   TenantEmailTemplate,
+  TenantEmailTemplateView,
   NotificationCategory,
   NotificationSubtype,
   UserNotificationPreference,
   UserEmailPreferenceCategoryState,
   isLockedCategory
 } from "../../types/notification";
+import { STOCK_EMAIL_PALETTE, applyEmailPalette, missingTemplateVariables, resolveEmailPalette } from '@alga-psa/email/branding';
+import {
+  NO_DERIVED_PROVENANCE,
+  derivedContentFor,
+  isUntouchedDerivation,
+  readTenantBrand,
+  stampDerivedTemplate,
+  tenantBrandDecoration,
+} from '@alga-psa/email/derivedTemplates';
 import {
   notificationActionErrorFrom,
   type NotificationActionError,
@@ -123,7 +133,7 @@ export const getTemplatesAction = withAuth(async (
   { tenant },
 ): Promise<{
   systemTemplates: (SystemEmailTemplate & { category: string })[];
-  tenantTemplates: TenantEmailTemplate[];
+  tenantTemplates: TenantEmailTemplateView[];
 }> => {
   const { knex } = await createTenantKnex();
 
@@ -139,9 +149,31 @@ export const getTemplatesAction = withAuth(async (
     systemTemplatesQuery = db.tenantJoin(systemTemplatesQuery, "notification_categories as c", "s.category_id", "c.id");
     const systemTemplates = await systemTemplatesQuery.orderBy(["c.name", "t.name"]);
       
-    const tenantTemplates = await tenantScopedTable(trx, "tenant_email_templates", tenant)
+    const storedTemplates = await tenantScopedTable(trx, "tenant_email_templates", tenant)
       .orderBy("name");
-      
+
+    // What the list, the editor and the preview show is what is sent: an untouched derived row
+    // reads as the current standard template in the tenant's brand, and a row the tenant owns is
+    // checked against the standard template for variables it no longer uses.
+    const systemByKey = new Map<string, SystemEmailTemplate>(
+      systemTemplates.map((row: SystemEmailTemplate): [string, SystemEmailTemplate] => [`${row.name}::${row.language_code}`, row]),
+    );
+    const tenantTemplates: TenantEmailTemplateView[] = storedTemplates.map((row: TenantEmailTemplate) => {
+      const systemRow = systemByKey.get(`${row.name}::${row.language_code}`);
+      if (!systemRow) return { ...row, derived: false, missingVariables: [] };
+      if (isUntouchedDerivation(row)) {
+        return { ...row, ...derivedContentFor(row, systemRow), derived: true, missingVariables: [] };
+      }
+      return {
+        ...row,
+        derived: false,
+        missingVariables: missingTemplateVariables(
+          `${systemRow.subject}\n${systemRow.html_content}\n${systemRow.text_content}`,
+          `${row.subject}\n${row.html_content}\n${row.text_content}`,
+        ),
+      };
+    });
+
     return { systemTemplates, tenantTemplates };
   });
 });
@@ -154,8 +186,20 @@ export const createTenantTemplateAction = withAuth(async (
   const { knex } = await createTenantKnex();
   await withTransaction(knex, (trx: Knex.Transaction) => requireSettingsUpdate(user, trx));
 
+  // A created template may equal the standard one (an untouched copy); then it follows the
+  // standard template. Provenance is never taken from the caller.
+  const stamped = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const systemTemplate = await tenantScopedTable(trx, "system_email_templates", tenant)
+      .where({ name: template.name, language_code: template.language_code })
+      .first();
+    const content = { ...template, ...NO_DERIVED_PROVENANCE };
+    if (!systemTemplate) return content;
+    const brand = await readTenantBrand(tenantDb(trx, tenant));
+    return stampDerivedTemplate(content, systemTemplate, STOCK_EMAIL_PALETTE, tenantBrandDecoration(brand, STOCK_EMAIL_PALETTE));
+  });
+
   const notificationService = getEmailNotificationService();
-  const created = await notificationService.createTenantTemplate(tenant, template);
+  const created = await notificationService.createTenantTemplate(tenant, stamped);
   revalidatePath("/msp/settings/notifications");
   return created;
 });
@@ -180,19 +224,27 @@ export const cloneSystemTemplateAction = withAuth(async (
         throw new Error("System template not found");
       }
 
+      // With a palette saved, the copy the tenant starts editing already wears their colors
+      // instead of the stock purple: the colors the last apply wrote, else the saved palette.
+      const brand = await readTenantBrand(tenantDb(trx, tenant));
+      const target = brand.palette ? brand.palette.appliedPalette ?? resolveEmailPalette(brand.palette) : STOCK_EMAIL_PALETTE;
+
       // Create new tenant template based on system template
       const template: Omit<TenantEmailTemplate, "id" | "created_at" | "updated_at"> = {
         tenant,
         name: systemTemplate.name,
         subject: systemTemplate.subject,
-        html_content: systemTemplate.html_content,
+        html_content: applyEmailPalette(systemTemplate.html_content, STOCK_EMAIL_PALETTE, target),
         text_content: systemTemplate.text_content,
         language_code: systemTemplate.language_code,
         system_template_id: systemTemplateId
       };
 
+      // An untouched clone is the standard template: it follows it until the tenant edits it.
+      const stamped = stampDerivedTemplate(template, systemTemplate, target, tenantBrandDecoration(brand, target));
+
       const notificationService = getEmailNotificationService();
-      const created = await notificationService.createTenantTemplate(tenant, template);
+      const created = await notificationService.createTenantTemplate(tenant, stamped);
       revalidatePath("/msp/settings/notifications");
       return created;
     });
@@ -213,7 +265,8 @@ export const updateTenantTemplateAction = withAuth(async (
   await withTransaction(knex, (trx: Knex.Transaction) => requireSettingsUpdate(user, trx));
 
   const notificationService = getEmailNotificationService();
-  const updated = await notificationService.updateTenantTemplate(tenant, id, template);
+  // Saving is the tenant's edit: the row stops following the standard template.
+  const updated = await notificationService.updateTenantTemplate(tenant, id, { ...template, ...NO_DERIVED_PROVENANCE });
   revalidatePath("/msp/settings/notifications");
   return updated;
 });
@@ -549,11 +602,21 @@ export const sendTestEmailAction = withAuth(async (
     }
 
     // 3. Load the template
-    const template = templateType === 'system'
+    let template = templateType === 'system'
       ? await tenantScopedTable(trx, 'system_email_templates', tenant).where({ id: templateId }).first()
       : await tenantScopedTable(trx, 'tenant_email_templates', tenant).where({ id: templateId }).first();
     if (!template) {
       return { success: false, error: 'Template not found.' };
+    }
+
+    // A derived row is sent as the current standard template in the tenant's brand; so is its test.
+    if (templateType === 'tenant' && isUntouchedDerivation(template)) {
+      const systemRow = await tenantScopedTable(trx, 'system_email_templates', tenant)
+        .where({ name: template.name, language_code: template.language_code })
+        .first();
+      if (systemRow) {
+        template = { ...template, ...derivedContentFor(template, systemRow) };
+      }
     }
 
     // 4. Use override content if provided (for previewing unsaved edits)

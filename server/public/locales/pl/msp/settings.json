@@ -1913,7 +1913,9 @@
         "templateCount": "({{templateCount}} szablonów)",
         "usingCustom": "Używany szablon niestandardowy",
         "usingStandard": "Używany szablon standardowy",
-        "notCurrentlySent": "Obecnie niewysyłany"
+        "notCurrentlySent": "Obecnie niewysyłany",
+        "followsStandard": "Szablon standardowy w Twojej marce — zgodny z aktualizacjami Alga",
+        "missingVariables": "Szablon standardowy używa teraz {{variables}}. Twoja edytowana kopia – nie."
       },
       "columns": {
         "name": "Nazwa",
@@ -1925,11 +1927,18 @@
         "htmlContent": "Zawartość HTML",
         "textContent": "Zawartość tekstowa"
       },
+      "resetToStandard": {
+        "title": "Przywrócić szablon standardowy?",
+        "message": "Twoje zmiany w tym szablonie zostaną zastąpione szablonem standardowym w barwach Twojej marki. Tej operacji nie można cofnąć.",
+        "error": "Ten szablon nie został przywrócony i nadal zawiera Twoje zmiany. Spróbuj ponownie lub wybierz Użyj standardowego, aby wrócić do szablonu standardowego.",
+        "errorNoPalette": "Ten szablon nie został przywrócony, ponieważ nie zapisano palety marki. Najpierw zastosuj branding wiadomości e-mail lub wybierz Użyj standardowego, aby wrócić do szablonu standardowego."
+      },
       "actions": {
         "collapse": "Zwiń",
         "expand": "Rozwiń",
         "edit": "Edytuj",
         "useStandard": "Użyj standardowego",
+        "resetToStandard": "Przywróć standardowy",
         "view": "Wyświetl",
         "customize": "Dostosuj",
         "sending": "Wysyłanie...",

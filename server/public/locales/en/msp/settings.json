@@ -1913,7 +1913,9 @@
         "templateCount": "({{templateCount}} templates)",
         "usingCustom": "Using custom template",
         "usingStandard": "Using standard template",
-        "notCurrentlySent": "Not currently sent"
+        "notCurrentlySent": "Not currently sent",
+        "followsStandard": "Standard template in your brand — follows Alga updates",
+        "missingVariables": "The standard template now uses {{variables}}. Your edited copy doesn't."
       },
       "columns": {
         "name": "Name",
@@ -1925,11 +1927,18 @@
         "htmlContent": "HTML Content",
         "textContent": "Text Content"
       },
+      "resetToStandard": {
+        "title": "Reset to standard template?",
+        "message": "Your edits to this template will be replaced by the standard template in your brand. This cannot be undone.",
+        "error": "This template wasn't reset and still has your edits. Try again, or choose Use Standard to switch back to the standard template.",
+        "errorNoPalette": "This template wasn't reset because no brand palette is saved. Apply email branding first, or choose Use Standard to switch back to the standard template."
+      },
       "actions": {
         "collapse": "Collapse",
         "expand": "Expand",
         "edit": "Edit",
         "useStandard": "Use Standard",
+        "resetToStandard": "Reset to standard",
         "view": "View",
         "customize": "Customize",
         "sending": "Sending...",

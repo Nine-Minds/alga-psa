@@ -8,6 +8,8 @@ import { Button } from "@alga-psa/ui/components/Button";
 import { Dialog, DialogContent } from "@alga-psa/ui/components/Dialog";
 import { Input } from "@alga-psa/ui/components/Input";
 import { Label } from "@alga-psa/ui/components/Label";
+import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
+import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
 import { DataTable } from "@alga-psa/ui/components/DataTable";
 import { ColumnDefinition } from "@alga-psa/types";
@@ -17,6 +19,7 @@ import { useUserPreference } from "@alga-psa/user-composition/hooks";
 import {
   getTemplatesAction,
   getEmailBrandingStatusAction,
+  applyEmailBrandingAction,
   updateTenantTemplateAction,
   cloneSystemTemplateAction,
   deactivateTenantTemplateAction,
@@ -25,7 +28,8 @@ import {
 } from "../../actions";
 import {
   SystemEmailTemplate,
-  TenantEmailTemplate
+  TenantEmailTemplate,
+  TenantEmailTemplateView
 } from "../../types/notification";
 import {
   applyEmailPalette,
@@ -89,7 +93,7 @@ interface TemplateRow {
   displayName: string;
   category: string;
   systemTemplate: SystemEmailTemplate;
-  tenantTemplate?: TenantEmailTemplate;
+  tenantTemplate?: TenantEmailTemplateView;
   activeTemplate: SystemEmailTemplate | TenantEmailTemplate;
   isCustom: boolean;
   language: string;
@@ -103,7 +107,7 @@ export function EmailTemplates() {
   const { data: session } = useSession();
   const [templates, setTemplates] = useState<{
     systemTemplates: (SystemEmailTemplate & { category: string })[];
-    tenantTemplates: TenantEmailTemplate[];
+    tenantTemplates: TenantEmailTemplateView[];
   } | null>(null);
   // Readiness only: the actions take their tenant from the session server-side.
   const sessionTenant = (session?.user as any)?.tenant as string | undefined;
@@ -114,6 +118,10 @@ export function EmailTemplates() {
   const [isVariableReferenceOpen, setIsVariableReferenceOpen] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [brandingStatus, setBrandingStatus] = useState<EmailBrandingStatus | null>(null);
+  // The template a "Reset to standard" click is waiting on a confirmation for, and the outcome of the last reset.
+  const [resetCandidate, setResetCandidate] = useState<{ name: string; language: string } | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   // Language filter state - empty means show all languages
   const [selectedLanguages, setSelectedLanguages] = useState<Set<string>>(new Set());
@@ -236,20 +244,41 @@ export function EmailTemplates() {
         return;
       }
 
-      // With a palette saved, the copy the tenant starts editing should already
-      // wear their colors instead of the stock purple.
-      if (brandingTarget) {
-        const branded = applyEmailPalette(template.html_content, STOCK_EMAIL_PALETTE, brandingTarget);
-        if (branded !== template.html_content) {
-          await updateTenantTemplateAction(result.id, { html_content: branded });
-        }
-      }
-
       await refreshTemplates();
     } catch (error) {
       console.error("Failed to create custom template:", error);
     } finally {
       setIsCloning(false);
+    }
+  };
+
+  // Rebuilds one template from the standard one in the tenant's palette, edits and all, and
+  // ties it to the standard template again so it follows it from here on. Runs only after the
+  // tenant confirmed, because it replaces their edits.
+  const handleResetToStandard = async ({ name, language }: { name: string; language: string }) => {
+    const noPalette = t(
+      'notifications.emailTemplatesUi.resetToStandard.errorNoPalette',
+      "This template wasn't reset because no brand palette is saved. Apply email branding first, or choose Use Standard to switch back to the standard template."
+    );
+    const failedGeneric = t(
+      'notifications.emailTemplatesUi.resetToStandard.error',
+      "This template wasn't reset and still has your edits. Try again, or choose Use Standard to switch back to the standard template."
+    );
+    setResetError(null);
+    setIsResetting(true);
+    try {
+      const result = await applyEmailBrandingAction({ names: [name], languages: [language], overwrite: [name] });
+      if (result.failed.length > 0) {
+        console.error("Failed to reset template to standard:", result.failed);
+        setResetError(failedGeneric);
+      }
+      await refreshTemplates();
+    } catch (error) {
+      console.error("Failed to reset template to standard:", error);
+      setResetError(/palette/i.test(getErrorMessage(error)) ? noPalette : failedGeneric);
+    } finally {
+      setIsResetting(false);
+      setResetCandidate(null);
     }
   };
 
@@ -314,7 +343,7 @@ export function EmailTemplates() {
     return acc;
   }, {} as Record<string, Array<{
     systemTemplate: SystemEmailTemplate & { category: string };
-    tenantTemplate?: TenantEmailTemplate;
+    tenantTemplate?: TenantEmailTemplateView;
     activeTemplate: SystemEmailTemplate | TenantEmailTemplate;
   }>>);
 
@@ -363,6 +392,9 @@ export function EmailTemplates() {
     {
       title: t('notifications.emailTemplatesUi.columns.name', 'Name'),
       dataIndex: 'name',
+      // The name carries the template's status and any missing-variable warning; Subject is the
+      // column that gives way (it truncates with a tooltip).
+      width: '35%',
       render: (value: string, record: EmailTemplateRow) => {
         if (record.type === 'category') {
           const isExpanded = expandedCategories.has(record.name);
@@ -390,12 +422,28 @@ export function EmailTemplates() {
           const tplRecord = record as TemplateRow;
           return (
             <div className="flex items-center pl-8">
-              <CornerDownRight className="h-3 w-3 text-muted-foreground mr-2" />
-              <div>
+              <CornerDownRight className="h-3 w-3 shrink-0 text-muted-foreground mr-2" />
+              {/* The table cell is single-line by default; the status and warning lines must wrap, or the variable name is cut off. */}
+              <div className="min-w-0">
                 <span className="font-medium text-gray-700">{tplRecord.displayName}</span>
-                <div className="text-xs text-gray-500">
-                  {tplRecord.isCustom ? t('notifications.emailTemplatesUi.list.usingCustom', 'Using custom template') : t('notifications.emailTemplatesUi.list.usingStandard', 'Using standard template')}
+                <div className="text-xs text-gray-500 whitespace-normal">
+                  {tplRecord.tenantTemplate?.derived
+                    ? t('notifications.emailTemplatesUi.list.followsStandard', 'Standard template in your brand — follows Alga updates')
+                    : tplRecord.isCustom
+                      ? t('notifications.emailTemplatesUi.list.usingCustom', 'Using custom template')
+                      : t('notifications.emailTemplatesUi.list.usingStandard', 'Using standard template')}
                 </div>
+                {!!tplRecord.tenantTemplate?.missingVariables?.length && (
+                  <div
+                    id={`missing-variables-${tplRecord.systemTemplate.id}`}
+                    className="mt-1 text-xs whitespace-normal text-[rgb(var(--badge-warning-text))]"
+                  >
+                    {t('notifications.emailTemplatesUi.list.missingVariables', {
+                      defaultValue: "The standard template now uses {{variables}}. Your edited copy doesn't.",
+                      variables: tplRecord.tenantTemplate.missingVariables!.map((variable) => `{{${variable}}}`).join(', '),
+                    })}
+                  </div>
+                )}
                 {templateVariableRegistry[tplRecord.name]?.contractInferred && (
                   <div className="mt-1 text-xs text-[rgb(var(--badge-warning-text))]">
                     {t('notifications.emailTemplatesUi.list.notCurrentlySent', 'Not currently sent')}
@@ -427,7 +475,9 @@ export function EmailTemplates() {
     {
       title: t('notifications.emailTemplatesUi.columns.actions', 'Actions'),
       dataIndex: 'id',
-      width: '15%',
+      // Cells are single-line, so the column must fit its widest row: Edit, Reset to standard
+      // and Use Standard on a customized template. A percentage clipped their labels.
+      width: '23rem',
       render: (value: string, record: EmailTemplateRow) => {
         if (record.type === 'category') {
           return (
@@ -462,6 +512,20 @@ export function EmailTemplates() {
               >
                 {t('notifications.emailTemplatesUi.actions.edit', 'Edit')}
               </Button>
+              {/* Resetting rebuilds the row in the saved palette, so it needs one; without a palette "Use Standard" is the way back. */}
+              {brandingStatus?.palette && (tplRecord.tenantTemplate?.derived || !!tplRecord.tenantTemplate?.missingVariables?.length) && (
+                <Button
+                  id={`reset-to-standard-${tplRecord.systemTemplate.id}`}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setResetError(null);
+                    setResetCandidate({ name: tplRecord.systemTemplate.name, language: tplRecord.systemTemplate.language_code });
+                  }}
+                >
+                  {t('notifications.emailTemplatesUi.actions.resetToStandard', 'Reset to standard')}
+                </Button>
+              )}
               <Button
                 id={`use-standard-${tplRecord.systemTemplate.id}`}
                 variant="outline"
@@ -573,6 +637,27 @@ export function EmailTemplates() {
           </DropdownMenu>
         </div>
       </div>
+
+      {resetError && (
+        <Alert id="email-template-reset-error" variant="destructive">
+          <AlertDescription>{resetError}</AlertDescription>
+        </Alert>
+      )}
+
+      <ConfirmationDialog
+        id="confirm-reset-to-standard"
+        isOpen={resetCandidate !== null}
+        onClose={() => setResetCandidate(null)}
+        onConfirm={() => resetCandidate ? handleResetToStandard(resetCandidate) : undefined}
+        isConfirming={isResetting}
+        title={t('notifications.emailTemplatesUi.resetToStandard.title', 'Reset to standard template?')}
+        message={t(
+          'notifications.emailTemplatesUi.resetToStandard.message',
+          'Your edits to this template will be replaced by the standard template in your brand. This cannot be undone.'
+        )}
+        confirmLabel={t('notifications.emailTemplatesUi.actions.resetToStandard', 'Reset to standard')}
+        cancelLabel={t('notifications.emailTemplatesUi.actions.cancel', 'Cancel')}
+      />
 
       <DataTable
         id="email-templates-table"
@@ -771,7 +856,7 @@ function EditTemplateDialog({
   isOpen: boolean;
   onClose: () => void;
   template: TenantEmailTemplate | null;
-  onTemplatesChange: (templates: { systemTemplates: (SystemEmailTemplate & { category: string })[]; tenantTemplates: TenantEmailTemplate[] }) => void;
+  onTemplatesChange: (templates: { systemTemplates: (SystemEmailTemplate & { category: string })[]; tenantTemplates: TenantEmailTemplateView[] }) => void;
   /** Token map to rewrite into the editor, null when no palette is saved. */
   brandingPalette: EmailPaletteTokens | null;
   /** What the last apply wrote, so its tokens are recognized too. */

@@ -10,6 +10,7 @@ import {
 } from '@alga-psa/email/branding';
 
 const source = readFileSync(resolve(__dirname, 'EmailTemplates.tsx'), 'utf8');
+const actionsSource = readFileSync(resolve(__dirname, '../../actions/notification-actions/notificationActions.ts'), 'utf8');
 
 const TERRACOTTA = resolveEmailPalette({ primary: '#b4552f', secondary: '#3f4d8a' });
 
@@ -46,8 +47,11 @@ describe('editor palette integration', () => {
   });
 
   it('starts a clone from the branded HTML so the row classifies as branded', () => {
-    expect(source).toContain('applyEmailPalette(template.html_content, STOCK_EMAIL_PALETTE, brandingTarget)');
-    expect(source).toContain('brandingStatus.palette.appliedPalette ?? brandingStatus.resolved');
+    // The clone action wears the palette itself (and stamps the row as derived), so the editor
+    // no longer patches the copy afterwards, which would have cut that provenance.
+    expect(actionsSource).toContain('applyEmailPalette(systemTemplate.html_content, STOCK_EMAIL_PALETTE, target)');
+    expect(actionsSource).toContain('brand.palette.appliedPalette ?? resolveEmailPalette(brand.palette)');
+    expect(source).not.toContain('updateTenantTemplateAction(result.id');
 
     const cloned = applyEmailPalette(SYSTEM_HTML, STOCK_EMAIL_PALETTE, TERRACOTTA);
     const classification = classifyTenantTemplate({

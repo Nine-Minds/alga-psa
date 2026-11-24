@@ -8,18 +8,17 @@ import { isEnterprise } from '@alga-psa/core/features';
 import { mergeTenantSettingsJson } from '@alga-psa/tenancy/server/tenantSettingsStore';
 import { isLicensedUserType } from '@alga-psa/types';
 import {
+  decoratorFor,
+  resolveBrandDecoration,
   classifyTenantTemplate,
+  deriveTemplate,
   copiedFromSystemRowFor,
-  decorateBrandedHtml,
-  isDarkEmailHeader,
-  pickBrandLogoVariant,
   planEmailBrandingApply,
   planEmailBrandingRemoval,
   previewEmailBrandingApply,
   resolveEmailPalette,
   suggestEmailPalette,
   type EmailBrandingApplyScope,
-  type EmailBrandingLogoVariant,
   type EmailBrandingPalette,
   type EmailPaletteTokens,
 } from '@alga-psa/email/branding';
@@ -37,6 +36,7 @@ import {
   type EmailBrandingTemplateStatus,
   type TenantSettingsBlob,
 } from '../../lib/emailBranding';
+import { NO_DERIVED_PROVENANCE, isUntouchedDerivation, stampDerivedTemplate, type DerivedProvenance, type StoredBrandDecoration } from '@alga-psa/email/derivedTemplates';
 import { TICKET_EMAIL_TEMPLATES_COPIED_FROM } from '../../lib/templateVariables/ticketEmailAudience';
 
 function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant: string) {
@@ -97,6 +97,33 @@ interface TemplateRowShape {
   text_content: string;
   created_at?: string | Date | null;
   category?: string;
+  derived_from_system_id?: number | null;
+  derived_palette?: EmailPaletteTokens | null;
+  derived_decoration?: StoredBrandDecoration | null;
+  derived_snapshot_hash?: string | null;
+}
+
+/**
+ * The tenant rows as they currently read. A derived row's stored body is whatever the system
+ * template was when it was written; what the tenant has is the current system template, so that
+ * is what gets classified and applied over. Without this a derived row would read as
+ * "customized" the day after any system change and the apply would skip it. The palette is the
+ * last applied one, the one classification compares against; brand assets are not needed here,
+ * classification normalizes them away.
+ */
+function withDerivedRowsResolved<T extends { tenantTemplates: TemplateRowShape[]; systemTemplates: TemplateRowShape[] }>(
+  rows: T,
+  appliedPalette: EmailPaletteTokens | null | undefined,
+): T {
+  const systemByKey = new Map(rows.systemTemplates.map((row) => [rowKey(row.name, row.language_code), row]));
+  return {
+    ...rows,
+    tenantTemplates: rows.tenantTemplates.map((row) => {
+      const systemRow = systemByKey.get(rowKey(row.name, row.language_code));
+      if (!systemRow || !isUntouchedDerivation(row)) return row;
+      return { ...row, ...deriveTemplate(systemRow, appliedPalette ?? row.derived_palette!, decoratorFor(row.derived_decoration)) };
+    }),
+  };
 }
 
 async function loadTemplateRows(trx: Knex.Transaction, tenant: string): Promise<{
@@ -159,7 +186,9 @@ export const getEmailBrandingStatusAction = withAuth(async (
     const palette = readEmailBrandingPalette(settings.emailBranding);
     const suggestion = suggestEmailPalette({ theme: settings.theme, branding: settings.branding ?? null });
 
-    const { systemTemplates, tenantTemplates } = await loadTemplateRows(trx, tenant);
+    const { systemTemplates, tenantTemplates } = withDerivedRowsResolved(
+      await loadTemplateRows(trx, tenant), palette?.appliedPalette,
+    );
     const tenantByKey = new Map(tenantTemplates.map((row) => [rowKey(row.name, row.language_code), row]));
 
     const availableLanguages = [...new Set(systemTemplates.map((row) => row.language_code))].sort();
@@ -234,39 +263,6 @@ async function persistAppliedPalette(
 }
 
 /**
- * The Enterprise pass over every HTML the apply writes: the tenant's logo in
- * the header and the "Powered by AlgaPSA" line. Community gets no decorator at
- * all, even if the saved palette still carries the fields from an Enterprise
- * period, mirroring scopeBrandingToEdition.
- */
-function buildBrandDecorator(
-  palette: EmailBrandingPalette,
-  branding: Record<string, any> | null | undefined,
-  enterprise: boolean,
-  target: EmailPaletteTokens,
-): ((html: string) => string) | undefined {
-  if (!enterprise) return undefined;
-
-  // The written row references the logo by content-id, never by URL: the bytes
-  // are attached at send time. Only the variant is decided here — the shape the
-  // tenant picked, in the artwork that reads on the header this palette paints
-  // or the one they pinned — and only one the tenant has actually uploaded may
-  // be written.
-  const variant: EmailBrandingLogoVariant | null = palette.logo
-    ? pickBrandLogoVariant(palette.logo.variant, isDarkEmailHeader(target), {
-        logoUrl: branding?.logoUrl || undefined,
-        logoDarkUrl: branding?.logoDarkUrl || undefined,
-        logoWideUrl: branding?.logoWideUrl || undefined,
-        logoWideDarkUrl: branding?.logoWideDarkUrl || undefined,
-      }, palette.logo.artwork)
-    : null;
-  const logo = variant ? { variant, alt: branding?.clientName ?? '' } : undefined;
-  const hideAttribution = palette.hideAttribution === true;
-
-  return (html: string) => decorateBrandedHtml(html, { logo, hideAttribution });
-}
-
-/**
  * What "Apply to templates" would do to one template, without writing anything.
  *
  * Reads only, so it is not gated on settings:update: the dialog that shows it
@@ -287,7 +283,7 @@ export const previewEmailBrandingApplyAction = withAuth(async (
     const palette = readEmailBrandingPalette(settings.emailBranding);
     if (!palette) throw new Error('No email branding palette has been saved');
 
-    const rows = await loadTemplateRowsForName(trx, tenant, name);
+    const rows = withDerivedRowsResolved(await loadTemplateRowsForName(trx, tenant, name), palette.appliedPalette);
     return { settings, palette, ...rows };
   });
 
@@ -300,7 +296,7 @@ export const previewEmailBrandingApplyAction = withAuth(async (
     name,
     language,
     overwrite,
-    decorate: buildBrandDecorator(context.palette, context.settings.branding, isEnterprise, target),
+    decorate: decoratorFor(resolveBrandDecoration(context.palette, context.settings.branding, isEnterprise, target)),
     copiedFrom: TICKET_EMAIL_TEMPLATES_COPIED_FROM,
   });
 
@@ -329,20 +325,34 @@ export const applyEmailBrandingAction = withAuth(async (
     const palette = readEmailBrandingPalette(settings.emailBranding);
     if (!palette) throw new Error('No email branding palette has been saved');
 
-    const rows = await loadTemplateRows(trx, tenant);
+    const rows = withDerivedRowsResolved(await loadTemplateRows(trx, tenant), palette.appliedPalette);
     return { settings, palette, ...rows };
   });
 
   const target = resolveEmailPalette(context.palette);
+  // One decision, used twice: the options decorate what is written and are recorded on the row.
+  const decoration = resolveBrandDecoration(context.palette, context.settings.branding, isEnterprise, target);
+  const decorate = decoratorFor(decoration);
   const plan = planEmailBrandingApply({
     systemRows: context.systemTemplates,
     tenantRows: context.tenantTemplates,
     target,
     appliedPalette: context.palette.appliedPalette ?? null,
     scope,
-    decorate: buildBrandDecorator(context.palette, context.settings.branding, isEnterprise, target),
+    decorate,
     copiedFrom: TICKET_EMAIL_TEMPLATES_COPIED_FROM,
   });
+
+  const systemByKey = new Map(context.systemTemplates.map((row) => [rowKey(row.name, row.language_code), row]));
+  const tenantById = new Map(context.tenantTemplates.map((row) => [row.id, row]));
+
+  /** Provenance for what is about to be stored: stamped only if it is exactly the derivation. */
+  const provenanceFor = (
+    systemRow: TemplateRowShape | undefined,
+    content: { subject: string; html_content: string; text_content: string },
+  ): DerivedProvenance => (
+    systemRow ? stampDerivedTemplate(content, systemRow, target, decoration) : NO_DERIVED_PROVENANCE
+  );
 
   const written: EmailBrandingApplyResult['written'] = [];
   const failed: EmailBrandingApplyResult['failed'] = [];
@@ -357,29 +367,50 @@ export const applyEmailBrandingAction = withAuth(async (
         const now = new Date();
 
         for (const batch of chunked(inserts, INSERT_BATCH_SIZE)) {
-          await tenantScopedTable(trx, "tenant_email_templates", tenant).insert(batch.map((insert) => ({
-            tenant,
-            name: insert.name,
-            language_code: insert.language,
-            subject: insert.subject,
-            html_content: insert.html,
-            text_content: insert.text,
-            system_template_id: insert.systemTemplateId,
-            created_at: now,
-            updated_at: now,
-          })));
+          await tenantScopedTable(trx, "tenant_email_templates", tenant).insert(batch.map((insert) => {
+            const content = { subject: insert.subject, html_content: insert.html, text_content: insert.text };
+            const { derived_from_system_id, derived_palette, derived_decoration, derived_snapshot_hash } = provenanceFor(
+              systemByKey.get(rowKey(insert.name, insert.language)),
+              content,
+            );
+            return {
+              tenant,
+              name: insert.name,
+              language_code: insert.language,
+              ...content,
+              system_template_id: insert.systemTemplateId,
+              derived_from_system_id,
+              derived_palette,
+              derived_decoration,
+              derived_snapshot_hash,
+              created_at: now,
+              updated_at: now,
+            };
+          }));
         }
 
         // Selected first, updated by id with plain parameters: Citus rejects
         // column references in the SET clause of a distributed table.
         for (const update of updates) {
+          const existing = tenantById.get(update.id);
+          const provenance = provenanceFor(systemByKey.get(rowKey(update.name, update.language)), {
+            subject: update.subject ?? existing?.subject ?? '',
+            html_content: update.html,
+            text_content: update.text ?? existing?.text_content ?? '',
+          });
+          const derived = provenance.derived_from_system_id !== null;
           await tenantScopedTable(trx, "tenant_email_templates", tenant)
             .where({ id: update.id })
             .update({
               html_content: update.html,
-              // Only an overwrite restores these; a palette pass never touches them.
-              ...(update.subject !== undefined ? { subject: update.subject } : {}),
-              ...(update.text !== undefined ? { text_content: update.text } : {}),
+              // Only an overwrite restores these; a palette pass never touches them. A derived
+              // row is stored whole, so what the hash covers is exactly what is in the table.
+              ...(update.subject !== undefined || derived ? { subject: update.subject ?? existing?.subject } : {}),
+              ...(update.text !== undefined || derived ? { text_content: update.text ?? existing?.text_content } : {}),
+              derived_from_system_id: provenance.derived_from_system_id,
+              derived_palette: provenance.derived_palette,
+              derived_decoration: provenance.derived_decoration,
+              derived_snapshot_hash: provenance.derived_snapshot_hash,
               updated_at: now,
             });
         }
@@ -421,8 +452,9 @@ export const removeEmailBrandingAction = withAuth(async (
   const context = await withTransaction(knex, async (trx: Knex.Transaction) => {
     await requireSettingsUpdate(user, trx);
     const settings = await readTenantSettings(trx, tenant);
-    const rows = await loadTemplateRows(trx, tenant);
-    return { settings, palette: readEmailBrandingPalette(settings.emailBranding), ...rows };
+    const palette = readEmailBrandingPalette(settings.emailBranding);
+    const rows = withDerivedRowsResolved(await loadTemplateRows(trx, tenant), palette?.appliedPalette);
+    return { settings, palette, ...rows };
   });
 
   const { deletable, kept } = planEmailBrandingRemoval({

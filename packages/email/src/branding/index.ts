@@ -16,6 +16,7 @@ export {
 } from './applyEmailPalette';
 export {
   classifyTenantTemplate,
+  withoutBrandAssets,
   copiedFromSystemRowFor,
   type ClassifiableTemplate,
   type ClassifyTenantTemplateInput,
@@ -31,6 +32,7 @@ export {
   findBrandLogoCid,
   parseBrandLogoVariant,
   pickBrandLogoVariant,
+  readBrandDecoration,
   removeBrandLogo,
   resolveBrandLogoForPreview,
   stripBrandAttribution,
@@ -59,3 +61,7 @@ export {
   type EmailBrandingPreviewAction,
   type EmailBrandingPreviewInput,
 } from './previewEmailBrandingApply';
+export { brandDecorator, decoratorFor, resolveBrandDecoration } from './brandDecorator';
+export { deriveTemplate, type DerivableTemplate } from './deriveTemplate';
+export { missingTemplateVariables, templateVariables } from './templateVariables';
+export { readBrandLogo, readEmailBrandingPalette } from './readEmailBrandingPalette';

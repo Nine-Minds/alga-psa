@@ -72,7 +72,7 @@ function equalsBrandedStock(
  * branded against the corrected system templates. So is the stock "Changes Made"
  * box, which moved from pre-rendered HTML to a template loop (see changesBox.ts).
  */
-const withoutBrandAssets = (html: string): string =>
+export const withoutBrandAssets = (html: string): string =>
   normalizeChangesBox(stripGradientFallback(stripBrandAttribution(removeBrandLogo(html))));
 
 /**

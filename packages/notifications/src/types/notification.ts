@@ -1,3 +1,6 @@
+import type { EmailPaletteTokens } from '@alga-psa/email/branding';
+import type { StoredBrandDecoration } from '@alga-psa/email/derivedTemplates';
+
 export interface NotificationSettings {
   id: number;
   tenant: string;
@@ -37,8 +40,21 @@ export interface TenantEmailTemplate {
   text_content: string;
   language_code: string;
   system_template_id: number | null;
+  /** Set while the row is an untouched derivation of a system template (see lookupEmailTemplate). */
+  derived_from_system_id?: number | null;
+  derived_palette?: EmailPaletteTokens | null;
+  derived_decoration?: StoredBrandDecoration | null;
+  derived_snapshot_hash?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** A tenant template as the settings screen shows it. */
+export interface TenantEmailTemplateView extends TenantEmailTemplate {
+  /** Untouched derivation: the content above is the current standard template in the tenant's brand. */
+  derived: boolean;
+  /** Variables the standard template uses that this tenant-owned template does not; empty when derived. */
+  missingVariables: string[];
 }
 
 export interface NotificationCategoryBase {

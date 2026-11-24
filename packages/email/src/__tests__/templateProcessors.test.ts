@@ -204,6 +204,10 @@ function createFakeKnex(rows: Array<Record<string, any>>) {
     where(...args: unknown[]) {
       return createQuery(table, { ...filters, ...normalizeFilters(args) });
     },
+    // The shared resolver ends each table with the legacy row that has no language.
+    whereNull(column: string) {
+      return createQuery(table, { ...filters, [normalizeColumn(column)]: null });
+    },
     async first() {
       lookups.push({ table, filters });
       return rows.find(
@@ -273,6 +277,7 @@ describe('DatabaseTemplateProcessor', () => {
     expect(lookups).toEqual([
       { table: 'tenant_email_templates', filters: { tenant: 't1', name: 'welcome', language_code: 'fr' } },
       { table: 'tenant_email_templates', filters: { tenant: 't1', name: 'welcome', language_code: 'en' } },
+      { table: 'tenant_email_templates', filters: { tenant: 't1', name: 'welcome', language_code: null } },
       { table: 'system_email_templates', filters: { name: 'welcome', language_code: 'fr' } },
       { table: 'system_email_templates', filters: { name: 'welcome', language_code: 'en' } }
     ]);

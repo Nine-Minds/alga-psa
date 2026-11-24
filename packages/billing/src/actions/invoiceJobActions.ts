@@ -7,6 +7,7 @@ import { getInvoiceForRendering } from './invoiceQueries';
 import { createPDFGenerationService, publishGeneratedDocumentsToClient } from '../services/pdfGenerationService';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { StaticTemplateProcessor, TenantEmailService } from '@alga-psa/email';
+import { lookupEmailTemplate } from '@alga-psa/email/templateLookup';
 import { formatCurrency, formatLocalizedCalendarDate, isValidEmail, enqueueImmediateJob } from '@alga-psa/core';
 import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import Handlebars from 'handlebars';
@@ -359,44 +360,8 @@ async function getInvoiceEmailTemplate(
   tenant: string,
   locale: string = 'en'
 ): Promise<InvoiceEmailTemplate> {
-  const db = tenantDb(knex, tenant);
-  // Try tenant template in requested locale
-  let template = await db.table('tenant_email_templates')
-    .where({
-      name: 'invoice-email',
-      language_code: locale,
-    })
-    .first();
-
-  // Fall back to tenant English template
-  if (!template && locale !== 'en') {
-    template = await db.table('tenant_email_templates')
-      .where({
-        name: 'invoice-email',
-        language_code: 'en',
-      })
-      .first();
-  }
-
-  // Fall back to system template in requested locale
-  if (!template) {
-    template = await db.table('system_email_templates')
-      .where({
-        name: 'invoice-email',
-        language_code: locale,
-      })
-      .first();
-  }
-
-  // Fall back to system English template
-  if (!template && locale !== 'en') {
-    template = await db.table('system_email_templates')
-      .where({
-        name: 'invoice-email',
-        language_code: 'en',
-      })
-      .first();
-  }
+  // The shared resolver: tenant row (locale, English), then system (locale, English); a branded row nobody edited reads as the current system template.
+  const template = (await lookupEmailTemplate(tenantDb(knex, tenant), 'invoice-email', locale))?.template;
 
   if (!template) {
     return {
@@ -422,9 +387,9 @@ Best regards,
   }
 
   return {
-    subject: template.subject,
+    subject: template.subject ?? '',
     html_content: template.html_content,
-    text_content: template.text_content,
+    text_content: template.text_content ?? '',
   };
 }
 

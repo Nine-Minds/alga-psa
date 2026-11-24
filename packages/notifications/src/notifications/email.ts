@@ -19,6 +19,7 @@ import type {
 import { TenantEmailService, TenantEmailOutboundAdapter } from '@alga-psa/email';
 import type { OutboundMailPort } from '@alga-psa/email';
 import type { TenantEmailSettings } from '@alga-psa/types';
+import { lookupEmailTemplate } from '@alga-psa/email/templateLookup';
 import { resolveEmailPreferenceEnabled } from './emailPreferenceState';
 import { resolveEmailLocale } from './emailLocaleResolver';
 import type { SupportedLocale } from '@alga-psa/core/i18n/config';
@@ -32,7 +33,12 @@ export type EmailNotificationResult =
  * row shadows — are allow-listed out instead of trusted.
  */
 const SETTINGS_WRITABLE_COLUMNS = ['is_enabled', 'default_dont_notify_customer', 'rate_limit_per_minute'] as const;
-const TEMPLATE_WRITABLE_COLUMNS = ['subject', 'html_content', 'text_content', 'language_code'] as const;
+// The derived_* columns are provenance, never UI input: the actions that call this decide them
+// (cleared on every tenant edit), and a payload that names none of them leaves them alone.
+const TEMPLATE_WRITABLE_COLUMNS = [
+  'subject', 'html_content', 'text_content', 'language_code',
+  'derived_from_system_id', 'derived_palette', 'derived_decoration', 'derived_snapshot_hash',
+] as const;
 
 function pickDefined<T extends object>(source: T, columns: readonly (keyof T & string)[]): Partial<T> {
   const picked: Partial<T> = {};
@@ -183,33 +189,23 @@ export class EmailNotificationService implements NotificationService {
     return updated;
   }
 
+  /**
+   * The template one email is rendered with, resolved by the shared resolver so a branded row
+   * nobody edited reads as the current system template in the tenant's brand. Last resort when the
+   * resolver finds nothing: the system template of that name in any language (throws if none).
+   */
   async getEffectiveTemplate(
     tenant: string,
     name: string,
     locale?: SupportedLocale
   ): Promise<SystemEmailTemplate | TenantEmailTemplate> {
-    const tenantTemplate = await this.getTenantTemplate(tenant, name, locale);
-    if (tenantTemplate) {
-      return tenantTemplate;
+    if (!tenant) {
+      throw new Error('Tenant is required for tenant-specific templates');
     }
 
     const knex = await this.getTenantKnex();
-
-    if (locale) {
-      let systemTemplate = await this.tenantScopedTable(knex, 'system_email_templates', tenant)
-        .where({ name, language_code: locale })
-        .first();
-
-      if (systemTemplate) return systemTemplate;
-
-      if (locale !== 'en') {
-        systemTemplate = await this.tenantScopedTable(knex, 'system_email_templates', tenant)
-          .where({ name, language_code: 'en' })
-          .first();
-
-        if (systemTemplate) return systemTemplate;
-      }
-    }
+    const found = await lookupEmailTemplate(tenantDb(knex, tenant), name, locale);
+    if (found) return found.template as unknown as SystemEmailTemplate | TenantEmailTemplate;
 
     return this.getSystemTemplate(name);
   }

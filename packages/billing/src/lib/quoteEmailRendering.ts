@@ -1,5 +1,7 @@
 import Handlebars from 'handlebars';
 import { tenantDb } from '@alga-psa/db';
+import { templateVariables } from '@alga-psa/email/branding';
+import { lookupEmailTemplate } from '@alga-psa/email/templateLookup';
 import type { Knex } from 'knex';
 import type { IQuote } from '@alga-psa/types';
 import { formatCurrency } from '@alga-psa/core/formatters';
@@ -24,55 +26,30 @@ const CODE_TEMPLATES = {
   'quote-accepted-confirmation-email': buildQuoteAcceptedConfirmationEmailTemplate,
 } as const;
 
-// Resolves the quote email template with the same precedence as invoices:
-// tenant override (locale, then English) before the system template, so
-// customisations made in Notification Settings > Email Templates are honoured.
+export const REVIEW_LINK_VARIABLE = 'quoteReviewLink';
+
+// Resolves the quote email template through the same resolver every other email uses: the tenant's
+// own template (recipient language, then English) before the system one, so customisations made in
+// Notification Settings > Email Templates are honoured, and a branded copy nobody edited is served
+// as the current system template in the tenant's brand (see lookupEmailTemplate).
+// LEVERAGE: pattern tenant-then-system template lookup — this was the third private copy (see also EmailNotificationService.getEffectiveTemplate); the resolver is the one layer
 export const getQuoteEmailTemplate = async (
   knex: Knex | Knex.Transaction,
   tenant: string,
   name: QuoteTemplateName,
   locale: string = 'en'
 ): Promise<QuoteEmailTemplate | null> => {
-  const db = tenantDb(knex, tenant);
-  const languages = locale === 'en' ? ['en'] : [locale, 'en'];
-
-  for (const table of ['tenant_email_templates', 'system_email_templates']) {
-    for (const language_code of languages) {
-      const template = await db.table(table)
-        .where({ name, language_code })
-        .first<QuoteEmailTemplate | undefined>();
-
-      if (template) {
-        return {
-          subject: template.subject,
-          html_content: template.html_content,
-          text_content: template.text_content,
-        };
-      }
-    }
-  }
-
-  return null;
-};
-
-export const REVIEW_LINK_VARIABLE = 'quoteReviewLink';
-
-const templateReferencesReviewLink = (source: string): boolean => {
-  let ast: unknown;
-  try {
-    ast = Handlebars.parse(source);
-  } catch {
-    return false;
-  }
-  const visit = (node: unknown): boolean => {
-    if (Array.isArray(node)) return node.some(visit);
-    if (!node || typeof node !== 'object') return false;
-    const record = node as Record<string, unknown>;
-    if (record.type === 'PathExpression' && !record.data && Array.isArray(record.parts) && record.parts[0] === REVIEW_LINK_VARIABLE) return true;
-    return Object.values(record).some((value) => typeof value === 'object' && value !== null && visit(value));
+  const found = await lookupEmailTemplate(tenantDb(knex, tenant), name, locale);
+  if (!found) return null;
+  const { template } = found;
+  return {
+    subject: template.subject ?? '',
+    html_content: template.html_content,
+    text_content: template.text_content ?? '',
   };
-  return visit(ast);
 };
+
+const templateReferencesReviewLink = (source: string): boolean => templateVariables(source).has(REVIEW_LINK_VARIABLE);
 
 export interface ResolvedQuoteEmail {
   templateName: QuoteTemplateName;

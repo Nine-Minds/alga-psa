@@ -1913,7 +1913,9 @@
         "templateCount": "({{templateCount}} sjablonen)",
         "usingCustom": "Aangepast sjabloon wordt gebruikt",
         "usingStandard": "Standaardsjabloon wordt gebruikt",
-        "notCurrentlySent": "Wordt momenteel niet verzonden"
+        "notCurrentlySent": "Wordt momenteel niet verzonden",
+        "followsStandard": "Standaardsjabloon in uw huisstijl — volgt Alga-updates",
+        "missingVariables": "Het standaardsjabloon gebruikt nu {{variables}}. Uw bewerkte kopie niet."
       },
       "columns": {
         "name": "Naam",
@@ -1925,11 +1927,18 @@
         "htmlContent": "HTML-inhoud",
         "textContent": "Tekstinhoud"
       },
+      "resetToStandard": {
+        "title": "Terugzetten naar de standaardsjabloon?",
+        "message": "Uw wijzigingen in deze sjabloon worden vervangen door de standaardsjabloon in uw huisstijl. Dit kan niet ongedaan worden gemaakt.",
+        "error": "Deze sjabloon is niet teruggezet en bevat nog uw wijzigingen. Probeer het opnieuw of kies Standaard gebruiken om terug te gaan naar de standaardsjabloon.",
+        "errorNoPalette": "Deze sjabloon is niet teruggezet omdat er geen huisstijlpalet is opgeslagen. Pas eerst de e-mailhuisstijl toe of kies Standaard gebruiken om terug te gaan naar de standaardsjabloon."
+      },
       "actions": {
         "collapse": "Inklappen",
         "expand": "Uitklappen",
         "edit": "Bewerken",
         "useStandard": "Standaard gebruiken",
+        "resetToStandard": "Terugzetten naar standaard",
         "view": "Bekijken",
         "customize": "Aanpassen",
         "sending": "Verzenden...",

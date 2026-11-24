@@ -73,6 +73,15 @@ export function findBrandLogoCid(html: string): string | null {
   return variant ? brandLogoCid(variant) : null;
 }
 
+const ALT_ATTRIBUTE = /\salt=(?:"([^"]*)"|'([^']*)')/i;
+
+const unescapeAttribute = (value: string): string =>
+  value
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&');
+
 export interface BrandLogo {
   variant: EmailBrandingLogoVariant;
   alt?: string;
@@ -218,4 +227,21 @@ export function decorateBrandedHtml(html: string, options: BrandDecorationOption
   let result = options.logo ? applyBrandLogo(html, options.logo) : removeBrandLogo(html);
   if (options.hideAttribution) result = stripBrandAttribution(result);
   return result;
+}
+
+/**
+ * The decoration a stored row visibly carries: the marked logo tag (variant and
+ * alt, read back through the inverse of the escaping `logoTag` applies) or none,
+ * and whether the attribution line is absent. Reading is inference from the row,
+ * never from settings; callers verify it by rebuilding the row byte for byte.
+ */
+export function readBrandDecoration(html: string): BrandDecorationOptions & { hideAttribution: boolean } {
+  const tag = html ? FIRST_MARKER_TAG.exec(html)?.[0] : null;
+  const variant = tag ? parseBrandLogoVariant(readImgSrc(tag)) : null;
+  const altMatch = tag ? ALT_ATTRIBUTE.exec(tag) : null;
+  const alt = altMatch ? unescapeAttribute(altMatch[1] ?? altMatch[2] ?? '') : '';
+  return {
+    ...(variant ? { logo: { variant, alt } } : {}),
+    hideAttribution: !containsBrandAttribution(html),
+  };
 }

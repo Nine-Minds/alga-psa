@@ -9,6 +9,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { isValidEmail } from '@alga-psa/core';
 import logger from '@alga-psa/core/logger';
 import { StaticTemplateProcessor, TenantEmailService, resolveTenantCompanyName } from '@alga-psa/email';
+import { lookupEmailTemplate } from '@alga-psa/email/templateLookup';
 import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import {
   actionError,
@@ -300,21 +301,8 @@ async function getStatusUpdateTemplate(
   locale: string,
 ): Promise<StatusUpdateTemplate | null> {
   const db = tenantDb(knex, tenant);
-  const lookups: Array<[string, string]> = [
-    ['tenant_email_templates', locale],
-    ['tenant_email_templates', 'en'],
-    ['system_email_templates', locale],
-    ['system_email_templates', 'en'],
-  ];
-
-  for (const [table, languageCode] of lookups) {
-    const template = await db.table(table)
-      .where({ name: TEMPLATE_NAME, language_code: languageCode })
-      .first();
-    if (template) return template as StatusUpdateTemplate;
-  }
-
-  return null;
+  const found = await lookupEmailTemplate(db, TEMPLATE_NAME, locale);
+  return (found?.template as StatusUpdateTemplate | undefined) ?? null;
 }
 
 function formatHours(value: number): string {
