@@ -45,4 +45,38 @@ Previous ticket content that should not be copied.`,
     expect(result.appliedHeuristics).toContain('provider-header');
     expect(result.sanitizedText).toBe('The restart fixed the issue. Thank you.');
   });
+
+  it('trims a Gmail attribution wrapped over two lines', () => {
+    const result = parseEmailReply({
+      text: `Thursday afternoon works for us.
+
+On Mon, Nov 17, 2026 at 8:42 AM Jane Client <
+jane.client@example.test> wrote:
+
+> Tell us what you need from our side before the install day.
+> The laptops are still sealed in their shipping boxes.`,
+    });
+
+    expect(result.appliedHeuristics).toContain('provider-header');
+    expect(result.sanitizedText).toBe('Thursday afternoon works for us.');
+  });
+
+  it('keeps authored text that introduces a quote of its own', () => {
+    // The wrapped-attribution heuristic looks for the address Gmail wraps on and the previous
+    // message below it. An author who writes "On Friday … He wrote:" above one quoted line has
+    // neither, and the text after their quote is theirs to keep.
+    const result = parseEmailReply({
+      text: `Here is the update you asked for.
+
+On Friday I spoke to the vendor.
+He wrote:
+> We ship Monday.
+
+Please confirm the Wednesday install.`,
+    });
+
+    expect(result.sanitizedText).toContain('Here is the update you asked for.');
+    expect(result.sanitizedText).toContain('On Friday I spoke to the vendor.');
+    expect(result.sanitizedText).toContain('Please confirm the Wednesday install.');
+  });
 });

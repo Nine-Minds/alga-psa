@@ -158,12 +158,34 @@ function isCoherentQuotedHeaderBlock(lines: string[], startIndex: number): boole
 
 /** How many lines a provider attribution may wrap over before it stops looking like one. */
 const MAX_WRAPPED_HEADER_LINES = 3;
+/** Quoted lines a wrapped attribution must introduce: a whole quoted message, not one sentence. */
+const MIN_WRAPPED_HEADER_QUOTED_LINES = 2;
+/** The address a provider attribution names, which is what makes it wrap in the first place. */
+const attributionAddressRegex = /[^\s<>@]+@[^\s<>@]+\.[A-Za-z]{2,}/;
+
+/** Length of the quoted-line run starting at the first non-empty line from `startIndex`. */
+function quotedLineRunLength(lines: string[], startIndex: number): number {
+  let quoted = 0;
+
+  for (let i = startIndex; i < lines.length; i += 1) {
+    const line = lines[i].trim();
+    if (!line) {
+      if (quoted === 0) continue;
+      break;
+    }
+    if (!line.startsWith('>')) break;
+    quoted += 1;
+  }
+
+  return quoted;
+}
 
 /**
  * Gmail wraps a long `On <date> <Name> <addr> wrote:` attribution over two or three lines, so the
- * single-line `providerReplyHeaders` patterns miss it. Treat such a run as an attribution only
- * when quoted content follows it, which keeps authored sentences that merely open with "On"
- * (and happen to sit above an "… wrote:" line) intact.
+ * single-line `providerReplyHeaders` patterns miss it. An authored sentence can open with "On" and
+ * introduce a quote of its own ("On Friday I spoke to the vendor. / He wrote: / > …"), and cutting
+ * there destroys the text below it, so require what only a real attribution carries: the address
+ * that forced the wrap, and the previous message — not a single line — quoted beneath.
  */
 function isWrappedProviderReplyHeader(lines: string[], startIndex: number): boolean {
   if (!/^on\b/i.test(lines[startIndex].trim())) {
@@ -171,20 +193,21 @@ function isWrappedProviderReplyHeader(lines: string[], startIndex: number): bool
   }
 
   const endIndex = Math.min(lines.length, startIndex + MAX_WRAPPED_HEADER_LINES);
+  let run = lines[startIndex].trim();
+
   for (let i = startIndex + 1; i < endIndex; i += 1) {
     const line = lines[i].trim();
     if (!line) {
       return false;
     }
+    run = `${run} ${line}`;
     if (!/wrote:$/i.test(line)) {
       continue;
     }
-    for (let next = i + 1; next < lines.length; next += 1) {
-      const candidate = lines[next].trim();
-      if (!candidate) continue;
-      return candidate.startsWith('>');
-    }
-    return false;
+    return (
+      attributionAddressRegex.test(run)
+      && quotedLineRunLength(lines, i + 1) >= MIN_WRAPPED_HEADER_QUOTED_LINES
+    );
   }
 
   return false;
