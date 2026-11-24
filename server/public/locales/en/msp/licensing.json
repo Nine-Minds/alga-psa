@@ -453,6 +453,8 @@
       },
       "error": {
         "operationConflict": "This request was already sent with different details. Refresh and start again.",
+        "trialClaimUnavailable": "This trial is already in use or was started for another client. Refresh and try again.",
+        "trialSponsorNotEligible": "This workspace is not eligible for a Seat trial. Check the account's plan and billing status.",
         "invalidSeats": "Enter a whole number of seats, at least 1.",
         "invalidInvitation": "Choose a contact to invite.",
         "contactNotFound": "This contact is no longer available. Choose another contact.",

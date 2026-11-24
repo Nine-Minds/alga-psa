@@ -453,6 +453,8 @@
       },
       "error": {
         "operationConflict": "Dit verzoek is al met andere gegevens verzonden. Vernieuw de pagina en begin opnieuw.",
+        "trialClaimUnavailable": "Deze proefperiode is al in gebruik of is gestart voor een andere klant. Vernieuw en probeer het opnieuw.",
+        "trialSponsorNotEligible": "Deze werkruimte komt niet in aanmerking voor een Seat-proefperiode. Controleer het abonnement en de factureringsstatus van het account.",
         "invalidSeats": "Voer een geheel aantal plekken in, minimaal 1.",
         "invalidInvitation": "Kies een contactpersoon om uit te nodigen.",
         "contactNotFound": "Deze contactpersoon is niet meer beschikbaar. Kies een andere.",

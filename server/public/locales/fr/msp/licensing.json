@@ -453,6 +453,8 @@
       },
       "error": {
         "operationConflict": "Cette demande a déjà été envoyée avec des informations différentes. Actualisez et recommencez.",
+        "trialClaimUnavailable": "Cet essai est déjà utilisé ou a été lancé pour un autre client. Actualisez et réessayez.",
+        "trialSponsorNotEligible": "Cet espace de travail n’est pas éligible à un essai de Seat. Vérifiez l’offre et l’état de facturation du compte.",
         "invalidSeats": "Saisissez un nombre entier de postes, au moins 1.",
         "invalidInvitation": "Choisissez un contact à inviter.",
         "contactNotFound": "Ce contact n'est plus disponible. Choisissez un autre contact.",

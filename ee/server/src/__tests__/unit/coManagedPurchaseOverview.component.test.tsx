@@ -11,11 +11,12 @@ import frCommon from '../../../../../server/public/locales/fr/common.json';
 import frLicensing from '../../../../../server/public/locales/fr/msp/licensing.json';
 
 const mocks = vi.hoisted(() => ({ offer: vi.fn(), reviewSeat: vi.fn(), useSeat: vi.fn(), refresh: vi.fn(), discovery: vi.fn(), editorProps: [] as unknown[],
-  hasRecovery: vi.fn(), cancelConversion: vi.fn(), readers: { billing: vi.fn(), overview: vi.fn(), admit: vi.fn(), allocate: vi.fn() } }));
+  hasRecovery: vi.fn(), cancelConversion: vi.fn(), cancelTrial: vi.fn(), readers: { billing: vi.fn(), overview: vi.fn(), admit: vi.fn(), allocate: vi.fn() } }));
 vi.mock('../../lib/actions/coManagedSeatTrialActions', () => ({
   getSeatTrialOfferAction: mocks.offer, reviewSeatTrialConversionAction: mocks.reviewSeat, applyPaidSeatToTrialAction: mocks.useSeat,
-  cancelSeatTrialConversionAction: mocks.cancelConversion,
+  cancelSeatTrialConversionAction: mocks.cancelConversion, cancelCoManagedSeatTrialAction: mocks.cancelTrial,
 }));
+vi.mock('@/components/co-managed/CoManagedSeatContactField', () => ({ default: () => null }));
 vi.mock('next/navigation', () => {
   const router = { refresh: mocks.refresh };
   return { useRouter: () => router };
@@ -58,7 +59,7 @@ function renderOnMspRoute(node: ReactNode, route: string, locale: 'en' | 'fr' = 
 
 beforeEach(() => {
   mocks.offer.mockReset().mockResolvedValue({ canStart: false, canPurchase: false, pilot: null, price: { unitAmount: 999, currency: 'USD' } });
-  mocks.reviewSeat.mockReset(); mocks.useSeat.mockReset(); mocks.refresh.mockReset(); mocks.discovery.mockReset().mockResolvedValue(true); mocks.editorProps = []; (Object.values(mocks.readers) as Array<ReturnType<typeof vi.fn>>).forEach((fn) => fn.mockReset()); });
+  mocks.reviewSeat.mockReset(); mocks.cancelTrial.mockReset(); mocks.useSeat.mockReset(); mocks.refresh.mockReset(); mocks.discovery.mockReset().mockResolvedValue(true); mocks.editorProps = []; (Object.values(mocks.readers) as Array<ReturnType<typeof vi.fn>>).forEach((fn) => fn.mockReset()); });
 afterEach(cleanup);
 
 describe('purchase-only co-managed overview', () => {
@@ -116,6 +117,39 @@ describe('purchase-only co-managed overview', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Annuler le passage à un poste payant' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Impossible de terminer cette action. Actualisez l’essai et réessayez.');
     expect(mocks.cancelConversion).toHaveBeenCalledWith('pilot');
+  });
+
+  describe('trial refusals', () => {
+    const pending = () => mocks.offer.mockResolvedValue({ price: { unitAmount: 1149, currency: 'EUR' }, intake: false, canStart: false,
+      canPurchase: false, clientId: 'pilot-client', pilot: { trialId: 'pilot', status: 'pending', invited: true, pendingPurchase: null } });
+
+    it('shows the specific copy for a refusal the server named, not the generic message', async () => {
+      pending();
+      mocks.cancelTrial.mockResolvedValue({ rejected: true, errorCode: 'TRIAL_CLAIM_UNAVAILABLE' });
+      renderOnMspRoute(<CoManagedSeatTrial clientId="pilot-client" />, '/msp/clients/pilot-client');
+      fireEvent.click(await screen.findByRole('button', { name: /cancel/i }));
+      expect(await screen.findByRole('alert')).toHaveTextContent('This trial is already in use or was started for another client. Refresh and try again.');
+      expect(screen.getByRole('alert')).not.toHaveTextContent('Could not complete this action');
+    });
+
+    it('words a sponsor refusal for the trial, and a mapped invitation refusal from the seat copy', async () => {
+      pending();
+      mocks.cancelTrial.mockResolvedValueOnce({ rejected: true, errorCode: 'SPONSOR_NOT_ELIGIBLE' })
+        .mockResolvedValueOnce({ rejected: true, errorCode: 'EMAIL_IN_USE' });
+      renderOnMspRoute(<CoManagedSeatTrial clientId="pilot-client" />, '/msp/clients/pilot-client');
+      fireEvent.click(await screen.findByRole('button', { name: /cancel/i }));
+      expect(await screen.findByRole('alert')).toHaveTextContent('not eligible for a Seat trial');
+      fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+      await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('already belongs to a user account'));
+    });
+
+    it('keeps the generic message for an error nobody named', async () => {
+      pending();
+      mocks.cancelTrial.mockRejectedValue(new Error('redacted'));
+      renderOnMspRoute(<CoManagedSeatTrial clientId="pilot-client" />, '/msp/clients/pilot-client');
+      fireEvent.click(await screen.findByRole('button', { name: /cancel/i }));
+      expect(await screen.findByRole('alert')).toHaveTextContent('Could not complete this action. Refresh the trial and try again.');
+    });
   });
 
   it('re-renders the server root when verified capacity moves (access is re-derived, not inferred)', () => {
