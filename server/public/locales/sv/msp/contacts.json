@@ -409,7 +409,8 @@
         "used": "Använd",
         "expired": "Utgången",
         "revoked": "Återkallad"
-      }
+      },
+      "lastSentPrefix": "Senast skickad:"
     },
     "actions": {
       "sendInvitation": "Skicka portalinbjudan",
@@ -462,7 +463,8 @@
         "noDefaultLocation": "Standardkunden måste ha en standardplats konfigurerad för att portalinbjudningar ska kunna skickas.",
         "noLocationEmail": "Standardkundens plats måste ha en konfigurerad kontakt-e-postadress.",
         "noBaseUrl": "Bas-URL har inte konfigurerats för portalinbjudningar.",
-        "invitationNotFound": "Inbjudan hittades inte eller har redan använts."
+        "invitationNotFound": "Inbjudan hittades inte eller har redan använts.",
+        "rateLimited": "För många inbjudningsförsök för den här kontakten. Försök igen senare."
       },
       "userNotFound": "Kundanvändaren hittades inte",
       "validationErrorTitle": "Valideringsfel"
@@ -677,7 +679,8 @@
       "none": "Inte inbjuden",
       "pendingUntil": "Väntande till {{date}}",
       "expired": "Inbjudan har gått ut",
-      "activeUser": "Aktiv portalanvändare"
+      "activeUser": "Aktiv portalanvändare",
+      "inactiveUser": "Inaktiv portalanvändare"
     }
   },
   "bulkPortalInvitation": {
@@ -690,7 +693,8 @@
     "skipReasons": {
       "alreadyHasPortalAccess": "har redan portalåtkomst",
       "missingEmail": "ingen användbar e-postadress",
-      "sharedMailbox": "delad brevlåda"
+      "sharedMailbox": "delad brevlåda",
+      "emailInUse": "e-postadressen tillhör redan en annan användare"
     },
     "actions": {
       "send": "Skicka {{total}} inbjudningar",
@@ -706,7 +710,18 @@
       "summary": "{{sent}} skickade, {{skipped}} överhoppade, {{failed}} misslyckade.",
       "sent": "Skickad",
       "skipped": "Överhoppad",
-      "failed": "Misslyckad"
+      "failed": "Misslyckad",
+      "reasons": {
+        "contactNotFound": "Kontakten hittades inte",
+        "missingEmail": "Kontakten har ingen e-postadress",
+        "invalidEmail": "Kontaktens e-postadress är ogiltig",
+        "userExists": "Har redan ett portalkonto",
+        "emailInUse": "E-postadressen tillhör en annan användare",
+        "permissionDenied": "Du får inte bjuda in den här kontakten",
+        "stateMismatch": "Inbjudan har inte längre den status du valde",
+        "rateLimited": "För många inbjudningsförsök för den här kontakten. Försök igen senare.",
+        "invitationFailed": "Inbjudan kunde inte skickas"
+      }
     },
     "errors": {
       "loadFailed": "Kunde inte avgöra vilka som kan bjudas in. Försök igen.",
@@ -715,7 +730,11 @@
     },
     "resendTitle": "Skicka inbjudningar till kundportalen igen",
     "resendCount_one": "{{count}} kontakt får sin inbjudan igen, med hela giltighetsperioden.",
-    "resendCount_other": "{{count}} kontakter får sin inbjudan igen, med hela giltighetsperioden."
+    "resendCount_other": "{{count}} kontakter får sin inbjudan igen, med hela giltighetsperioden.",
+    "states": {
+      "pending": "Väntande",
+      "expired": "Utgången"
+    }
   },
   "contactsLayout": {
     "title": "Kontaktlayout",

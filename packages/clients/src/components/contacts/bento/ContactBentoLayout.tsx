@@ -1028,7 +1028,14 @@ export function ContactBentoLayout({
         className="max-w-3xl"
       >
         <DialogContent>
-          <ContactPortalTab contact={contact} currentUserPermissions={userPermissions} />
+          {/* Inviting, resending or revoking in here changes what the list
+              behind this drawer shows for the contact, so the opener is told
+              the same way a save tells it. */}
+          <ContactPortalTab
+            contact={contact}
+            currentUserPermissions={userPermissions}
+            onInvitationChanged={onChangesSaved}
+          />
         </DialogContent>
       </Dialog>
     );

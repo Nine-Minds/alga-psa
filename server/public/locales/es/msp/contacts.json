@@ -409,7 +409,8 @@
         "used": "Usado",
         "expired": "Caducado",
         "revoked": "Revocado"
-      }
+      },
+      "lastSentPrefix": "Último envío:"
     },
     "actions": {
       "sendInvitation": "Enviar invitación al portal",
@@ -462,7 +463,8 @@
         "noDefaultLocation": "El cliente predeterminado debe tener una ubicación predeterminada configurada para enviar invitaciones al portal.",
         "noLocationEmail": "La ubicación del cliente predeterminado debe tener un correo electrónico de contacto configurado.",
         "noBaseUrl": "La URL base no está configurada para las invitaciones al portal.",
-        "invitationNotFound": "Invitación no encontrada o ya utilizada."
+        "invitationNotFound": "Invitación no encontrada o ya utilizada.",
+        "rateLimited": "Demasiados intentos de invitación para este contacto. Vuelva a intentarlo más tarde."
       },
       "userNotFound": "No se encontró el usuario del cliente",
       "validationErrorTitle": "Error de validación"
@@ -677,7 +679,8 @@
       "none": "Sin invitar",
       "pendingUntil": "Pendiente hasta el {{date}}",
       "expired": "Invitación vencida",
-      "activeUser": "Usuario activo del portal"
+      "activeUser": "Usuario activo del portal",
+      "inactiveUser": "Usuario del portal inactivo"
     }
   },
   "bulkPortalInvitation": {
@@ -690,7 +693,8 @@
     "skipReasons": {
       "alreadyHasPortalAccess": "ya tiene acceso al portal",
       "missingEmail": "sin dirección de correo utilizable",
-      "sharedMailbox": "buzón compartido"
+      "sharedMailbox": "buzón compartido",
+      "emailInUse": "el correo electrónico ya pertenece a otro usuario"
     },
     "actions": {
       "send": "Enviar {{total}} invitaciones",
@@ -706,7 +710,18 @@
       "summary": "{{sent}} enviadas, {{skipped}} omitidas, {{failed}} fallidas.",
       "sent": "Enviada",
       "skipped": "Omitida",
-      "failed": "Fallida"
+      "failed": "Fallida",
+      "reasons": {
+        "contactNotFound": "Contacto no encontrado",
+        "missingEmail": "El contacto no tiene correo electrónico",
+        "invalidEmail": "El correo electrónico del contacto no es válido",
+        "userExists": "Ya tiene una cuenta del portal",
+        "emailInUse": "El correo electrónico pertenece a otro usuario",
+        "permissionDenied": "No puede invitar a este contacto",
+        "stateMismatch": "La invitación ya no está en el estado que seleccionó",
+        "rateLimited": "Demasiados intentos de invitación para este contacto. Vuelva a intentarlo más tarde.",
+        "invitationFailed": "No se pudo enviar la invitación"
+      }
     },
     "errors": {
       "loadFailed": "No se pudo determinar a quién invitar. Vuelva a intentarlo.",
@@ -715,7 +730,11 @@
     },
     "resendTitle": "Reenviar invitaciones al portal del cliente",
     "resendCount_one": "{{count}} contacto recibirá su invitación de nuevo, con el período de validez completo.",
-    "resendCount_other": "{{count}} contactos recibirán su invitación de nuevo, con el período de validez completo."
+    "resendCount_other": "{{count}} contactos recibirán su invitación de nuevo, con el período de validez completo.",
+    "states": {
+      "pending": "Pendiente",
+      "expired": "Vencida"
+    }
   },
   "contactsLayout": {
     "title": "Diseño de contactos",

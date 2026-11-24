@@ -69,7 +69,8 @@ const PORTAL_INVITE_ERROR_KEYS: Partial<Record<PortalInvitationErrorCode, string
   BASE_URL_NOT_CONFIGURED: 'contactPortalTab.toast.errors.noBaseUrl',
   INVITATION_FAILED: 'contactPortalTab.toast.sendInviteFailed',
   INVITATION_NOT_FOUND: 'contactPortalTab.toast.errors.invitationNotFound',
-  REVOKE_FAILED: 'contactPortalTab.toast.revokeInviteFailed'
+  REVOKE_FAILED: 'contactPortalTab.toast.revokeInviteFailed',
+  RATE_LIMITED: 'contactPortalTab.toast.errors.rateLimited'
 };
 
 // Catch-all codes whose localized message is generic ("Failed to send
@@ -101,6 +102,13 @@ interface ContactPortalTabProps {
     canUpdateRoles: boolean;
     canRead: boolean;
   };
+  /**
+   * Called after an invitation is sent, resent or revoked here. Whoever opened
+   * this tab (the contact list behind a drawer, for one) shows the contact's
+   * invitation state elsewhere, and that state is stale the moment this tab
+   * changes it.
+   */
+  onInvitationChanged?: () => void;
 }
 
 interface ClientRole {
@@ -113,7 +121,11 @@ interface UserRole {
   role_name: string;
 }
 
-export function ContactPortalTab({ contact, currentUserPermissions }: ContactPortalTabProps) {
+export function ContactPortalTab({
+  contact,
+  currentUserPermissions,
+  onInvitationChanged
+}: ContactPortalTabProps) {
   const { t } = useTranslation(['msp/contacts', 'msp/settings']);
 
   const translatePortalInvitationError = (
@@ -450,6 +462,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
         });
         // Reload invitation history to show the new invitation
         await loadData();
+        onInvitationChanged?.();
       } else {
         toast({
           title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
@@ -481,6 +494,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
         });
         // Reload invitation history
         await loadData();
+        onInvitationChanged?.();
       } else {
         toast({
           title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
@@ -520,6 +534,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
           description: result.message || t('contactPortalTab.toast.resendInviteSuccess', { defaultValue: 'Portal invitation resent successfully!' })
         });
         await loadData();
+        onInvitationChanged?.();
       } else {
         toast({
           title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
@@ -1257,6 +1272,12 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {t('contactPortalTab.history.sentPrefix', { defaultValue: 'Sent:' })} {formatDate(invitation.created_at)}
+                          {/* A resend renews this same invitation, so without
+                              this the history would still show only the day it
+                              was first created. */}
+                          {invitation.last_sent_at && (
+                            <span> • {t('contactPortalTab.history.lastSentPrefix', { defaultValue: 'Last sent:' })} {formatDate(invitation.last_sent_at)}</span>
+                          )}
                           {invitation.status === 'pending' && (
                             <span> • {t('contactPortalTab.history.expiresPrefix', { defaultValue: 'Expires:' })} {formatDate(invitation.expires_at)}</span>
                           )}

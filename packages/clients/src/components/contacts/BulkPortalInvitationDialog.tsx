@@ -17,14 +17,38 @@ import {
 } from '@alga-psa/clients/actions';
 import type {
   BulkSendInvitationResult,
+  PortalInvitationContactState,
+  PortalInvitationErrorCode,
   PortalInvitationStateTarget,
 } from '@alga-psa/portal-shared/types';
 
 export type BulkPortalInvitationTarget =
   | { mode: 'selected'; contactIds: string[] }
   | { mode: 'allEligible' }
-  /** The chase-up case: everyone whose invitation expired or is still pending. */
-  | { mode: 'invitationState'; states: PortalInvitationStateTarget[] };
+  /**
+   * The chase-up case: the contacts on screen whose invitation expired or is
+   * still pending. `contactIds` is the filtered list the MSP was looking at, so
+   * the batch is never wider than that; the states travel with it and the
+   * server re-checks both.
+   */
+  | { mode: 'invitationState'; states: PortalInvitationStateTarget[]; contactIds: string[] };
+
+/**
+ * The server's own reasons, in the recipient's language. The per-contact
+ * outcomes are shown in this dialog, so they cannot stay English strings from
+ * the action; the stable error codes are what gets translated.
+ */
+const BULK_INVITE_RESULT_KEYS: Partial<Record<PortalInvitationErrorCode, { key: string; defaultValue: string }>> = {
+  CONTACT_NOT_FOUND: { key: 'bulkPortalInvitation.results.reasons.contactNotFound', defaultValue: 'Contact not found' },
+  CONTACT_MISSING_EMAIL: { key: 'bulkPortalInvitation.results.reasons.missingEmail', defaultValue: 'No email address on the contact' },
+  CONTACT_INVALID_EMAIL: { key: 'bulkPortalInvitation.results.reasons.invalidEmail', defaultValue: 'The contact\'s email address is not valid' },
+  USER_EXISTS_FOR_CONTACT: { key: 'bulkPortalInvitation.results.reasons.userExists', defaultValue: 'Already has a portal account' },
+  PORTAL_USER_ALREADY_EXISTS: { key: 'bulkPortalInvitation.results.reasons.emailInUse', defaultValue: 'The email address belongs to another user' },
+  PERMISSION_DENIED_INVITE: { key: 'bulkPortalInvitation.results.reasons.permissionDenied', defaultValue: 'You may not invite this contact' },
+  INVITATION_STATE_MISMATCH: { key: 'bulkPortalInvitation.results.reasons.stateMismatch', defaultValue: 'The invitation is no longer in the state you selected' },
+  RATE_LIMITED: { key: 'bulkPortalInvitation.results.reasons.rateLimited', defaultValue: 'Too many invitation attempts for this contact. Try again later.' },
+  INVITATION_FAILED: { key: 'bulkPortalInvitation.results.reasons.invitationFailed', defaultValue: 'The invitation could not be sent' },
+};
 
 interface BulkPortalInvitationDialogProps {
   isOpen: boolean;
@@ -39,7 +63,7 @@ interface BulkPortalInvitationDialogProps {
 }
 
 /** Why a chosen contact will not receive an invitation. */
-type SkipReason = 'alreadyHasPortalAccess' | 'missingEmail' | 'sharedMailbox';
+type SkipReason = 'alreadyHasPortalAccess' | 'missingEmail' | 'sharedMailbox' | 'emailInUse';
 
 /**
  * Confirms a bulk portal invitation before anything is sent, then reports what
@@ -58,7 +82,7 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
 }) => {
   const { t } = useTranslation('msp/contacts');
   const [eligibleContacts, setEligibleContacts] = useState<IContact[] | null>(null);
-  const [stateContactIds, setStateContactIds] = useState<Set<string> | null>(null);
+  const [contactStates, setContactStates] = useState<PortalInvitationContactState[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [sendResult, setSendResult] = useState<BulkSendInvitationResult | null>(null);
@@ -67,7 +91,7 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
   const targetKey = target.mode === 'selected'
     ? target.contactIds.join(',')
     : target.mode === 'invitationState'
-      ? `state:${targetStates.join(',')}`
+      ? `state:${targetStates.join(',')}:${target.contactIds.join(',')}`
       : 'all';
   // "Invite all eligible" and an invitation-state resend are the server's own
   // sets, which are active contacts only. A named selection is whatever the
@@ -78,7 +102,7 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
   useEffect(() => {
     if (!isOpen) {
       setEligibleContacts(null);
-      setStateContactIds(null);
+      setContactStates(null);
       setLoadError(null);
       setSendResult(null);
       return;
@@ -86,16 +110,14 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
 
     let isCancelled = false;
     setEligibleContacts(null);
-    setStateContactIds(null);
+    setContactStates(null);
     setLoadError(null);
-    // The same two rules the send runs: who is invitable, and whose invitation
-    // is in the asked-for state. So the count on the button is the number of
-    // emails that go out.
+    // The same rules the send runs: who is invitable, whose invitation is in
+    // the asked-for state, and whose email the send would refuse. So the count
+    // on the button is the number of emails that go out.
     Promise.all([
       getContactsEligibleForInvitation(clientId, previewStatus),
-      target.mode === 'invitationState'
-        ? getPortalInvitationStatesForClient(clientId)
-        : Promise.resolve(null),
+      getPortalInvitationStatesForClient(clientId),
     ])
       .then(([rows, states]) => {
         if (isCancelled) return;
@@ -108,11 +130,7 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
           return;
         }
         setEligibleContacts(rows);
-        setStateContactIds(states === null
-          ? null
-          : new Set(states
-            .filter((entry) => (targetStates as string[]).includes(entry.state))
-            .map((entry) => entry.contactId)));
+        setContactStates(states);
       })
       .catch((err) => {
         console.error('Error loading contacts eligible for portal invitation:', err);
@@ -128,16 +146,24 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
     };
   }, [isOpen, clientId, targetKey, previewStatus, t]);
 
+  const stateByContactId = useMemo(
+    () => new Map((contactStates ?? []).map((entry) => [entry.contactId, entry])),
+    [contactStates],
+  );
+
   const preview = useMemo(() => {
     if (!eligibleContacts) return null;
-    if (target.mode === 'invitationState' && !stateContactIds) return null;
+    if (target.mode === 'invitationState' && !contactStates) return null;
 
     const eligibleById = new Map(eligibleContacts.map((contact) => [contact.contact_name_id, contact]));
+    // A state resend acts on the rows the MSP had on screen, narrowed to the
+    // states they asked for; "all eligible" is the server's own set.
     const chosen = target.mode === 'selected'
       ? target.contactIds
-      : eligibleContacts
-        .filter((contact) => !stateContactIds || stateContactIds.has(contact.contact_name_id))
-        .map((contact) => contact.contact_name_id);
+      : target.mode === 'invitationState'
+        ? target.contactIds.filter((contactId) =>
+          (targetStates as string[]).includes(stateByContactId.get(contactId)?.state ?? 'none'))
+        : eligibleContacts.map((contact) => contact.contact_name_id);
 
     const invitable: IContact[] = [];
     const skipped: Array<{ contactId: string; reason: SkipReason }> = [];
@@ -160,12 +186,18 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
         skipped.push({ contactId, reason: 'missingEmail' });
         continue;
       }
+      // The send refuses an address another user already owns, so counting it
+      // as invitable here would promise an email that never goes out.
+      if (stateByContactId.get(contactId)?.emailConflict) {
+        skipped.push({ contactId, reason: 'emailInUse' });
+        continue;
+      }
       invitable.push(eligible);
     }
 
     const skipCounts = skipped.reduce<Record<SkipReason, number>>(
       (counts, entry) => ({ ...counts, [entry.reason]: counts[entry.reason] + 1 }),
-      { alreadyHasPortalAccess: 0, missingEmail: 0, sharedMailbox: 0 },
+      { alreadyHasPortalAccess: 0, missingEmail: 0, sharedMailbox: 0, emailInUse: 0 },
     );
 
     return {
@@ -175,7 +207,7 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
       groupScoped: invitable.filter((contact) => Boolean(contact.portal_visibility_group_id)).length,
       fullAccess: invitable.filter((contact) => !contact.portal_visibility_group_id).length,
     };
-  }, [eligibleContacts, stateContactIds, target]);
+  }, [eligibleContacts, contactStates, stateByContactId, target, targetStates]);
 
   const nameOf = useCallback(
     (contactId: string) =>
@@ -198,7 +230,9 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
         ...(target.mode === 'selected'
           ? { contactIds: target.contactIds }
           : target.mode === 'invitationState'
-            ? { invitationStates: target.states }
+            // The explicit set the MSP saw, plus the states it was chosen by:
+            // the server re-checks both before it mails anybody.
+            ? { contactIds: target.contactIds, invitationStates: target.states }
             : { allEligible: true }),
       });
       setSendResult(result);
@@ -231,6 +265,26 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
     sharedMailbox: t('bulkPortalInvitation.skipReasons.sharedMailbox', {
       defaultValue: 'shared mailbox',
     }),
+    emailInUse: t('bulkPortalInvitation.skipReasons.emailInUse', {
+      defaultValue: 'email address already belongs to another user',
+    }),
+  };
+
+  const stateLabels: Record<string, string> = {
+    pending: t('bulkPortalInvitation.states.pending', { defaultValue: 'Pending' }),
+    expired: t('bulkPortalInvitation.states.expired', { defaultValue: 'Expired' }),
+  };
+
+  /** The server's own outcome for one contact, in the reader's language. */
+  const resultMessage = (item: BulkSendInvitationResult['results'][number]): string => {
+    const mapped = item.errorCode ? BULK_INVITE_RESULT_KEYS[item.errorCode] : undefined;
+    if (mapped) {
+      return t(mapped.key, { defaultValue: mapped.defaultValue });
+    }
+    return item.message
+      || (item.status === 'failed'
+        ? t('bulkPortalInvitation.results.failed', { defaultValue: 'Failed' })
+        : t('bulkPortalInvitation.results.skipped', { defaultValue: 'Skipped' }));
   };
 
   // A resend names the exact set it will mail, so the MSP reads the same thing
@@ -284,10 +338,7 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
                   <span className={item.status === 'sent' ? 'text-[rgb(var(--color-status-success))]' : item.status === 'failed' ? 'text-[rgb(var(--color-status-error))]' : 'text-[rgb(var(--color-text-500))]'}>
                     {item.status === 'sent'
                       ? t('bulkPortalInvitation.results.sent', { defaultValue: 'Sent' })
-                      : item.message
-                        || (item.status === 'failed'
-                          ? t('bulkPortalInvitation.results.failed', { defaultValue: 'Failed' })
-                          : t('bulkPortalInvitation.results.skipped', { defaultValue: 'Skipped' }))}
+                      : resultMessage(item)}
                   </span>
                 </li>
               ))}
@@ -329,6 +380,26 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
               total: preview.invitable.length,
             })}
         </p>
+        {target.mode === 'invitationState' && preview.invitable.length > 0 && (
+          // Who exactly, by name and current state: a count alone leaves the
+          // MSP guessing whether the batch matches the list they filtered.
+          <ul
+            id="bulk-portal-invitation-recipients"
+            className="max-h-48 overflow-y-auto space-y-1 text-sm"
+          >
+            {preview.invitable.map((contact) => (
+              <li
+                key={contact.contact_name_id}
+                className="flex justify-between gap-3 border-b border-[rgb(var(--color-border-100))] py-1"
+              >
+                <span className="truncate">{contact.full_name}</span>
+                <span className="text-[rgb(var(--color-text-500))]">
+                  {stateLabels[stateByContactId.get(contact.contact_name_id)?.state ?? ''] ?? ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
         {preview.skipped.length > 0 && (
           <div className="text-sm text-[rgb(var(--color-text-600))]">
             <p>

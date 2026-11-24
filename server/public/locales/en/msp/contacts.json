@@ -409,7 +409,8 @@
         "used": "Used",
         "expired": "Expired",
         "revoked": "Revoked"
-      }
+      },
+      "lastSentPrefix": "Last sent:"
     },
     "actions": {
       "sendInvitation": "Send Portal Invitation",
@@ -462,7 +463,8 @@
         "noDefaultLocation": "Default client must have a default location configured to send portal invitations.",
         "noLocationEmail": "Default client's location must have a contact email configured.",
         "noBaseUrl": "Base URL is not configured for portal invitations.",
-        "invitationNotFound": "Invitation not found or already used."
+        "invitationNotFound": "Invitation not found or already used.",
+        "rateLimited": "Too many invitation attempts for this contact. Try again later."
       },
       "userNotFound": "Client user not found",
       "validationErrorTitle": "Validation Error"
@@ -677,7 +679,8 @@
       "none": "Not invited",
       "pendingUntil": "Pending until {{date}}",
       "expired": "Invitation expired",
-      "activeUser": "Active portal user"
+      "activeUser": "Active portal user",
+      "inactiveUser": "Inactive portal user"
     }
   },
   "bulkPortalInvitation": {
@@ -690,7 +693,8 @@
     "skipReasons": {
       "alreadyHasPortalAccess": "already has portal access",
       "missingEmail": "no usable email address",
-      "sharedMailbox": "shared mailbox"
+      "sharedMailbox": "shared mailbox",
+      "emailInUse": "email address already belongs to another user"
     },
     "actions": {
       "send": "Send {{total}} invitations",
@@ -706,7 +710,18 @@
       "summary": "Sent {{sent}}, skipped {{skipped}}, failed {{failed}}.",
       "sent": "Sent",
       "skipped": "Skipped",
-      "failed": "Failed"
+      "failed": "Failed",
+      "reasons": {
+        "contactNotFound": "Contact not found",
+        "missingEmail": "No email address on the contact",
+        "invalidEmail": "The contact's email address is not valid",
+        "userExists": "Already has a portal account",
+        "emailInUse": "The email address belongs to another user",
+        "permissionDenied": "You may not invite this contact",
+        "stateMismatch": "The invitation is no longer in the state you selected",
+        "rateLimited": "Too many invitation attempts for this contact. Try again later.",
+        "invitationFailed": "The invitation could not be sent"
+      }
     },
     "errors": {
       "loadFailed": "Could not work out who can be invited. Please try again.",
@@ -715,7 +730,11 @@
     },
     "resendTitle": "Resend client portal invitations",
     "resendCount_one": "{{count}} contact will get their invitation again, with the full validity period.",
-    "resendCount_other": "{{count}} contacts will get their invitation again, with the full validity period."
+    "resendCount_other": "{{count}} contacts will get their invitation again, with the full validity period.",
+    "states": {
+      "pending": "Pending",
+      "expired": "Expired"
+    }
   },
   "contactsLayout": {
     "title": "Contacts Layout",

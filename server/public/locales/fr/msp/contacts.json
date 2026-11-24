@@ -409,7 +409,8 @@
         "used": "Utilisé",
         "expired": "Expiré",
         "revoked": "Révoqué"
-      }
+      },
+      "lastSentPrefix": "Dernier envoi :"
     },
     "actions": {
       "sendInvitation": "Envoyer l’invitation au portail",
@@ -462,7 +463,8 @@
         "noDefaultLocation": "Le client par défaut doit avoir un emplacement par défaut configuré pour envoyer des invitations au portail.",
         "noLocationEmail": "L'emplacement du client par défaut doit avoir une adresse e-mail de contact configurée.",
         "noBaseUrl": "L'URL de base n'est pas configurée pour les invitations au portail.",
-        "invitationNotFound": "Invitation introuvable ou déjà utilisée."
+        "invitationNotFound": "Invitation introuvable ou déjà utilisée.",
+        "rateLimited": "Trop de tentatives d’invitation pour ce contact. Réessayez plus tard."
       },
       "userNotFound": "Utilisateur du client introuvable",
       "validationErrorTitle": "Erreur de validation"
@@ -677,7 +679,8 @@
       "none": "Non invité",
       "pendingUntil": "En attente jusqu’au {{date}}",
       "expired": "Invitation expirée",
-      "activeUser": "Utilisateur actif du portail"
+      "activeUser": "Utilisateur actif du portail",
+      "inactiveUser": "Utilisateur du portail inactif"
     }
   },
   "bulkPortalInvitation": {
@@ -690,7 +693,8 @@
     "skipReasons": {
       "alreadyHasPortalAccess": "a déjà accès au portail",
       "missingEmail": "aucune adresse e-mail utilisable",
-      "sharedMailbox": "boîte aux lettres partagée"
+      "sharedMailbox": "boîte aux lettres partagée",
+      "emailInUse": "l’adresse e-mail appartient déjà à un autre utilisateur"
     },
     "actions": {
       "send": "Envoyer {{total}} invitations",
@@ -706,7 +710,18 @@
       "summary": "{{sent}} envoyées, {{skipped}} ignorées, {{failed}} en échec.",
       "sent": "Envoyée",
       "skipped": "Ignorée",
-      "failed": "Échec"
+      "failed": "Échec",
+      "reasons": {
+        "contactNotFound": "Contact introuvable",
+        "missingEmail": "Aucune adresse e-mail sur le contact",
+        "invalidEmail": "L’adresse e-mail du contact n’est pas valide",
+        "userExists": "Possède déjà un compte du portail",
+        "emailInUse": "L’adresse e-mail appartient à un autre utilisateur",
+        "permissionDenied": "Vous ne pouvez pas inviter ce contact",
+        "stateMismatch": "L’invitation n’est plus dans l’état que vous avez sélectionné",
+        "rateLimited": "Trop de tentatives d’invitation pour ce contact. Réessayez plus tard.",
+        "invitationFailed": "L’invitation n’a pas pu être envoyée"
+      }
     },
     "errors": {
       "loadFailed": "Impossible de déterminer qui peut être invité. Veuillez réessayer.",
@@ -715,7 +730,11 @@
     },
     "resendTitle": "Renvoyer les invitations au portail client",
     "resendCount_one": "{{count}} contact recevra à nouveau son invitation, avec la durée de validité complète.",
-    "resendCount_other": "{{count}} contacts recevront à nouveau leur invitation, avec la durée de validité complète."
+    "resendCount_other": "{{count}} contacts recevront à nouveau leur invitation, avec la durée de validité complète.",
+    "states": {
+      "pending": "En attente",
+      "expired": "Expirée"
+    }
   },
   "contactsLayout": {
     "title": "Mise en page des contacts",

@@ -409,7 +409,8 @@
         "used": "Użyte",
         "expired": "Wygasłe",
         "revoked": "Unieważnione"
-      }
+      },
+      "lastSentPrefix": "Ostatnio wysłano:"
     },
     "actions": {
       "sendInvitation": "Wyślij zaproszenie do portalu",
@@ -462,7 +463,8 @@
         "noDefaultLocation": "Domyślny klient musi mieć skonfigurowaną domyślną lokalizację, aby wysyłać zaproszenia do portalu.",
         "noLocationEmail": "Lokalizacja domyślnego klienta musi mieć skonfigurowany kontaktowy adres e-mail.",
         "noBaseUrl": "Podstawowy adres URL nie jest skonfigurowany dla zaproszeń do portalu.",
-        "invitationNotFound": "Nie znaleziono zaproszenia lub zostało już wykorzystane."
+        "invitationNotFound": "Nie znaleziono zaproszenia lub zostało już wykorzystane.",
+        "rateLimited": "Zbyt wiele prób zaproszenia tego kontaktu. Spróbuj ponownie później."
       },
       "userNotFound": "Nie znaleziono użytkownika klienta",
       "validationErrorTitle": "Błąd walidacji"
@@ -677,7 +679,8 @@
       "none": "Bez zaproszenia",
       "pendingUntil": "Oczekuje do {{date}}",
       "expired": "Zaproszenie wygasło",
-      "activeUser": "Aktywny użytkownik portalu"
+      "activeUser": "Aktywny użytkownik portalu",
+      "inactiveUser": "Nieaktywny użytkownik portalu"
     }
   },
   "bulkPortalInvitation": {
@@ -690,7 +693,8 @@
     "skipReasons": {
       "alreadyHasPortalAccess": "ma już dostęp do portalu",
       "missingEmail": "brak użytecznego adresu e-mail",
-      "sharedMailbox": "skrzynka współdzielona"
+      "sharedMailbox": "skrzynka współdzielona",
+      "emailInUse": "adres e-mail należy już do innego użytkownika"
     },
     "actions": {
       "send": "Wyślij {{total}} zaproszeń",
@@ -712,7 +716,18 @@
       "summary": "Wysłano {{sent}}, pominięto {{skipped}}, niepowodzenia: {{failed}}.",
       "sent": "Wysłano",
       "skipped": "Pominięto",
-      "failed": "Niepowodzenie"
+      "failed": "Niepowodzenie",
+      "reasons": {
+        "contactNotFound": "Nie znaleziono kontaktu",
+        "missingEmail": "Kontakt nie ma adresu e-mail",
+        "invalidEmail": "Adres e-mail kontaktu jest nieprawidłowy",
+        "userExists": "Ma już konto w portalu",
+        "emailInUse": "Adres e-mail należy do innego użytkownika",
+        "permissionDenied": "Nie możesz zaprosić tego kontaktu",
+        "stateMismatch": "Zaproszenie nie jest już w wybranym stanie",
+        "rateLimited": "Zbyt wiele prób zaproszenia tego kontaktu. Spróbuj ponownie później.",
+        "invitationFailed": "Nie udało się wysłać zaproszenia"
+      }
     },
     "errors": {
       "loadFailed": "Nie udało się ustalić, kogo można zaprosić. Spróbuj ponownie.",
@@ -723,7 +738,11 @@
     "resendCount_one": "{{count}} kontakt otrzyma zaproszenie ponownie, z pełnym okresem ważności.",
     "resendCount_few": "{{count}} kontakty otrzymają zaproszenie ponownie, z pełnym okresem ważności.",
     "resendCount_many": "{{count}} kontaktów otrzyma zaproszenie ponownie, z pełnym okresem ważności.",
-    "resendCount_other": "{{count}} kontaktu otrzyma zaproszenie ponownie, z pełnym okresem ważności."
+    "resendCount_other": "{{count}} kontaktu otrzyma zaproszenie ponownie, z pełnym okresem ważności.",
+    "states": {
+      "pending": "Oczekujące",
+      "expired": "Wygasłe"
+    }
   },
   "contactsLayout": {
     "title": "Układ kontaktów",

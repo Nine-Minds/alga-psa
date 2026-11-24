@@ -31,7 +31,7 @@ import { useContactQuickViewDrawer } from './bento/useContactQuickViewDrawer';
 import { useContactEditDrawer } from './bento/useContactEditDrawer';
 import QuickAddContact from './QuickAddContact';
 import BulkPortalInvitationDialog, { type BulkPortalInvitationTarget } from './BulkPortalInvitationDialog';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ClientContactsListProps {
   clientId: string;
@@ -53,6 +53,7 @@ const addIdToContacts = (contacts: IContact[]): ContactWithId[] => {
 
 const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, client }) => {
   const { t } = useTranslation('msp/contacts');
+  const { formatDate } = useFormatters();
   const [contacts, setContacts] = useState<ContactWithId[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -238,8 +239,9 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
             (contact.locations ?? []).some((location) => location.location_id === locationFilter));
 
     if (invitationFilter === 'all' || !invitationStates) return byLocation;
-    // Same classification the resend acts on, so what the MSP filtered to is
-    // what the batch mails.
+    // Same classification the resend acts on, and the resend is aimed at the
+    // rows this leaves on screen, so what the MSP filtered to is what the batch
+    // mails.
     const wanted: PortalInvitationState[] = invitationFilter === 'open'
       ? ['expired', 'pending']
       : [invitationFilter];
@@ -256,6 +258,22 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
       ? ['expired', 'pending']
       : ['expired'];
 
+  // Exactly the rows on screen that a resend would mail: every active filter
+  // applies, so the batch is what the MSP is looking at and never the client's
+  // whole backlog. Empty means there is nobody to offer the action to.
+  const resendContactIds = useMemo(
+    () => (invitationStates
+      ? locationFilteredContacts
+        .filter((contact) => {
+          const state = invitationStates.get(contact.contact_name_id)?.state;
+          return state !== undefined && (resendStates as string[]).includes(state);
+        })
+        .map((contact) => contact.contact_name_id)
+      : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locationFilteredContacts, invitationStates, resendStates.join(',')],
+  );
+
   const invitationStateCell = (contactId: string): React.ReactNode => {
     const entry = invitationStates?.get(contactId);
     if (!entry || entry.state === 'none') {
@@ -264,10 +282,19 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
     if (entry.state === 'active_user') {
       return t('clientContactsList.invitation.activeUser', { defaultValue: 'Active portal user' });
     }
+    if (entry.state === 'inactive_user') {
+      return (
+        <span className="text-gray-400">
+          {t('clientContactsList.invitation.inactiveUser', { defaultValue: 'Inactive portal user' })}
+        </span>
+      );
+    }
     if (entry.state === 'pending') {
       return t('clientContactsList.invitation.pendingUntil', {
         defaultValue: 'Pending until {{date}}',
-        date: entry.expiresAt ? new Date(entry.expiresAt).toLocaleDateString() : '',
+        // The app's own language and date format, like every other date on the
+        // contacts screens — not the browser's.
+        date: entry.expiresAt ? formatDate(entry.expiresAt) : '',
       });
     }
     return (
@@ -624,11 +651,15 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
               })}
             </Button>
           )}
-          {canInvite && invitationStates && selectedContactIds.size === 0 && (
+          {canInvite && invitationStates && selectedContactIds.size === 0 && resendContactIds.length > 0 && (
             <Button
               id="resend-portal-invitations-btn"
               variant="secondary"
-              onClick={() => setInvitationTarget({ mode: 'invitationState', states: resendStates })}
+              onClick={() => setInvitationTarget({
+                mode: 'invitationState',
+                states: resendStates,
+                contactIds: resendContactIds,
+              })}
             >
               {resendStates.length > 1
                 ? t('clientContactsList.actions.resendOpen', {

@@ -177,9 +177,9 @@ describe('BulkPortalInvitationDialog', () => {
       eligible('never', 'never@acme.com'),
     ]);
     hoisted.getPortalInvitationStatesForClient.mockResolvedValue([
-      { contactId: 'lapsed', state: 'expired', expiresAt: null },
-      { contactId: 'waiting', state: 'pending', expiresAt: '2099-01-01T00:00:00.000Z' },
-      { contactId: 'never', state: 'none', expiresAt: null },
+      { contactId: 'lapsed', state: 'expired', expiresAt: null, emailConflict: false },
+      { contactId: 'waiting', state: 'pending', expiresAt: '2099-01-01T00:00:00.000Z', emailConflict: false },
+      { contactId: 'never', state: 'none', expiresAt: null, emailConflict: false },
     ]);
     hoisted.sendBulkPortalInvitations.mockResolvedValue({
       success: true, total: 1, sent: 1, skipped: 0, failed: 0,
@@ -190,7 +190,7 @@ describe('BulkPortalInvitationDialog', () => {
       <BulkPortalInvitationDialog
         isOpen
         clientId="acme"
-        target={{ mode: 'invitationState', states: ['expired'] }}
+        target={{ mode: 'invitationState', states: ['expired'], contactIds: ['lapsed', 'waiting', 'never'] }}
         statusFilter="all"
         contacts={[]}
         onClose={vi.fn()}
@@ -204,10 +204,14 @@ describe('BulkPortalInvitationDialog', () => {
     await screen.findByText(
       '1 contact will get their invitation again, with the full validity period.',
     );
+    // Named, not just counted: the MSP sees who the batch will mail.
+    expect(screen.getByText('lapsed')).toBeInTheDocument();
+    expect(screen.getByText('Expired')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Resend 1 expired invitation'));
 
     await waitFor(() => expect(hoisted.sendBulkPortalInvitations).toHaveBeenCalledWith({
       clientId: 'acme',
+      contactIds: ['lapsed', 'waiting', 'never'],
       invitationStates: ['expired'],
     }));
     expect(await screen.findByText('Sent 1, skipped 0, failed 0.')).toBeInTheDocument();
@@ -220,16 +224,16 @@ describe('BulkPortalInvitationDialog', () => {
       eligible('never', 'never@acme.com'),
     ]);
     hoisted.getPortalInvitationStatesForClient.mockResolvedValue([
-      { contactId: 'lapsed', state: 'expired', expiresAt: null },
-      { contactId: 'waiting', state: 'pending', expiresAt: '2099-01-01T00:00:00.000Z' },
-      { contactId: 'never', state: 'none', expiresAt: null },
+      { contactId: 'lapsed', state: 'expired', expiresAt: null, emailConflict: false },
+      { contactId: 'waiting', state: 'pending', expiresAt: '2099-01-01T00:00:00.000Z', emailConflict: false },
+      { contactId: 'never', state: 'none', expiresAt: null, emailConflict: false },
     ]);
 
     render(
       <BulkPortalInvitationDialog
         isOpen
         clientId="acme"
-        target={{ mode: 'invitationState', states: ['expired', 'pending'] }}
+        target={{ mode: 'invitationState', states: ['expired', 'pending'], contactIds: ['lapsed', 'waiting', 'never'] }}
         statusFilter="all"
         contacts={[]}
         onClose={vi.fn()}
@@ -240,6 +244,120 @@ describe('BulkPortalInvitationDialog', () => {
     expect(await screen.findByText('Resend 2 expired or pending invitations')).toBeInTheDocument();
     // An invitation-state resend is the server's own set: active contacts only.
     expect(hoisted.getContactsEligibleForInvitation).toHaveBeenCalledWith('acme', 'active');
+  });
+
+  it('mails only the contacts it was handed, not every expired contact of the client', async () => {
+    hoisted.getContactsEligibleForInvitation.mockResolvedValue([
+      eligible('lapsed', 'lapsed@acme.com'),
+      eligible('also-lapsed', 'also@acme.com'),
+    ]);
+    hoisted.getPortalInvitationStatesForClient.mockResolvedValue([
+      { contactId: 'lapsed', state: 'expired', expiresAt: null, emailConflict: false },
+      { contactId: 'also-lapsed', state: 'expired', expiresAt: null, emailConflict: false },
+    ]);
+    hoisted.sendBulkPortalInvitations.mockResolvedValue({
+      success: true, total: 1, sent: 1, skipped: 0, failed: 0,
+      results: [{ contactId: 'lapsed', email: 'lapsed@acme.com', status: 'sent' }],
+    });
+
+    render(
+      <BulkPortalInvitationDialog
+        isOpen
+        clientId="acme"
+        // What the list was filtered to: one of the two expired contacts.
+        target={{ mode: 'invitationState', states: ['expired'], contactIds: ['lapsed'] }}
+        statusFilter="active"
+        contacts={[]}
+        onClose={vi.fn()}
+        onSent={vi.fn()}
+      />,
+    );
+
+    await screen.findByText(
+      '1 contact will get their invitation again, with the full validity period.',
+    );
+    expect(screen.getByText('lapsed')).toBeInTheDocument();
+    expect(screen.queryByText('also-lapsed')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Resend 1 expired invitation'));
+
+    await waitFor(() => expect(hoisted.sendBulkPortalInvitations).toHaveBeenCalledWith({
+      clientId: 'acme',
+      contactIds: ['lapsed'],
+      invitationStates: ['expired'],
+    }));
+  });
+
+  it('does not count a contact whose email already belongs to another user', async () => {
+    hoisted.getContactsEligibleForInvitation.mockResolvedValue([
+      eligible('fine', 'fine@acme.com'),
+      eligible('taken', 'taken@acme.com'),
+    ]);
+    hoisted.getPortalInvitationStatesForClient.mockResolvedValue([
+      { contactId: 'fine', state: 'none', expiresAt: null, emailConflict: false },
+      { contactId: 'taken', state: 'none', expiresAt: null, emailConflict: true },
+    ]);
+
+    render(
+      <BulkPortalInvitationDialog
+        isOpen
+        clientId="acme"
+        target={{ mode: 'selected', contactIds: ['fine', 'taken'] }}
+        statusFilter="active"
+        contacts={[]}
+        onClose={vi.fn()}
+        onSent={vi.fn()}
+      />,
+    );
+
+    // The server refuses that address, so the preview says so instead of
+    // promising an email that never goes out.
+    await screen.findByText('1 contacts will be invited to the client portal.');
+    expect(screen.getByText('1 — email address already belongs to another user'))
+      .toBeInTheDocument();
+    expect(screen.getByText('Send 1 invitations')).toBeInTheDocument();
+  });
+
+  it('reports each outcome in the reader\'s language, not the server\'s English', async () => {
+    hoisted.getContactsEligibleForInvitation.mockResolvedValue([eligible('fine', 'fine@acme.com')]);
+    hoisted.sendBulkPortalInvitations.mockResolvedValue({
+      success: true, total: 2, sent: 0, skipped: 1, failed: 1,
+      results: [
+        {
+          contactId: 'fine',
+          email: 'fine@acme.com',
+          status: 'failed',
+          errorCode: 'RATE_LIMITED',
+          message: 'Too many attempts. Please try again in 5 minutes.',
+        },
+        {
+          contactId: 'moved-on',
+          status: 'skipped',
+          errorCode: 'INVITATION_STATE_MISMATCH',
+          message: 'This contact\'s invitation is no longer in the state this batch was aimed at.',
+        },
+      ],
+    });
+
+    render(
+      <BulkPortalInvitationDialog
+        isOpen
+        clientId="acme"
+        target={{ mode: 'selected', contactIds: ['fine'] }}
+        statusFilter="active"
+        contacts={[]}
+        onClose={vi.fn()}
+        onSent={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(await screen.findByText('Send 1 invitations'));
+
+    expect(await screen.findByText('Too many invitation attempts for this contact. Try again later.'))
+      .toBeInTheDocument();
+    expect(screen.getByText('The invitation is no longer in the state you selected'))
+      .toBeInTheDocument();
+    expect(screen.queryByText(/Too many attempts\. Please try again/)).not.toBeInTheDocument();
   });
 
   // The read refuses (or fails) while a state resend is open: with no states
@@ -253,7 +371,7 @@ describe('BulkPortalInvitationDialog', () => {
       <BulkPortalInvitationDialog
         isOpen
         clientId="acme"
-        target={{ mode: 'invitationState', states: ['expired'] }}
+        target={{ mode: 'invitationState', states: ['expired'], contactIds: ['lapsed'] }}
         statusFilter="all"
         contacts={[]}
         onClose={vi.fn()}

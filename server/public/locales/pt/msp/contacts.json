@@ -409,7 +409,8 @@
         "used": "Usado",
         "expired": "Expirado",
         "revoked": "Revogado"
-      }
+      },
+      "lastSentPrefix": "Último envio:"
     },
     "actions": {
       "sendInvitation": "Enviar convite do portal",
@@ -462,7 +463,8 @@
         "noDefaultLocation": "O cliente padrão deve ter um local padrão configurado para enviar convites do portal.",
         "noLocationEmail": "A localização padrão do cliente deve ter um email de contato configurado.",
         "noBaseUrl": "O URL base não está configurado para convites do portal.",
-        "invitationNotFound": "Convite não encontrado ou já utilizado."
+        "invitationNotFound": "Convite não encontrado ou já utilizado.",
+        "rateLimited": "Muitas tentativas de convite para este contato. Tente novamente mais tarde."
       },
       "userNotFound": "Usuário do cliente não encontrado",
       "validationErrorTitle": "Erro de validação"
@@ -677,7 +679,8 @@
       "none": "Sem convite",
       "pendingUntil": "Pendente até {{date}}",
       "expired": "Convite expirado",
-      "activeUser": "Usuário ativo do portal"
+      "activeUser": "Usuário ativo do portal",
+      "inactiveUser": "Usuário do portal inativo"
     }
   },
   "bulkPortalInvitation": {
@@ -690,7 +693,8 @@
     "skipReasons": {
       "alreadyHasPortalAccess": "já tem acesso ao portal",
       "missingEmail": "sem endereço de e-mail utilizável",
-      "sharedMailbox": "caixa de correio compartilhada"
+      "sharedMailbox": "caixa de correio compartilhada",
+      "emailInUse": "o e-mail já pertence a outro usuário"
     },
     "actions": {
       "send": "Enviar {{total}} convites",
@@ -706,7 +710,18 @@
       "summary": "{{sent}} enviados, {{skipped}} ignorados, {{failed}} com falha.",
       "sent": "Enviado",
       "skipped": "Ignorado",
-      "failed": "Falhou"
+      "failed": "Falhou",
+      "reasons": {
+        "contactNotFound": "Contato não encontrado",
+        "missingEmail": "O contato não tem e-mail",
+        "invalidEmail": "O e-mail do contato não é válido",
+        "userExists": "Já tem uma conta do portal",
+        "emailInUse": "O e-mail pertence a outro usuário",
+        "permissionDenied": "Você não pode convidar este contato",
+        "stateMismatch": "O convite não está mais no estado que você selecionou",
+        "rateLimited": "Muitas tentativas de convite para este contato. Tente novamente mais tarde.",
+        "invitationFailed": "Não foi possível enviar o convite"
+      }
     },
     "errors": {
       "loadFailed": "Não foi possível determinar quem pode ser convidado. Tente novamente.",
@@ -715,7 +730,11 @@
     },
     "resendTitle": "Reenviar convites para o portal do cliente",
     "resendCount_one": "{{count}} contato receberá o convite novamente, com o período de validade completo.",
-    "resendCount_other": "{{count}} contatos receberão o convite novamente, com o período de validade completo."
+    "resendCount_other": "{{count}} contatos receberão o convite novamente, com o período de validade completo.",
+    "states": {
+      "pending": "Pendente",
+      "expired": "Expirado"
+    }
   },
   "contactsLayout": {
     "title": "Layout de contatos",

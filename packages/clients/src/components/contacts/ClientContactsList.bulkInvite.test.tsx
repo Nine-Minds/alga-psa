@@ -41,7 +41,15 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => {
     }
     return text;
   };
-  return { useTranslation: () => ({ t }) };
+  return {
+    useTranslation: () => ({ t }),
+    // The app's own locale formatting, stubbed so the assertions do not depend
+    // on the machine's locale or time zone.
+    useFormatters: () => ({
+      formatDate: (value: string | Date) =>
+        new Date(value).toISOString().slice(0, 10),
+    }),
+  };
 });
 
 vi.mock('@alga-psa/clients/actions', () => ({
@@ -140,8 +148,8 @@ beforeEach(() => {
   hoisted.getCurrentUserAsync.mockResolvedValue({ user_id: 'user-1' });
   hoisted.getContactPortalPermissions.mockResolvedValue({ canInvite: true, canUpdateRoles: true, canRead: true });
   hoisted.getPortalInvitationStatesForClient.mockResolvedValue([
-    { contactId: 'contact-a', state: 'expired', expiresAt: null },
-    { contactId: 'contact-b', state: 'pending', expiresAt: '2099-01-02T00:00:00.000Z' },
+    { contactId: 'contact-a', state: 'expired', expiresAt: null, emailConflict: false },
+    { contactId: 'contact-b', state: 'pending', expiresAt: '2099-01-02T00:00:00.000Z', emailConflict: false },
   ]);
 });
 
@@ -207,6 +215,7 @@ describe('ClientContactsList bulk portal invitations', () => {
     expect(hoisted.dialogTarget).toHaveBeenLastCalledWith({
       mode: 'invitationState',
       states: ['expired'],
+      contactIds: ['contact-a'],
     });
   });
 
@@ -223,7 +232,64 @@ describe('ClientContactsList bulk portal invitations', () => {
     expect(hoisted.dialogTarget).toHaveBeenLastCalledWith({
       mode: 'invitationState',
       states: ['expired', 'pending'],
+      contactIds: ['contact-a', 'contact-b'],
     });
+  });
+
+  it('resends to the contacts the search left on screen, by name', async () => {
+    hoisted.getContactsByClient.mockResolvedValue([
+      contact('contact-a', 'Ada Lovelace', 'ada@acme.com'),
+      contact('contact-c', 'Cy Lapsed', 'cy@acme.com'),
+    ]);
+    hoisted.getPortalInvitationStatesForClient.mockResolvedValue([
+      { contactId: 'contact-a', state: 'expired', expiresAt: null, emailConflict: false },
+      { contactId: 'contact-c', state: 'expired', expiresAt: null, emailConflict: false },
+    ]);
+
+    render(<ClientContactsList clientId="acme" client={client} />);
+    await screen.findByTestId('row-contact-a');
+    await screen.findAllByText('Invitation expired');
+
+    fireEvent.change(screen.getByPlaceholderText('Search contacts...'), { target: { value: 'Ada' } });
+    await waitFor(() => expect(screen.queryByTestId('row-contact-c')).not.toBeInTheDocument());
+
+    fireEvent.click(screen.getByText('Resend expired'));
+
+    // The batch is what the MSP is looking at: the other expired contact was
+    // filtered away and is not mailed.
+    expect(hoisted.dialogTarget).toHaveBeenLastCalledWith({
+      mode: 'invitationState',
+      states: ['expired'],
+      contactIds: ['contact-a'],
+    });
+  });
+
+  it('does not offer a resend when no contact on screen needs one', async () => {
+    hoisted.getPortalInvitationStatesForClient.mockResolvedValue([
+      { contactId: 'contact-a', state: 'active_user', expiresAt: null, emailConflict: false },
+      { contactId: 'contact-b', state: 'none', expiresAt: null, emailConflict: false },
+    ]);
+
+    render(<ClientContactsList clientId="acme" client={client} />);
+    await screen.findByTestId('row-contact-a');
+    await screen.findByText('Active portal user');
+
+    // An action that can only report "0 contacts" is not an action.
+    expect(screen.queryByText('Resend expired')).not.toBeInTheDocument();
+  });
+
+  it('says when a portal user is deactivated and dates a pending invitation in the app\'s locale', async () => {
+    hoisted.getPortalInvitationStatesForClient.mockResolvedValue([
+      { contactId: 'contact-a', state: 'inactive_user', expiresAt: null, emailConflict: false },
+      { contactId: 'contact-b', state: 'pending', expiresAt: '2099-01-02T00:00:00.000Z', emailConflict: false },
+    ]);
+
+    render(<ClientContactsList clientId="acme" client={client} />);
+    await screen.findByTestId('row-contact-a');
+
+    expect(await screen.findByText('Inactive portal user')).toBeInTheDocument();
+    // Through the shared formatter, not the browser's own toLocaleDateString.
+    expect(screen.getByText('Pending until 2099-01-02')).toBeInTheDocument();
   });
 
   it('hides the invitation column when the reader may not see invitation state', async () => {

@@ -37,7 +37,12 @@ vi.mock('@alga-psa/ui', () => ({
 // `t` must be referentially stable: the component lists it as an effect dependency.
 vi.mock('@alga-psa/ui/lib/i18n/client', () => {
   const t = (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key;
-  return { useTranslation: () => ({ t }) };
+  return {
+    useTranslation: () => ({ t }),
+    useFormatters: () => ({
+      formatDate: (value: string | Date) => new Date(value).toISOString().slice(0, 10),
+    }),
+  };
 });
 
 vi.mock('@alga-psa/clients/actions', () => ({
