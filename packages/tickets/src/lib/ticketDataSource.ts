@@ -136,7 +136,15 @@ import type {
   getTicketSlaPolicyName,
 } from '../actions/ticketBentoActions';
 import type { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
-import type { listTicketFixedFeeServices, addTicketFixedFeeService, deleteTicketFixedFeeService, updateTicketFixedFeeService } from '../actions/ticketFixedFeeActions';
+import type {
+  listTicketFixedFeeServices,
+  addTicketFixedFeeService,
+  deleteTicketFixedFeeService,
+  updateTicketFixedFeeService,
+  searchTicketFixedFeeServiceCatalog,
+  getTicketFixedFeeCatalogCategories,
+  getTicketFixedFeeServicePrices,
+} from '../actions/ticketFixedFeeActions';
 
 // ---------------------------------------------------------------------------
 // Identity
@@ -602,6 +610,9 @@ export interface TicketFixedFeeMethods {
   addTicketFixedFeeService: typeof addTicketFixedFeeService;
   deleteTicketFixedFeeService: typeof deleteTicketFixedFeeService;
   updateTicketFixedFeeService: typeof updateTicketFixedFeeService;
+  searchTicketFixedFeeServiceCatalog: typeof searchTicketFixedFeeServiceCatalog;
+  getTicketFixedFeeCatalogCategories: typeof getTicketFixedFeeCatalogCategories;
+  getTicketFixedFeeServicePrices: typeof getTicketFixedFeeServicePrices;
 }
 
 /** Bento (Grid layout) tile reads. */
@@ -724,7 +735,10 @@ export function composeTicketDataSource(
       !(overrides.fixedFees?.listTicketFixedFeeServices &&
         overrides.fixedFees?.addTicketFixedFeeService &&
         overrides.fixedFees?.deleteTicketFixedFeeService &&
-        overrides.fixedFees?.updateTicketFixedFeeService)) {
+        overrides.fixedFees?.updateTicketFixedFeeService &&
+        overrides.fixedFees?.searchTicketFixedFeeServiceCatalog &&
+        overrides.fixedFees?.getTicketFixedFeeCatalogCategories &&
+        overrides.fixedFees?.getTicketFixedFeeServicePrices)) {
     merged.capabilities = { ...(merged.capabilities as TicketCapabilities), fixedFeeServices: false };
     // Never let a foreign source fall through to the native fixed-fee actions.
     const unsupported = () => {
@@ -736,6 +750,9 @@ export function composeTicketDataSource(
       addTicketFixedFeeService: fixedFeeOverrides.addTicketFixedFeeService ?? unsupported,
       deleteTicketFixedFeeService: fixedFeeOverrides.deleteTicketFixedFeeService ?? unsupported,
       updateTicketFixedFeeService: fixedFeeOverrides.updateTicketFixedFeeService ?? unsupported,
+      searchTicketFixedFeeServiceCatalog: fixedFeeOverrides.searchTicketFixedFeeServiceCatalog ?? unsupported,
+      getTicketFixedFeeCatalogCategories: fixedFeeOverrides.getTicketFixedFeeCatalogCategories ?? unsupported,
+      getTicketFixedFeeServicePrices: fixedFeeOverrides.getTicketFixedFeeServicePrices ?? unsupported,
     } as unknown as TicketFixedFeeMethods;
   }
   if (overrides.kind && overrides.kind !== base.kind && !overrides.materials?.updateTicketMaterial) {

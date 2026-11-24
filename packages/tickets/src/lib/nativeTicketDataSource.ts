@@ -234,6 +234,9 @@ export const nativeTicketDataSource: TicketDataSource = Object.freeze({
     addTicketFixedFeeService: lazy(ticketFixedFeeActionsModule, 'addTicketFixedFeeService'),
     deleteTicketFixedFeeService: lazy(ticketFixedFeeActionsModule, 'deleteTicketFixedFeeService'),
     updateTicketFixedFeeService: lazy(ticketFixedFeeActionsModule, 'updateTicketFixedFeeService'),
+    searchTicketFixedFeeServiceCatalog: lazy(ticketFixedFeeActionsModule, 'searchTicketFixedFeeServiceCatalog'),
+    getTicketFixedFeeCatalogCategories: lazy(ticketFixedFeeActionsModule, 'getTicketFixedFeeCatalogCategories'),
+    getTicketFixedFeeServicePrices: lazy(ticketFixedFeeActionsModule, 'getTicketFixedFeeServicePrices'),
   }),
 
   tiles: Object.freeze({

@@ -12,6 +12,9 @@ const state = vi.hoisted(() => ({
     addTicketFixedFeeService: vi.fn(),
     updateTicketFixedFeeService: vi.fn(),
     deleteTicketFixedFeeService: vi.fn(),
+    searchTicketFixedFeeServiceCatalog: vi.fn(),
+    getTicketFixedFeeCatalogCategories: vi.fn(),
+    getTicketFixedFeeServicePrices: vi.fn(),
   },
   materials: {
     getTicketCatalogCategories: vi.fn(),
@@ -92,6 +95,14 @@ beforeEach(() => {
   state.fixedFees.listTicketFixedFeeServices.mockResolvedValue([]);
   state.fixedFees.addTicketFixedFeeService.mockResolvedValue({ entry_id: 'fee-1' });
   state.fixedFees.updateTicketFixedFeeService.mockResolvedValue(undefined);
+  state.fixedFees.searchTicketFixedFeeServiceCatalog.mockResolvedValue({
+    items: [{ service_id: 'service-1', service_name: 'Onsite setup' }],
+    totalCount: 1,
+  });
+  state.fixedFees.getTicketFixedFeeCatalogCategories.mockResolvedValue([
+    { category_id: 'category-1', category_name: 'Software' },
+  ]);
+  state.fixedFees.getTicketFixedFeeServicePrices.mockResolvedValue([{ currency_code: 'USD', rate: 2500 }]);
   state.materials.searchServiceCatalogForPicker.mockResolvedValue({
     items: [{ service_id: 'service-1', service_name: 'Onsite setup', free_total: 99, track_stock: true }],
     totalCount: 1,
@@ -111,25 +122,25 @@ beforeEach(() => {
 describe('ticket fixed-fee service card', () => {
   it('filters Services inside the dropdown, combining category and text and clearing to all categories', async () => {
     render(<TicketFixedFeeServicesCard ticketId="ticket-1" />);
-    expect(state.materials.getTicketCatalogCategories).not.toHaveBeenCalled();
+    expect(state.fixedFees.getTicketFixedFeeCatalogCategories).not.toHaveBeenCalled();
     fireEvent.click(await screen.findByRole('button', { name: 'fixedFeeServices.add' }));
     fireEvent.click(screen.getByRole('combobox', { name: 'fixedFeeServices.service' }));
     const filter = await screen.findByLabelText('catalogFilter.category');
     await waitFor(() => expect(filter).not.toBeDisabled());
-    expect(state.materials.getTicketCatalogCategories).toHaveBeenCalledWith({ item_kinds: ['service'], billing_methods: ['fixed'] });
+    expect(state.fixedFees.getTicketFixedFeeCatalogCategories).toHaveBeenCalledWith();
     fireEvent.change(filter, { target: { value: 'category-1' } });
     fireEvent.change(screen.getByPlaceholderText('form.searchPlaceholder'), { target: { value: 'license' } });
-    await waitFor(() => expect(state.materials.searchServiceCatalogForPicker).toHaveBeenLastCalledWith({
-      search: 'license', page: 1, limit: 10, item_kinds: ['service'], billing_methods: ['fixed'], is_active: true, category_id: 'category-1',
+    await waitFor(() => expect(state.fixedFees.searchTicketFixedFeeServiceCatalog).toHaveBeenLastCalledWith({
+      search: 'license', page: 1, limit: 10, category_id: 'category-1',
     }));
     fireEvent.change(filter, { target: { value: 'all' } });
-    await waitFor(() => expect(state.materials.searchServiceCatalogForPicker).toHaveBeenLastCalledWith({
-      search: 'license', page: 1, limit: 10, item_kinds: ['service'], billing_methods: ['fixed'], is_active: true,
+    await waitFor(() => expect(state.fixedFees.searchTicketFixedFeeServiceCatalog).toHaveBeenLastCalledWith({
+      search: 'license', page: 1, limit: 10,
     }));
   });
 
   it('surfaces category failures and allows retry', async () => {
-    state.materials.getTicketCatalogCategories.mockRejectedValueOnce(new Error('Unavailable'));
+    state.fixedFees.getTicketFixedFeeCatalogCategories.mockRejectedValueOnce(new Error('Unavailable'));
     render(<TicketFixedFeeServicesCard ticketId="ticket-1" />);
     fireEvent.click(await screen.findByRole('button', { name: 'fixedFeeServices.add' }));
     fireEvent.click(screen.getByRole('combobox', { name: 'fixedFeeServices.service' }));
@@ -162,18 +173,20 @@ describe('ticket fixed-fee service card', () => {
     expect(within(billedRow).queryByRole('button')).not.toBeInTheDocument();
   });
 
-  it('uses the real async picker with fixed-fee search filters, without stock badges', async () => {
+  it('searches fixed-fee services through the ticket-scoped picker, never the inventory catalog', async () => {
     render(<TicketFixedFeeServicesCard ticketId="ticket-1" />);
     fireEvent.click(await screen.findByRole('button', { name: 'fixedFeeServices.add' }));
     fireEvent.click(screen.getByRole('combobox', { name: 'fixedFeeServices.service' }));
     fireEvent.change(await screen.findByPlaceholderText('form.searchPlaceholder'), { target: { value: 'setup' } });
     expect(await screen.findByText('Onsite setup')).toBeInTheDocument();
-    await waitFor(() => expect(state.materials.searchServiceCatalogForPicker).toHaveBeenLastCalledWith({
-      search: 'setup', page: 1, limit: 10, item_kinds: ['service'], billing_methods: ['fixed'], is_active: true,
+    await waitFor(() => expect(state.fixedFees.searchTicketFixedFeeServiceCatalog).toHaveBeenLastCalledWith({
+      search: 'setup', page: 1, limit: 10,
     }));
-    expect(screen.queryByText(/99/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('Onsite setup'));
     await waitFor(() => expect(screen.getByLabelText('fixedFeeServices.currency')).toHaveValue('USD'));
+    expect(state.fixedFees.getTicketFixedFeeServicePrices).toHaveBeenCalledWith('service-1');
+    expect(state.materials.searchServiceCatalogForPicker).not.toHaveBeenCalled();
+    expect(state.materials.getServicePrices).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'fixedFeeServices.increaseQuantity' }));
     fireEvent.change(screen.getByLabelText('fixedFeeServices.description'), { target: { value: 'Custom setup' } });
     const buttons = screen.getAllByRole('button', { name: 'fixedFeeServices.add' });

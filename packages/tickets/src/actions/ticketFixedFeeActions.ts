@@ -6,7 +6,7 @@ import {
   TicketRecordAccessDeniedError,
 } from '@alga-psa/authorization/ticketRecordAuthorization';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
-import type { ITicketFixedFeeService } from '@alga-psa/types';
+import type { IService, IServicePrice, ITicketFixedFeeService } from '@alga-psa/types';
 import { isMspPrincipalUserType } from '@alga-psa/types';
 import { z } from 'zod';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -45,6 +45,111 @@ const entrySchema = z.object({
   quantity: z.number().int().min(1).max(2147483647),
   currency_code: z.string().regex(/^[A-Z]{3}$/),
   description: z.string().trim().max(2000).optional(),
+});
+
+const catalogSearchSchema = z.object({
+  search: z.string().max(200).optional(),
+  page: z.number().int().min(1).optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+  category_id: z.string().uuid().optional(),
+}).strict();
+
+export type TicketFixedFeeCatalogSearchOptions = z.input<typeof catalogSearchSchema>;
+export type TicketFixedFeeCatalogOption = Pick<IService, 'service_id' | 'service_name'>;
+export type TicketFixedFeeServicePrice = Pick<IServicePrice, 'currency_code' | 'rate'>;
+
+const ticketUpdateRequired = () => permissionError('Permission denied: ticket update required');
+
+/**
+ * The fixed-fee picker is gated by ticket update, the permission that adding a
+ * fee requires, rather than the inventory permission the materials picker
+ * needs. It only ever exposes active fixed-fee services and the fields the
+ * picker shows.
+ */
+function fixedFeeCatalog(db: ReturnType<typeof tenantDb>) {
+  return db.table('service_catalog as sc')
+    .where({ 'sc.item_kind': 'service', 'sc.billing_method': 'fixed', 'sc.is_active': true });
+}
+
+export const searchTicketFixedFeeServiceCatalog = withAuth(async (
+  user,
+  { tenant },
+  options: TicketFixedFeeCatalogSearchOptions = {},
+): Promise<{ items: TicketFixedFeeCatalogOption[]; totalCount: number } | ReturnType<typeof permissionError>> => {
+  if (!isMspPrincipalUserType(user.user_type)) {
+    return mspAccessRequired();
+  }
+  if (!await hasPermission(user, 'ticket', 'update')) {
+    return ticketUpdateRequired();
+  }
+  const parsed = catalogSearchSchema.safeParse(options);
+  if (!parsed.success) {
+    throw new Error(`Invalid fixed-fee service search: ${parsed.error.message}`);
+  }
+  const { search, page = 1, limit = 10, category_id: categoryId } = parsed.data;
+  const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenant);
+  const query = fixedFeeCatalog(db);
+  if (categoryId) query.andWhere('sc.category_id', categoryId);
+  const term = search?.trim();
+  if (term) {
+    query.andWhere((qb) => qb.whereILike('sc.service_name', `%${term}%`).orWhereILike('sc.description', `%${term}%`));
+  }
+  const [countRow, items] = await Promise.all([
+    query.clone().count<{ count: string }>('sc.service_id as count').first(),
+    query.clone().select<TicketFixedFeeCatalogOption[]>('sc.service_id', 'sc.service_name')
+      .orderBy('sc.service_name', 'asc').limit(limit).offset((page - 1) * limit),
+  ]);
+  return { items, totalCount: Number(countRow?.count ?? 0) };
+});
+
+export const getTicketFixedFeeCatalogCategories = withAuth(async (
+  user,
+  { tenant },
+): Promise<Array<{ category_id: string; category_name: string }> | ReturnType<typeof permissionError>> => {
+  if (!isMspPrincipalUserType(user.user_type)) {
+    return mspAccessRequired();
+  }
+  if (!await hasPermission(user, 'ticket', 'update')) {
+    return ticketUpdateRequired();
+  }
+  const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenant);
+  const query = db.table('service_categories as c')
+    .distinct('c.category_id', 'c.category_name', 'c.display_order');
+  db.tenantJoin(query, 'service_catalog as sc', 'sc.category_id', 'c.category_id');
+  query.where({ 'sc.item_kind': 'service', 'sc.billing_method': 'fixed', 'sc.is_active': true });
+  const rows: Array<{ category_id: string; category_name: string }> = await query
+    .orderBy('c.display_order', 'asc')
+    .orderBy('c.category_name', 'asc');
+  return rows.map(({ category_id, category_name }) => ({ category_id, category_name }));
+});
+
+export const getTicketFixedFeeServicePrices = withAuth(async (
+  user,
+  { tenant },
+  serviceId: string,
+): Promise<TicketFixedFeeServicePrice[] | ReturnType<typeof permissionError> | ReturnType<typeof actionError>> => {
+  if (!isMspPrincipalUserType(user.user_type)) {
+    return mspAccessRequired();
+  }
+  if (!await hasPermission(user, 'ticket', 'update')) {
+    return ticketUpdateRequired();
+  }
+  const serviceInvalid = () => actionError('Select an active fixed-fee service.', 'features/tickets:fixedFeeServices.errors.serviceInvalid');
+  if (!z.string().uuid().safeParse(serviceId).success) {
+    return serviceInvalid();
+  }
+  const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenant);
+  const service = await fixedFeeCatalog(db).where('sc.service_id', serviceId).first('sc.service_id');
+  if (!service) {
+    return serviceInvalid();
+  }
+  return db.table('service_prices')
+    .where({ service_id: serviceId })
+    .orderBy('currency_code', 'asc')
+    .select<TicketFixedFeeServicePrice[]>('currency_code', 'rate');
 });
 
 export const listTicketFixedFeeServices = withAuth(async (user, { tenant }, ticketId: string): Promise<ITicketFixedFeeService[] | ReturnType<typeof permissionError> | ReturnType<typeof actionError>> => {

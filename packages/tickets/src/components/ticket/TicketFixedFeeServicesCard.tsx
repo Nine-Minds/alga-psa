@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Minus, Plus, Receipt, Trash2, Pencil } from 'lucide-react';
-import type { IServicePrice, ITicketFixedFeeService } from '@alga-psa/types';
+import type { ITicketFixedFeeService } from '@alga-psa/types';
 import { ContentCard } from '@alga-psa/ui/components';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -18,6 +18,7 @@ import { useTicketDataSource, useTicketScreenReadOnly } from './TicketDataSource
 import TicketChargeEditDialog from './TicketChargeEditDialog';
 import TicketChargeTable from './TicketChargeTable';
 import TicketCatalogCategoryFilter from './TicketCatalogCategoryFilter';
+import type { TicketFixedFeeServicePrice } from '../../actions/ticketFixedFeeActions';
 
 const isActionError = (value: unknown) => isActionMessageError(value) || isActionPermissionError(value);
 
@@ -28,7 +29,7 @@ export default function TicketFixedFeeServicesCard({
   const { t } = useTranslation('features/tickets');
   const { money, currencyCode } = useCurrencyFormat();
   const readOnly = useTicketScreenReadOnly();
-  const { fixedFees, materials } = useTicketDataSource();
+  const { fixedFees } = useTicketDataSource();
   const [entries, setEntries] = useState<ITicketFixedFeeService[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -36,7 +37,7 @@ export default function TicketFixedFeeServicesCard({
   const [serviceId, setServiceId] = useState('');
   const [serviceLabel, setServiceLabel] = useState('');
   const [categoryId, setCategoryId] = useState('');
-  const [prices, setPrices] = useState<IServicePrice[]>([]);
+  const [prices, setPrices] = useState<TicketFixedFeeServicePrice[]>([]);
   const [currency, setCurrency] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [description, setDescription] = useState('');
@@ -85,20 +86,21 @@ export default function TicketFixedFeeServicesCard({
   }, [reload]);
 
   const loadOptions = useCallback(async ({ search, page, limit }: { search: string; page: number; limit: number }) => {
-    const result = await materials.searchServiceCatalogForPicker({
-      search, page, limit, item_kinds: ['service'], billing_methods: ['fixed'], is_active: true,
-      ...(categoryId ? { category_id: categoryId } : {}),
+    const result = await fixedFees.searchTicketFixedFeeServiceCatalog({
+      search, page, limit, ...(categoryId ? { category_id: categoryId } : {}),
     });
+    if (isActionError(result)) throw result;
     return {
       options: result.items.map((service) => ({ value: service.service_id, label: service.service_name })),
       total: result.totalCount,
     };
-  }, [materials, categoryId]);
+  }, [fixedFees, categoryId]);
 
-  const getTicketCatalogCategories = materials.getTicketCatalogCategories;
-  const loadCategories = useMemo(() => getTicketCatalogCategories
-    && (() => getTicketCatalogCategories({ item_kinds: ['service'], billing_methods: ['fixed'] })),
-  [getTicketCatalogCategories]);
+  const loadCategories = useCallback(async () => {
+    const result = await fixedFees.getTicketFixedFeeCatalogCategories();
+    if (isActionError(result)) throw result;
+    return result;
+  }, [fixedFees]);
 
   const selectService = async (value: string, label?: string) => {
     const request = ++priceRequest.current;
@@ -109,8 +111,9 @@ export default function TicketFixedFeeServicesCard({
     setError(null);
     if (!value) return;
     try {
-      const result = await materials.getServicePrices(value);
+      const result = await fixedFees.getTicketFixedFeeServicePrices(value);
       if (request !== priceRequest.current) return;
+      if (isActionError(result)) throw result;
       setPrices(result);
       setCurrency(result.find((row) => row.currency_code === currencyCode)?.currency_code ?? result[0]?.currency_code ?? '');
       if (result.length === 0) setError(t('fixedFeeServices.errors.priceInvalid'));

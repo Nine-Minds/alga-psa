@@ -29,6 +29,15 @@ vi.mock('@alga-psa/db', () => ({
     table: (table: string) => {
       const builder: any = {
         where: () => builder,
+        andWhere: () => builder,
+        clone: () => builder,
+        count: () => builder,
+        select: () => builder,
+        distinct: () => builder,
+        orderBy: () => builder,
+        limit: () => builder,
+        offset: () => builder,
+        then: (resolve: (rows: unknown) => unknown) => resolve(h.rows[`list:${table}`] ?? []),
         forShare: () => builder,
         forUpdate: () => builder,
         first: async () => h.rows[table],
@@ -49,7 +58,10 @@ vi.mock('@alga-psa/authorization/ticketRecordAuthorization', () => ({
 import {
   addTicketFixedFeeService,
   deleteTicketFixedFeeService,
+  getTicketFixedFeeCatalogCategories,
+  getTicketFixedFeeServicePrices,
   listTicketFixedFeeServices,
+  searchTicketFixedFeeServiceCatalog,
   updateTicketFixedFeeService,
 } from './ticketFixedFeeActions';
 
@@ -120,5 +132,39 @@ describe('ticket fixed-fee action authorization', () => {
     await expect(deleteTicketFixedFeeService(entryId)).resolves.toBeUndefined();
     await expect(updateTicketFixedFeeService(entryId, { quantity: 2, description: '' })).resolves.toBeUndefined();
     expect(h.mutations).toEqual(['delete:ticket_fixed_fee_services', 'update:ticket_fixed_fee_services']);
+  });
+
+  it('lets a ticket editor without inventory access load the fixed-fee picker', async () => {
+    h.permission.mockImplementation(async (_user: unknown, resource: string, action: string) =>
+      resource === 'ticket' && action === 'update');
+    h.rows['service_catalog as sc'] = { service_id: serviceId, count: '1' };
+    h.rows['list:service_catalog as sc'] = [{ service_id: serviceId, service_name: 'Onsite setup' }];
+    h.rows['list:service_categories as c'] = [{ category_id: 'category-1', category_name: 'Support', display_order: 1 }];
+    h.rows['list:service_prices'] = [{ currency_code: 'USD', rate: 2500 }];
+
+    await expect(searchTicketFixedFeeServiceCatalog({ search: 'setup' })).resolves.toEqual({
+      items: [{ service_id: serviceId, service_name: 'Onsite setup' }], totalCount: 1,
+    });
+    await expect(getTicketFixedFeeCatalogCategories()).resolves.toEqual([{ category_id: 'category-1', category_name: 'Support' }]);
+    await expect(getTicketFixedFeeServicePrices(serviceId)).resolves.toEqual([{ currency_code: 'USD', rate: 2500 }]);
+    expect(h.permission.mock.calls.map(([, resource, action]) => `${resource}:${action}`))
+      .toEqual(['ticket:update', 'ticket:update', 'ticket:update']);
+  });
+
+  it('denies the fixed-fee picker without ticket update and rejects non-fixed-fee services', async () => {
+    h.permission.mockResolvedValue(false);
+    for (const result of [
+      await searchTicketFixedFeeServiceCatalog({}),
+      await getTicketFixedFeeCatalogCategories(),
+      await getTicketFixedFeeServicePrices(serviceId),
+    ]) {
+      expect(result).toHaveProperty('permissionError', 'Permission denied: ticket update required');
+    }
+    expect(h.createTenantKnex).not.toHaveBeenCalled();
+
+    h.permission.mockResolvedValue(true);
+    h.rows['service_catalog as sc'] = undefined;
+    expect(await getTicketFixedFeeServicePrices(serviceId))
+      .toHaveProperty('messageKey', 'features/tickets:fixedFeeServices.errors.serviceInvalid');
   });
 });

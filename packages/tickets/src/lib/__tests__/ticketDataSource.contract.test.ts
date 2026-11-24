@@ -48,7 +48,7 @@ describe('native ticket data source contract', () => {
         methods += 1;
       }
     }
-    expect(methods).toBe(106);
+    expect(methods).toBe(108);
   });
 
   it('forwards arguments and results unchanged, resolving the action at call time', async () => {
@@ -99,6 +99,7 @@ describe('native ticket data source contract', () => {
     expect(composed.fixedFees.listTicketFixedFeeServices).not.toBe(nativeTicketDataSource.fixedFees.listTicketFixedFeeServices);
     expect(() => composed.fixedFees.listTicketFixedFeeServices('ticket-1')).toThrow(/does not support fixed-fee services/);
     expect(() => composed.fixedFees.deleteTicketFixedFeeService('entry-1')).toThrow(/does not support fixed-fee services/);
+    expect(() => composed.fixedFees.searchTicketFixedFeeServiceCatalog({ search: '', page: 1, limit: 10 })).toThrow(/does not support fixed-fee services/);
   });
 
   it('uses the explicit category loader supplied by an alternate source', async () => {
