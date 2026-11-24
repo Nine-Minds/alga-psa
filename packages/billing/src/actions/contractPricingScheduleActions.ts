@@ -202,6 +202,32 @@ export const getPricingScheduleLineScopes = withAuth(async (
 
 
 /**
+ * `effective_date`/`end_date` are DATE columns and pg ships no 1082 parser, so
+ * the driver materialises them as a Date at *server-local* midnight. Normalise
+ * them to calendar-date strings at the read boundary with local components —
+ * the `normalizeClientContract` convention — so the client is handed the day
+ * that is stored whatever time zone the server process runs in. Reading the UTC
+ * components instead would re-introduce this card's off-by-one on a non-UTC
+ * server.
+ */
+function normalizePricingScheduleDates(
+  schedule: IContractPricingSchedule,
+): IContractPricingSchedule {
+  try {
+    const effectiveDate = toCalendarDateString(schedule.effective_date);
+    const endDate = toCalendarDateString(schedule.end_date);
+    return {
+      ...schedule,
+      effective_date: effectiveDate ?? schedule.effective_date,
+      end_date: endDate,
+    };
+  } catch {
+    // Unparseable stored value: hand it back untouched rather than hide the row.
+    return schedule;
+  }
+}
+
+/**
  * Get all pricing schedules for a contract
  * @param contractId The contract ID
  * @returns Array of pricing schedules
@@ -228,7 +254,7 @@ export const getPricingSchedulesByContract = withAuth(async (
     .orderBy('effective_date', 'asc')
     .select('*');
 
-  return schedules;
+  return schedules.map(normalizePricingScheduleDates);
 });
 
 /**
@@ -257,7 +283,7 @@ export const getPricingScheduleById = withAuth(async (
     })
     .first();
 
-  return schedule || null;
+  return schedule ? normalizePricingScheduleDates(schedule) : null;
 });
 
 /**

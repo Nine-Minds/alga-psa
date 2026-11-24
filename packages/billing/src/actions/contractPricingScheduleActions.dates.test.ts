@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => fn,
@@ -27,11 +27,13 @@ vi.mock('../lib/billing/billingMutationLock', () => ({
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
   createPricingSchedule,
+  getPricingSchedulesByContract,
   updatePricingSchedule,
 } from './contractPricingScheduleActions';
 
 const callCreatePricingSchedule = createPricingSchedule as any;
 const callUpdatePricingSchedule = updatePricingSchedule as any;
+const callGetPricingSchedulesByContract = getPricingSchedulesByContract as any;
 
 const INVALID_DATE_ERROR = {
   actionError: 'Effective date and end date must be calendar dates (YYYY-MM-DD)',
@@ -55,6 +57,8 @@ const storedRow = {
 type Fixtures = {
   /** Queued `first()` results for contract_pricing_schedules (existing lookup, then overlap probe). */
   schedulesFirst?: unknown[];
+  /** Rows the list read (`select('*')`) resolves to. */
+  schedulesRows?: unknown[];
   /** Fixed lines of the contract, as contract_lines rows. */
   lines?: Array<{ contract_line_id: string; contract_line_name: string | null }>;
   /** Member rows: one per (line, pricing_basis). */
@@ -82,6 +86,7 @@ function seedTables(fixtures: Fixtures = {}) {
     orWhere: vi.fn().mockReturnThis(),
     orderBy: vi.fn().mockReturnThis(),
     first: vi.fn(async () => queued.shift()),
+    select: vi.fn(async () => fixtures.schedulesRows ?? []),
     insert: vi.fn(() => ({ returning })),
     update: vi.fn(() => ({ returning })),
   };
@@ -402,5 +407,71 @@ describe('pricing schedule actions: line scope', () => {
     expect(schedulesQuery.update).toHaveBeenCalledWith(
       expect.objectContaining({ contract_line_id: 'line-2' })
     );
+  });
+});
+
+describe('pricing schedule actions: read boundary', () => {
+  const originalTz = process.env.TZ;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(hasPermission).mockResolvedValue(true);
+  });
+
+  afterEach(() => {
+    // TZ is process-global and vitest isolation is module-level only; assigning
+    // an undefined original would set the literal string "undefined".
+    if (originalTz === undefined) {
+      delete process.env.TZ;
+    } else {
+      process.env.TZ = originalTz;
+    }
+  });
+
+  it.each([
+    { zone: 'Europe/Berlin', offset: -120 },
+    { zone: 'Pacific/Auckland', offset: -720 },
+    { zone: 'America/Los_Angeles', offset: 420 },
+  ])('hands the client the stored calendar day under TZ=$zone', async ({ zone, offset }) => {
+    process.env.TZ = zone;
+    expect(
+      new Date('2026-06-01T12:00:00.000Z').getTimezoneOffset(),
+      `TZ=${zone} did not take effect`,
+    ).toBe(offset);
+
+    // pg ships no DATE (1082) parser, so a DATE column arrives as a Date at
+    // server-local midnight. Reading its UTC components would be a day early
+    // east of UTC — the same off-by-one on the way out as on the way in.
+    seedTables({
+      schedulesRows: [
+        {
+          ...storedRow,
+          effective_date: new Date(2026, 5, 1),
+          end_date: new Date(2026, 11, 31),
+        },
+      ],
+    });
+
+    await expect(callGetPricingSchedulesByContract(user, ctx, 'contract-1')).resolves.toEqual([
+      expect.objectContaining({ effective_date: '2026-06-01', end_date: '2026-12-31' }),
+    ]);
+  });
+
+  it('passes a stored calendar-date string through and keeps a null end date', async () => {
+    seedTables({
+      schedulesRows: [{ ...storedRow, effective_date: '2026-06-01', end_date: null }],
+    });
+
+    await expect(callGetPricingSchedulesByContract(user, ctx, 'contract-1')).resolves.toEqual([
+      expect.objectContaining({ effective_date: '2026-06-01', end_date: null }),
+    ]);
+  });
+
+  it('maps a legacy instant row to its UTC calendar date, as the write path does', async () => {
+    seedTables({ schedulesRows: [storedRow] });
+
+    await expect(callGetPricingSchedulesByContract(user, ctx, 'contract-1')).resolves.toEqual([
+      expect.objectContaining({ effective_date: '2026-01-01' }),
+    ]);
   });
 });
