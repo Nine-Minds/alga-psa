@@ -252,6 +252,17 @@ export const TICKET_MATERIAL_SOURCE: RedactableRecordSource = {
   },
 };
 
+/** Project material rows mirror the ticket material descriptor: aliases plus the joined service name and SKU. */
+export const PROJECT_MATERIAL_SOURCE: RedactableRecordSource = {
+  resource: ['project_materials'],
+  identifier: ids('project_material_id', 'project_materials.project_material_id', 'values.project_materials.project_material_id'),
+  fields: {},
+  derived: {
+    service_name: ids('service_id', 'service_catalog', 'service_catalog.service_name'),
+    sku: ids('service_id', 'service_catalog', 'service_catalog.sku'),
+  },
+};
+
 export const TICKET_CHECKLIST_ITEM_SOURCE: RedactableRecordSource = {
   resource: ['ticket_checklist_items'],
   identifier: ids('checklist_item_id', 'ticket_checklist_items.checklist_item_id', 'values.ticket_checklist_items.checklist_item_id'),

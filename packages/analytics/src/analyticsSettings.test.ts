@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   createTenantKnex: vi.fn(),
   getTenantForCurrentRequest: vi.fn(),
-  readTenantSettingsRow: vi.fn(),
+  getTenantSettingsByTenantId: vi.fn(),
   insert: vi.fn(),
   merge: vi.fn(),
   now: vi.fn(),
@@ -13,10 +13,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@alga-psa/tenancy/server', () => ({
   getTenantForCurrentRequest: mocks.getTenantForCurrentRequest,
 }));
-// The full-row reader is a server-only module behind its own entry point; mocking
-// it here keeps the node test out of the server-only boundary.
-vi.mock('@alga-psa/tenancy/server/tenantSettingsStore', () => ({
-  readTenantSettingsRow: mocks.readTenantSettingsRow,
+
+vi.mock('@alga-psa/tenancy/server/tenantSettings', () => ({
+  getTenantSettingsByTenantId: mocks.getTenantSettingsByTenantId,
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -53,7 +52,7 @@ describe('analytics settings persistence', () => {
       environment: 'test',
     };
     mocks.getTenantForCurrentRequest.mockResolvedValue('tenant-1');
-    mocks.readTenantSettingsRow.mockResolvedValue({ settings: { analytics } });
+    mocks.getTenantSettingsByTenantId.mockResolvedValue({ settings: { analytics } });
     mocks.first.mockResolvedValue({ settings: { analytics } });
     mocks.createTenantKnex.mockResolvedValue({ knex: {} });
     mocks.merge.mockResolvedValue(undefined);

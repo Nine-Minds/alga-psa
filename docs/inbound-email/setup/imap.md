@@ -41,3 +41,39 @@ The IMAP-specific flags are OR-ed with the shared in-app flags:
 - `IMAP_MAX_RAW_MIME_BYTES`
 
 The IMAP webhook enforces these caps before in-app persistence and records structured `ingressSkipReasons` for over-limit artifacts.
+
+## Private mail servers
+
+IMAP connections are checked against an outbound-target policy before any
+socket opens. Every DNS answer for the mailbox host must be a public address,
+and the connection is pinned to the address that was checked. A mailbox whose
+host resolves to a private address (RFC 1918 IPv4 or IPv6 unique-local) is
+refused by default, both in **Test connection** and in the live listener.
+
+To allow an on-premises or VPN-only mail server, list its exact hostnames or IP
+addresses in `EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST`:
+
+```dotenv
+EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST=imap.internal.example,10.40.8.12
+```
+
+- Set the same value on **both** the server and the email-service containers
+  (Helm: `imap.privateTargetAllowlist` in both charts), then restart or roll
+  out both. The server uses it for connection tests, OAuth callbacks and
+  recovery of auth-paused providers; email-service uses it for the live
+  listener and inbound queue fetches.
+- Set it **before** upgrading a deployment that already reads a private
+  mailbox, or that mailbox stops syncing after the upgrade.
+- Entries are exact matches only. Wildcards, CIDR ranges, URLs and ports are
+  not accepted. Loopback, link-local, metadata and CGNAT addresses stay blocked
+  even when listed.
+- Custom IMAP ports (1–65535) are accepted and go through the same checks.
+- The IMAP OAuth token endpoint is not covered by this allowlist. It must be a
+  public HTTPS endpoint on port 443.
+
+For OAuth mailboxes, the stored mailbox tokens are bound to the token endpoint
+they were issued by. Changing the provider's token endpoint clears those tokens
+and the mailbox must be authorized again.
+
+The full operator contract is in
+[Private IMAP target allowlist](../../security/email-provider-private-target-allowlist.md).

@@ -29,7 +29,6 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
 }));
 vi.mock('@/lib/actions/coManagedActions', () => ({ getCoManagedClientManagement: getView }));
 vi.mock('@/components/co-managed/CoManagedClientView', () => ({ default: () => <div>tab-body</div> }));
-vi.mock('@/components/co-managed/CoManagedClientSummary', () => ({ default: () => <div>summary</div> }));
 
 import Integration from '@/components/co-managed/CoManagedClientIntegration';
 
@@ -51,34 +50,36 @@ describe('client co-managed integration slots', () => {
   });
 
   // Flag-off neutrality: with the seat capability closed the integration never reads seat state.
-  it('seat capability closed: workspace slots exactly as before and no seat read', async () => {
+  it('seat capability closed: workspace slots are the tab only and no seat read', async () => {
     getView.mockResolvedValue(view());
     let latest: any = null;
-    mount((slots) => { latest = slots; return <div>{slots?.summary}</div>; });
-    await waitFor(() => expect(screen.getByText('summary')).toBeInTheDocument());
+    mount((slots) => { latest = slots; return <div>{slots?.tab?.content}</div>; });
+    await waitFor(() => expect(screen.getByText('tab-body')).toBeInTheDocument());
     expect(latest.tab.id).toBe('co-managed');
+    expect(latest).not.toHaveProperty('summary');
     expect(getSeat).not.toHaveBeenCalled();
-    expect(screen.queryByText('seat-summary')).not.toBeInTheDocument();
   });
 
-  it('seat capability open, no arrangement: the workspace summary stays and the chooser wraps the workspace setup', async () => {
+  it('seat capability open, no arrangement: the slots are the tab only', async () => {
     capability.seat = true;
     getView.mockResolvedValue(view());
     getSeat.mockResolvedValue({ panel: null, canManage: true, enable: { capacity: { purchased: 3, allocated: 1, available: 2 }, blocker: null } });
     let latest: any = null;
-    mount((slots) => { latest = slots; return <div>{slots?.summary}</div>; });
-    await waitFor(() => expect(screen.getByText('summary')).toBeInTheDocument());
+    mount((slots) => { latest = slots; return <div>{slots?.tab?.content}</div>; });
     await waitFor(() => expect(getSeat).toHaveBeenCalledWith('client-1'));
     expect(latest.tab.id).toBe('co-managed');
+    expect(latest).not.toHaveProperty('summary');
   });
 
-  it('seat capability open with an arrangement: the seat summary replaces the workspace one', async () => {
+  it('seat capability open with an arrangement: the seat panel is the tab and there is no summary', async () => {
     capability.seat = true;
     getView.mockResolvedValue(view());
     getSeat.mockResolvedValue({ panel: { usedSeats: 1, seats: 2 }, canManage: true, enable: null });
-    mount((slots) => <div>{slots?.summary}</div>);
-    await waitFor(() => expect(screen.getByText('seat-summary')).toBeInTheDocument());
-    expect(screen.queryByText('summary')).not.toBeInTheDocument();
+    let latest: any = null;
+    mount((slots) => { latest = slots; return <div>{slots?.tab?.content}</div>; });
+    await waitFor(() => expect(screen.getByText(/seat-tab-body/)).toBeInTheDocument());
+    expect(latest.tab.id).toBe('co-managed');
+    expect(latest).not.toHaveProperty('summary');
   });
 
   it('only the seat capability open: a seat-only tab, and no workspace read', async () => {
@@ -91,6 +92,7 @@ describe('client co-managed integration slots', () => {
     expect(screen.getByText(/chooser/)).toBeInTheDocument();
     expect(screen.queryByText(/\+workspace/)).not.toBeInTheDocument();
     expect(latest.tab.id).toBe('co-managed');
+    expect(latest).not.toHaveProperty('summary');
     expect(getView).not.toHaveBeenCalled();
   });
 
@@ -105,21 +107,21 @@ describe('client co-managed integration slots', () => {
     expect(seen.every((slots) => slots === null)).toBe(true);
   });
 
-  it('read denied: no summary, no tab', async () => {
+  it('read denied: no tab', async () => {
     getView.mockRejectedValue(new Error('denied'));
     const seen: any[] = [];
     mount((slots) => { seen.push(slots); return <div>ordinary</div>; });
     await waitFor(() => expect(getView).toHaveBeenCalledTimes(1));
     await Promise.resolve();
     expect(seen.every((slots) => slots === null)).toBe(true);
-    expect(screen.queryByText('summary')).not.toBeInTheDocument();
   });
 
-  it('ready: a summary and exactly one co-managed tab', async () => {
+  it('ready: exactly one co-managed tab and no summary', async () => {
     getView.mockResolvedValue(view());
     let latest: any = null;
-    mount((slots) => { latest = slots; return <div>{slots?.summary}</div>; });
-    await waitFor(() => expect(screen.getByText('summary')).toBeInTheDocument());
+    mount((slots) => { latest = slots; return <div>{slots?.tab?.content}</div>; });
+    await waitFor(() => expect(screen.getByText('tab-body')).toBeInTheDocument());
+    expect(latest).not.toHaveProperty('summary');
     expect(latest.tab.id).toBe('co-managed');
     expect(latest.tab.hasUnsavedChanges()).toBe(false);
     expect(getView).toHaveBeenCalledTimes(1);

@@ -14,6 +14,7 @@ import { Badge } from "../../../ui/components/Badge";
 import { getAppConfig } from "../../../config/appConfig";
 import { getClientMetadataHeaders } from "../../../device/clientMetadata";
 import { formatDateTimeWithRelative } from "../../../ui/formatters/dateTime";
+import { isOpenerComment, openerAttachmentCount, openerSenderName } from "../openerComment";
 import { useModeration } from "../../moderation/useModeration";
 import {
   extractPlainTextFromRichEditorJson,
@@ -148,6 +149,9 @@ export function CommentsSection({
   // that flipping it re-renders this component (fixing the stale-ref bug).
   const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({});
   const toggleRef = useRef<Record<string, () => void>>({});
+  // The comment that opened the ticket by email starts collapsed to one row on every mount.
+  // Kept apart from expandedMap, which mirrors ExpandableComment's see-more clamp state.
+  const [openerExpandedIds, setOpenerExpandedIds] = useState<Record<string, boolean>>({});
 
   // Collapse state (global collapse-all; independent of per-thread collapse)
   const [collapsed, setCollapsed] = useState(initiallyCollapsed);
@@ -636,6 +640,74 @@ export function CommentsSection({
               );
             }
 
+            const isOpener = !isSystemEventComment && isOpenerComment(c);
+            const openerCid = c.comment_id ?? "";
+            const threadBarEl =
+              node.isRoot && node.group.replyCount > 0 ? (
+                // LEVERAGE: pattern comment-thread-bar — third copy of the per-thread replies bar in this file
+                <Pressable
+                  onPress={() => toggleThreadCollapsed(rootKey)}
+                  accessibilityRole="button"
+                  accessibilityLabel={threadCollapsed ? t("comments.expand") : t("comments.collapse")}
+                  style={({ pressed }) => ({
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                    marginTop: spacing.xs,
+                    marginLeft: indent,
+                    opacity: pressed ? 0.85 : 1,
+                  })}
+                >
+                  <Text style={{ ...typography.caption, color: colors.textSecondary }}>
+                    {t("comments.repliesCount", { count: node.group.replyCount })}
+                  </Text>
+                  <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>
+                    {threadCollapsed ? t("comments.expand") : t("comments.collapse")}
+                  </Text>
+                  <Feather name={threadCollapsed ? "chevron-down" : "chevron-up"} size={12} color={colors.primary} />
+                </Pressable>
+              ) : null;
+
+            // Compact opener row: one line in place of the duplicate of the ticket description.
+            if (isOpener && !openerExpandedIds[openerCid] && !isEditingThis) {
+              const sender = openerSenderName(c) ?? t("common:unknown");
+              const attachments = openerAttachmentCount(c);
+              const summary = [
+                t("comments.openerOpenedBy", { sender }),
+                c.created_at ? formatDateTimeWithRelative(c.created_at) : null,
+                attachments > 0 ? t("comments.openerAttachments", { count: attachments }) : null,
+              ]
+                .filter(Boolean)
+                .join(" · ");
+              return (
+                <React.Fragment key={c.comment_id ?? String(idx)}>
+                  <View style={nodeWrapperStyle}>
+                    {railEl}
+                    <Pressable
+                      onPress={() => setOpenerExpandedIds((m) => ({ ...m, [openerCid]: true }))}
+                      accessibilityRole="button"
+                      accessibilityState={{ expanded: false }}
+                      accessibilityLabel={`${summary}. ${t("comments.openerShow")}`}
+                      style={({ pressed }) => ({
+                        flexDirection: "row",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                        gap: 6,
+                        opacity: pressed ? 0.7 : 1,
+                      })}
+                    >
+                      <Feather name="mail" size={14} color={colors.textSecondary} />
+                      <Text style={{ ...typography.caption, color: colors.textSecondary, flexShrink: 1 }}>{summary}</Text>
+                      <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>
+                        {t("comments.openerShow")}
+                      </Text>
+                    </Pressable>
+                  </View>
+                  {threadBarEl}
+                </React.Fragment>
+              );
+            }
+
             return (
               <React.Fragment key={c.comment_id ?? String(idx)}>
               <View
@@ -644,6 +716,19 @@ export function CommentsSection({
                 style={nodeWrapperStyle}
               >
                 {railEl}
+                {isOpener ? (
+                  <Pressable
+                    onPress={() => setOpenerExpandedIds((m) => ({ ...m, [openerCid]: false }))}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: true }}
+                    accessibilityLabel={t("comments.openerHide")}
+                    style={{ alignSelf: "flex-start", paddingVertical: 2, marginBottom: spacing.xs }}
+                  >
+                    <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>
+                      {t("comments.openerHide")}
+                    </Text>
+                  </Pressable>
+                ) : null}
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
                   {!isSystemEventComment ? (
                     <Avatar

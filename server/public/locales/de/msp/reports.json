@@ -2,12 +2,6 @@
   "page": {
     "title": "Berichte"
   },
-  "actions": {
-    "refresh": "Aktualisieren"
-  },
-  "placeholders": {
-    "selectContract": "Vertrag auswählen..."
-  },
   "units": {
     "hoursShort": "Std.",
     "days": "Tage",
@@ -433,64 +427,6 @@
       "label": "Spalten",
       "title": "Spalten",
       "reset": "Standardspalten wiederherstellen"
-    }
-  },
-  "contractPerformance": {
-    "title": "Kennzahlen zur Vertragsleistung",
-    "errors": {
-      "loadData": "Vertragsdaten konnten nicht geladen werden"
-    },
-    "metrics": {
-      "totalClients": "Gesamtkunden",
-      "activeClients": "Aktive Kunden",
-      "totalPlans": "Gesamtpläne",
-      "averagePlansPerClient": "Durchschn. Pläne pro Kunde",
-      "totalRevenue": "Gesamtumsatz",
-      "averageRevenuePerClient": "Durchschn. Umsatz pro Kunde"
-    },
-    "empty": {
-      "selectContract": "Wählen Sie einen Vertrag, um Leistungskennzahlen anzuzeigen",
-      "noContracts": "Keine Verträge verfügbar"
-    },
-    "comparison": {
-      "title": "Vertragsvergleich",
-      "table": {
-        "contract": "Vertrag",
-        "clients": "Kunden",
-        "plans": "Pläne",
-        "revenue": "Umsatz"
-      }
-    }
-  },
-  "contractUsage": {
-    "title": "Vertragsnutzungsbericht",
-    "errors": {
-      "loadInitialData": "Initiale Daten konnten nicht geladen werden",
-      "loadUsageData": "Vertragsnutzungsdaten konnten nicht geladen werden"
-    },
-    "empty": {
-      "noClientsUsingContract": "Kein Kunde nutzt diesen Vertrag",
-      "selectContract": "Wählen Sie einen Vertrag, um Nutzungsdaten anzuzeigen"
-    },
-    "table": {
-      "client": "Kunde",
-      "startDate": "Startdatum",
-      "endDate": "Enddatum",
-      "contractLines": "Vertragspositionen",
-      "totalBilled": "Insgesamt abgerechnet",
-      "status": "Status"
-    },
-    "statusValues": {
-      "active": "Aktiv",
-      "inactive": "Inaktiv",
-      "ongoing": "Laufend",
-      "unknownClient": "Unbekannter Kunde"
-    },
-    "summary": {
-      "title": "Zusammenfassung",
-      "totalClients": "Gesamtkunden",
-      "activeAssignments": "Aktive Zuordnungen",
-      "totalBilled": "Insgesamt abgerechnet"
     }
   },
   "deferredRevenue": {

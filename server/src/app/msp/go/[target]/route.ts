@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { isProductNavTarget, resolveProductNavDestination } from '@alga-psa/types';
+import { redirectToAppPath } from '@alga-psa/core/redirectToAppPath';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
 
 export const dynamic = 'force-dynamic';
@@ -30,14 +31,12 @@ export async function GET(
 
   const productCode = await getCurrentTenantProduct();
   const destination = resolveProductNavDestination(target, productCode);
-  const url = new URL(destination, request.nextUrl.origin);
-  // Carry the caller's query (e.g. the Microsoft email-setup outcome) onto the
-  // destination. The destination's own params stay authoritative on collision.
-  request.nextUrl.searchParams.forEach((value, key) => {
-    if (!url.searchParams.has(key)) url.searchParams.append(key, value);
-  });
-  return NextResponse.redirect(url, {
-    status: 307,
+  // Relative Location: behind the proxy `request.nextUrl.origin` is the internal
+  // upstream (localhost:3000), so no origin is ever built here. The caller's query
+  // (e.g. the Microsoft email-setup outcome) is carried onto the destination, whose
+  // own params stay authoritative on collision.
+  return redirectToAppPath(destination, {
+    carryQuery: request.nextUrl.searchParams,
     headers: { 'Cache-Control': 'no-store' },
   });
 }

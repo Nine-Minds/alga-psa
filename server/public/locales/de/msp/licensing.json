@@ -505,8 +505,7 @@
         "save": "Standardwerte für Übergaben speichern"
       },
       "client": {
-        "seatArrangement": "Platzvereinbarung",
-        "summary": "Platzvereinbarung: {{used}} von {{count}} Plätzen belegt"
+        "seatArrangement": "Platzvereinbarung"
       },
       "technicians": {
         "sent": "Einladung gesendet.",
@@ -617,8 +616,6 @@
     },
     "client": {
       "awaitingAcceptance": "Der Kundenadministrator muss zustimmen, bevor der Zugriff gewährt wird.",
-      "chooseRelationship": "Beziehung auswählen",
-      "endedHint": "Diese Beziehung wurde beendet. Aufbewahrter Verlauf und Archive bleiben verfügbar.",
       "endedOn": "Beendet am {{date}}",
       "failedHint": "Die Einrichtung wurde nicht abgeschlossen. Die Plätze bleiben reserviert. Versuchen Sie es erneut, um fortzufahren, oder brechen Sie die Einrichtung ab.",
       "forClient": "Co-Managed IT für {{name}}",
@@ -636,7 +633,6 @@
       "setupHint": "Aktivieren Sie Co-Managed IT für diesen Kunden, um Kundentechniker zu reservieren und einen Administrator einzuladen.",
       "tab": "Co-Managed IT",
       "viewDetails": "Details anzeigen",
-      "viewHistory": "Verlauf anzeigen",
       "workspace": "Kundenarbeitsbereich",
       "seatUsage": "{{used}} von {{count}} Technikerplätzen",
       "seatAllocation": "{{count}} zugewiesene Technikerplätze"

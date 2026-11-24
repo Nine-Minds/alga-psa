@@ -23,7 +23,10 @@ export interface StopwatchSessionView {
   service_id: string | null;
   notes: string;
   status: StopwatchSessionStatus;
+  /** First entry the session was logged as (kept for compatibility; see time_entry_ids). */
   time_entry_id: string | null;
+  /** Every entry the session was logged as, in chronological order (one per work day). */
+  time_entry_ids: string[];
   closed_at: string | null;
   created_at: string;
   updated_at: string;

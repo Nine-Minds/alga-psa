@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ticketReopenedEventPayloadSchema } from '@alga-psa/event-schemas';
 
 const TICKET_1 = '00000000-0000-4000-8000-000000000001';
@@ -265,6 +265,11 @@ function createClientPortalTrx(overrides: {
 }
 
 describe('client portal board-scoped ticket status validation', () => {
+  // LEVERAGE: pattern warm-cold-import — the first dynamic import is billed to the first test's timeout
+  beforeAll(async () => {
+    await import('./client-tickets');
+  }, 120_000);
+
   beforeEach(() => {
     vi.clearAllMocks();
     currentUser = {

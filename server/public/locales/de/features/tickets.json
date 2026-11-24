@@ -575,6 +575,13 @@
       },
       "unavailable": "Dieses Ticket ist nicht verfügbar.",
       "back": "Zurück zu Kundentickets"
+    },
+    "opener": {
+      "openedBy": "Per E-Mail eröffnet von {{sender}}",
+      "attachments_one": "{{count}} Anhang",
+      "attachments_other": "{{count}} Anhänge",
+      "show": "Original-E-Mail anzeigen",
+      "hide": "Original-E-Mail ausblenden"
     }
   },
   "responseState": {

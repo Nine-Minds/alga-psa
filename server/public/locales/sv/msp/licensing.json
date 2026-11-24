@@ -505,8 +505,7 @@
         "save": "Spara standardvärden för överlämning"
       },
       "client": {
-        "seatArrangement": "Platsavtal",
-        "summary": "Platsavtal: {{used}} av {{count}} platser används"
+        "seatArrangement": "Platsavtal"
       },
       "technicians": {
         "sent": "Inbjudan skickad.",
@@ -617,8 +616,6 @@
     },
     "client": {
       "awaitingAcceptance": "Kundens administratör måste acceptera innan åtkomst beviljas.",
-      "chooseRelationship": "Välj relation",
-      "endedHint": "Den här relationen har avslutats. Sparad historik och sparade arkiv finns kvar.",
       "endedOn": "Avslutades {{date}}",
       "failedHint": "Konfigurationen slutfördes inte. Platserna förblir reserverade; försök igen för att fortsätta eller avbryt konfigurationen.",
       "forClient": "Samhanterad IT för {{name}}",
@@ -636,7 +633,6 @@
       "setupHint": "Aktivera samhanterad IT från den här kunden för att reservera kundens tekniker och bjuda in en administratör.",
       "tab": "Samhanterad IT",
       "viewDetails": "Visa detaljer",
-      "viewHistory": "Visa historik",
       "workspace": "Kundarbetsyta",
       "seatUsage": "{{used}} av {{count}} teknikerplatser",
       "seatAllocation": "{{count}} tilldelade teknikerplatser"

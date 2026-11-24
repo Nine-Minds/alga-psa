@@ -153,7 +153,8 @@
       "endAfterStartPicker": "L'heure de fin doit être postérieure à l'heure de début",
       "durationSameDay": "La durée doit se terminer le même jour",
       "endSameDay": "L'heure de fin doit être le même jour que l'heure de début",
-      "invalidTimeRange": "Saisissez une plage horaire valide"
+      "invalidTimeRange": "Saisissez une plage horaire valide",
+      "billableExceedsDuration": "La durée facturable ne peut pas dépasser la durée totale"
     },
     "serviceSource": {
       "task": "Par défaut depuis la tâche",
@@ -531,6 +532,12 @@
     "save": {
       "noPeriod": "Aucune période ne couvre le {{date}}. Choisissez un jour compris dans une période.",
       "sheetLocked": "La feuille de temps du {{date}} a le statut « {{status}} ». Choisissez un jour sur une feuille brouillon ou une feuille avec modifications demandées."
+    },
+    "multiDay": {
+      "notice": "Ce chronomètre a couvert {{count}} jours ; il sera donc enregistré en une entrée de temps par jour. Supprimez un jour pour en exclure le temps.",
+      "dayHeading": "Jour {{index}} sur {{count}} · {{date}}",
+      "remove": "Supprimer",
+      "total": "Total : {{duration}}"
     }
   },
   "launch": {

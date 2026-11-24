@@ -98,6 +98,7 @@ export {
 export type { TicketListIdentity, TicketListIdentitySource } from './ticketListIdentity';
 export { calculateItilPriority, ItilLabels } from './itilUtils';
 export { getCommentResponseSource, getLatestCustomerResponseSource } from './responseSource';
+export { isTicketOpenerComment, getTicketOpenerAttachmentCount } from './ticketOpenerComment';
 export { resolveCommentAuthor } from './commentAuthorResolution';
 export {
   convertProseMirrorToTicketRichTextBlocks,

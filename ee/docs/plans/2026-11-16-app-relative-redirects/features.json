@@ -1,0 +1,9 @@
+[
+  {"id":"F001","description":"redirectToAppPath helper returns a redirect response with a relative Location (path, query, optional fragment), default status 307, optional extra headers, and no dependency on request origin, forwarded headers or environment.","implemented":false,"prdRefs":["App-path redirect helper"]},
+  {"id":"F002","description":"The helper rejects any destination that is not a single-slash-rooted app path (scheme, protocol-relative //host, backslash variants) so it cannot produce an off-site redirect.","implemented":false,"prdRefs":["App-path redirect helper","Security / Permissions"]},
+  {"id":"F003","description":"The helper can merge incoming request query parameters into the destination without overriding parameters the destination already has.","implemented":false,"prdRefs":["App-path redirect helper"]},
+  {"id":"F004","description":"The /msp/go/[target] route redirects through the helper; unknown targets still 404, query pass-through and Cache-Control: no-store are unchanged.","implemented":false,"prdRefs":["Go route"]},
+  {"id":"F005","description":"Other same-app redirects built from a request-derived origin (ApiMetadataController OpenAPI redirect, mobile handoff sign-in redirect, Teams auth callback, plus any found by the sweep) use the helper; sites that need an absolute URL stay on the public base URL helper and are recorded in SCRATCHPAD.md.","implemented":false,"prdRefs":["Other request-origin redirects"]},
+  {"id":"F006","description":"authorizationMiddleware redirects are checked against the origin the middleware resolves and corrected only if wrong behind the hosted proxy.","implemented":false,"prdRefs":["Other request-origin redirects"]},
+  {"id":"F007","description":"A source-level contract test fails when a route handler or controller passes a request-derived origin to a redirect, with a per-file allow-list that carries a reason.","implemented":false,"prdRefs":["Contract test"]}
+]

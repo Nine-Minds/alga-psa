@@ -18,7 +18,7 @@ append after an uncertain response could duplicate rows. This follows Google's
 
 | Suite label | Workflow | Recording condition |
 |---|---|---|
-| `unit-coverage` | `unit-tests.yml` | Always after the coverage job's steps, including PR runs |
+| `unit-coverage` | `unit-tests.yml` | Always after the coverage job's steps, including PR runs. The `coverage_by_dir` breakdown is written only for pushes to `main` |
 | `integration-tier1` | `integration-tests.yml` | Selected integration lane on push |
 | `integration-full` | `integration-tests.yml` | Selected full integration lane |
 | `infrastructure-full` | `integration-tests.yml` | Selected full infrastructure lane |
@@ -170,9 +170,9 @@ Collection writes `browser-metric-collection.json` alongside the reconciliation
 report. A failed collection remains a failed workflow, but retains its phase and
 error code in the artifact, job summary and log. HTTP failures include the status;
 a `sheet-row-limit-exceeded` failure includes the allocated grid row count and
-configured limit (currently 200,000, bounding the index scan only). Empty
-allocated rows count toward that limit, and reaching it means retention stopped
-running rather than that history grew normally.
+configured limit (currently 500,000, bounding the index scan only). Empty
+allocated rows count toward that limit. Reaching it means retention stopped
+running or run volume outgrew the limit.
 Diagnostics omit credentials, response bodies and upstream exception messages.
 The collection status `collected` means evidence was fetched; only the subsequent
 reconciliation decides whether the browser exports are complete.
@@ -235,6 +235,12 @@ Reading the whole grid was what broke this workflow: it appends roughly 80 rows
 per regression run and nothing deleted them, so the tab reached 19,091 rows and
 every reconcile refused it with `sheet-row-limit-exceeded`. Raising that cap only
 postpones the next failure and is not the fix.
+
+The cap still has to cover what retention keeps. In November 2026 the tab grew by
+about 4,000 rows a day and reached 263,963 rows with nothing yet past the window,
+above the 200,000 cap of the time. A 90-day window archived in whole ISO weeks by
+a weekly job peaks near 105 days of rows, about 420,000 at that volume, so the cap
+is 500,000. Revisit it if run volume grows, or shorten the window instead.
 
 `Browser metrics retention` (`.github/workflows/browser-metrics-retention.yml`,
 weekly on Sunday 06:10 UTC, plus manual dispatch) bounds the tab.
@@ -336,9 +342,10 @@ Any trendline crossing that date is wrong. Compare within one regime.
 
 ## Per-directory coverage
 
-The `unit-coverage` run also writes a breakdown to the `coverage_by_dir` tab:
-one row per source directory per run, with covered/total line counts alongside
-the percentages. Directories group at four path segments under
+A `unit-coverage` run on a push to `main` also writes a breakdown to the
+`coverage_by_dir` tab: one row per source directory per run, with covered/total
+line counts alongside the percentages. PR, branch and manual runs record only
+their `metrics` row (`recordsCoverageDetail` in `scripts/record-test-metrics.mjs`). Directories group at four path segments under
 `server/src/lib` (each subtree there is a whole subsystem), three elsewhere
 under `server/src`, and two for everything else — so `packages/billing`,
 `shared/workflow`, and `server/src/lib/actions` are each one row.
@@ -357,6 +364,29 @@ with two caveats:
   completely.
 - Directory percentages come from the server unit suite alone. A directory
   covered mainly by integration tests will read low here.
+
+### `coverage_by_dir` retention
+
+Until November 2026 every run wrote these rows, PR runs included, and nothing
+deleted them. The tab reached 711,367 rows, 12 million of the workbook's 20
+million allowed cells, and every append to the workbook started failing with
+`This action would increase the number of cells in the workbook above the limit`.
+
+`Coverage metrics retention` (`.github/workflows/coverage-metrics-retention.yml`,
+weekly on Sunday 06:40 UTC, plus manual dispatch) bounds the tab.
+`scripts/coverage-metrics-retention.mjs` deletes rows whose `timestamp_utc` is
+older than **90 days**, bottom-up with `deleteDimension`. It writes no summary:
+the per-run totals stay on the `metrics` tab. Rows with an unreadable timestamp
+and allocated empty rows are never deleted.
+
+Dry run is the default, and manual dispatch defaults to it. Before deleting, the
+job re-reads the timestamps of exactly the rows in its plan and refuses if any
+changed. A failed run is recorded on the `workflow_health` tab.
+
+```bash
+node scripts/coverage-metrics-retention.mjs            # dry run: print the plan
+node scripts/coverage-metrics-retention.mjs --apply    # delete rows past the window
+```
 
 The same two counts roll up onto the `metrics` row as `files_measured` /
 `files_total` (about 4,100 of 5,600 files at the time of writing), so the

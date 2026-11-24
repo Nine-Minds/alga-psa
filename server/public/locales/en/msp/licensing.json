@@ -505,8 +505,7 @@
         "save": "Save handoff defaults"
       },
       "client": {
-        "seatArrangement": "Seat arrangement",
-        "summary": "Seat arrangement: {{used}} of {{count}} seats used"
+        "seatArrangement": "Seat arrangement"
       },
       "technicians": {
         "sent": "Invitation sent.",
@@ -617,8 +616,6 @@
     },
     "client": {
       "awaitingAcceptance": "The customer administrator must accept before access is granted.",
-      "chooseRelationship": "Choose relationship",
-      "endedHint": "This relationship has ended. Retained history and archives remain available.",
       "endedOn": "Ended {{date}}",
       "failedHint": "Setup did not finish. Seats stay reserved; retry to continue it, or cancel the setup.",
       "forClient": "Co-managed IT for {{name}}",
@@ -636,7 +633,6 @@
       "setupHint": "Enable co-managed IT from this client to reserve customer technicians and invite an administrator.",
       "tab": "Co-managed IT",
       "viewDetails": "View details",
-      "viewHistory": "View history",
       "workspace": "Customer workspace",
       "seatUsage": "{{used}} of {{count}} technician seats",
       "seatAllocation": "{{count}} allocated technician seats"

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTeamsAvailability } from './teamsAvailability';
 import { resolveTeamsTabAuthState, type TeamsTabAuthState } from './resolveTeamsTabAuthState';
-import { buildTeamsReauthUrl } from './buildTeamsReauthUrl';
+import { redirectToAppPath } from '@alga-psa/core/redirectToAppPath';
+import { buildTeamsReauthPath } from './buildTeamsReauthUrl';
 import { isBotConnectorConfigured, sendBotActivity } from './bot/teamsBotConnector';
 import { findTeamsConversationReferenceByConversationId } from './bot/teamsConversationReferences';
 import { buildTeamsAdaptiveCard, buildAdaptiveImBackAction } from './bot/teamsAdaptiveCards';
@@ -269,8 +270,7 @@ export async function handleTeamsAuthCallback(
   });
 
   if (state.status === 'unauthenticated') {
-    const requestUrl = getRequestUrl(request);
-    return NextResponse.redirect(buildTeamsReauthUrl(requestUrl.origin, buildCallbackUrl(request)));
+    return redirectToAppPath(buildTeamsReauthPath(buildCallbackUrl(request)));
   }
 
   const availability = await getTeamsAvailability({
