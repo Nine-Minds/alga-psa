@@ -251,6 +251,72 @@ function scheduleState() {
 
 describe('simulator schedule line selection', () => {
   it.each([
+    ['JPY', 900, '950', 950, '1'],
+    ['KWD', 0.9, '0.951', 951, '0.001'],
+    ['USD', 9, '9.51', 951, '0.01'],
+  ])('round-trips schedule edits in %s minor units', (currencyCode, displayed, edited, stored, step) => {
+    render(<Harness currencyCode={currencyCode} initialLines={[fixedLine('line-a'), fixedLine('line-b')]} initialSchedules={[
+      { effective_date: '2026-06-01', end_date: null, custom_rate: 900 },
+    ]} />);
+    const input = screen.getByLabelText('Schedule rate');
+    expect(input).toHaveValue(displayed);
+    expect(input).toHaveAttribute('step', step);
+    fireEvent.change(input, { target: { value: edited } });
+    expect(scheduleState()[0]).toEqual({ effective_date: '2026-06-01', end_date: null, custom_rate: stored });
+    expect(input).toHaveValue(Number(edited));
+    fireEvent.change(input, { target: { value: '' } });
+    expect(scheduleState()[0].custom_rate).toBeNull();
+    expect(input).toHaveValue(null);
+    fireEvent.change(input, { target: { value: '0' } });
+    expect(scheduleState()[0].custom_rate).toBe(0);
+    expect(input).toHaveValue(0);
+    fireEvent.change(screen.getByLabelText('Applies To'), { target: { value: 'line-a' } });
+    fireEvent.change(input, { target: { value: edited } });
+    expect(scheduleState()[0]).toEqual({ effective_date: '2026-06-01', end_date: null, custom_rate: stored, contract_line_key: 'line-a' });
+    expect(input).toHaveValue(Number(edited));
+  });
+
+  it('preselects a non-product fallback service and excludes ineligible lines', () => {
+    const fallback: ScenarioLine = {
+      ...fixedLine('fallback'), custom_rate: 50000,
+      services: [{ ...usageService, item_kind: 'service' }],
+    };
+    const unitOnly = fixedLine('units', 'service', 'unit');
+    unitOnly.services.push({ ...usageService, item_kind: 'service' });
+    render(<Harness initialLines={[
+      fallback, unitOnly, initialLine,
+      { ...fallback, key: 'product', contract_line_name: 'product', services: [{ ...usageService, item_kind: 'product' }] },
+      { ...fallback, key: 'unknown', contract_line_name: 'unknown', services: [{ ...usageService, item_kind: null }] },
+      { ...fixedLine('empty'), services: [] },
+    ]} />);
+    const picker = screen.getByLabelText('Applies to');
+    expect(within(picker).getAllByRole('option').map((option) => option.textContent)).toEqual(['Select a fixed-fee line', 'fallback']);
+    expect(picker).toHaveValue('fallback');
+    fireEvent.click(screen.getByText('+ add schedule'));
+    expect(scheduleState()[0].contract_line_key).toBe('fallback');
+  });
+
+  it('counts fallback lines in legacy warnings and offers them for explicit re-scoping', () => {
+    const fallback: ScenarioLine = {
+      ...fixedLine('fallback'), custom_rate: 50000,
+      services: [{ ...usageService, item_kind: 'service' }],
+    };
+    render(<Harness initialLines={[fixedLine('line-a'), fixedLine('line-b'), fallback]} initialSchedules={[
+      { effective_date: '2026-06-01', end_date: null, custom_rate: 90000 },
+    ]} />);
+    expect(screen.getByRole('status')).toHaveTextContent('each of the 3 fixed-fee lines bills $900.00');
+    expect(screen.getByText('+ add schedule')).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Applies to'), { target: { value: 'fallback' } });
+    fireEvent.click(screen.getByText('+ add schedule'));
+    expect(scheduleState()[1].contract_line_key).toBe('fallback');
+    expect(scheduleState()[0].contract_line_key).toBeUndefined();
+    fireEvent.change(screen.getAllByLabelText('Applies To')[0], { target: { value: 'fallback' } });
+    expect(scheduleState()[0].contract_line_key).toBe('fallback');
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByRole('option', { name: 'Whole contract' })).toBeNull();
+  });
+
+  it.each([
     ['JPY', '¥900'], ['KWD', 'KWD\u00a00.900'],
   ])('formats legacy schedule minor units in %s', (currencyCode, amount) => {
     render(<Harness currencyCode={currencyCode} initialLines={[fixedLine('line-a'), fixedLine('line-b')]} initialSchedules={[

@@ -5,7 +5,7 @@ import { ChevronRight } from "lucide-react";
 import { Button } from "@alga-psa/ui/components/Button";
 import { DatePicker } from "@alga-psa/ui/components/DatePicker";
 import { UnitOfMeasureInput } from "@alga-psa/ui/components/UnitOfMeasureInput";
-import { toCalendarDateString } from "@alga-psa/core";
+import { currencyFractionDigits, toCalendarDateString } from "@alga-psa/core";
 import { labelForUnitCode } from "@alga-psa/core/unitOfMeasure";
 import { dateFromString, dateToString } from "@alga-psa/ui/lib/dateInput";
 import { cn } from "@alga-psa/ui/lib/utils";
@@ -318,13 +318,24 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
 }) => {
   const { t } = useTranslation("msp/contracts");
   const { money } = useCurrencyFormat();
-  const eligibleScheduleLines = lines.filter((line) =>
-    line.contract_line_type === "Fixed" && line.services.some((service) =>
-      service.item_kind !== "product" &&
-      service.configuration.configuration_type === "Fixed" &&
-      service.configuration.pricing_basis !== "unit",
-    ),
-  );
+  const scheduleRateFactor = 10 ** currencyFractionDigits(currencyCode);
+  const eligibleScheduleLines = lines.filter((line) => {
+    if (line.contract_line_type !== "Fixed") return false;
+    const services = line.services.filter((service) =>
+      service.item_kind != null && service.item_kind !== "product",
+    );
+    const fixedServices = services.filter((service) =>
+      service.configuration.configuration_type === "Fixed",
+    );
+    // Match live billing and the action guard: a non-product fallback bills
+    // the fixed fee only when no Fixed services exist. Unit members suppress it.
+    return fixedServices.length === 0
+      ? services.length > 0
+      : fixedServices.some((service) =>
+          service.configuration.configuration_type === "Fixed" &&
+          service.configuration.pricing_basis !== "unit",
+        );
+  });
   const [newScheduleLineKey, setNewScheduleLineKey] = useState("");
   const selectedScheduleLineKey = eligibleScheduleLines.some((line) => line.key === newScheduleLineKey)
     ? newScheduleLineKey
@@ -1647,11 +1658,12 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                       },
                     )}
                     type="number"
+                    step={1 / scheduleRateFactor}
                     className={`${fieldClass} ${adornedFieldClass}`}
                     value={
                       schedule.custom_rate == null
                         ? ""
-                        : schedule.custom_rate / 100
+                        : schedule.custom_rate / scheduleRateFactor
                     }
                     onChange={(event) =>
                       onPricingSchedulesChange(
@@ -1663,7 +1675,7 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                                   event.target.value === ""
                                     ? null
                                     : Math.round(
-                                        Number(event.target.value) * 100,
+                                        Number(event.target.value) * scheduleRateFactor,
                                       ),
                               }
                             : candidate,
