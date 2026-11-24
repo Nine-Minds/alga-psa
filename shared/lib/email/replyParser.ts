@@ -196,6 +196,35 @@ function isTrailingQuotedHistory(lines: string[], startIndex: number, config: Re
 }
 
 /**
+ * Does the attribution starting here introduce a quote the author wrote *around*, rather than
+ * the history trailing the message? Only a positive sighting counts: a `>`-quoted run followed
+ * by more authored text. Cutting at such an attribution deletes the customer's own answer —
+ * the reply-to-own-reply shape this parser exists to handle puts the answer right there
+ * (alga-2026-0003353). Mail whose quoted history is not `>`-prefixed (an Outlook envelope, an
+ * html-to-text rendition) shows no run, so it keeps being cut as before.
+ */
+function introducesInlineQuote(lines: string[], startIndex: number, config: ReplyParserConfig): boolean {
+  let sawQuotedLine = false;
+
+  for (let i = startIndex; i < lines.length; i += 1) {
+    const line = lines[i].trim();
+    if (!line) {
+      continue;
+    }
+    if (line.startsWith('>')) {
+      sawQuotedLine = true;
+      continue;
+    }
+    if (config.signatureMarkers.some((regex) => regex.test(line))) {
+      return false;
+    }
+    return sawQuotedLine;
+  }
+
+  return false;
+}
+
+/**
  * Gmail wraps a long `On <date> <Name> <addr> wrote:` attribution over two lines, so the
  * single-line `providerReplyHeaders` patterns miss it. Authored prose can wear the same clothes
  * ("On Tuesday I emailed jane@example.com about the invoice. / She wrote: / > …"), and cutting
@@ -610,7 +639,16 @@ function stripProviderHeaders(text: string, config: ReplyParserConfig): TrimResu
 
     if (config.providerReplyHeaders.some((regex) => regex.test(line))) {
       const headerField = classifyQuotedHeaderField(line);
-      if (headerField && !isCoherentQuotedHeaderBlock(lines, i)) {
+      if (headerField) {
+        // An Outlook envelope ends the reply only as a whole From/Sent/To/Subject block.
+        if (!isCoherentQuotedHeaderBlock(lines, i)) {
+          kept.push(rawLine);
+          continue;
+        }
+      } else if (introducesInlineQuote(lines, i + 1, config)) {
+        // An `On … wrote:` line with the author still writing below its quote introduces an
+        // inline quote. Keep the line, drop its quoted run below, and keep reading: the words
+        // under it are the customer's.
         kept.push(rawLine);
         continue;
       }

@@ -132,4 +132,55 @@ That timeline works for us, so please book the Wednesday install.`,
     expect(result.sanitizedText).toContain('Here is where we landed with the vendor.');
     expect(result.sanitizedText).toContain('That timeline works for us, so please book the Wednesday install.');
   });
+
+  it('keeps the answer under a single-line attribution the author quoted inline', () => {
+    // A reply to an Alga notification: the Alga boundary cuts the notification off, and the
+    // attribution above the author's own inline quote must not take their answer with it.
+    // Co-managed replies store this text verbatim, so losing it here loses the customer's words.
+    const result = parseEmailReply({
+      text: `Answers inline.
+
+On Mon, Nov 17, 2026 at 8:42 AM Dana Tech <dana@msp.test> wrote:
+> do you want the monitors too?
+
+Yes please, two of them.
+
+--- Please reply above this line ---
+Ticket Update: monitor order`,
+    });
+
+    expect(result.sanitizedText).toContain('Answers inline.');
+    expect(result.sanitizedText).toContain('Yes please, two of them.');
+    expect(result.sanitizedText).not.toContain('do you want the monitors too?');
+    expect(result.sanitizedText).not.toContain('Ticket Update');
+  });
+
+  it('keeps the answer under a single-line attribution with no Alga boundary', () => {
+    const result = parseEmailReply({
+      text: `Answers inline.
+
+On Mon, Nov 17, 2026 at 8:42 AM Dana Tech <dana@msp.test> wrote:
+> do you want the monitors too?
+
+Yes please, two of them.`,
+    });
+
+    expect(result.sanitizedText).toContain('Yes please, two of them.');
+  });
+
+  it('still trims an attribution whose quoted history carries no > prefix', () => {
+    // An html-to-text rendition quotes by position, not with `>`. There is no inline-quote
+    // run to spot, so the attribution keeps ending the reply as it always has.
+    const result = parseEmailReply({
+      text: `Rebooted and all good now.
+
+On Mon, Nov 17, 2026 at 8:42 AM Dana Tech <dana@msp.test> wrote:
+
+Ticket Update: Printer offline
+We have dispatched a technician to floor 3.`,
+    });
+
+    expect(result.appliedHeuristics).toContain('provider-header');
+    expect(result.sanitizedText).toBe('Rebooted and all good now.');
+  });
 });
