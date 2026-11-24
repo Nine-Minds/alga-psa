@@ -204,7 +204,8 @@ describe('tag workflow actions (DB-backed)', () => {
     await expect(invoke('tags.add', { entity_type: 'client', entity_id: clientId, tags: [other] }))
       .rejects.toMatchObject({ code: 'PERMISSION_DENIED', details: { resource: 'client', action: 'update' } });
     expect(await definitionCount(other, 'client')).toBe(0);
-    expect(await mappings(clientId)).toHaveLength(0);
+    // The client fixture is shared with the earlier client test, so assert on the denied tag only.
+    expect(await texts(clientId)).not.toContain(other);
 
     runtimeState.deniedResources.add('ticket:update');
     await expect(invoke('tags.remove', { entity_type: 'ticket', entity_id: ticketId, tags: [text] }))
