@@ -575,6 +575,37 @@ describe('enterprise brand assets in the plan', () => {
     }
   });
 
+  /**
+   * The consequence of reading a missing footer row as ours
+   * (see classifyTenantTemplate.ts): a tenant who deleted the row by hand gets
+   * it back on the next apply, because deleting it is indistinguishable from
+   * the row an apply writes with the attribution hidden. The Enterprise toggle
+   * is the supported way to drop that footer, and it keeps working.
+   */
+  it('restores a footer row the tenant deleted by hand', () => {
+    const footerRow = /<tr[^>]*>\s*<td[^>]*>\s*Powered by AlgaPSA[^<]*<\/td>\s*<\/tr>/;
+    const tenantRows = NAMES.map((name, index) => {
+      const row = brandedRow(980 + index, name, 'en');
+      expect(row.html_content).toMatch(footerRow);
+      return { ...row, html_content: row.html_content.replace(footerRow, '') };
+    });
+
+    const plan = planEmailBrandingApply({
+      systemRows: SYSTEM_ROWS,
+      tenantRows,
+      target: TERRACOTTA,
+      appliedPalette: TERRACOTTA,
+      scope: { names: NAMES, languages: ['en'] },
+      decorate: (html: string) => decorateBrandedHtml(html, { logo }),
+    });
+
+    expect(plan.skipped).toEqual([]);
+    expect(plan.updates).toHaveLength(3);
+    for (const update of plan.updates) {
+      expect(containsBrandAttribution(update.html)).toBe(true);
+    }
+  });
+
   it('still recognizes those rows as its own on a re-apply', () => {
     const tenantRows = applyOnce();
     const plan = planEmailBrandingApply({

@@ -201,6 +201,29 @@ describe('classifyTenantTemplate with enterprise brand assets', () => {
     expect(result.differs).toContain('text');
   });
 
+  /**
+   * A footer row deleted by hand is the same bytes as the row an apply writes
+   * with the attribution hidden, so it reads as ours and an apply puts it back.
+   * That is the deliberate side to take: the row carries nothing but our
+   * attribution and slogan, the toggle that removes it is Enterprise-only, and
+   * reading its absence as a hand edit would mean a tenant who hid the
+   * attribution could never restore the footer by turning the toggle on again.
+   */
+  it('treats a footer row deleted by hand as ours, not as a customization', () => {
+    const footerRow = /<tr[^>]*>\s*<td[^>]*>\s*Powered by AlgaPSA[^<]*<\/td>\s*<\/tr>/;
+    expect(brandedRow.html_content).toMatch(footerRow);
+    const stored = brandedRow.html_content.replace(footerRow, '');
+
+    expect(stored).not.toContain('Powered by AlgaPSA');
+    expect(stored).not.toContain('Keeping teams aligned');
+
+    expect(classifyTenantTemplate({
+      tenantRow: { ...brandedRow, html_content: stored },
+      systemRow,
+      appliedPalette: TERRACOTTA,
+    })).toEqual({ state: 'branded', differs: [] });
+  });
+
   it('still calls a copy edit on such a row customized', () => {
     const decorated = decorateBrandedHtml(brandedRow.html_content, { logo, hideAttribution: true })
       .replace('View Ticket', 'Open in our portal');
