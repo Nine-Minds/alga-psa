@@ -37,6 +37,7 @@ export function OpportunityStepTimeline({
   onStageSelect,
   onOpenCitation,
   canOpenInteraction,
+  onEditEvidence,
   onCompleteStep,
   onEditStep,
   onDeleteStep,
@@ -54,6 +55,8 @@ export function OpportunityStepTimeline({
   onStageSelect?: (stage: PlannableStage) => void;
   onOpenCitation?: (type: 'interaction' | 'document', id: string) => void;
   canOpenInteraction?: boolean;
+  /** Opens the evidence editor for a reached stage. Absent: no Edit evidence control. */
+  onEditEvidence?: (stage: PlannableStage) => void;
   onCompleteStep: (step: IOpportunityStep) => void;
   onEditStep: (step: IOpportunityStep, focus: StepEditFocus) => void;
   onDeleteStep: (step: IOpportunityStep) => void;
@@ -117,6 +120,7 @@ export function OpportunityStepTimeline({
             onStageSelect={onStageSelect}
             onOpenCitation={onOpenCitation}
             canOpenInteraction={canOpenInteraction}
+            onEditEvidence={onEditEvidence}
             onCompleteStep={onCompleteStep}
             onEditStep={onEditStep}
             onDeleteStep={onDeleteStep}
@@ -184,6 +188,7 @@ function StageSegment({
   onStageSelect,
   onOpenCitation,
   canOpenInteraction,
+  onEditEvidence,
   onCompleteStep,
   onEditStep,
   onDeleteStep,
@@ -200,6 +205,8 @@ function StageSegment({
   onStageSelect?: (stage: PlannableStage) => void;
   onOpenCitation?: (type: 'interaction' | 'document', id: string) => void;
   canOpenInteraction?: boolean;
+  /** Opens the evidence editor for a reached stage. Absent: no Edit evidence control. */
+  onEditEvidence?: (stage: PlannableStage) => void;
   onCompleteStep: (step: IOpportunityStep) => void;
   onEditStep: (step: IOpportunityStep, focus: StepEditFocus) => void;
   onDeleteStep: (step: IOpportunityStep) => void;
@@ -285,11 +292,14 @@ function StageSegment({
       </div>
       <div className={`min-w-0 flex-1 ${isLast ? 'pb-1' : 'pb-4'}`}>
         <div className="flex min-h-7 items-center gap-2">{heading}</div>
-        <EvidenceCitation
+        <RungDeclaration
           idBase={idBase}
-          evidence={evidence?.evidence}
+          stage={stage}
+          reached={state === 'reached'}
+          declaration={evidence?.declaration ?? null}
           onOpenCitation={onOpenCitation}
           canOpenInteraction={canOpenInteraction}
+          onEditEvidence={onEditEvidence}
         />
         {steps.length > 0 ? (
           <div className="mt-2 space-y-2">
@@ -332,53 +342,85 @@ function StageSegment({
 }
 
 /**
- * The source a declaration cites. A live source is a link; a deleted one is a
- * muted chip and the rung otherwise renders as normal.
+ * What a reached rung says about itself: the declaration's note, the sources it
+ * cites as links, and the control that edits both. A deleted source is a muted
+ * chip and the rung otherwise renders as normal. Identified has no checkpoint,
+ * so it has no declaration to edit.
  */
-function EvidenceCitation({
+function RungDeclaration({
   idBase,
-  evidence,
+  stage,
+  reached,
+  declaration,
   onOpenCitation,
   canOpenInteraction,
+  onEditEvidence,
 }: {
   idBase: string;
-  evidence: IOpportunityEvidenceLadderStep['evidence'];
+  stage: PlannableStage;
+  reached: boolean;
+  declaration: IOpportunityEvidenceLadderStep['declaration'];
   onOpenCitation?: (type: 'interaction' | 'document', id: string) => void;
   canOpenInteraction?: boolean;
+  onEditEvidence?: (stage: PlannableStage) => void;
 }) {
   const { t } = useTranslation('msp/opportunities');
-  const type = evidence?.ref_type;
-  if (!evidence || (type !== 'interaction' && type !== 'document') || !evidence.ref_id) return null;
-  if (evidence.ref_missing) {
-    return (
-      <div className="mt-1">
-        <Badge id={`${idBase}-source-removed`} variant="default-muted" size="sm">
-          {t('opportunities.declare.sourceRemoved', 'Source removed')}
-        </Badge>
-      </div>
-    );
-  }
-  const fallback = type === 'interaction'
-    ? t('opportunities.declare.interactionFallback', 'Interaction')
-    : t('opportunities.declare.documentFallback', 'Document');
-  const label = evidence.ref_label || fallback;
-  const refId = evidence.ref_id;
+  const note = declaration?.note?.trim() ? declaration.note : null;
+  const citations = declaration?.citations ?? [];
+  const canEdit = Boolean(onEditEvidence) && reached && stage !== 'identified';
+  if (!note && citations.length === 0 && !canEdit) return null;
+
+  const editLabel = declaration
+    ? t('opportunities.declare.editEvidence', 'Edit evidence')
+    : t('opportunities.declare.addEvidence', 'Add evidence');
+
   return (
-    <div className="mt-1 flex min-w-0 items-center gap-1.5 text-xs">
-      <span className="text-[rgb(var(--color-text-500))]">{t('opportunities.declare.source', 'Source')}:</span>
-      {onOpenCitation && (type === 'document' || canOpenInteraction) ? (
-        <button
-          id={`${idBase}-source-link`}
-          type="button"
-          onClick={() => onOpenCitation?.(type, refId)}
-          className="min-w-0 truncate text-[rgb(var(--color-primary-600))] hover:underline"
-          title={label}
+    <div id={`${idBase}-declaration`} className="mt-1 space-y-1 text-xs">
+      {note ? (
+        <p id={`${idBase}-note`} className="whitespace-pre-wrap text-[13px] text-[rgb(var(--color-text-700))]">{note}</p>
+      ) : null}
+      {citations.length > 0 ? (
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="text-[rgb(var(--color-text-500))]">{t('opportunities.declare.source', 'Source')}:</span>
+          {citations.map((citation) => {
+            if (citation.missing) {
+              return (
+                <Badge key={citation.citation_id} id={`${idBase}-source-removed-${citation.citation_id}`} variant="default-muted" size="sm">
+                  {t('opportunities.declare.sourceRemoved', 'Source removed')}
+                </Badge>
+              );
+            }
+            const fallback = citation.type === 'interaction'
+              ? t('opportunities.declare.interactionFallback', 'Interaction')
+              : t('opportunities.declare.documentFallback', 'Document');
+            const text = citation.label || fallback;
+            return onOpenCitation && (citation.type === 'document' || canOpenInteraction) ? (
+              <button
+                key={citation.citation_id}
+                id={`${idBase}-source-link-${citation.citation_id}`}
+                type="button"
+                onClick={() => onOpenCitation(citation.type, citation.id)}
+                className="min-w-0 max-w-full truncate text-[rgb(var(--color-primary-600))] hover:underline"
+                title={text}
+              >
+                {text}
+              </button>
+            ) : (
+              <span key={citation.citation_id} className="min-w-0 max-w-full truncate" title={text}>{text}</span>
+            );
+          })}
+        </div>
+      ) : null}
+      {canEdit ? (
+        <Button
+          id={`${idBase}-edit-evidence`}
+          size="xs"
+          variant="ghost"
+          onClick={() => onEditEvidence?.(stage)}
         >
-          {label}
-        </button>
-      ) : (
-        <span className="min-w-0 truncate" title={label}>{label}</span>
-      )}
+          {editLabel}
+        </Button>
+      ) : null}
     </div>
   );
 }

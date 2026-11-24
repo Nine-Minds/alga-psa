@@ -361,6 +361,7 @@ const TENANT_TABLE_METADATA = {
   online_meetings: { scope: 'tenant' },
   opportunities: { scope: 'tenant' },
   opportunity_evidence: { scope: 'tenant' },
+  opportunity_evidence_citations: { scope: 'tenant' },
   opportunity_suggestions: { scope: 'tenant' },
   opportunity_meeting_sessions: { scope: 'tenant' },
   opportunity_meeting_reviews: { scope: 'tenant' },

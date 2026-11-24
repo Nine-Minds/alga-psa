@@ -31,14 +31,10 @@ describe('manual opportunity stage declarations', () => {
     )).toBe('proposed');
   });
 
-  it('records forward declarations as user-declared evidence', () => {
-    expect(buildStageDeclarationPlan([], 'assessment', 'Assessment confirmed')).toEqual({
+  it('records forward declarations as user-declared evidence with no placeholder note', () => {
+    expect(buildStageDeclarationPlan([], 'assessment')).toEqual({
       correctionEvidenceIds: [],
-      evidence: {
-        checkpoint: 'assessment',
-        source: 'user_declared',
-        detail: 'Assessment confirmed',
-      },
+      evidence: { checkpoint: 'assessment', source: 'user_declared' },
     });
   });
 

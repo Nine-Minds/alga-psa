@@ -471,7 +471,8 @@
       "whitespaceSuggestionCreated": "Suggestion prête à être examinée",
       "whitespaceSuggestionDismissed": "Cette suggestion a été précédemment rejetée",
       "whitespaceSuggestionKnown": "Cette suggestion est déjà connue",
-      "won": "Gagné"
+      "won": "Gagné",
+      "evidenceSaved": "Preuves enregistrées"
     },
     "type": {
       "expansion": "Extension",
@@ -569,14 +570,25 @@
     },
     "declare": {
       "title": "Passer à {{stage}}",
-      "sourceLabel": "Source justificative",
-      "noSource": "Aucune source",
-      "sourceHelp": "Facultatif. Citez une interaction ou un document de cette opportunité. Joignez d'abord le document à l'opportunité s'il n'apparaît pas.",
+      "sourceHelp": "Facultatif. Citez des interactions ou des documents de cette affaire. Rattachez d'abord un document à l'affaire s'il n'apparaît pas.",
       "submit": "Déclarer",
       "source": "Source",
       "sourceRemoved": "Source supprimée",
       "interactionFallback": "Interaction",
-      "documentFallback": "Document"
+      "documentFallback": "Document",
+      "editTitle": "Preuves pour {{stage}}",
+      "noteLabel": "Note",
+      "notePlaceholder": "Qu'est-ce qui montre que l'affaire en est à cette étape ?",
+      "sourcesLabel": "Sources justificatives",
+      "groupInteractions": "Interactions",
+      "groupDocuments": "Documents",
+      "removeSource": "Retirer la source",
+      "sourcesLoading": "Chargement des sources…",
+      "addSource": "Ajouter une source",
+      "noSourcesAvailable": "Aucune autre interaction ni aucun autre document sur cette affaire",
+      "save": "Enregistrer",
+      "editEvidence": "Modifier les preuves",
+      "addEvidence": "Ajouter une preuve"
     }
   }
 }
