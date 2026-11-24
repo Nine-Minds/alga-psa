@@ -24132,6 +24132,223 @@
         ],
         "description": "Payload for creating a project task within a phase. Provide project_status_mapping_id as a UUID from the project task status mappings endpoint. The phaseId path parameter selects which phase will receive the task."
       },
+      "ProjectMaterialParams": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Project UUID."
+          },
+          "materialId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Project material UUID."
+          }
+        },
+        "required": [
+          "id",
+          "materialId"
+        ]
+      },
+      "ProjectMaterialResource": {
+        "type": "object",
+        "properties": {
+          "project_material_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "client_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "service_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "service_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sku": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "rate": {
+            "type": "number",
+            "description": "Integer minor units (cents)."
+          },
+          "currency_code": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "is_billed": {
+            "type": "boolean"
+          },
+          "billed_invoice_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "billed_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "billing_destination": {
+            "type": "string",
+            "enum": [
+              "next_project_invoice",
+              "schedule_entry",
+              "separate",
+              "project_completion",
+              "on_hold"
+            ]
+          },
+          "billing_schedule_entry_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "from_staging_line_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "project_material_id",
+          "project_id",
+          "client_id",
+          "service_id",
+          "quantity",
+          "rate",
+          "currency_code",
+          "is_billed",
+          "billing_destination"
+        ]
+      },
+      "ProjectMaterialEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ProjectMaterialResource"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ProjectMaterialListEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectMaterialResource"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ProjectMaterialCreateBody": {
+        "type": "object",
+        "properties": {
+          "service_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "rate": {
+            "type": "number",
+            "minimum": 0
+          },
+          "currency_code": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 1000
+          },
+          "unit_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "billing_destination": {
+            "type": "string",
+            "enum": [
+              "next_project_invoice",
+              "schedule_entry",
+              "separate",
+              "project_completion",
+              "on_hold"
+            ]
+          },
+          "billing_schedule_entry_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "service_id",
+          "quantity",
+          "rate",
+          "currency_code"
+        ],
+        "additionalProperties": false,
+        "description": "Material to add to a project. client_id is taken from the project and is rejected if sent; allow_reserved_override is not accepted. rate is integer minor units. unit_id is required for serialized stock-tracked products."
+      },
       "ProjectTaskCommentParams": {
         "type": "object",
         "properties": {
@@ -95188,6 +95405,301 @@
           },
           "404": {
             "description": "Project task not found, or its parent project could not be resolved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/materials": {
+      "get": {
+        "summary": "List project materials",
+        "description": "Returns the materials (products) recorded against a project, newest first, with product name and SKU. Requires project:read and read access to the project.",
+        "tags": [
+          "Projects"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-header-required": true,
+          "x-rbac-resource": "project",
+          "x-rbac-action": "read",
+          "x-chat-callable": true,
+          "x-chat-display-name": "List Project Materials",
+          "x-chat-rbac-resource": "project",
+          "x-chat-approval-required": false
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Project UUID."
+            },
+            "required": true,
+            "description": "Project UUID.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project materials returned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectMaterialListEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid project identifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks project read permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Add a project material",
+        "description": "Adds a product to a project with quantity, rate and currency. A stock-tracked product consumes stock and a serialized product delivers the picked unit_id. Insufficient stock, or stock reserved or held for a sales order, is refused with 400 on quantity and nothing is written. Requires project:update. Returns the created material.",
+        "tags": [
+          "Projects"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-header-required": true,
+          "x-rbac-resource": "project",
+          "x-rbac-action": "update",
+          "x-chat-callable": true,
+          "x-chat-display-name": "Add Project Material",
+          "x-chat-rbac-resource": "project",
+          "x-chat-approval-required": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Project UUID."
+            },
+            "required": true,
+            "description": "Project UUID.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectMaterialCreateBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Material added.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectMaterialEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body (field path reported), insufficient or reserved stock (path: quantity).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks project update permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/materials/{materialId}": {
+      "delete": {
+        "summary": "Delete a project material",
+        "description": "Deletes an unbilled material from the project and restores the stock it consumed. Returns 404 if the material does not belong to the project, and 409 if it has been billed. Requires project:update.",
+        "tags": [
+          "Projects"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-header-required": true,
+          "x-rbac-resource": "project",
+          "x-rbac-action": "update",
+          "x-chat-callable": true,
+          "x-chat-display-name": "Delete Project Material",
+          "x-chat-rbac-resource": "project",
+          "x-chat-approval-required": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Project UUID."
+            },
+            "required": true,
+            "description": "Project UUID.",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Project material UUID."
+            },
+            "required": true,
+            "description": "Project material UUID.",
+            "name": "materialId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Material deleted and stock restored."
+          },
+          "400": {
+            "description": "Invalid identifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks project update permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found, or the material does not belong to it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The material has been billed and cannot be deleted.",
             "content": {
               "application/json": {
                 "schema": {

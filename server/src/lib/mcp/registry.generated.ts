@@ -44402,6 +44402,178 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ]
   },
   {
+    "id": "get-_api_v1_projects_id_materials",
+    "method": "get",
+    "path": "/api/v1/projects/{id}/materials",
+    "displayName": "List project materials",
+    "summary": "List project materials",
+    "description": "Returns the materials (products) recorded against a project, newest first, with product name and SKU. Requires project:read and read access to the project.",
+    "tags": [
+      "Projects"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Project UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/ProjectMaterialResource"
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_projects_id_materials",
+    "method": "post",
+    "path": "/api/v1/projects/{id}/materials",
+    "displayName": "Add a project material",
+    "summary": "Add a project material",
+    "description": "Adds a product to a project with quantity, rate and currency. A stock-tracked product consumes stock and a serialized product delivers the picked unit_id. Insufficient stock, or stock reserved or held for a sales order, is refused with 400 on quantity and nothing is written. Requires project:update. Returns the created material.",
+    "tags": [
+      "Projects"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Project UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project UUID."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "service_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "quantity": {
+          "type": "integer",
+          "exclusiveMinimum": 0
+        },
+        "rate": {
+          "type": "number",
+          "minimum": 0
+        },
+        "currency_code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1000
+        },
+        "unit_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "billing_destination": {
+          "type": "string",
+          "enum": [
+            "next_project_invoice",
+            "schedule_entry",
+            "separate",
+            "project_completion",
+            "on_hold"
+          ]
+        },
+        "billing_schedule_entry_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "service_id",
+        "quantity",
+        "rate",
+        "currency_code"
+      ],
+      "additionalProperties": false,
+      "description": "Material to add to a project. client_id is taken from the project and is rejected if sent; allow_reserved_override is not accepted. rate is integer minor units. unit_id is required for serialized stock-tracked products."
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/ProjectMaterialResource"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_projects_id_materials_materialid",
+    "method": "delete",
+    "path": "/api/v1/projects/{id}/materials/{materialId}",
+    "displayName": "Delete a project material",
+    "summary": "Delete a project material",
+    "description": "Deletes an unbilled material from the project and restores the stock it consumed. Returns 404 if the material does not belong to the project, and 409 if it has been billed. Requires project:update.",
+    "tags": [
+      "Projects"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Project UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project UUID."
+        }
+      },
+      {
+        "name": "materialId",
+        "in": "path",
+        "required": true,
+        "description": "Project material UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project material UUID."
+        }
+      }
+    ]
+  },
+  {
     "id": "get-_api_v1_projects_tasks_taskid_comments",
     "method": "get",
     "path": "/api/v1/projects/tasks/{taskId}/comments",
