@@ -1,10 +1,15 @@
 import type {
   LabelClass,
   TemplateAst,
+  TemplateBarcodeNode,
   TemplateFieldNode,
   TemplateI18nRef,
+  TemplateImageNode,
   TemplateNode,
+  TemplateRichTextNode,
+  TemplateStackNode,
   TemplateStyleDeclaration,
+  TemplateTextNode,
 } from '@alga-psa/types';
 import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
 
@@ -62,7 +67,7 @@ type InlineStyle = TemplateStyleDeclaration;
  * (an RMM asset tag such as `levelio:Z2lkOi8v...` has no break opportunities), and a block capped with
  * `maxHeight` clips at the cap instead of spilling into the next line or off the label.
  */
-const text = (id: string, bindingId: string, inline: InlineStyle): Node => ({
+const text = (id: string, bindingId: string, inline: InlineStyle): TemplateTextNode => ({
   id,
   type: 'text',
   content: { type: 'binding', bindingId },
@@ -76,7 +81,7 @@ const text = (id: string, bindingId: string, inline: InlineStyle): Node => ({
   },
 });
 
-const qr = (id: string, size: string): Node => ({
+const qr = (id: string, size: string): TemplateBarcodeNode => ({
   id,
   type: 'barcode',
   symbology: 'qr',
@@ -84,7 +89,7 @@ const qr = (id: string, size: string): Node => ({
   style: { inline: { width: size, height: size, flexShrink: '0' } },
 });
 
-const code128 = (id: string): Node => ({
+const code128 = (id: string): TemplateBarcodeNode => ({
   id,
   type: 'barcode',
   symbology: 'code128',
@@ -97,7 +102,7 @@ const code128 = (id: string): Node => ({
  * The issuer logo (inlined as a `data:` URL by the PDF service). It renders nothing when the tenant has no
  * logo or the logo could not be read, and it collapses the text brand line (`tenantBrandText`).
  */
-const logo = (id: string, heightMm: number, extra: InlineStyle = {}): Node => ({
+const logo = (id: string, heightMm: number, extra: InlineStyle = {}): TemplateImageNode => ({
   id,
   type: 'image',
   src: { type: 'binding', bindingId: 'tenantLogo' },
@@ -114,7 +119,7 @@ const logo = (id: string, heightMm: number, extra: InlineStyle = {}): Node => ({
   },
 });
 
-const brandLine = (): Node =>
+const brandLine = (): TemplateTextNode =>
   text('brand', 'tenantBrandText', { fontSize: '8px', lineHeight: 1.2, maxHeight: '9.6px', color: '#4b5563' });
 
 /**
@@ -172,7 +177,7 @@ const lines = (count: number, fontPx: number, lineHeight: number) => ({
   maxHeight: `${(count * fontPx * lineHeight).toFixed(1)}px`,
 });
 
-const identifier = (id: string, fontPx: number): Node =>
+const identifier = (id: string, fontPx: number): TemplateTextNode =>
   text(id, 'identifier', { fontSize: `${fontPx}px`, fontWeight: 800, fontFamily: '"JetBrains Mono", monospace', lineHeight: 1.1 });
 
 /**
@@ -203,6 +208,118 @@ const worksheetField = (id: string, bindingId: string, labelText: TemplateI18nRe
   style: { inline: { ...WORKSHEET_FIELD_STYLE } },
 });
 
+const buildWorksheetHeader = (): TemplateStackNode => ({
+  id: 'header',
+  type: 'stack',
+  direction: 'row',
+  style: { inline: { width: '100%', display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: '24px' } },
+  children: [
+    {
+      id: 'header-text',
+      type: 'stack',
+      direction: 'column',
+      style: { inline: { minWidth: '0', flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '4px' } },
+      children: [
+        {
+          id: 'logo',
+          type: 'image',
+          src: { type: 'binding', bindingId: 'tenantLogo' },
+          alt: { type: 'binding', bindingId: 'tenantName' },
+          style: { inline: { width: '180px', height: 'auto', maxHeight: '72px', objectFit: 'contain', objectPosition: 'left center' } },
+        },
+        {
+          id: 'ticket-number',
+          type: 'stack',
+          direction: 'row',
+          style: { inline: { gap: '0.25em', fontSize: '30px', fontWeight: 800, fontFamily: 'monospace', lineHeight: '1.2' } },
+          children: [
+            {
+              id: 'ticket-number-label',
+              type: 'text',
+              content: { type: 'i18n', i18nKey: 'labels.worksheet.ticketNumber', defaultValue: 'Ticket #' },
+              style: { inline: { margin: '0' } },
+            },
+            text('ticket-number-value', 'identifier', { minWidth: '0', flex: '1 1 0', overflowWrap: 'anywhere' }),
+          ],
+        },
+        {
+          id: 'ticket-title',
+          type: 'text',
+          content: { type: 'binding', bindingId: 'title' },
+          style: { inline: { margin: '0', fontSize: '20px', fontWeight: 600, lineHeight: '1.3', overflowWrap: 'anywhere' } },
+        },
+      ],
+    },
+    {
+      id: 'header-code',
+      type: 'stack',
+      direction: 'column',
+      style: { inline: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' } },
+      // The QR scans straight to the ticket, the same code the 4 x 2 in tag carries.
+      children: [qr('qr', '120px')],
+    },
+  ],
+});
+
+const buildWorksheetInfo = (): TemplateStackNode => ({
+  id: 'info',
+  type: 'stack',
+  direction: 'row',
+  style: { inline: { width: '100%', display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: '32px' } },
+  children: [
+    {
+      id: 'info-left',
+      type: 'stack',
+      direction: 'column',
+      style: { inline: { minWidth: '0', flexGrow: 1, flexBasis: '0', display: 'flex', flexDirection: 'column', gap: '8px' } },
+      children: [
+        worksheetField('fld-name', 'clientName', { i18nKey: 'labels.worksheet.customer', defaultValue: 'Customer' }),
+        worksheetField('fld-asset', 'secondaryIdentifier', { i18nKey: 'labels.worksheet.assetTag', defaultValue: 'Asset Tag' }),
+        worksheetField('fld-serial', 'assetSerialNumber', { i18nKey: 'labels.worksheet.serial', defaultValue: 'Serial' }),
+      ],
+    },
+    {
+      id: 'info-right',
+      type: 'stack',
+      direction: 'column',
+      style: { inline: { minWidth: '0', flexGrow: 1, flexBasis: '0', display: 'flex', flexDirection: 'column', gap: '8px' } },
+      children: [
+        worksheetField('fld-custody', 'custodyLocation', { i18nKey: 'labels.worksheet.custodyLocation', defaultValue: 'Custody location' }),
+        worksheetField('fld-next', 'nextAction', { i18nKey: 'labels.worksheet.nextAction', defaultValue: 'Next action' }),
+      ],
+    },
+  ],
+});
+
+const buildWorksheetAssetSpecs = (): TemplateStackNode => ({
+  id: 'asset-specs',
+  type: 'stack',
+  direction: 'column',
+  style: { inline: { display: 'flex', flexDirection: 'column', gap: '4px' } },
+  children: [
+    {
+      id: 'asset-specs-heading',
+      type: 'text',
+      content: { type: 'i18n', i18nKey: 'labels.worksheet.assetSpecifications', defaultValue: 'Asset Specifications' },
+      style: { inline: { margin: '0 0 6px 0', color: '#111827', fontSize: '15px', fontWeight: 700 } },
+    },
+    worksheetField('spec-name', 'assetName', { i18nKey: 'labels.worksheet.assetName', defaultValue: 'Name' }),
+    worksheetField('spec-make', 'assetManufacturer', { i18nKey: 'labels.worksheet.make', defaultValue: 'Make' }),
+    worksheetField('spec-model', 'assetModel', { i18nKey: 'labels.worksheet.model', defaultValue: 'Model' }),
+    worksheetField('spec-os', 'assetOs', { i18nKey: 'labels.worksheet.os', defaultValue: 'Operating system' }),
+    worksheetField('spec-cpu', 'assetCpu', { i18nKey: 'labels.worksheet.cpu', defaultValue: 'CPU' }),
+    worksheetField('spec-ram', 'assetRam', { i18nKey: 'labels.worksheet.ram', defaultValue: 'RAM' }),
+    worksheetField('spec-storage', 'assetStorage', { i18nKey: 'labels.worksheet.storage', defaultValue: 'Storage' }),
+  ],
+});
+
+const buildWorksheetDetails = (): TemplateRichTextNode => ({
+  id: 'fld-details',
+  type: 'richText',
+  content: { type: 'binding', bindingId: 'ticketDescriptionRichText' },
+  style: { inline: { margin: '0', fontSize: '14px', lineHeight: '1.6', overflowWrap: 'anywhere' } },
+});
+
 const buildTicketCustomerWorksheet = (paper: 'letter' | 'a4'): TemplateAst => ({
   kind: 'invoice-template-ast',
   version: TEMPLATE_AST_VERSION,
@@ -228,110 +345,11 @@ const buildTicketCustomerWorksheet = (paper: 'letter' | 'a4'): TemplateAst => ({
       },
     },
     children: [
-      {
-        id: 'header',
-        type: 'stack',
-        direction: 'row',
-        style: { inline: { width: '100%', display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: '24px' } },
-        children: [
-          {
-            id: 'header-text',
-            type: 'stack',
-            direction: 'column',
-            style: { inline: { minWidth: '0', flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '4px' } },
-            children: [
-              {
-                id: 'logo',
-                type: 'image',
-                src: { type: 'binding', bindingId: 'tenantLogo' },
-                alt: { type: 'binding', bindingId: 'tenantName' },
-                style: { inline: { width: '180px', height: 'auto', maxHeight: '72px', objectFit: 'contain', objectPosition: 'left center' } },
-              },
-              {
-                id: 'ticket-number',
-                type: 'stack',
-                direction: 'row',
-                style: { inline: { gap: '0.25em', fontSize: '30px', fontWeight: 800, fontFamily: 'monospace', lineHeight: '1.2' } },
-                children: [
-                  {
-                    id: 'ticket-number-label',
-                    type: 'text',
-                    content: { type: 'i18n', i18nKey: 'labels.worksheet.ticketNumber', defaultValue: 'Ticket #' },
-                    style: { inline: { margin: '0' } },
-                  },
-                  text('ticket-number-value', 'identifier', { minWidth: '0', flex: '1 1 0', overflowWrap: 'anywhere' }),
-                ],
-              },
-              {
-                id: 'ticket-title',
-                type: 'text',
-                content: { type: 'binding', bindingId: 'title' },
-                style: { inline: { margin: '0', fontSize: '20px', fontWeight: 600, lineHeight: '1.3', overflowWrap: 'anywhere' } },
-              },
-            ],
-          },
-          {
-            id: 'header-code',
-            type: 'stack',
-            direction: 'column',
-            style: { inline: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' } },
-            // The QR scans straight to the ticket, the same code the 4 x 2 in tag carries.
-            children: [qr('qr', '120px')],
-          },
-        ],
-      },
+      buildWorksheetHeader(),
       { id: 'header-divider', type: 'divider', style: { inline: { margin: '16px 0' } } },
-      {
-        id: 'info',
-        type: 'stack',
-        direction: 'row',
-        style: { inline: { width: '100%', display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: '32px' } },
-        children: [
-          {
-            id: 'info-left',
-            type: 'stack',
-            direction: 'column',
-            style: { inline: { minWidth: '0', flexGrow: 1, flexBasis: '0', display: 'flex', flexDirection: 'column', gap: '8px' } },
-            children: [
-              worksheetField('fld-name', 'clientName', { i18nKey: 'labels.worksheet.customer', defaultValue: 'Customer' }),
-              worksheetField('fld-asset', 'secondaryIdentifier', { i18nKey: 'labels.worksheet.assetTag', defaultValue: 'Asset Tag' }),
-              worksheetField('fld-serial', 'assetSerialNumber', { i18nKey: 'labels.worksheet.serial', defaultValue: 'Serial' }),
-            ],
-          },
-          {
-            id: 'info-right',
-            type: 'stack',
-            direction: 'column',
-            style: { inline: { minWidth: '0', flexGrow: 1, flexBasis: '0', display: 'flex', flexDirection: 'column', gap: '8px' } },
-            children: [
-              worksheetField('fld-custody', 'custodyLocation', { i18nKey: 'labels.worksheet.custodyLocation', defaultValue: 'Custody location' }),
-              worksheetField('fld-next', 'nextAction', { i18nKey: 'labels.worksheet.nextAction', defaultValue: 'Next action' }),
-            ],
-          },
-        ],
-      },
+      buildWorksheetInfo(),
       { id: 'asset-divider', type: 'divider', style: { inline: { margin: '18px 0 12px 0' } } },
-      {
-        id: 'asset-specs',
-        type: 'stack',
-        direction: 'column',
-        style: { inline: { display: 'flex', flexDirection: 'column', gap: '4px' } },
-        children: [
-          {
-            id: 'asset-specs-heading',
-            type: 'text',
-            content: { type: 'i18n', i18nKey: 'labels.worksheet.assetSpecifications', defaultValue: 'Asset Specifications' },
-            style: { inline: { margin: '0 0 6px 0', color: '#111827', fontSize: '15px', fontWeight: 700 } },
-          },
-          worksheetField('spec-name', 'assetName', { i18nKey: 'labels.worksheet.assetName', defaultValue: 'Name' }),
-          worksheetField('spec-make', 'assetManufacturer', { i18nKey: 'labels.worksheet.make', defaultValue: 'Make' }),
-          worksheetField('spec-model', 'assetModel', { i18nKey: 'labels.worksheet.model', defaultValue: 'Model' }),
-          worksheetField('spec-os', 'assetOs', { i18nKey: 'labels.worksheet.os', defaultValue: 'Operating system' }),
-          worksheetField('spec-cpu', 'assetCpu', { i18nKey: 'labels.worksheet.cpu', defaultValue: 'CPU' }),
-          worksheetField('spec-ram', 'assetRam', { i18nKey: 'labels.worksheet.ram', defaultValue: 'RAM' }),
-          worksheetField('spec-storage', 'assetStorage', { i18nKey: 'labels.worksheet.storage', defaultValue: 'Storage' }),
-        ],
-      },
+      buildWorksheetAssetSpecs(),
       { id: 'details-divider', type: 'divider', style: { inline: { margin: '18px 0 12px 0' } } },
       {
         id: 'details-heading',
@@ -339,12 +357,7 @@ const buildTicketCustomerWorksheet = (paper: 'letter' | 'a4'): TemplateAst => ({
         content: { type: 'i18n', i18nKey: 'labels.worksheet.ticketDetails', defaultValue: 'Ticket Details' },
         style: { inline: { margin: '0 0 6px 0', color: '#111827', fontSize: '15px', fontWeight: 700 } },
       },
-      {
-        id: 'fld-details',
-        type: 'richText',
-        content: { type: 'binding', bindingId: 'ticketDescriptionRichText' },
-        style: { inline: { margin: '0', fontSize: '14px', lineHeight: '1.6', overflowWrap: 'anywhere' } },
-      },
+      buildWorksheetDetails(),
     ],
   },
 });
