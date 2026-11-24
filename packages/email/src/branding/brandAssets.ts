@@ -6,6 +6,7 @@
  * leaves exactly one logo and one footer.
  */
 
+import { LEGACY_BRAND_SLOGAN_PATTERN } from './orphanedSlogan';
 import type { EmailBrandingLogoArtwork, EmailBrandingLogoShape, EmailBrandingLogoVariant } from './types';
 
 export const BRAND_LOGO_MARKER = 'data-alga-brand-logo';
@@ -205,11 +206,43 @@ const ATTRIBUTION_PREFIXES = [
 ];
 const ATTRIBUTION = `(?:${ATTRIBUTION_PREFIXES.join('|')}) Alga\\s?PSA`;
 const SEPARATOR = '(?:&middot;|&#183;|·|•)';
+
 /**
  * The layout's footer row when the attribution opens it: the cell holds nothing
- * but the attribution and, after the separator, AlgaPSA's own slogan.
+ * but the attribution and, after the separator, whatever tail the mode allows.
  */
-const ATTRIBUTION_ROW = `<tr[^>]*>\\s*<td[^>]*>\\s*${ATTRIBUTION}(?:\\s*${SEPARATOR}\\s*[^<]*?)?\\s*</td>\\s*</tr>`;
+const footerRow = (tail: string) => new RegExp(
+  `<tr[^>]*>\\s*<td[^>]*>\\s*${ATTRIBUTION}(?:\\s*${SEPARATOR}\\s*${tail})?\\s*</td>\\s*</tr>`,
+  'gi',
+);
+/** The same attribution-and-tail pair outside a row of its own. */
+const attributionWithTail = (tail: string) =>
+  new RegExp(`${ATTRIBUTION}\\s*${SEPARATOR}\\s*${tail}`, 'gi');
+
+const ANY_TAIL_ROW = footerRow('[^<]*?');
+const ANY_TAIL = attributionWithTail('[^<]*');
+const SHIPPED_SLOGAN_ROW = footerRow(LEGACY_BRAND_SLOGAN_PATTERN);
+const SHIPPED_SLOGAN = attributionWithTail(LEGACY_BRAND_SLOGAN_PATTERN);
+const STANDALONE_PARAGRAPH = new RegExp(`<p>\\s*${ATTRIBUTION}\\s*</p>`, 'gi');
+const TRAILING_ATTRIBUTION = new RegExp(`\\s*${SEPARATOR}\\s*${ATTRIBUTION}`, 'gi');
+const BARE_ATTRIBUTION = new RegExp(ATTRIBUTION, 'gi');
+
+export interface BrandAttributionStripOptions {
+  /**
+   * Which footer row counts as ours.
+   * - `any-tail`, the default the apply and send paths run on: the HTML being
+   *   decorated is the standard template, so a footer row the attribution opens
+   *   is ours by construction and goes whatever follows the separator — wording
+   *   we have not shipped yet included.
+   * - `shipped-slogan`, for normalizing a row a tenant may have typed in: only
+   *   the footers we have actually shipped go. A footer reworded around the
+   *   attribution ("Powered by AlgaPSA &middot; Acme MSP, your IT partner") is
+   *   then still visible to the classifier as the tenant's own edit, instead of
+   *   normalizing to the same nothing our footer does — which would let an apply
+   *   overwrite it and "Remove branding" delete it.
+   */
+  footerRow?: 'any-tail' | 'shipped-slogan';
+}
 
 /**
  * Drops the attribution and everything that only exists to carry it, in every
@@ -225,15 +258,17 @@ const ATTRIBUTION_ROW = `<tr[^>]*>\\s*<td[^>]*>\\s*${ATTRIBUTION}(?:\\s*${SEPARA
  *
  * Idempotent: a second pass has nothing left to match.
  */
-export function stripBrandAttribution(html: string): string {
+export function stripBrandAttribution(html: string, options: BrandAttributionStripOptions = {}): string {
   if (!html) return html;
 
+  const shippedOnly = options.footerRow === 'shipped-slogan';
+
   return html
-    .replace(new RegExp(`<p>\\s*${ATTRIBUTION}\\s*</p>`, 'gi'), '')
-    .replace(new RegExp(`\\s*${SEPARATOR}\\s*${ATTRIBUTION}`, 'gi'), '')
-    .replace(new RegExp(ATTRIBUTION_ROW, 'gi'), '')
-    .replace(new RegExp(`${ATTRIBUTION}\\s*${SEPARATOR}\\s*[^<]*`, 'gi'), '')
-    .replace(new RegExp(ATTRIBUTION, 'gi'), '');
+    .replace(STANDALONE_PARAGRAPH, '')
+    .replace(TRAILING_ATTRIBUTION, '')
+    .replace(shippedOnly ? SHIPPED_SLOGAN_ROW : ANY_TAIL_ROW, '')
+    .replace(shippedOnly ? SHIPPED_SLOGAN : ANY_TAIL, '')
+    .replace(BARE_ATTRIBUTION, '');
 }
 
 export function containsBrandAttribution(html: string): boolean {

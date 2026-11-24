@@ -76,9 +76,17 @@ function equalsBrandedStock(
  * left in the footer of rows it wrote (see orphanedSlogan.ts), which must still
  * read as ours so the next apply rewrites that footer rather than freezing it as
  * a hand edit.
+ *
+ * Only the footers we have shipped are ours to normalize away, though: a footer
+ * row a tenant reworded around the attribution has to survive this pass, or it
+ * would collapse to the same nothing our own footer does and read as a row the
+ * tool wrote — free for an apply to overwrite and for "Remove branding" to
+ * delete. Hence `footerRow: 'shipped-slogan'`.
  */
 const withoutBrandAssets = (html: string): string =>
-  normalizeChangesBox(stripGradientFallback(stripOrphanedBrandFooter(stripBrandAttribution(removeBrandLogo(html)))));
+  normalizeChangesBox(stripGradientFallback(stripOrphanedBrandFooter(
+    stripBrandAttribution(removeBrandLogo(html), { footerRow: 'shipped-slogan' }),
+  )));
 
 /**
  * Decides whether a tenant row is untouched, something the branding tool wrote,

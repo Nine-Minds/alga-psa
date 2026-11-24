@@ -339,6 +339,34 @@ describe('stripBrandAttribution', () => {
 
     expect(stripBrandAttribution(once)).toBe(once);
   });
+
+  it('takes the stock footer row in either mode, in every language', () => {
+    for (const language of ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt', 'sv']) {
+      const template = loadSystemTemplate('ticket-created', language);
+      const shippedOnly = stripBrandAttribution(template.html, { footerRow: 'shipped-slogan' });
+
+      // What the classifier normalizes has to match what the apply path writes,
+      // or a branded copy would stop reading as ours.
+      expect(shippedOnly).toBe(stripBrandAttribution(template.html));
+      expect(containsBrandAttribution(shippedOnly)).toBe(false);
+    }
+  });
+
+  it.each([
+    ['their own line instead of our slogan', 'Acme MSP, your IT partner', 'Acme MSP, your IT partner'],
+    ['their own line after our slogan', 'Keeping teams aligned &middot; +1 555 0100', '+1 555 0100'],
+  ])('keeps a footer reworded with %s when only our own may go', (_shape, tail, theirs) => {
+    const footer = '<table><tr><td style="padding:18px 32px;background:#f8f5ff;text-align:center;">'
+      + `Powered by AlgaPSA &middot; ${tail}</td></tr></table>`;
+
+    const stripped = stripBrandAttribution(footer, { footerRow: 'shipped-slogan' });
+
+    expect(stripped).toContain(theirs);
+    expect(stripped).toMatch(/<tr><td/);
+    expect(containsBrandAttribution(stripped)).toBe(false);
+    // The apply path decorates the standard template, where the row is ours.
+    expect(stripBrandAttribution(footer)).toBe('<table></table>');
+  });
 });
 
 describe('decorateBrandedHtml', () => {

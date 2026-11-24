@@ -178,6 +178,29 @@ describe('classifyTenantTemplate with enterprise brand assets', () => {
     })).toEqual({ state: 'branded', differs: [] });
   });
 
+  /**
+   * The footer row the strip now takes whole is ours in the standard template
+   * only. A tenant who reworded theirs around the attribution has to keep
+   * reading as customized, or an apply would overwrite their line and "Remove
+   * branding" would delete the row out from under them.
+   */
+  it.each([
+    ['their own line instead of our slogan', 'Powered by AlgaPSA &middot; Acme MSP, your IT partner'],
+    ['their own line after our slogan', 'Powered by AlgaPSA &middot; Keeping teams aligned &middot; +1 555 0100'],
+  ])('calls a footer the tenant reworded with %s customized', (_shape, footer) => {
+    const stored = brandedRow.html_content.replace('Powered by AlgaPSA &middot; Keeping teams aligned', footer);
+    expect(stored).not.toBe(brandedRow.html_content);
+
+    const result = classifyTenantTemplate({
+      tenantRow: { ...brandedRow, html_content: stored },
+      systemRow,
+      appliedPalette: TERRACOTTA,
+    });
+
+    expect(result.state).toBe('customized');
+    expect(result.differs).toContain('text');
+  });
+
   it('still calls a copy edit on such a row customized', () => {
     const decorated = decorateBrandedHtml(brandedRow.html_content, { logo, hideAttribution: true })
       .replace('View Ticket', 'Open in our portal');

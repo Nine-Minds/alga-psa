@@ -14,14 +14,21 @@
  * apply instead of freezing as a hand customization — which is also what lets
  * turning the attribution back on restore the whole footer.
  *
- * The slogan list is FROZEN: it is the set of lines the template sources and
- * their history ever shipped, and it exists only to recognize rows written
- * before the fix. A new slogan must never be added to it — nothing writes an
- * orphaned footer any more. A list is unavoidable here: a bare slogan in a
- * stored row carries no structural marker that tells it apart from footer text
- * a tenant typed, and blanking footer cells wholesale would clobber hand-edited
- * footers. The empty row needs no list: a cell with nothing in it holds nothing
- * a tenant wrote, and no stock template ships one.
+ * The slogan list is the set of lines the template sources and their history
+ * ever shipped. Nothing writes an orphaned footer any more, so it needs no
+ * entry for a repair that cannot happen; it does need one for every slogan the
+ * stock footer carries, because `stripBrandAttribution` reads the same list to
+ * tell our own footer row from one a tenant reworded around the attribution
+ * (see brandAssets.ts). Were the stock footer ever to ship different wording,
+ * it belongs here too, or copies of that template written with the attribution
+ * hidden stop reading as ours.
+ *
+ * A list is unavoidable: a bare slogan in a stored row carries no structural
+ * marker that tells it apart from footer text a tenant typed, and blanking
+ * footer cells wholesale would clobber hand-edited footers. The empty row needs
+ * no list — a cell with nothing in it holds nothing a tenant wrote — only the
+ * coloured band's own `background`, which every stock footer cell carries and a
+ * content cell does not.
  */
 
 /** Every slogan the stock templates have shipped behind the attribution. */
@@ -52,15 +59,23 @@ export const LEGACY_BRAND_SLOGANS: readonly string[] = [
 
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+/** The shipped slogans as one alternation, shared with the attribution strip. */
+export const LEGACY_BRAND_SLOGAN_PATTERN = `(?:${LEGACY_BRAND_SLOGANS.map(escapeRegExp).join('|')})`;
+
 const SLOGAN_ROW = new RegExp(
-  `<tr[^>]*>\\s*<td[^>]*>\\s*(?:${LEGACY_BRAND_SLOGANS.map(escapeRegExp).join('|')})\\s*</td>\\s*</tr>`,
+  `<tr[^>]*>\\s*<td[^>]*>\\s*${LEGACY_BRAND_SLOGAN_PATTERN}\\s*</td>\\s*</tr>`,
   'gi',
 );
 
-/** What the old strip left of a footer that was the attribution alone. */
-const EMPTY_ROW = /<tr[^>]*>\s*<td[^>]*>\s*<\/td>\s*<\/tr>/gi;
+/**
+ * What the old strip left of a footer that was the attribution alone: the
+ * coloured band with nothing in it. Tied to the band's own `background` so an
+ * emptied content cell, which a tenant may well have cleared on purpose, is not
+ * normalized away with it.
+ */
+const EMPTY_ROW = /<tr[^>]*>\s*<td[^>]*background:[^>]*>\s*<\/td>\s*<\/tr>/gi;
 
-/** Removes a footer row left holding nothing but one of our slogans, or nothing at all. */
+/** Removes a footer row left holding nothing but one of our slogans, or an empty coloured band. */
 export function stripOrphanedBrandFooter(html: string): string {
   return html ? html.replace(SLOGAN_ROW, '').replace(EMPTY_ROW, '') : html;
 }

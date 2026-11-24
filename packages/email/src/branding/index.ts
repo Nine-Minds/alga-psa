@@ -36,6 +36,7 @@ export {
   stripBrandAttribution,
   BRAND_LOGO_CIDS,
   BRAND_LOGO_MARKER,
+  type BrandAttributionStripOptions,
   type BrandDecorationOptions,
   type BrandLogo,
   type BrandLogoPreviewUrls,

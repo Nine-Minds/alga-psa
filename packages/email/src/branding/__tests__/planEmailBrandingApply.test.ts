@@ -488,6 +488,48 @@ describe('enterprise brand assets in the plan', () => {
     }
   });
 
+  /**
+   * The other side of the same rule: hiding the attribution takes the whole
+   * footer row, but only where that row is ours. A tenant who kept the
+   * attribution and wrote their own line beside it owns that footer, so neither
+   * an apply nor a removal may touch the row.
+   */
+  it('neither rewrites nor deletes a footer the tenant reworded', () => {
+    const tenantRows = NAMES.map((name, index) => {
+      const row = brandedRow(900 + index, name, 'en');
+      const html = row.html_content.replace(
+        /Powered by AlgaPSA(?:\s*&middot;\s*[^<]*)?/,
+        'Powered by AlgaPSA &middot; Acme MSP, your IT partner',
+      );
+
+      expect(html).not.toBe(row.html_content);
+      return { ...row, html_content: html };
+    });
+
+    const plan = planEmailBrandingApply({
+      systemRows: SYSTEM_ROWS,
+      tenantRows,
+      target: TERRACOTTA,
+      appliedPalette: TERRACOTTA,
+      scope: { names: NAMES, languages: ['en'] },
+      decorate,
+    });
+
+    expect(plan.inserts).toEqual([]);
+    expect(plan.updates).toEqual([]);
+    expect(plan.skipped).toHaveLength(3);
+    expect(plan.skipped.every((skip) => skip.state === 'customized' && skip.reason === 'customized')).toBe(true);
+
+    const removal = planEmailBrandingRemoval({
+      systemRows: SYSTEM_ROWS,
+      tenantRows,
+      appliedPalette: TERRACOTTA,
+    });
+
+    expect(removal.deletable).toEqual([]);
+    expect(removal.kept).toHaveLength(3);
+  });
+
   it('still recognizes those rows as its own on a re-apply', () => {
     const tenantRows = applyOnce();
     const plan = planEmailBrandingApply({
