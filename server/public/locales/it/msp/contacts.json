@@ -288,7 +288,8 @@
     },
     "primary": {
       "title": "Email principale",
-      "description": "Questo rimane l'indirizzo predefinito memorizzato nella scheda del contatto"
+      "description": "Questo rimane l'indirizzo predefinito memorizzato nella scheda del contatto",
+      "keepOldEmail": "Mantieni {{email}} come email aggiuntiva"
     },
     "row": {
       "title": "Email aggiuntiva {{number}}",

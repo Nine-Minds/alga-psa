@@ -288,7 +288,8 @@
     },
     "primary": {
       "title": "Correo electrónico principal",
-      "description": "Esta sigue siendo la dirección predeterminada almacenada en el registro del contacto"
+      "description": "Esta sigue siendo la dirección predeterminada almacenada en el registro del contacto",
+      "keepOldEmail": "Conservar {{email}} como correo adicional"
     },
     "row": {
       "title": "Correo adicional {{number}}",
