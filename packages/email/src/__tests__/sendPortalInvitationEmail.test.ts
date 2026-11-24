@@ -89,6 +89,7 @@ const warning = {
   de: 'Zeitkritische Einladung — Dieser Einladungslink läuft in <strong>{{expirationTime}}</strong> ab.',
   fr: "Ce lien d’invitation expirera dans <strong>{{expirationTime}}</strong>.",
   es: 'Este enlace de invitación expirará en <strong>{{expirationTime}}</strong>.',
+  sv: 'Den här inbjudningslänken slutar gälla om <strong>{{expirationTime}}</strong>.',
 } as const;
 
 const subjects = {
@@ -96,6 +97,7 @@ const subjects = {
   de: 'Kundenportal-Einladung - {{tenantName}}',
   fr: 'Invitation au portail client - {{tenantName}}',
   es: 'Invitación al portal del cliente - {{tenantName}}',
+  sv: 'Inbjudan till kundportalen – {{tenantName}}',
 } as const;
 
 function systemRow(language: keyof typeof warning): TemplateRow {
@@ -122,7 +124,7 @@ function tenantRow(language: keyof typeof warning): TemplateRow {
 }
 
 /** Every supported locale has a system template, as production does. */
-const SYSTEM_TEMPLATES = (['en', 'de', 'fr', 'es'] as const).map(systemRow);
+const SYSTEM_TEMPLATES = (['en', 'de', 'fr', 'es', 'sv'] as const).map(systemRow);
 
 function seedTemplates(rows: TemplateRow[]): void {
   getConnectionMock.mockResolvedValue(createFakeTemplateKnex(rows));
@@ -206,13 +208,18 @@ describe('sendPortalInvitationEmail validity wording', () => {
     tenantSendMock.mock.calls[0]?.[0]?.templateData?.expirationTime ?? '',
   ).replace(/\s/gu, ' ');
 
+  // German and Swedish are read out of DAY_UNIT_OVERRIDES, not ICU: the
+  // carrier sentence "läuft in … ab" wants the dative plural "Tagen", and a
+  // Swedish invitation says "dagar" rather than ICU's 24-hour "dygn".
   it.each([
     ['en', 7, '7 days'],
     ['en', 1, '1 day'],
-    ['de', 7, '7 Tage'],
+    ['de', 7, '7 Tagen'],
     ['de', 1, '1 Tag'],
     ['fr', 3, '3 jours'],
     ['es', 1, '1 día'],
+    ['sv', 7, '7 dagar'],
+    ['sv', 1, '1 dag'],
   ])('renders %s validity of %i day(s) as "%s"', async (locale, validityDays, expected) => {
     resolveEmailLocaleMock.mockResolvedValue(locale);
 
@@ -232,7 +239,7 @@ describe('sendPortalInvitationEmail validity wording', () => {
  * The duration belongs to the template that is actually sent, not to the
  * recipient's resolved locale: a tenant that keeps an English-only copy of
  * 'portal-invitation' mails an English body, and an English body saying
- * "expire in 14 Tage" is the half-translated email this covers.
+ * "expire in 14 Tagen" is the half-translated email this covers.
  */
 describe('sendPortalInvitationEmail duration follows the template that is sent', () => {
   beforeEach(() => {
@@ -265,18 +272,18 @@ describe('sendPortalInvitationEmail duration follows the template that is sent',
     expect(rendered.html).not.toContain('Tag<');
   });
 
-  it('uses the German system template and "14 Tage" when the tenant has no copy', async () => {
+  it('uses the German system template and "14 Tagen" when the tenant has no copy', async () => {
     seedTemplates(SYSTEM_TEMPLATES);
 
     await sendPortalInvitationEmail({ ...params, validityDays: 14 });
 
     const rendered = await renderedBy(tenantSendMock);
     expect(rendered.subject).toBe('Kundenportal-Einladung - Example MSP');
-    expect(rendered.html).toContain('Dieser Einladungslink läuft in <strong>14 Tage</strong> ab');
+    expect(rendered.html).toContain('Dieser Einladungslink läuft in <strong>14 Tagen</strong> ab');
     expect(rendered.html).not.toContain('14 days');
   });
 
-  it('uses the tenant German template and "14 Tage" when the tenant has one', async () => {
+  it('uses the tenant German template and "14 Tagen" when the tenant has one', async () => {
     seedTemplates([...SYSTEM_TEMPLATES, tenantRow('en'), tenantRow('de')]);
 
     await sendPortalInvitationEmail({ ...params, validityDays: 14 });
@@ -284,7 +291,7 @@ describe('sendPortalInvitationEmail duration follows the template that is sent',
     const rendered = await renderedBy(tenantSendMock);
     expect(rendered.subject).toBe('[Example MSP] Kundenportal-Einladung - Example MSP');
     expect(rendered.html).toContain('Example MSP copy');
-    expect(rendered.html).toContain('<strong>14 Tage</strong>');
+    expect(rendered.html).toContain('<strong>14 Tagen</strong>');
     expect(rendered.html).not.toContain('14 days');
   });
 

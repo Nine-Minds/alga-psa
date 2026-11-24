@@ -23,8 +23,22 @@ interface SendPortalInvitationEmailParams {
   clientId?: string;  // Client ID (from contact.company_id) for locale resolution when user doesn't exist yet
 }
 
+type DayUnitForms = { other: string } & Partial<Record<Intl.LDMLPluralRule, string>>;
+
 /**
- * "7 days" / "7 Tage" / "1 day" in the language of the template that carries it.
+ * Day words the carrier sentence needs in a form Intl does not hand us. German
+ * reads "läuft in {{expirationTime}} ab", which governs the dative plural
+ * ("7 Tagen", not Intl's nominative "7 Tage"); Swedish Intl renders the
+ * 24-hour period "dygn" where an invitation says "dagar". Every other locale's
+ * Intl form already fits its template, so it is left to ICU.
+ */
+const DAY_UNIT_OVERRIDES: Partial<Record<SupportedLocale, DayUnitForms>> = {
+  de: { one: 'Tag', other: 'Tagen' },
+  sv: { one: 'dag', other: 'dagar' }
+};
+
+/**
+ * "7 days" / "7 Tagen" / "1 day" in the language of the template that carries it.
  * The templates interpolate the rendered string as `{{expirationTime}}`, so a
  * German invitation no longer reads "läuft in 24 hours ab" — and an English
  * template sent to a German recipient (a tenant that keeps an English-only copy)
@@ -32,6 +46,11 @@ interface SendPortalInvitationEmailParams {
  */
 function formatValidityDuration(locale: SupportedLocale, validityDays: number): string {
   const days = Number.isFinite(validityDays) ? Math.max(1, Math.round(validityDays)) : 1;
+  const forms = DAY_UNIT_OVERRIDES[locale];
+  if (forms) {
+    const category = new Intl.PluralRules(locale).select(days);
+    return `${new Intl.NumberFormat(locale).format(days)} ${forms[category] ?? forms.other}`;
+  }
   return new Intl.NumberFormat(locale, { style: 'unit', unit: 'day', unitDisplay: 'long' }).format(days);
 }
 
