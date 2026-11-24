@@ -83,7 +83,7 @@ describe('ticket close/checklist/material facade contract', () => {
     expect(sources.inventoryMaterials).toContain('.where({ [`m.${cfg.parentCol}`]: parentId })');
     expect(sources.inventoryMaterials).toContain("scoped.tenantJoin(query, 'service_catalog as sc', 'm.service_id', 'sc.service_id', { type: 'left' })");
     expect(sources.inventoryMaterials).toContain("scoped.tenantJoin(query, 'product_inventory_settings as pis', 'm.service_id', 'pis.service_id', { type: 'left' })");
-    expect(sources.inventoryMaterials).toContain('WHERE sm.tenant = m.tenant AND sm.source_doc_type = ?');
+    expect(sources.inventoryMaterials).toContain('WHERE sm.tenant = ? AND sm.tenant = m.tenant AND sm.source_doc_type = ?');
     expect(sources.inventoryMaterials).toContain(".where({ tenant, [cfg.parentPk]: input.parent_id })");
     expect(sources.inventoryMaterials).toContain(".where({ tenant, service_id: input.service_id, item_kind: 'product' })");
 

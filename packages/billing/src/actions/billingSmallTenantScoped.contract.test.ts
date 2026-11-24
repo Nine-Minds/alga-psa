@@ -55,7 +55,7 @@ describe('low-risk billing tenant-scoped query contract', () => {
     expect(inventoryMaterials).toContain('scoped.table(`${cfg.table} as m`)');
     expect(inventoryMaterials).toContain("scoped.tenantJoin(query, 'service_catalog as sc', 'm.service_id', 'sc.service_id', { type: 'left' })");
     expect(inventoryMaterials).toContain("scoped.tenantJoin(query, 'product_inventory_settings as pis', 'm.service_id', 'pis.service_id', { type: 'left' })");
-    expect(inventoryMaterials).toContain('WHERE sm.tenant = m.tenant AND sm.source_doc_type = ?');
+    expect(inventoryMaterials).toContain('WHERE sm.tenant = ? AND sm.tenant = m.tenant AND sm.source_doc_type = ?');
 
     expect(usage).toContain("facade.table('usage_tracking')");
     expect(usage).toContain("facade.tenantJoin(query, 'clients'");
