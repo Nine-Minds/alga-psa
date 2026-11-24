@@ -253,7 +253,10 @@ export async function renderLabelBatchHtml(
           worksheetSize.widthMm > cellSize.widthMm + 0.05 ||
           worksheetSize.heightMm > cellSize.heightMm + 0.05
         ) {
+          // The layout, not the record, is wrong: every ticket on this worksheet would fail the same
+          // way, so refuse the whole batch and point at the template size instead of listing tickets.
           throw new LabelLayoutError('The selected print layout is too small for this worksheet.', {
+            code: 'template-size-mismatch',
             errorCode: 'worksheetPageSize',
           });
         }
@@ -289,6 +292,7 @@ export async function renderLabelBatchHtml(
         ...(worksheetSize ? { flowMarginMm } : {}),
       });
     } catch (error) {
+      if (error instanceof LabelLayoutError && error.code === 'template-size-mismatch') throw error;
       const fallback = LABEL_FALLBACK_TEMPLATE_BY_CODE[templateCode];
       failures.push({
         index,

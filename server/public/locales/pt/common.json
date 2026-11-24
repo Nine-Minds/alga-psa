@@ -1700,9 +1700,9 @@
       "useTemplate": "Usar {{template}}",
       "copiesPerAsset": "Cópias por ativo",
       "adjacentCopies": "As cópias de cada ativo são impressas juntas.",
-      "templatePaperWarning": "Este modelo é impresso em uma folha inteira. Escolha “Papel do modelo” (ou uma disposição de folha inteira), caso contrário o conteúdo não caberá na etiqueta.",
-      "paperMismatchWarning": "Este modelo foi concebido para {{template}}, mas a disposição selecionada imprime em {{layout}}. Escolha “Papel do modelo” ou a disposição de folha inteira correspondente, ou o conteúdo não caberá.",
-      "worksheetPageSizeError": "A folha de trabalho não corresponde à disposição de impressão selecionada. Use “Papel do modelo” ou uma disposição com o mesmo papel do modelo.",
+      "templatePaperWarning": "Este modelo é impresso em uma folha inteira. Escolha “Usar o tamanho do modelo” (ou uma disposição de folha inteira), caso contrário o conteúdo não caberá na etiqueta.",
+      "paperMismatchWarning": "Este modelo foi concebido para {{template}}, mas a disposição selecionada imprime em {{layout}}. Escolha “Usar o tamanho do modelo” ou a disposição de folha inteira correspondente, ou o conteúdo não caberá.",
+      "worksheetPageSizeError": "A folha de trabalho não corresponde à disposição de impressão selecionada. Use “Usar o tamanho do modelo” ou uma disposição com o mesmo papel do modelo.",
       "worksheetTextOverflowError": "Esta folha contém texto que não cabe. Ajuste a disposição ou encurte o conteúdo antes de imprimir."
     },
     "layout": {

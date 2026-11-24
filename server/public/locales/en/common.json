@@ -1700,9 +1700,9 @@
       "useTemplate": "Use {{template}}",
       "copiesPerAsset": "Copies per asset",
       "adjacentCopies": "Copies print together for each asset.",
-      "templatePaperWarning": "This template prints on a full sheet. Choose \"Template paper\" (or a full-sheet layout), or the content will not fit the label.",
-      "paperMismatchWarning": "This template is designed for {{template}} paper, but the selected layout prints on {{layout}}. Choose \"Template paper\" or the matching full-sheet layout, or the content will not fit.",
-      "worksheetPageSizeError": "The worksheet does not fit the selected print layout. Use \"Template paper\" or a layout on the same paper as the template.",
+      "templatePaperWarning": "This template prints on a full sheet. Choose \"Match template size\" (or a full-sheet layout), or the content will not fit the label.",
+      "paperMismatchWarning": "This template is designed for {{template}} paper, but the selected layout prints on {{layout}}. Choose \"Match template size\" or the matching full-sheet layout, or the content will not fit.",
+      "worksheetPageSizeError": "The worksheet does not fit the selected print layout. Use \"Match template size\" or a layout on the same paper as the template.",
       "worksheetTextOverflowError": "This worksheet contains text that will not fit. Adjust the layout or shorten the content before printing."
     },
     "layout": {

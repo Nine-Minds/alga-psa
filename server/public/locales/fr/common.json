@@ -1700,9 +1700,9 @@
       "useTemplate": "Utiliser {{template}}",
       "copiesPerAsset": "Exemplaires par actif",
       "adjacentCopies": "Les exemplaires de chaque actif sont imprimés ensemble.",
-      "templatePaperWarning": "Ce modèle s'imprime sur une feuille entière. Choisissez « Papier du modèle » (ou une mise en page pleine feuille), sinon le contenu ne tiendra pas sur l'étiquette.",
-      "paperMismatchWarning": "Ce modèle est conçu pour du papier {{template}}, mais la mise en page sélectionnée imprime sur {{layout}}. Choisissez « Papier du modèle » ou la mise en page plein format correspondante, sinon le contenu ne tiendra pas.",
-      "worksheetPageSizeError": "La feuille de travail ne correspond pas à la mise en page d’impression sélectionnée. Utilisez « Papier du modèle » ou une mise en page utilisant le même papier que le modèle.",
+      "templatePaperWarning": "Ce modèle s'imprime sur une feuille entière. Choisissez « Utiliser la taille du modèle » (ou une mise en page pleine feuille), sinon le contenu ne tiendra pas sur l'étiquette.",
+      "paperMismatchWarning": "Ce modèle est conçu pour du papier {{template}}, mais la mise en page sélectionnée imprime sur {{layout}}. Choisissez « Utiliser la taille du modèle » ou la mise en page plein format correspondante, sinon le contenu ne tiendra pas.",
+      "worksheetPageSizeError": "La feuille de travail ne correspond pas à la mise en page d’impression sélectionnée. Utilisez « Utiliser la taille du modèle » ou une mise en page utilisant le même papier que le modèle.",
       "worksheetTextOverflowError": "Cette feuille de travail contient du texte qui ne tient pas. Ajustez la mise en page ou raccourcissez le contenu avant impression."
     },
     "layout": {

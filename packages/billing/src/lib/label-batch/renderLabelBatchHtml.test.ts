@@ -3,6 +3,7 @@ import { recordUrl, type LabelViewModel } from '@alga-psa/types';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
 import { LabelRenderError, labelTextOverflowError, renderLabelBatchHtml, type LabelPrintItem } from './renderLabelBatchHtml';
+import { LabelLayoutError } from './layout';
 import {
   STANDARD_LABEL_ASSET_CODE,
   STANDARD_LABEL_ASSET_CODE128_CODE,
@@ -329,7 +330,7 @@ describe('renderLabelBatchHtml failures', () => {
       const letterAst = getStandardLabelTemplateAstByCode(STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE)!;
       await expect(renderLabelBatchHtml([{ templateAst: letterAst, viewModel }], ONE_PER_PAGE))
         .rejects.toMatchObject({
-          failures: [expect.objectContaining({ errorCode: 'worksheetPageSize' })],
+          code: 'template-size-mismatch', errorCode: 'worksheetPageSize',
         });
     });
 
@@ -345,8 +346,21 @@ describe('renderLabelBatchHtml failures', () => {
         [{ templateCode: STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_A4_CODE, viewModel }],
         letter,
       )).rejects.toMatchObject({
-        failures: [expect.objectContaining({ errorCode: 'worksheetPageSize' })],
+        code: 'template-size-mismatch', errorCode: 'worksheetPageSize',
       });
+    });
+
+    it('refuses a worksheet on a 4 x 2 roll once for the whole batch, not ticket by ticket', async () => {
+      const error = await renderLabelBatchHtml(
+        [1, 2].map((n) => ({
+          templateCode: STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE,
+          viewModel: { ...viewModel, recordId: uuid(n), url: recordUrl('ticket', uuid(n), BASE), identifier: `TIC-${n}` },
+        })),
+        ONE_PER_PAGE,
+      ).catch((caught: unknown) => caught);
+      expect(error).toBeInstanceOf(LabelLayoutError);
+      expect(error).toMatchObject({ code: 'template-size-mismatch', errorCode: 'worksheetPageSize' });
+      expect(error).not.toHaveProperty('failures');
     });
 
     it('rejects a landscape or square output cell even when it is large enough', async () => {
@@ -355,7 +369,7 @@ describe('renderLabelBatchHtml failures', () => {
           [{ templateCode: STANDARD_LABEL_TICKET_CUSTOMER_WORKSHEET_CODE, viewModel }],
           { kind: 'one-per-page', pageSize: { width, height: 11, unit: 'in' } },
         )).rejects.toMatchObject({
-          failures: [expect.objectContaining({ errorCode: 'worksheetPageSize' })],
+          code: 'template-size-mismatch', errorCode: 'worksheetPageSize',
         });
       }
     });
@@ -365,7 +379,7 @@ describe('renderLabelBatchHtml failures', () => {
       delete ast.metadata!.printSettings!.customPageSize;
       await expect(renderLabelBatchHtml([{ templateAst: ast, viewModel }], ONE_PER_PAGE))
         .rejects.toMatchObject({
-          failures: [expect.objectContaining({ errorCode: 'worksheetPageSize' })],
+          code: 'template-size-mismatch', errorCode: 'worksheetPageSize',
         });
       const { html } = await renderLabelBatchHtml([{ templateAst: ast, viewModel }], letter);
       expect(html).toContain('1234567');

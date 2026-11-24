@@ -1700,9 +1700,9 @@
       "useTemplate": "Usar {{template}}",
       "copiesPerAsset": "Copias por activo",
       "adjacentCopies": "Las copias de cada activo se imprimen juntas.",
-      "templatePaperWarning": "Esta plantilla se imprime en una hoja completa. Elija «Papel de la plantilla» (o un diseño de hoja completa); de lo contrario, el contenido no cabrá en la etiqueta.",
-      "paperMismatchWarning": "Esta plantilla está diseñada para papel {{template}}, pero el diseño seleccionado imprime en {{layout}}. Elija «Papel de la plantilla» o el diseño de hoja completa equivalente; si no, el contenido no cabrá.",
-      "worksheetPageSizeError": "La hoja de trabajo no cabe en el diseño de impresión seleccionado. Use «Papel de la plantilla» o un diseño con el mismo papel que la plantilla.",
+      "templatePaperWarning": "Esta plantilla se imprime en una hoja completa. Elija «Usar el tamaño de la plantilla» (o un diseño de hoja completa); de lo contrario, el contenido no cabrá en la etiqueta.",
+      "paperMismatchWarning": "Esta plantilla está diseñada para papel {{template}}, pero el diseño seleccionado imprime en {{layout}}. Elija «Usar el tamaño de la plantilla» o el diseño de hoja completa equivalente; si no, el contenido no cabrá.",
+      "worksheetPageSizeError": "La hoja de trabajo no cabe en el diseño de impresión seleccionado. Use «Usar el tamaño de la plantilla» o un diseño con el mismo papel que la plantilla.",
       "worksheetTextOverflowError": "Esta hoja de trabajo contiene texto que no cabe. Ajuste el diseño o acorte el contenido antes de imprimir."
     },
     "layout": {

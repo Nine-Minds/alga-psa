@@ -1700,9 +1700,9 @@
       "useTemplate": "Usa {{template}}",
       "copiesPerAsset": "Copie per asset",
       "adjacentCopies": "Le copie di ciascun asset vengono stampate insieme.",
-      "templatePaperWarning": "Questo modello viene stampato su un foglio intero. Scegli «Carta del modello» (o un layout a foglio intero), altrimenti il contenuto non entrerà nell'etichetta.",
-      "paperMismatchWarning": "Questo modello è progettato per carta {{template}}, ma il layout selezionato stampa su {{layout}}. Scegli «Carta del modello» o il layout a foglio intero corrispondente, altrimenti il contenuto non starà.",
-      "worksheetPageSizeError": "Il foglio di lavoro non corrisponde al layout di stampa selezionato. Usa «Carta del modello» o un layout con la stessa carta del modello.",
+      "templatePaperWarning": "Questo modello viene stampato su un foglio intero. Scegli «Usa la dimensione del modello» (o un layout a foglio intero), altrimenti il contenuto non entrerà nell'etichetta.",
+      "paperMismatchWarning": "Questo modello è progettato per carta {{template}}, ma il layout selezionato stampa su {{layout}}. Scegli «Usa la dimensione del modello» o il layout a foglio intero corrispondente, altrimenti il contenuto non starà.",
+      "worksheetPageSizeError": "Il foglio di lavoro non corrisponde al layout di stampa selezionato. Usa «Usa la dimensione del modello» o un layout con la stessa carta del modello.",
       "worksheetTextOverflowError": "Questo foglio di lavoro contiene testo che non entra. Modifica il layout o riduci il contenuto prima di stampare."
     },
     "layout": {

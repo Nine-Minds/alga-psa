@@ -1700,9 +1700,9 @@
       "useTemplate": "{{template}} gebruiken",
       "copiesPerAsset": "Exemplaren per asset",
       "adjacentCopies": "De exemplaren van elke asset worden samen afgedrukt.",
-      "templatePaperWarning": "Deze sjabloon wordt op een volledig vel afgedrukt. Kies „Sjabloonpapier“ (of een indeling voor een volledig vel), anders past de inhoud niet op het label.",
-      "paperMismatchWarning": "Deze sjabloon is ontworpen voor {{template}}, maar de geselecteerde indeling print op {{layout}}. Kies „Sjabloonpapier“ of de passende indeling voor volle vellen, anders past de inhoud niet.",
-      "worksheetPageSizeError": "Het werkblad past niet bij de geselecteerde printindeling. Gebruik „Sjabloonpapier“ of een indeling met hetzelfde papier als de sjabloon.",
+      "templatePaperWarning": "Deze sjabloon wordt op een volledig vel afgedrukt. Kies „Sjabloonformaat gebruiken“ (of een indeling voor een volledig vel), anders past de inhoud niet op het label.",
+      "paperMismatchWarning": "Deze sjabloon is ontworpen voor {{template}}, maar de geselecteerde indeling print op {{layout}}. Kies „Sjabloonformaat gebruiken“ of de passende indeling voor volle vellen, anders past de inhoud niet.",
+      "worksheetPageSizeError": "Het werkblad past niet bij de geselecteerde printindeling. Gebruik „Sjabloonformaat gebruiken“ of een indeling met hetzelfde papier als de sjabloon.",
       "worksheetTextOverflowError": "Dit werkblad bevat tekst die niet past. Pas de indeling aan of verkort de inhoud voordat u afdrukt."
     },
     "layout": {

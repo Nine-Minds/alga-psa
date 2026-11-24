@@ -262,6 +262,11 @@ export function LabelPrintDialog({
   }
 
   const failures: LabelPrintFailure[] = outcome?.status === 'failed' ? outcome.failures : [];
+  // Skipping is only useful when something is left to print. A single ticket's tags all share one
+  // record, and a batch where every remaining record failed would otherwise reprint nothing at all.
+  const failedRecordIds = new Set(failures.map((f) => f.recordId));
+  const canSkipFailures =
+    !isSingleTicket && ids.some((id) => !excluded.has(id) && !failedRecordIds.has(id));
   // The chosen layout is smaller than the template's own label size: point at the preset that fits.
   const sizeMismatch =
     outcome?.status === 'failed' &&
@@ -271,7 +276,7 @@ export function LabelPrintDialog({
   const localizedWorksheetError = (code?: LabelPrintErrorCode): string | null => {
     if (code === 'worksheetPageSize') {
       return t('labels.dialog.worksheetPageSizeError', {
-        defaultValue: 'The worksheet does not fit the selected print layout. Use "Template paper" or a layout on the same paper as the template.',
+        defaultValue: 'The worksheet does not fit the selected print layout. Use "Match template size" or a layout on the same paper as the template.',
       });
     }
     if (code === 'worksheetTextOverflow') {
@@ -388,7 +393,7 @@ export function LabelPrintDialog({
               <AlertDescription>
                 {t('labels.dialog.paperMismatchWarning', {
                   defaultValue:
-                    'This template is designed for {{template}} paper, but the selected layout prints on {{layout}}. Choose "Template paper" or the matching full-sheet layout, or the content will not fit.',
+                    'This template is designed for {{template}} paper, but the selected layout prints on {{layout}}. Choose "Match template size" or the matching full-sheet layout, or the content will not fit.',
                   template: paperMismatch.template,
                   layout: paperMismatch.layout,
                 })}
@@ -556,9 +561,11 @@ export function LabelPrintDialog({
                           </li>
                         ))}
                       </ul>
-                      <Button id={`${idPrefix}-skip-failures-button`} variant="outline" size="sm" onClick={skipFailures}>
-                        {t('labels.dialog.skipFailures', { defaultValue: 'Skip these and print the rest' })}
-                      </Button>
+                      {canSkipFailures && (
+                        <Button id={`${idPrefix}-skip-failures-button`} variant="outline" size="sm" onClick={skipFailures}>
+                          {t('labels.dialog.skipFailures', { defaultValue: 'Skip these and print the rest' })}
+                        </Button>
+                      )}
                     </>
                   )}
                 </div>

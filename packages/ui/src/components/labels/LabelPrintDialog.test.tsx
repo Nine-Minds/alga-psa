@@ -227,6 +227,34 @@ describe('LabelPrintDialog', () => {
     expect(screen.queryByText(/server detail/)).toBeNull();
   });
 
+  it('a worksheet refused for the whole batch points at the template size and offers no skip', async () => {
+    window.localStorage.setItem('alga.labels.layout', 'roll-4x2');
+    hook.print.mockResolvedValue({
+      status: 'failed', httpStatus: 422, code: 'template-size-mismatch', errorCode: 'worksheetPageSize',
+      message: 'server fallback', failures: [],
+    });
+    render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="ticket-work-tag" ids={[A, B]} />);
+    fireEvent.click(screen.getByText('Print'));
+    await waitFor(() => expect(document.getElementById('label-print-size-mismatch')).toBeTruthy());
+    expect(screen.getByText(/The worksheet does not fit the selected print layout\. Use "Match template size"/)).toBeTruthy();
+    expect(screen.queryByText('server fallback')).toBeNull();
+    expect(screen.queryByText('Skip these and print the rest')).toBeNull();
+  });
+
+  it('hides "Skip these" when every remaining record failed', async () => {
+    hook.print.mockResolvedValue({
+      status: 'failed', httpStatus: 422, message: 'cannot print',
+      failures: [
+        { index: 0, recordId: A, identifier: 'TIC-1', templateCode: 'x', message: 'too long' },
+        { index: 1, recordId: B, identifier: 'TIC-2', templateCode: 'x', message: 'too long' },
+      ],
+    });
+    render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="ticket-work-tag" ids={[A, B]} />);
+    fireEvent.click(screen.getByText('Print'));
+    await waitFor(() => expect(screen.getByText('TIC-2')).toBeTruthy());
+    expect(screen.queryByText('Skip these and print the rest')).toBeNull();
+  });
+
   it('disables printing above the 200-label limit and says why', async () => {
     const ids = Array.from({ length: 201 }, (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`);
     render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="asset-identity" ids={ids} />);

@@ -1700,9 +1700,9 @@
       "useTemplate": "{{template}} verwenden",
       "copiesPerAsset": "Exemplare pro Asset",
       "adjacentCopies": "Die Exemplare jedes Assets werden zusammen gedruckt.",
-      "templatePaperWarning": "Diese Vorlage wird auf ein ganzes Blatt gedruckt. Wählen Sie „Vorlagenpapier“ (oder ein Ganzseiten-Layout), sonst passt der Inhalt nicht auf das Etikett.",
-      "paperMismatchWarning": "Dieses Vorlagenformat ist für {{template}} ausgelegt, aber das gewählte Layout druckt auf {{layout}}. Wählen Sie „Vorlagenpapier“ oder das passende Layout für volle Bögen, sonst passt der Inhalt nicht.",
-      "worksheetPageSizeError": "Das Arbeitsblatt passt nicht zum gewählten Drucklayout. Verwenden Sie „Vorlagenpapier“ oder ein Layout mit demselben Papier wie die Vorlage.",
+      "templatePaperWarning": "Diese Vorlage wird auf ein ganzes Blatt gedruckt. Wählen Sie „Vorlagengröße verwenden“ (oder ein Ganzseiten-Layout), sonst passt der Inhalt nicht auf das Etikett.",
+      "paperMismatchWarning": "Dieses Vorlagenformat ist für {{template}} ausgelegt, aber das gewählte Layout druckt auf {{layout}}. Wählen Sie „Vorlagengröße verwenden“ oder das passende Layout für volle Bögen, sonst passt der Inhalt nicht.",
+      "worksheetPageSizeError": "Das Arbeitsblatt passt nicht zum gewählten Drucklayout. Verwenden Sie „Vorlagengröße verwenden“ oder ein Layout mit demselben Papier wie die Vorlage.",
       "worksheetTextOverflowError": "Dieses Arbeitsblatt enthält Text, der nicht hineinpasst. Passen Sie das Layout an oder kürzen Sie den Inhalt vor dem Drucken."
     },
     "layout": {
