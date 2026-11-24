@@ -514,6 +514,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   resources: { scope: 'tenant' },
   user_work_schedules: { scope: 'tenant' },
   roles: { scope: 'tenant' },
+  managed_role_reconciliation_findings: { scope: 'tenant' },
   role_permissions: { scope: 'tenant' },
   rmm_alert_rules: { scope: 'tenant' },
   rmm_alerts: { scope: 'tenant' },

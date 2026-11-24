@@ -338,6 +338,8 @@ export async function listAssignableRoles(tenant: string): Promise<AssignableRol
     const { knex } = await createTenantKnex(tenant);
     return tenantDb(knex, tenant).table('roles')
       .where({ msp: true })
+      // A capability-owned role is never a manual choice.
+      .whereNull('managed_by')
       .select('role_id', 'role_name', 'description')
       .orderBy('role_name');
   });

@@ -4159,7 +4159,8 @@
       "builtInRename": "Les rôles intégrés ne peuvent pas être renommés.",
       "duplicateName": "Un rôle nommé « {{name}} » existe déjà pour ce portail.",
       "lastMspAdmin": "Un locataire doit conserver au moins un utilisateur MSP Admin actif.",
-      "lastRole": "Un utilisateur doit conserver au moins un rôle. Affectez d’abord un autre rôle, puis supprimez celui-ci."
+      "lastRole": "Un utilisateur doit conserver au moins un rôle. Affectez d’abord un autre rôle, puis supprimez celui-ci.",
+      "managedRole": "Ce rôle est géré par Co-managed IT et ne peut pas être modifié ici."
     },
     "secrets": {
       "tenantContextMissing": "Le contexte du locataire est absent. Veuillez actualiser la page et réessayer.",
@@ -4658,5 +4659,15 @@
       "openMenu": "Ouvrir le menu",
       "inactive": "Inactif"
     }
+  },
+  "managedRole": {
+    "badge": "Géré par Co-managed IT",
+    "readOnlyNotice": "Alga gère ce rôle. Son nom, ses autorisations et ses membres ne peuvent pas être modifiés ici.",
+    "scopeHint": "Pour modifier les tableaux et projets auxquels un technicien a accès, modifiez l'accord de cogestion du client.",
+    "openArrangement": "Ouvrir Co-managed IT",
+    "permissionsLocked": "Les autorisations de {{role}} sont gérées par Co-managed IT et ne peuvent pas être modifiées ici.",
+    "viewDetails": "Voir les autorisations",
+    "detailsTitle": "{{role}} (lecture seule)",
+    "assignedHint": "Attribué via un poste de cogestion. Les changements d'accès se font sur l'accord du client."
   }
 }

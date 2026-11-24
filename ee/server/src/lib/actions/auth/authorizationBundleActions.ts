@@ -635,7 +635,8 @@ export const listAuthorizationBundleAssignmentsAction = withAuth(
       apiKeyIds.length > 0
         ? tenantScopedTable(knex, tenant, 'api_keys').whereIn('api_key_id', apiKeyIds).select<{ api_key_id: string; description: string | null }[]>('api_key_id', 'description')
         : Promise.resolve([]),
-      tenantScopedTable(knex, tenant, 'roles').orderBy('role_name', 'asc').select<{ role_id: string; role_name: string; msp: boolean; client: boolean }[]>('role_id', 'role_name', 'msp', 'client'),
+      // A capability-owned role is never a manual choice: its access is not assigned through bundles.
+      tenantScopedTable(knex, tenant, 'roles').whereNull('managed_by').orderBy('role_name', 'asc').select<{ role_id: string; role_name: string; msp: boolean; client: boolean }[]>('role_id', 'role_name', 'msp', 'client'),
       tenantScopedTable(knex, tenant, 'teams').orderBy('team_name', 'asc').select<{ team_id: string; team_name: string }[]>('team_id', 'team_name'),
       tenantScopedTable(knex, tenant, 'users').orderBy('username', 'asc').select<{ user_id: string; first_name: string | null; last_name: string | null; username: string | null; email: string | null }[]>('user_id', 'first_name', 'last_name', 'username', 'email'),
       tenantScopedTable(knex, tenant, 'api_keys as ak')

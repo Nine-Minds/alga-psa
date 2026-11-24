@@ -6,7 +6,7 @@ import User from '@alga-psa/db/models/user';
 import { lockCoManagedSponsorPool, readCoManagedSeatAllocationState, type CountCoManagedSeatCommitments } from '@alga-psa/licensing';
 import { retainBuiltinResolverSubject } from '@alga-psa/authorization/subject/resolverSubjects';
 import { CO_MANAGED_SEAT_RESOLVER_ID } from './seatAuthority';
-import { admitCoManagedSeatRole } from './seatRole';
+import { admitCoManagedSeatRole, runAsCoManagedSeatLifecycle } from './seatRole';
 
 /**
  * Seat invitations: a technician of one of the sponsor's clients, invited as one of that client's
@@ -413,7 +413,7 @@ export async function acceptCoManagedSeatInvitation(
       seat_reader: true,
     });
     // The seat role and no other.
-    await sponsor.table('user_roles').insert({ tenant: sponsorTenant, user_id: userId, role_id: roleId });
+    await runAsCoManagedSeatLifecycle(() => sponsor.table('user_roles').insert({ tenant: sponsorTenant, user_id: userId, role_id: roleId }));
     // The assignment's foreign key requires the resolver membership first, in this transaction.
     await retainBuiltinResolverSubject(trx, { tenant: sponsorTenant, userId }, CO_MANAGED_SEAT_RESOLVER_ID);
     // write-admission: exempt — seat assignment lifecycle state, written by its owning command under the pool and arrangement locks

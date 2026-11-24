@@ -8,6 +8,7 @@ import {
   isClientUserType,
   isInteractiveUserType,
   isLicensedUserType,
+  isManagedRoleOwnershipError,
   isMspPrincipalUserType,
 } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
@@ -1694,7 +1695,8 @@ export const updateUserRoles = withAuth(async (
     if (message === 'User not found') {
       return { success: false, error: 'User not found' };
     }
-    if (isSeatTechnicianGuardError(error)) {
+    // LEVERAGE: pattern managed-role-error-mapping — same mapping as auth policyActions and users roleActions
+    if (isSeatTechnicianGuardError(error) || isManagedRoleOwnershipError(error)) {
       return { success: false, error: error.message };
     }
     const dbError = error as { code?: string; column?: string };

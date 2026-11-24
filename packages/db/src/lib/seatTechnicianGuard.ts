@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import { CO_MANAGED_SEAT_ROLE_NAME, SeatTechnicianGuardError } from '@alga-psa/types';
+import { CO_MANAGED_SEAT_ROLE_OWNER_KEY, CO_MANAGED_SEAT_ROLE_NAME, SeatTechnicianGuardError } from '@alga-psa/types';
 import { tenantDb } from './tenantDb';
 
 /**
@@ -68,8 +68,9 @@ export async function assertSeatTechnicianWrite(
     live.whereExists(
       scope.table('roles as granted').select(db.raw('1'))
         .whereIn('granted.role_id', roleIds as string[])
-        // The seat role is the one role a technician may hold: identified as the seat admission does.
-        .whereRaw('NOT (granted.role_name = ? AND granted.msp = true AND granted.client = false)', [CO_MANAGED_SEAT_ROLE_NAME]),
+        // The seat role is the one role a technician may hold: identified by the owner marker
+        // seat admission gives it, never by name.
+        .whereRaw('granted.managed_by IS DISTINCT FROM ?', [CO_MANAGED_SEAT_ROLE_OWNER_KEY]),
     );
   }
   const refused: string[] = await live.distinct('seat_assignment.user_id').pluck('seat_assignment.user_id');

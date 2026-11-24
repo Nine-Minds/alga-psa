@@ -563,7 +563,7 @@ const User = {
       const db = tenantDb(knexOrTrx, tenant);
       const query = db.table('roles')
         .whereIn('user_roles.user_id', userIds)
-        .select('user_roles.user_id', 'roles.role_id', 'roles.role_name', 'roles.description', 'roles.tenant', 'roles.msp', 'roles.client');
+        .select('user_roles.user_id', 'roles.role_id', 'roles.role_name', 'roles.description', 'roles.tenant', 'roles.msp', 'roles.client', 'roles.managed_by');
       db.tenantJoin(query, 'user_roles', 'roles.role_id', 'user_roles.role_id');
       const rows = await query;
 
@@ -576,6 +576,7 @@ const User = {
           tenant: row.tenant,
           msp: row.msp,
           client: row.client,
+          managed_by: row.managed_by ?? null,
         };
 
         if (!rolesByUser.has(userId)) {

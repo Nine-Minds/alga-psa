@@ -626,6 +626,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'user_internal_notification_preferences', deletion: 'ordered' },
   { table: 'user_preferences', deletion: 'ordered' },
   { table: 'user_client_portfolios', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
+  { table: 'managed_role_reconciliation_findings', deletion: 'ordered' },
   { table: 'role_permissions', deletion: 'ordered' },
   { table: 'user_roles', deletion: 'ordered', export: { rank: 41 } },
   { table: 'user_auth_accounts', deletion: 'ordered' },

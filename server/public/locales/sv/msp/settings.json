@@ -4159,7 +4159,8 @@
       "builtInRename": "Inbyggda roller kan inte byta namn.",
       "duplicateName": "En roll med namnet ”{{name}}” finns redan för den här portalen.",
       "lastMspAdmin": "En organisation måste behålla minst en aktiv användare med rollen MSP Admin.",
-      "lastRole": "En användare måste behålla minst en roll. Tilldela en annan roll först och ta sedan bort den här."
+      "lastRole": "En användare måste behålla minst en roll. Tilldela en annan roll först och ta sedan bort den här.",
+      "managedRole": "Den här rollen hanteras av Co-managed IT och kan inte ändras här."
     },
     "secrets": {
       "tenantContextMissing": "Organisationskontext saknas. Ladda om sidan och försök igen.",
@@ -4658,5 +4659,15 @@
       "openMenu": "Öppna meny",
       "inactive": "Inaktiv"
     }
+  },
+  "managedRole": {
+    "badge": "Hanteras av Co-managed IT",
+    "readOnlyNotice": "Alga hanterar den här rollen. Namn, behörigheter och medlemmar kan inte ändras här.",
+    "scopeHint": "Om du vill ändra vilka tavlor och projekt en tekniker kommer åt redigerar du kundens samförvaltningsöverenskommelse.",
+    "openArrangement": "Öppna Co-managed IT",
+    "permissionsLocked": "Behörigheterna för {{role}} hanteras av Co-managed IT och kan inte ändras här.",
+    "viewDetails": "Visa behörigheter",
+    "detailsTitle": "{{role}} (skrivskyddad)",
+    "assignedHint": "Tilldelad via en samförvaltad plats. Åtkomständringar görs i kundens överenskommelse."
   }
 }

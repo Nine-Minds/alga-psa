@@ -7,6 +7,8 @@ import { findUserById, getCurrentUser, getAllUsers, getUserRoles } from '@alga-p
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { updateUser, adminChangeUserPassword } from '@alga-psa/users/actions/user-actions/userActions';
 import { getRoles, assignRoleToUser, removeRoleFromUser } from '@alga-psa/users/lib/roleActions';
+import { isManagedRole } from '@alga-psa/auth/lib/managedRoles';
+import { ManagedRoleBadge, ManagedRoleNotice } from '@alga-psa/auth/components/settings/policy/ManagedRoleNotice';
 import {
   getUserCapacity,
   updateUserCapacity,
@@ -618,6 +620,18 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
           </Text>
           <div className="space-y-2">
             {roles.map((role: IRole): React.JSX.Element => {
+              // A capability-owned role is shown, never offered for removal: its owner assigns and removes it.
+              if (isManagedRole(role)) {
+                return (
+                  <div key={role.role_id} className="space-y-2 p-2 bg-gray-50 rounded">
+                    <div className="flex items-center gap-2">
+                      <Text size="2">{role.role_name}</Text>
+                      <ManagedRoleBadge role={role} />
+                    </div>
+                    <ManagedRoleNotice role={role} />
+                  </div>
+                );
+              }
               // The server refuses to leave a user with no role; don't offer it.
               const isOnlyRole = roles.length === 1;
               const removeButton = (

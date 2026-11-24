@@ -16,7 +16,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { 
   getPermissions, 
-  getRoles, 
+  getInspectableRoles, 
   getRolePermissions, 
   assignPermissionToRole, 
   removePermissionFromRole 
@@ -29,6 +29,8 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { isManagedRole } from '../../../lib/managedRoles';
+import { ManagedRoleNotice } from './ManagedRoleNotice';
 
 type ViewMode = 'msp' | 'client';
 
@@ -100,7 +102,8 @@ export default function PermissionsMatrix() {
 
   const fetchRoles = useCallback(async () => {
     try {
-      const data = await getRoles();
+      // Inspectable roles: a capability-owned role is listed, read-only, where its capability is served.
+      const data = await getInspectableRoles();
       setRoles(data);
     } catch (err) {
       console.error('Error fetching roles:', err);
@@ -140,6 +143,13 @@ export default function PermissionsMatrix() {
       .filter(r => viewMode === 'msp' ? r.msp : r.client)
       .sort((a, b) => a.role_name.localeCompare(b.role_name));
   }, [roles, viewMode]);
+
+  const roleIsManaged = useCallback(
+    (roleId: string) => roles.some(r => r.role_id === roleId && isManagedRole(r)),
+    [roles],
+  );
+  const selectedRoleIsManaged = selectedRole !== 'all' && roleIsManaged(selectedRole);
+  const selectedManagedRole = selectedRoleIsManaged ? roles.find(r => r.role_id === selectedRole) : undefined;
 
   const hasUnsavedChanges = useMemo(() => {
     return pendingChanges.size > 0;
@@ -231,8 +241,14 @@ export default function PermissionsMatrix() {
   const handlePermissionToggle = (permissionId: string, checked: boolean) => {
     if (!selectedRole || selectedRole === 'all') return;
 
-    // Check if this is an admin role
+    // A capability-owned role is read-only here.
     const selectedRoleObj = roles.find(r => r.role_id === selectedRole);
+    if (selectedRoleObj && isManagedRole(selectedRoleObj)) {
+      toast.error(t('managedRole.permissionsLocked', { role: selectedRoleObj.role_name }));
+      return;
+    }
+
+    // Check if this is an admin role
     if (selectedRoleObj && selectedRoleObj.role_name.toLowerCase() === 'admin') {
       toast.error(t('permissions.messages.adminLocked'));
       return; // Don't make any changes for admin roles
@@ -273,8 +289,14 @@ export default function PermissionsMatrix() {
 
   // Handle permission toggle for a specific role (resource view)
   const handlePermissionToggleForRole = (permissionId: string, roleId: string, checked: boolean) => {
-    // Check if this is an admin role
+    // A capability-owned role is read-only here.
     const roleObj = roles.find(r => r.role_id === roleId);
+    if (roleObj && isManagedRole(roleObj)) {
+      toast.error(t('managedRole.permissionsLocked', { role: roleObj.role_name }));
+      return;
+    }
+
+    // Check if this is an admin role
     if (roleObj && roleObj.role_name.toLowerCase() === 'admin') {
       toast.error(t('permissions.messages.adminLocked'));
       return; // Don't make any changes for admin roles
@@ -484,7 +506,7 @@ export default function PermissionsMatrix() {
       <Checkbox
         checked={isChecked}
         onChange={(e) => handlePermissionToggle(permission.permission_id, e.target.checked)}
-        disabled={!selectedRole || selectedRole === 'all'}
+        disabled={!selectedRole || selectedRole === 'all' || selectedRoleIsManaged}
         className={pendingChange !== undefined ? 'ring-2 ring-[rgb(var(--color-primary-500))]' : ''}
       />
     );
@@ -518,7 +540,7 @@ export default function PermissionsMatrix() {
       <Checkbox
         checked={isChecked}
         onChange={(e) => handlePermissionToggleForRole(permission.permission_id, roleId, e.target.checked)}
-        disabled={false}
+        disabled={roleIsManaged(roleId)}
         className={pendingChange !== undefined ? 'ring-2 ring-[rgb(var(--color-primary-500))]' : ''}
       />
     );
@@ -754,7 +776,7 @@ export default function PermissionsMatrix() {
                 { value: 'all', label: t('permissions.filters.allRoles', { defaultValue: 'All Roles' }) },
                 ...filteredRoles.map(role => ({
                   value: role.role_id,
-                  label: role.role_name
+                  label: isManagedRole(role) ? `${role.role_name} · ${t('managedRole.badge')}` : role.role_name
                 }))
               ]}
               placeholder={t('permissions.filters.selectRole', { defaultValue: 'Select a role' })}
@@ -776,6 +798,9 @@ export default function PermissionsMatrix() {
             />
           </div>
         </div>
+
+        {/* A capability-owned role is inspected here, never edited. */}
+        {selectedManagedRole && <ManagedRoleNotice role={selectedManagedRole} roleName={selectedManagedRole.role_name} />}
 
         {/* Stats */}
         <div className="text-sm text-gray-600">

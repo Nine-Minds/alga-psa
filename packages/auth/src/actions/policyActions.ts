@@ -1,6 +1,6 @@
 'use server'
 
-import { getRoleAssignmentViolation, isMspPrincipalUserType } from '@alga-psa/types';
+import { getRoleAssignmentViolation, isManagedRoleOwnershipError, isMspPrincipalUserType, MANAGED_ROLE_ERROR_LOCALE_KEY } from '@alga-psa/types';
 import { IPermission, IRole, IPolicy, IUserRole, IUserWithRoles, ICondition, DeletionValidationResult } from '@alga-psa/types';
 import { ITicket } from '@alga-psa/types';
 import { isClientUserType } from '@alga-psa/types';
@@ -9,7 +9,7 @@ import { USER_ATTRIBUTES, TICKET_ATTRIBUTES } from '../lib/attributes/EntityAttr
 import { assertSeatTechnicianWrite, assertUserRoleFloor, createTenantKnex, isSeatTechnicianGuardError, isUserRoleFloorRejected, syncContactClientAdminFlag, tenantDb, withTransaction, type UserRoleFloorViolation } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '../lib/withAuth';
-import { filterPermissionsByServedCapabilities, filterRolesByServedCapabilities } from '../lib/permissionCapabilities';
+import { filterPermissionsByServedCapabilities, filterRolesByServedCapabilities, omitManagedRoles } from '../lib/permissionCapabilities';
 import { hasPermission } from '../lib/rbac';
 import { isBuiltInRoleName } from '../lib/policy/builtInRoles';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
@@ -56,6 +56,12 @@ function isAuthActionError(value: unknown): value is AuthActionError {
 function authActionErrorFrom(error: unknown): AuthActionError | null {
   if (isAuthActionError(error)) {
     return error;
+  }
+
+  // A capability-owned role: its definition, grants and membership are not general administration.
+  // LEVERAGE: pattern managed-role-error-mapping — each action module maps the guard's refusal to its own error shape (policyActions, users roleActions, userActions)
+  if (isManagedRoleOwnershipError(error)) {
+    return actionError(error.message, MANAGED_ROLE_ERROR_LOCALE_KEY);
   }
 
   if (error instanceof Error) {
@@ -356,13 +362,30 @@ export const deleteRole = withAuth(async (
   }
 });
 
+const ROLE_LIST_COLUMNS = ['role_id', 'role_name', 'description', 'tenant', 'msp', 'client', 'managed_by'] as const;
+
+/**
+ * The roles an administrator may edit or assign by hand: every ordinary role. A capability-owned
+ * role (`managed_by`) is never offered here, served or not; see `getInspectableRoles`.
+ */
 export const getRoles = withAuth(async (_user, { tenant }): Promise<IRole[]> => {
     const { knex: db } = await createTenantKnex();
     const roles = await withTransaction(db, async (trx: Knex.Transaction) => {
-        return await tenantScopedTable(trx, 'roles', tenant)
-            .select('role_id', 'role_name', 'description', 'tenant', 'msp', 'client');
+        return await tenantScopedTable(trx, 'roles', tenant).select(...ROLE_LIST_COLUMNS);
     });
-    // A role that exists only for a capability is never listed for a tenant not served for it.
+    return omitManagedRoles(roles);
+});
+
+/**
+ * The roles an administrator may inspect: every ordinary role, plus a capability-owned role
+ * (marked by `managed_by`, to be shown read-only) in tenants served for its capability. Never
+ * feed this to a picker or an editable list.
+ */
+export const getInspectableRoles = withAuth(async (_user, { tenant }): Promise<IRole[]> => {
+    const { knex: db } = await createTenantKnex();
+    const roles = await withTransaction(db, async (trx: Knex.Transaction) => {
+        return await tenantScopedTable(trx, 'roles', tenant).select(...ROLE_LIST_COLUMNS);
+    });
     return filterRolesByServedCapabilities(tenant, roles);
 });
 

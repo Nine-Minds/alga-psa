@@ -4159,7 +4159,8 @@
       "builtInRename": "Funções integradas não podem ser renomeadas.",
       "duplicateName": "Já existe uma função chamada \"{{name}}\" para este portal.",
       "lastMspAdmin": "Um tenant deve manter pelo menos um usuário MSP Admin ativo.",
-      "lastRole": "Um usuário deve manter pelo menos uma função. Atribua outra função primeiro e depois remova esta."
+      "lastRole": "Um usuário deve manter pelo menos uma função. Atribua outra função primeiro e depois remova esta.",
+      "managedRole": "Esta função é gerenciada por Co-managed IT e não pode ser alterada aqui."
     },
     "secrets": {
       "tenantContextMissing": "O contexto do tenant está ausente. Atualize a página e tente novamente.",
@@ -4658,5 +4659,15 @@
       "openMenu": "Abrir menu",
       "inactive": "Inativo"
     }
+  },
+  "managedRole": {
+    "badge": "Gerenciado por Co-managed IT",
+    "readOnlyNotice": "A Alga gerencia esta função. Nome, permissões e membros não podem ser alterados aqui.",
+    "scopeHint": "Para alterar a quais quadros e projetos um técnico tem acesso, edite o acordo de cogestão do cliente.",
+    "openArrangement": "Abrir Co-managed IT",
+    "permissionsLocked": "As permissões de {{role}} são gerenciadas por Co-managed IT e não podem ser alteradas aqui.",
+    "viewDetails": "Ver permissões",
+    "detailsTitle": "{{role}} (somente leitura)",
+    "assignedHint": "Atribuído por uma vaga de cogestão. Alterações de acesso são feitas no acordo do cliente."
   }
 }

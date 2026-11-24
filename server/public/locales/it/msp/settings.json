@@ -4159,7 +4159,8 @@
       "builtInRename": "I ruoli predefiniti non possono essere rinominati.",
       "duplicateName": "Esiste già un ruolo denominato \"{{name}}\" per questo portale.",
       "lastMspAdmin": "Un tenant deve mantenere almeno un utente MSP Admin attivo.",
-      "lastRole": "Un utente deve mantenere almeno un ruolo. Assegnare prima un altro ruolo, quindi rimuovere questo."
+      "lastRole": "Un utente deve mantenere almeno un ruolo. Assegnare prima un altro ruolo, quindi rimuovere questo.",
+      "managedRole": "Questo ruolo è gestito da Co-managed IT e non può essere modificato qui."
     },
     "secrets": {
       "tenantContextMissing": "Manca il contesto del tenant. Aggiornare la pagina e riprovare.",
@@ -4658,5 +4659,15 @@
       "openMenu": "Apri menu",
       "inactive": "Inattivo"
     }
+  },
+  "managedRole": {
+    "badge": "Gestito da Co-managed IT",
+    "readOnlyNotice": "Alga gestisce questo ruolo. Nome, autorizzazioni e membri non possono essere modificati qui.",
+    "scopeHint": "Per cambiare a quali bacheche e progetti può accedere un tecnico, modifica l'accordo di co-gestione del cliente.",
+    "openArrangement": "Apri Co-managed IT",
+    "permissionsLocked": "Le autorizzazioni di {{role}} sono gestite da Co-managed IT e non possono essere modificate qui.",
+    "viewDetails": "Visualizza autorizzazioni",
+    "detailsTitle": "{{role}} (sola lettura)",
+    "assignedHint": "Assegnato tramite una postazione di co-gestione. Le modifiche di accesso si fanno nell'accordo del cliente."
   }
 }

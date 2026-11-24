@@ -10,6 +10,8 @@ import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSw
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { assignRoleToUser, removeRoleFromUser, getRoles } from '@alga-psa/users/lib/roleActions';
 import { getUserRoles, getUserRolesBatch } from '@alga-psa/auth/actions/policyActions';
+import { isManagedRole } from '@alga-psa/auth/lib/managedRoles';
+import { ManagedRoleBadge } from '@alga-psa/auth/components/settings/policy/ManagedRoleNotice';
 import { getAllUsers } from '@alga-psa/user-composition/actions/userQueryActions';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import type { IRole, IUserWithRoles } from '@alga-psa/types';
@@ -201,6 +203,15 @@ export default function UserRoleAssignment() {
         return (
           <Flex gap="2" wrap="wrap">
             {roles.map((role) => {
+              // A capability-owned role is shown read-only; only its owner removes it.
+              if (isManagedRole(role)) {
+                return (
+                  <span key={role.role_id} className="flex items-center gap-2 text-sm">
+                    {role.role_name}
+                    <ManagedRoleBadge role={role} />
+                  </span>
+                );
+              }
               const removeButton = (
                 <Button
                   id={`remove-role-${userId}-${role.role_id}-btn`}

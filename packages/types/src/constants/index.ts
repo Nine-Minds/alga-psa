@@ -20,3 +20,4 @@ export * from './userResponseSanitizer';
 export * from './seatTechnician';
 export * from './principalApiKey';
 export * from './timeEntryBillingMode';
+export * from './managedRole';

@@ -1,0 +1,39 @@
+[
+  {
+    "id": "T001",
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003"
+    ],
+    "description": "Exercise ordinary and bulk role writers against a migrated database as an authorized admin. Verify the managed identity, grants and memberships survive refused writes and ordinary role edits still succeed.",
+    "implemented": true
+  },
+  {
+    "id": "T002",
+    "featureIds": [
+      "F003",
+      "F006"
+    ],
+    "description": "Exercise invitation acceptance, ticket access on an allowed and an excluded board, revocation and conversion through the seat lifecycle. Prove a manual assignment cannot create a seat.",
+    "implemented": true
+  },
+  {
+    "id": "T003",
+    "featureIds": [
+      "F004",
+      "F005"
+    ],
+    "description": "Exercise role inspection, the permissions matrix, a technician profile and manual role pickers with and without the capability. Verify the explanation and read-only controls for an eligible admin.",
+    "implemented": true
+  },
+  {
+    "id": "T004",
+    "featureIds": [
+      "F001",
+      "F006"
+    ],
+    "description": "Exercise upgrade and a second reconciliation with missing and extra grants, a renamed role backed by seat history, an unrelated lookalike and a second tenant. Check exact grants, preserved identities and safe handling of ambiguity.",
+    "implemented": true
+  }
+]

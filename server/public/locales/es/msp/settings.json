@@ -4159,7 +4159,8 @@
       "builtInRename": "Los roles integrados no se pueden renombrar.",
       "duplicateName": "Ya existe un rol llamado «{{name}}» para este portal.",
       "lastMspAdmin": "Un inquilino debe conservar al menos un usuario MSP Admin activo.",
-      "lastRole": "Un usuario debe conservar al menos un rol. Asigne primero otro rol y luego quite este."
+      "lastRole": "Un usuario debe conservar al menos un rol. Asigne primero otro rol y luego quite este.",
+      "managedRole": "Este rol lo administra Co-managed IT y no se puede cambiar aquí."
     },
     "secrets": {
       "tenantContextMissing": "Falta el contexto del inquilino. Actualice la página e inténtelo de nuevo.",
@@ -4658,5 +4659,15 @@
       "openMenu": "Abrir menú",
       "inactive": "Inactivo"
     }
+  },
+  "managedRole": {
+    "badge": "Administrado por Co-managed IT",
+    "readOnlyNotice": "Alga administra este rol. Su nombre, permisos y miembros no se pueden cambiar aquí.",
+    "scopeHint": "Para cambiar a qué tableros y proyectos puede acceder un técnico, edite el acuerdo de gestión conjunta del cliente.",
+    "openArrangement": "Abrir Co-managed IT",
+    "permissionsLocked": "Los permisos de {{role}} los administra Co-managed IT y no se pueden cambiar aquí.",
+    "viewDetails": "Ver permisos",
+    "detailsTitle": "{{role}} (solo lectura)",
+    "assignedHint": "Asignado mediante un puesto de gestión conjunta. Los cambios de acceso se hacen en el acuerdo del cliente."
   }
 }

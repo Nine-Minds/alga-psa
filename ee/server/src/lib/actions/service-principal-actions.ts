@@ -227,6 +227,8 @@ export const getServicePrincipalFormOptionsAction = withAuth(
     const roles = (await tenantDb(knex, ctx.tenant)
       .table('roles')
       .where({ msp: true })
+      // A capability-owned role is never a manual choice.
+      .whereNull('managed_by')
       .orderBy('role_name')
       .select('role_id', 'role_name')) as MspRoleOption[];
     return { roles, rateLimitCeiling: rateLimitCeiling() };

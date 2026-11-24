@@ -27,7 +27,7 @@ const { compileRoleGrants, getCapabilityRoles, getDefaultRoles } = require('./ro
 const { assertCatalogIsValid } = require('./catalogValidation.cjs');
 
 const PERMISSION_COLUMNS = ['permission_id', 'resource', 'action', 'msp', 'client', 'description'];
-const ROLE_COLUMNS = ['role_id', 'role_name', 'msp', 'client'];
+const ROLE_COLUMNS = ['role_id', 'role_name', 'msp', 'client', 'managed_by'];
 
 // AlgaDesk and independently licensed co-managed workspaces can upgrade to PSA.
 // The upgrade backfills the PSA seeds (and therefore this catalog) before it flips
@@ -122,10 +122,7 @@ function buildCatalogPlan({ tenantId, product, permissions, roles, rolePermissio
   // A capability role is a grant target only in a tenant its capability admitted.
   const catalogRoles = [...getDefaultRoles(product), ...getCapabilityRoles(product)];
   for (const role of catalogRoles) {
-    const matches = roles.filter((candidate) =>
-      candidate.role_name === role.roleName
-      && candidate.msp === role.msp
-      && candidate.client === role.client);
+    const matches = roles.filter((candidate) => matchesCatalogRole(candidate, role));
 
     // Only a required role (the protected MSP and client-portal Admins) blocks the
     // tenant. Any other default role the tenant deleted or renamed simply gets no
@@ -180,10 +177,8 @@ function buildCatalogPlan({ tenantId, product, permissions, roles, rolePermissio
     }
   }
 
-  const customRoles = roles.filter((candidate) => !catalogRoles.some((role) =>
-    candidate.role_name === role.roleName
-    && candidate.msp === role.msp
-    && candidate.client === role.client)).length;
+  const customRoles = roles.filter((candidate) => !catalogRoles.some((role) => matchesCatalogRole(candidate, role))
+    && !candidate.managed_by).length;
 
   return {
     tenantId,
@@ -204,6 +199,19 @@ function buildCatalogPlan({ tenantId, product, permissions, roles, rolePermissio
     extraGrants,
     errors,
   };
+}
+
+/**
+ * A capability role is identified by its owner marker (`roles.managed_by`), never by name: a
+ * lookalike with the same name is an ordinary custom role to the catalog. A default role is
+ * identified by its exact (name, scope) and is never a managed role.
+ */
+function matchesCatalogRole(candidate, role) {
+  if (role.owner) return candidate.managed_by === role.owner;
+  return !candidate.managed_by
+    && candidate.role_name === role.roleName
+    && candidate.msp === role.msp
+    && candidate.client === role.client;
 }
 
 async function readTenantState(conn, tenantId) {

@@ -17,7 +17,7 @@ import {
   createCoManagedSeatArrangement, inviteCoManagedSeatTechnician,
 } from '@alga-psa/co-managed';
 import { coManagedSeatParticipants } from '@alga-psa/co-managed/seatCapability';
-import { filterRolesByServedCapabilities, unservedRoles } from '@alga-psa/auth/lib/permissionCapabilities';
+import { filterRolesByServedCapabilities, unservedManagedOwners } from '@alga-psa/auth/lib/permissionCapabilities';
 import { registerCapabilityParticipation } from '@alga-psa/core/capability';
 import { verifyPassword } from '@alga-psa/core/encryption';
 import { releaseCoManagedSeatAllocation } from '@alga-psa/licensing';
@@ -150,15 +150,15 @@ describeDb('accepting an invitation into the seat role', { shuffle: false }, () 
     await arrange(sponsor);
     // Stale state: the role's rows exist in a tenant that has no arrangement.
     await db.transaction((trx) => admitCoManagedSeatRole(trx, unserved));
-    const roles = (tenant: string) => db('roles').where({ tenant }).select('role_id', 'role_name', 'msp', 'client');
+    const roles = (tenant: string) => db('roles').where({ tenant }).select('role_id', 'role_name', 'msp', 'client', 'managed_by');
     const names = async (tenant: string) => (await filterRolesByServedCapabilities(tenant, await roles(tenant)))
       .map((role) => role.role_name);
 
     expect(await names(sponsor)).toContain('Seat Technician');
-    expect(await unservedRoles(sponsor)).toEqual([]);
+    expect(await unservedManagedOwners(sponsor)).toEqual([]);
     expect(await names(unserved)).not.toContain('Seat Technician');
     expect(await names(unserved)).toEqual(expect.arrayContaining(['Admin', 'Technician', 'Finance']));
-    expect(await unservedRoles(unserved)).toEqual([{ role_name: 'Seat Technician', msp: true, client: false }]);
+    expect(await unservedManagedOwners(unserved)).toEqual(['co-managed-seat']);
 
     // The kill switch closes the sponsor's too, and leaves its rows in place.
     process.env.FORCE_CAPABILITIES = 'co-managed-seat:off';

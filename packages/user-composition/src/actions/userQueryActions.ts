@@ -220,6 +220,8 @@ export const getAllRoles = withAuth(async (_user, { tenant }): Promise<IRole[]> 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const roles = await tenantDb(trx, tenant)
         .table<IRole>('roles')
+        // A capability-owned role is never a manual choice.
+        .whereNull('managed_by')
         .select('*');
       return roles;
     });

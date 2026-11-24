@@ -1,0 +1,32 @@
+[
+  {
+    "id": "F001",
+    "description": "Identify the seat role by stable tenant-scoped ownership and reserve its identity during creation, import and rename.",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Protect the managed role definition and its canonical permission set through UI actions, APIs and bulk writes.",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "Reserve seat-role assignment and removal for seat lifecycle operations, including conversion and revocation.",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "description": "Keep the role and its grants inspectable as read-only for authorized MSP administrators in eligible tenants. Identify the arrangement as the place to manage scope.",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "description": "Exclude the role from manual role selectors and editing controls, and suppress it on general role surfaces for tenants without the capability.",
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "description": "Reconcile legacy seat roles and grants across existing arrangements safely and idempotently. Preserve legitimate assignments, unrelated roles and tenant isolation.",
+    "implemented": true
+  }
+]

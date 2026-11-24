@@ -3,7 +3,7 @@
 // TODO: Consolidate with @alga-psa/auth/actions/policyActions after circular dependency is resolved
 // This is a temporary duplication to break the auth <-> users cycle
 
-import { IRole, IUserRole, getRoleAssignmentViolation } from '@alga-psa/types';
+import { IRole, IUserRole, getRoleAssignmentViolation, isManagedRoleOwnershipError, MANAGED_ROLE_ERROR_LOCALE_KEY } from '@alga-psa/types';
 import { assertSeatTechnicianWrite, assertUserRoleFloor, createTenantKnex, isSeatTechnicianGuardError, isUserRoleFloorRejected, syncContactClientAdminFlag, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
@@ -26,6 +26,9 @@ function userRoleFloorActionError(
 }
 
 function userRoleActionErrorFrom(error: unknown): UserRoleActionError | null {
+    // A capability-owned role changes only through its owner's lifecycle.
+    // LEVERAGE: pattern managed-role-error-mapping — same mapping as auth policyActions and users userActions
+    if (isManagedRoleOwnershipError(error)) return actionError(error.message, MANAGED_ROLE_ERROR_LOCALE_KEY);
     if (error instanceof Error) {
         const message = error.message;
         if (message.startsWith('Permission denied') || message === 'user is not logged in') {
@@ -74,7 +77,10 @@ export const getRoles = withAuth(async (
 ): Promise<IRole[]> => {
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
+        // A capability-owned role is never a manual choice.
+        // LEVERAGE: pattern role-picker-omit-managed — every role picker data source repeats `managed_by IS NULL` (auth getRoles, users getRoles, getAllRoles, MCP agents, service principals, bundles)
         return await tenantDb(trx, tenant).table('roles')
+            .whereNull('managed_by')
             .select('role_id', 'role_name', 'description', 'tenant', 'msp', 'client');
     });
 });

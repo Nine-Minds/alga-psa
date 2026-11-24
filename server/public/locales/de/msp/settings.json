@@ -4159,7 +4159,8 @@
       "builtInRename": "Integrierte Rollen können nicht umbenannt werden.",
       "duplicateName": "Eine Rolle mit dem Namen „{{name}}“ existiert für dieses Portal bereits.",
       "lastMspAdmin": "Ein Mandant muss mindestens einen aktiven MSP-Admin-Benutzer behalten.",
-      "lastRole": "Ein Benutzer muss mindestens eine Rolle behalten. Weisen Sie zuerst eine andere Rolle zu und entfernen Sie dann diese."
+      "lastRole": "Ein Benutzer muss mindestens eine Rolle behalten. Weisen Sie zuerst eine andere Rolle zu und entfernen Sie dann diese.",
+      "managedRole": "Diese Rolle wird von Co-managed IT verwaltet und kann hier nicht geändert werden."
     },
     "secrets": {
       "tenantContextMissing": "Der Mandantenkontext fehlt. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
@@ -4658,5 +4659,15 @@
       "openMenu": "Menü öffnen",
       "inactive": "Inaktiv"
     }
+  },
+  "managedRole": {
+    "badge": "Verwaltet von Co-managed IT",
+    "readOnlyNotice": "Alga verwaltet diese Rolle. Name, Berechtigungen und Mitglieder können hier nicht geändert werden.",
+    "scopeHint": "Um zu ändern, auf welche Boards und Projekte ein Techniker zugreifen kann, bearbeiten Sie die Co-Managed-Vereinbarung des Kunden.",
+    "openArrangement": "Co-managed IT öffnen",
+    "permissionsLocked": "Die Berechtigungen von {{role}} werden von Co-managed IT verwaltet und können hier nicht geändert werden.",
+    "viewDetails": "Berechtigungen anzeigen",
+    "detailsTitle": "{{role}} (schreibgeschützt)",
+    "assignedHint": "Über einen Co-Managed-Platz zugewiesen. Zugriffsänderungen erfolgen in der Vereinbarung des Kunden."
   }
 }
