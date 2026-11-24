@@ -79,7 +79,7 @@ export interface BrandLogo {
   alt?: string;
 }
 
-export interface BrandDecorationOptions {
+export interface BrandDecorationOptions extends BrandAttributionStripOptions {
   logo?: BrandLogo;
   hideAttribution?: boolean;
 }
@@ -225,21 +225,28 @@ const SHIPPED_SLOGAN_ROW = footerRow(LEGACY_BRAND_SLOGAN_PATTERN);
 const SHIPPED_SLOGAN = attributionWithTail(LEGACY_BRAND_SLOGAN_PATTERN);
 const STANDALONE_PARAGRAPH = new RegExp(`<p>\\s*${ATTRIBUTION}\\s*</p>`, 'gi');
 const TRAILING_ATTRIBUTION = new RegExp(`\\s*${SEPARATOR}\\s*${ATTRIBUTION}`, 'gi');
+/**
+ * The attribution and the separator that only joined it to what follows. Takes
+ * the separator with it so a tail that stays — a line a tenant wrote beside the
+ * attribution, which `shipped-slogan` keeps — does not open on a stray "&middot;".
+ */
+const ATTRIBUTION_WITH_SEPARATOR = new RegExp(`${ATTRIBUTION}\\s*${SEPARATOR}\\s*`, 'gi');
 const BARE_ATTRIBUTION = new RegExp(ATTRIBUTION, 'gi');
 
 export interface BrandAttributionStripOptions {
   /**
    * Which footer row counts as ours.
-   * - `any-tail`, the default the apply and send paths run on: the HTML being
-   *   decorated is the standard template, so a footer row the attribution opens
-   *   is ours by construction and goes whatever follows the separator — wording
-   *   we have not shipped yet included.
-   * - `shipped-slogan`, for normalizing a row a tenant may have typed in: only
-   *   the footers we have actually shipped go. A footer reworded around the
-   *   attribution ("Powered by AlgaPSA &middot; Acme MSP, your IT partner") is
-   *   then still visible to the classifier as the tenant's own edit, instead of
-   *   normalizing to the same nothing our footer does — which would let an apply
-   *   overwrite it and "Remove branding" delete it.
+   * - `any-tail`, the default: the HTML being decorated is the standard
+   *   template — a clone, a rebuild, the settings preview, the send-time repair
+   *   — so a footer row the attribution opens is ours by construction and goes
+   *   whatever follows the separator, wording we have not shipped yet included.
+   * - `shipped-slogan`, whenever the HTML passing through is a tenant's own row:
+   *   only the footers we have actually shipped go. A footer reworded around the
+   *   attribution ("Powered by AlgaPSA &middot; Acme MSP, your IT partner") then
+   *   survives, instead of collapsing to the same nothing our footer does. The
+   *   classifier reads it in this mode so such a row stays visibly the tenant's
+   *   edit, and the apply decorates a ticked `customized` row in it so the words
+   *   beside the attribution are not carried off with it.
    */
   footerRow?: 'any-tail' | 'shipped-slogan';
 }
@@ -255,6 +262,8 @@ export interface BrandAttributionStripOptions {
  * - a trailing "&copy; 2026 Acme &middot; Powered by AlgaPSA" loses only the
  *   attribution: the copyright is the tenant's.
  * - the standalone <p>Powered by AlgaPSA</p> older portal-invitation rows carry.
+ * - anything else the attribution sits in loses the attribution and the
+ *   separator behind it, and keeps the rest.
  *
  * Idempotent: a second pass has nothing left to match.
  */
@@ -268,6 +277,7 @@ export function stripBrandAttribution(html: string, options: BrandAttributionStr
     .replace(TRAILING_ATTRIBUTION, '')
     .replace(shippedOnly ? SHIPPED_SLOGAN_ROW : ANY_TAIL_ROW, '')
     .replace(shippedOnly ? SHIPPED_SLOGAN : ANY_TAIL, '')
+    .replace(ATTRIBUTION_WITH_SEPARATOR, '')
     .replace(BARE_ATTRIBUTION, '');
 }
 
@@ -278,6 +288,6 @@ export function containsBrandAttribution(html: string): boolean {
 /** The Enterprise pass the apply flow runs over every HTML it writes. */
 export function decorateBrandedHtml(html: string, options: BrandDecorationOptions): string {
   let result = options.logo ? applyBrandLogo(html, options.logo) : removeBrandLogo(html);
-  if (options.hideAttribution) result = stripBrandAttribution(result);
+  if (options.hideAttribution) result = stripBrandAttribution(result, { footerRow: options.footerRow });
   return result;
 }

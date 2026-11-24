@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { applyEmailPalette, containsEmailPaletteTokens } from '../applyEmailPalette';
-import { BRAND_LOGO_MARKER, containsBrandAttribution, decorateBrandedHtml } from '../brandAssets';
+import {
+  BRAND_LOGO_MARKER,
+  containsBrandAttribution,
+  decorateBrandedHtml,
+  type BrandAttributionStripOptions,
+} from '../brandAssets';
 import { LEGACY_BRAND_SLOGANS } from '../orphanedSlogan';
 import { planEmailBrandingApply, planEmailBrandingRemoval } from '../planEmailBrandingApply';
 import { resolveEmailPalette } from '../resolveEmailPalette';
@@ -379,7 +384,9 @@ describe('planEmailBrandingRemoval', () => {
 
 describe('enterprise brand assets in the plan', () => {
   const logo = { variant: 'wide' as const, alt: 'Acme MSP' };
-  const decorate = (html: string) => decorateBrandedHtml(html, { logo, hideAttribution: true });
+  // Forwards the planner's strip options, exactly as buildBrandDecorator does.
+  const decorate = (html: string, options?: BrandAttributionStripOptions) =>
+    decorateBrandedHtml(html, { logo, hideAttribution: true, ...options });
 
   function applyOnce() {
     const plan = planEmailBrandingApply({
@@ -528,6 +535,44 @@ describe('enterprise brand assets in the plan', () => {
 
     expect(removal.deletable).toEqual([]);
     expect(removal.kept).toHaveLength(3);
+  });
+
+  /**
+   * And when that same tenant does tick the template, so the apply recolors
+   * their row in place: hiding the attribution takes the attribution, not the
+   * line they wrote beside it. The row is theirs, so only a footer we shipped
+   * may be carried off with the attribution — the rest of the cell stays, and
+   * does not open on the separator that used to join it to our line.
+   */
+  it('keeps the words beside the attribution in a ticked customized row', () => {
+    const tenantRows = NAMES.map((name, index) => {
+      const row = brandedRow(950 + index, name, 'en');
+      const html = row.html_content.replace(
+        /Powered by AlgaPSA(?:\s*&middot;\s*[^<]*)?/,
+        'Powered by AlgaPSA &middot; Acme MSP &middot; +1 555 0100',
+      );
+
+      expect(html).not.toBe(row.html_content);
+      return { ...row, html_content: html };
+    });
+
+    const plan = planEmailBrandingApply({
+      systemRows: SYSTEM_ROWS,
+      tenantRows,
+      target: FOREST,
+      appliedPalette: TERRACOTTA,
+      scope: { names: NAMES, languages: ['en'], includeCustomized: NAMES },
+      decorate,
+    });
+
+    expect(plan.skipped).toEqual([]);
+    expect(plan.updates).toHaveLength(3);
+    for (const update of plan.updates) {
+      expect(update.html).toContain('Acme MSP');
+      expect(update.html).toContain('+1 555 0100');
+      expect(containsBrandAttribution(update.html)).toBe(false);
+      expect(update.html).not.toMatch(/<td[^>]*>\s*(?:&middot;|&#183;|·|•)/);
+    }
   });
 
   it('still recognizes those rows as its own on a re-apply', () => {
