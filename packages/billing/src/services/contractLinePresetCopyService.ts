@@ -40,6 +40,75 @@ export class ContractLinePresetDomainError extends Error {
 }
 
 /**
+ * A refusal raised while copying a preset, tagged with the refusal that caused
+ * it. A composite save (the quick-add contract save) catches this to read the
+ * refusal with the SAME reader the standalone action uses, so the dialog sees
+ * the readable message either way instead of a thrown, production-masked error.
+ */
+export class ContractLinePresetCopyFailure extends Error {
+    constructor(readonly reason: unknown) {
+        super(reason instanceof Error ? reason.message : 'Failed to copy the selected contract line preset');
+        this.name = 'ContractLinePresetCopyFailure';
+    }
+}
+
+/** The BILLING_RULE_CREATED properties for a line a preset copy created. */
+export type ContractLineCopiedAnalytics = {
+    contract_line_id: string;
+    contract_line_name: string;
+    contract_line_type: string | null;
+    copied_from_preset: string;
+    contract_id: string;
+};
+
+/**
+ * Report copied lines to analytics. Call it once the writing transaction has
+ * COMMITTED: a refusal later in a composite save rolls the lines back, and a
+ * rolled-back line was never created.
+ */
+export async function captureCopiedLineAnalytics(
+    user: IUser,
+    records: ContractLineCopiedAnalytics[],
+): Promise<void> {
+    if (records.length === 0) return;
+    const { analytics, AnalyticsEvents } = await getAnalyticsAsync();
+    for (const record of records) {
+        analytics.capture(AnalyticsEvents.BILLING_RULE_CREATED, record, user.user_id);
+    }
+}
+
+/**
+ * Copy several presets into lines of one contract, on a caller-owned
+ * transaction. Refusals come back tagged ({@link ContractLinePresetCopyFailure})
+ * and the analytics records are collected for the caller to report after the
+ * commit.
+ */
+export async function copyPresetLinesInTransaction(
+    trx: Knex.Transaction,
+    user: IUser,
+    tenantId: string,
+    contractId: string,
+    entries: Array<{ preset_id: string; overrides?: ContractLinePresetCopyOverrides }>,
+    analyticsSink: ContractLineCopiedAnalytics[],
+): Promise<string[]> {
+    const contractLineIds: string[] = [];
+    for (const entry of entries) {
+        const presetId = typeof entry?.preset_id === 'string' ? entry.preset_id.trim() : '';
+        if (!presetId) continue;
+        try {
+            contractLineIds.push(
+                await copyPresetToContractLineInTransaction(
+                    trx, user, tenantId, contractId, presetId, entry.overrides, analyticsSink,
+                ),
+            );
+        } catch (error) {
+            throw new ContractLinePresetCopyFailure(error);
+        }
+    }
+    return contractLineIds;
+}
+
+/**
  * Recurring rates are never negative. A negative fixed rate is not a discount
  * (credits are authored as configured discounts or manual invoice adjustments),
  * so it is rejected here before it can reach a stored charge and silently get
@@ -79,7 +148,14 @@ export async function copyPresetToContractLineInTransaction(
     tenantId: string,
     contractId: string,
     presetId: string,
-    overrides?: ContractLinePresetCopyOverrides
+    overrides?: ContractLinePresetCopyOverrides,
+    /**
+     * Collector for this line's BILLING_RULE_CREATED record, reported with
+     * {@link captureCopiedLineAnalytics} after the caller's transaction commits.
+     * Without one the copy is announced here, which is only safe when nothing
+     * else in the transaction can still refuse.
+     */
+    analyticsSink?: ContractLineCopiedAnalytics[],
 ): Promise<string> {
     // Recurring rates come from overrides, preset services and the preset
     // fixed config; reject a negative value at any of those sources.
@@ -330,15 +406,20 @@ export async function copyPresetToContractLineInTransaction(
         }
     }
 
-    // Track analytics
-    const { analytics, AnalyticsEvents } = await getAnalyticsAsync();
-    analytics.capture(AnalyticsEvents.BILLING_RULE_CREATED, {
+    // Track analytics. Deferred to the caller when it has a sink: a line this
+    // transaction later rolls back was never created, so it is not reported.
+    const analyticsRecord: ContractLineCopiedAnalytics = {
         contract_line_id: contractLineId,
         contract_line_name: contractLine.contract_line_name,
-        contract_line_type: contractLine.contract_line_type,
+        contract_line_type: contractLine.contract_line_type ?? null,
         copied_from_preset: presetId,
-        contract_id: contractId
-    }, user.user_id);
+        contract_id: contractId,
+    };
+    if (analyticsSink) {
+        analyticsSink.push(analyticsRecord);
+    } else {
+        await captureCopiedLineAnalytics(user, [analyticsRecord]);
+    }
 
     // Presets with a contract_line_preset_prepaid_blocks row produce a Prepaid Block line.
     if (preset.contract_line_type === 'Hourly') {

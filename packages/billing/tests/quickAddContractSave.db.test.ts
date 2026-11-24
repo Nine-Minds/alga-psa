@@ -36,22 +36,50 @@ type PublishedEvent = {
   committedContractIds: string[];
 };
 
+/** An analytics capture, with the contract lines an OUTSIDE connection saw. */
+type CapturedAnalytics = {
+  eventName: string;
+  properties: Record<string, any>;
+  committedLineIds: Promise<string[]>;
+};
+
 const hoisted = vi.hoisted(() => {
   const state = {
     db: null as any,
     tenant: '',
     userId: '00000000-0000-4000-8000-0000000000b1',
+    /** The acting principal's user_type; a portal Admin is 'client'. */
+    userType: 'internal',
     events: [] as PublishedEvent[],
+    dateDomainEvents: [] as string[],
+    analytics: [] as CapturedAnalytics[],
   };
   const withAuthMock = (fn: any) => async (...args: any[]) => {
     const { runWithTenant } = await import('@alga-psa/db');
     return runWithTenant(state.tenant, () =>
       fn(
-        { user_id: state.userId, tenant: state.tenant, user_type: 'internal', roles: [] },
+        { user_id: state.userId, tenant: state.tenant, user_type: state.userType, roles: [] },
         { tenant: state.tenant },
         ...args,
       ));
   };
+  // Analytics is recorded WITH what an outside connection sees, the same way
+  // publication is: a copied line is reported only once it is committed.
+  // `analytics.capture` is fire-and-forget in the product, so the read is kept
+  // as a promise for the test to await rather than awaited here.
+  const analyticsCapture = vi.fn((eventName: string, properties: Record<string, any>) => {
+    state.analytics.push({
+      eventName,
+      properties,
+      committedLineIds: state.db
+        ? state.db('contract_lines').where({ tenant: state.tenant }).pluck('contract_line_id')
+          .catch(() => [] as string[])
+        : Promise.resolve([] as string[]),
+    });
+  });
+  const emitDateDomainEventOnce = vi.fn(async (_knex: any, _tenant: string, event: any) => {
+    state.dateDomainEvents.push(event?.eventType);
+  });
   // Publication is mocked (an unreachable Redis would hang every save), but the
   // call is recorded WITH what a connection outside the save's transaction can
   // see: a visible header proves the event went out after the commit.
@@ -65,7 +93,9 @@ const hoisted = vi.hoisted(() => {
       committedContractIds,
     });
   });
-  return Object.assign(state, { withAuthMock, publishWorkflowEvent });
+  return Object.assign(state, {
+    withAuthMock, publishWorkflowEvent, analyticsCapture, emitDateDomainEventOnce,
+  });
 });
 
 vi.mock('@alga-psa/auth', () => ({
@@ -91,8 +121,14 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 }));
 vi.mock('@alga-psa/event-bus/workflow/dateDomainEvents', async () => {
   const actual = await vi.importActual<any>('@alga-psa/event-bus/workflow/dateDomainEvents');
-  return { ...actual, emitDateDomainEventOnce: vi.fn(async () => undefined) };
+  return { ...actual, emitDateDomainEventOnce: hoisted.emitDateDomainEventOnce };
 });
+// The only '@alga-psa/analytics' importer on this path is the billing package's
+// own dynamic-import helper (lib/authHelpers.getAnalyticsAsync).
+vi.mock('@alga-psa/analytics', () => ({
+  analytics: { capture: hoisted.analyticsCapture },
+  AnalyticsEvents: new Proxy({}, { get: (_target, key) => String(key) }),
+}));
 
 const wizard = enabled ? await import('../src/actions/contractWizardActions') : (null as any);
 const contracts = enabled ? await import('../src/actions/contractActions') : (null as any);
@@ -119,10 +155,16 @@ describe.runIf(enabled)('Quick add contract save', () => {
   let otherProfileId: string;
   let serviceId: string;
   let presetId: string;
+  let blockPresetId: string;
 
   const START_DATE = '2026-04-01';
   const END_DATE = '2026-09-30';
   const PRESET_NAME = 'QA Hourly Support';
+  /** An end date inside the renewal-decision window, so the date event is in play. */
+  const soonEndDate = () => {
+    const soon = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    return `${soon.getFullYear()}-${String(soon.getMonth() + 1).padStart(2, '0')}-${String(soon.getDate()).padStart(2, '0')}`;
+  };
 
   const submission = (extra: Record<string, unknown> = {}) => ({
     contract_name: `QA ${uuidv4().slice(0, 6)}`,
@@ -152,6 +194,7 @@ describe.runIf(enabled)('Quick add contract save', () => {
     otherProfileId = uuidv4();
     serviceId = uuidv4();
     presetId = uuidv4();
+    blockPresetId = uuidv4();
     const typeId = uuidv4();
 
     await db('tenants').insert({ tenant, client_name: 'QA Tenant', email: 'qa@test.local', billing_source: 'test' });
@@ -180,6 +223,22 @@ describe.runIf(enabled)('Quick add contract save', () => {
     await db('contract_line_preset_services').insert({
       tenant, preset_id: presetId, service_id: serviceId, quantity: 1, custom_rate: 12000,
     });
+    // A Prepaid Block (Hourly) preset: copying it refuses when the covered
+    // service has no hourly rate above zero, one of the refusal classes the
+    // dialog used to get back as a readable message.
+    await db('contract_line_presets').insert({
+      tenant, preset_id: blockPresetId, preset_name: 'QA Prepaid Block', contract_line_type: 'Hourly',
+      billing_frequency: 'monthly', minimum_billable_time: 15, round_up_to_nearest: 15,
+    });
+    await db('contract_line_preset_services').insert({
+      tenant, preset_id: blockPresetId, service_id: serviceId, quantity: 1, custom_rate: 12000,
+    });
+    await db('contract_line_preset_prepaid_blocks').insert({
+      tenant, preset_id: blockPresetId, block_minutes: 2400, block_price: 440000,
+      sold_as_service_id: serviceId, issue_mode: 'consumption', rollover_periods: 0,
+      expiry_months: 12, trigger_on_exhaustion: false, trigger_on_expiry: false,
+      trigger_on_renewal: false, replenishment_tier: 'auto_issue',
+    });
   });
 
   afterAll(async () => {
@@ -190,7 +249,8 @@ describe.runIf(enabled)('Quick add contract save', () => {
       'contract_line_service_hourly_configs', 'contract_line_service_hourly_config',
       'contract_line_service_fixed_config', 'contract_line_service_usage_config',
       'contract_line_service_configuration', 'contract_line_services', 'contract_line_fixed_config',
-      'contract_lines', 'client_contracts', 'contracts', 'contract_line_preset_services',
+      'contract_lines', 'client_contracts', 'contracts', 'contract_line_preset_prepaid_blocks',
+      'contract_line_preset_services',
       'contract_line_presets', 'client_billing_profiles', 'service_catalog', 'service_types',
       'users', 'clients', 'tenants',
     ]) {
@@ -210,6 +270,10 @@ describe.runIf(enabled)('Quick add contract save', () => {
   };
 
   const contractCreatedCount = () => hoisted.events.filter((event) => event.eventType === 'CONTRACT_CREATED').length;
+  const renewalEventCount = () =>
+    hoisted.dateDomainEvents.filter((eventType) => eventType === 'CONTRACT_RENEWAL_UPCOMING').length;
+  const lineCreatedAnalytics = () =>
+    hoisted.analytics.filter((captured) => captured.eventName === 'BILLING_RULE_CREATED');
 
   /** The three row groups the save owns, with ids and timestamps removed. */
   const savedRows = async (contractId: string) => {
@@ -364,5 +428,212 @@ describe.runIf(enabled)('Quick add contract save', () => {
     expect(header).toMatchObject({ status: 'draft', is_active: false });
     const assignment = await db('client_contracts').where({ tenant, contract_id: result.contract_id }).first();
     expect(assignment.is_active).toBe(false);
+  });
+
+  // The preset copy runs inside the save's transaction now. Its refusals have to
+  // come back as returned action errors, with the same readable messages the
+  // standalone copy action gives them: a thrown error shows the operator a
+  // generic failure in a production build.
+  describe('preset copy refusals', () => {
+    it('returns the message for a preset that is gone, and writes nothing', async () => {
+      const name = `QA gone ${uuidv4().slice(0, 6)}`;
+      const missingPresetId = uuidv4();
+      const before = await rowCounts();
+
+      const result = await wizard.saveQuickAddContract(
+        submission({ contract_name: name, preset_lines: [{ preset_id: missingPresetId }] }),
+      );
+
+      expect(messageOf(result)).toBe(`Contract line preset ${missingPresetId} not found`);
+      expect(await rowCounts()).toEqual(before);
+    });
+
+    it('returns the prepaid-block validation message, and writes nothing', async () => {
+      const name = `QA unpriced ${uuidv4().slice(0, 6)}`;
+      const before = await rowCounts();
+      const analyticsBefore = lineCreatedAnalytics().length;
+
+      const result = await wizard.saveQuickAddContract(
+        submission({
+          contract_name: name,
+          // A covered service at rate zero: overage would have nothing to bill at.
+          preset_lines: [{ preset_id: blockPresetId, overrides: { services: { [serviceId]: { custom_rate: 0 } } } }],
+        }),
+      );
+
+      expect(messageOf(result)).toContain('every covered service needs an hourly rate above zero');
+      expect(await rowCounts()).toEqual(before);
+      // The line the copy had already written is rolled back, so it is not
+      // reported to analytics either.
+      expect(lineCreatedAnalytics().length).toBe(analyticsBefore);
+    });
+  });
+
+  it('reports a copied line to analytics only once it is committed', async () => {
+    const name = `QA analytics ${uuidv4().slice(0, 6)}`;
+    const analyticsBefore = lineCreatedAnalytics().length;
+
+    const result = await wizard.saveQuickAddContract(submission({ contract_name: name }));
+    expect(messageOf(result)).toBe('');
+
+    const captured = lineCreatedAnalytics().slice(analyticsBefore);
+    expect(captured).toHaveLength(1);
+    expect(captured[0].properties).toMatchObject({
+      contract_id: result.contract_id,
+      contract_line_id: result.contract_line_ids[0],
+      copied_from_preset: presetId,
+    });
+    // Visible from a connection outside the save when it was reported.
+    expect(await captured[0].committedLineIds).toContain(result.contract_line_ids[0]);
+  });
+
+  it('announces an upcoming renewal for an active save but not for a draft', async () => {
+    const endDate = soonEndDate();
+
+    const draftBefore = renewalEventCount();
+    const draft = await wizard.saveQuickAddContract(
+      submission({ contract_name: `QA draft renewal ${uuidv4().slice(0, 6)}`, end_date: endDate, save_as_active: false }),
+    );
+    expect(messageOf(draft)).toBe('');
+    // A draft is not a live contract: nobody has to decide on renewing it.
+    expect(renewalEventCount()).toBe(draftBefore);
+
+    const active = await wizard.saveQuickAddContract(
+      submission({ contract_name: `QA active renewal ${uuidv4().slice(0, 6)}`, end_date: endDate }),
+    );
+    expect(messageOf(active)).toBe('');
+    expect(renewalEventCount()).toBe(draftBefore + 1);
+  });
+
+  // Authoring a billing contract is an MSP act. `hasPermission` is mocked true
+  // here, which is the real catalog's position for a client-portal Admin:
+  // billing:create and client:create are both client-flagged and granted to
+  // that role, so only the principal gate refuses.
+  describe('client-portal principal', () => {
+    const asPortalAdmin = async (run: () => Promise<any>) => {
+      hoisted.userType = 'client';
+      try {
+        return await run();
+      } finally {
+        hoisted.userType = 'internal';
+      }
+    };
+
+    it('refuses saveQuickAddContract and writes nothing', async () => {
+      const name = `QA portal ${uuidv4().slice(0, 6)}`;
+      const before = await rowCounts();
+
+      const result = await asPortalAdmin(() =>
+        wizard.saveQuickAddContract(submission({ contract_name: name })));
+
+      expect(result.permissionError).toBe('Permission denied: Cannot create billing contracts');
+      expect(await rowCounts()).toEqual(before);
+    });
+
+    it('refuses createClientContractFromWizard and writes nothing', async () => {
+      const before = await rowCounts();
+
+      const result = await asPortalAdmin(() =>
+        wizard.createClientContractFromWizard({
+          contract_name: `QA portal wizard ${uuidv4().slice(0, 6)}`,
+          client_id: clientId,
+          billing_frequency: 'monthly',
+          currency_code: 'EUR',
+          start_date: START_DATE,
+          use_tenant_renewal_defaults: true,
+        }));
+
+      expect(result.permissionError).toBe('Permission denied: Cannot create billing contracts');
+      expect(await rowCounts()).toEqual(before);
+    });
+  });
+
+  // The edit branch: the header update, the preset copies and the assignment in
+  // one transaction, with the refusals `updateContract` makes.
+  describe('editing an existing contract', () => {
+    const seedHeader = async (overrides: Record<string, unknown> = {}) => {
+      const contractId = uuidv4();
+      await db('contracts').insert({
+        tenant, contract_id: contractId, contract_name: `QA edit ${uuidv4().slice(0, 6)}`,
+        owner_client_id: clientId, billing_frequency: 'monthly', is_active: true, status: 'active',
+        is_template: false, currency_code: 'EUR', ...overrides,
+      });
+      return contractId;
+    };
+
+    it('updates the header and adds the assignment and the preset line', async () => {
+      const contractId = await seedHeader();
+      const name = `QA edited ${uuidv4().slice(0, 6)}`;
+
+      const result = await wizard.saveQuickAddContract(
+        submission({ contract_id: contractId, contract_name: name }),
+      );
+      expect(messageOf(result)).toBe('');
+      expect(result.contract_id).toBe(contractId);
+
+      const header = await db('contracts').where({ tenant, contract_id: contractId }).first();
+      expect(header).toMatchObject({ contract_name: name, status: 'active', is_active: true });
+      const assignment = await db('client_contracts').where({ tenant, contract_id: contractId }).first();
+      expect(calendarDay(assignment.start_date)).toBe(START_DATE);
+      expect(calendarDay(assignment.end_date)).toBe(END_DATE);
+      expect(await db('contract_lines').where({ tenant, contract_id: contractId })).toHaveLength(1);
+    });
+
+    it('refuses a client that does not own the contract, and writes nothing', async () => {
+      const contractId = await seedHeader();
+      const before = await rowCounts();
+
+      const result = await wizard.saveQuickAddContract(
+        submission({ contract_id: contractId, client_id: otherClientId, billing_profile_id: otherProfileId }),
+      );
+
+      expect(messageOf(result)).toBe(
+        'This contract belongs to a different client. Open it from that client to edit it.',
+      );
+      expect(await rowCounts()).toEqual(before);
+    });
+
+    it('refuses a contract that does not exist', async () => {
+      const result = await wizard.saveQuickAddContract(submission({ contract_id: uuidv4() }));
+      expect(messageOf(result)).toBe('Contract not found');
+    });
+
+    it('refuses a system-managed default contract, as updateContract does', async () => {
+      const contractId = await seedHeader({ is_system_managed_default: true });
+      const before = await rowCounts();
+
+      const result = await wizard.saveQuickAddContract(submission({ contract_id: contractId }));
+
+      expect(messageOf(result)).toContain('System-managed default contracts are attribution-only');
+      expect(await rowCounts()).toEqual(before);
+    });
+
+    it('refuses to re-open an expired contract, as updateContract does', async () => {
+      const contractId = await seedHeader({ status: 'expired' });
+      const before = await rowCounts();
+
+      const result = await wizard.saveQuickAddContract(submission({ contract_id: contractId }));
+
+      expect(messageOf(result)).toContain('Cannot manually change the status of an expired contract');
+      expect(await rowCounts()).toEqual(before);
+    });
+
+    it('refuses a client-portal principal before it writes the header', async () => {
+      const contractId = await seedHeader();
+      const name = `QA portal edit ${uuidv4().slice(0, 6)}`;
+      const before = await rowCounts();
+
+      hoisted.userType = 'client';
+      let result: any;
+      try {
+        result = await wizard.saveQuickAddContract(submission({ contract_id: contractId, contract_name: name }));
+      } finally {
+        hoisted.userType = 'internal';
+      }
+
+      expect(result.permissionError).toBe('Permission denied: Cannot create billing contracts');
+      expect(await db('contracts').where({ tenant, contract_name: name }).first()).toBeUndefined();
+      expect(await rowCounts()).toEqual(before);
+    });
   });
 });

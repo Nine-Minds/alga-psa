@@ -1,7 +1,7 @@
 'use client'
 
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -95,6 +95,11 @@ export function ContractDialog({
   const [poAmount, setPoAmount] = useState<number | undefined>(undefined);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  // One save per click: the second submit of a double-click used to create a
+  // second contract. The ref holds within a single tick, before React re-renders
+  // the disabled buttons.
+  const [isSaving, setIsSaving] = useState(false);
+  const savingRef = useRef(false);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
@@ -143,6 +148,9 @@ export function ContractDialog({
 
   const handleSubmit = async (e: React.FormEvent, saveAsActive: boolean = true) => {
     e.preventDefault();
+    // A save already in flight owns this dialog; a second submit would create a
+    // second contract.
+    if (savingRef.current) return;
     setHasAttemptedSubmit(true);
 
     // Validate form
@@ -199,6 +207,8 @@ export function ContractDialog({
     }
 
     setValidationErrors([]);
+    savingRef.current = true;
+    setIsSaving(true);
 
     try {
       // One transactional save: the contract header, the selected presets as
@@ -246,6 +256,9 @@ export function ContractDialog({
         ? error.message
         : t('contractDialog.validation.failedToSave', { defaultValue: 'Failed to save contract' });
       setValidationErrors([errorMessage]);
+    } finally {
+      savingRef.current = false;
+      setIsSaving(false);
     }
   };
 
@@ -321,7 +334,8 @@ export function ContractDialog({
               type="button"
               variant="secondary"
               onClick={(e) => void handleSubmit(e, false)}
-              className={!contractName.trim() || !clientId ? 'opacity-50' : ''}
+              disabled={isSaving}
+              className={!contractName.trim() || !clientId || isSaving ? 'opacity-50' : ''}
             >
               {t('contractDialog.actions.saveAsDraft', { defaultValue: 'Save as Draft' })}
             </Button>
@@ -329,8 +343,8 @@ export function ContractDialog({
               id="save-contract-btn"
               type="button"
               onClick={() => (document.getElementById('contract-dialog-form') as HTMLFormElement | null)?.requestSubmit()}
-              disabled={!contractName.trim() || !clientId}
-              className={(!contractName.trim() || !clientId) ? 'opacity-50' : ''}
+              disabled={!contractName.trim() || !clientId || isSaving}
+              className={(!contractName.trim() || !clientId || isSaving) ? 'opacity-50' : ''}
             >
               {editingContract
                 ? t('contractDialog.actions.updateContract', { defaultValue: 'Update Contract' })

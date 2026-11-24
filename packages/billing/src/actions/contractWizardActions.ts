@@ -86,9 +86,17 @@ import {
   upsertBucketOverlayInTransaction
 } from './bucketOverlayActions';
 import {
-  copyPresetToContractLineInTransaction,
+  captureCopiedLineAnalytics,
+  ContractLinePresetCopyFailure,
+  copyPresetLinesInTransaction,
+  type ContractLineCopiedAnalytics,
   type ContractLinePresetCopyOverrides,
 } from '../services/contractLinePresetCopyService';
+import { contractLinePresetActionErrorFrom } from './contractLinePresetActionErrors';
+import {
+  assertMspContractBillingPermission,
+  ContractScopeError,
+} from '../lib/billing/contractAuthorization';
 import { createBucketPoolInTransaction } from './bucketPoolActions';
 import { syncRecurringServicePeriodsForContract } from './recurringServicePeriodSync';
 import { syncPrepaidBlockIssuancesForContract } from '../services/prepaidBlockIssuanceSync';
@@ -1342,18 +1350,37 @@ export const createClientContractFromWizard = withAuth(async (
   submission: ClientContractWizardSubmission,
   options?: { isDraft?: boolean }
 ): Promise<ContractWizardResult | RecurringTotalChangeConfirmation | ContractWizardActionError> => {
-  const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
-
-  if (!isBypass) {
-    const canCreateBilling = await hasPermission(user, 'billing', 'create');
-    const canUpdateBilling = await hasPermission(user, 'billing', 'update');
-    if (!canCreateBilling || !canUpdateBilling) {
-      return permissionError('Permission denied: Cannot create billing contracts', 'msp/contracts:errors.wizard.permissions.createContracts');
-    }
-  }
+  // Authoring a billing contract is an MSP act: `hasPermission` honours
+  // client-flagged permissions and the catalog grants billing:create to the
+  // client-portal Admin role, so the principal is checked before the
+  // permissions — the same gate the contract-header action has always used.
+  const refusal = await contractAuthoringRefusal(user, tenant, ['create', 'update']);
+  if (refusal) return refusal;
 
   return runClientContractWizardSave(user, tenant, submission, options);
 });
+
+/**
+ * MSP-principal-and-permission gate for the contract-header write, returned
+ * (not thrown) in the shape the wizard and the quick-add dialog render.
+ */
+async function contractAuthoringRefusal(
+  user: IUserWithRoles,
+  tenant: string,
+  actions: Array<'create' | 'update'>,
+): Promise<ContractWizardActionError | null> {
+  try {
+    for (const action of actions) {
+      await assertMspContractBillingPermission(user, tenant, action, 'create billing contracts');
+    }
+    return null;
+  } catch (error) {
+    if (error instanceof ContractScopeError) {
+      return permissionError(error.message, 'msp/contracts:errors.wizard.permissions.createContracts');
+    }
+    throw error;
+  }
+}
 
 /**
  * The client-contract save itself, after authorization: the header, its lines
@@ -1383,6 +1410,8 @@ async function runClientContractWizardSave(
     actorUserId?: string;
   } | null = null;
   let renewalForWorkflow: { renewalAt: string; daysUntilRenewal: number } | null = null;
+  // Reported after the commit: a line a refusal rolls back was never created.
+  const copiedLineAnalytics: ContractLineCopiedAnalytics[] = [];
 
   const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const startDate = normalizeDateOnly(submission.start_date);
@@ -2332,13 +2361,9 @@ async function runClientContractWizardSave(
     // Contract line presets (quick add): copied here, before the client
     // assignment, so a refused assignment rolls the lines back with the header.
     const presetLineInputs = !templateId && Array.isArray(submission.preset_lines) ? submission.preset_lines : [];
-    for (const entry of presetLineInputs) {
-      const presetId = typeof entry?.preset_id === 'string' ? entry.preset_id.trim() : '';
-      if (!presetId) continue;
-      createdContractLineIds.push(
-        await copyPresetToContractLineInTransaction(trx, user, tenant, contractId, presetId, entry.overrides),
-      );
-    }
+    createdContractLineIds.push(
+      ...await copyPresetLinesInTransaction(trx, user, tenant, contractId, presetLineInputs, copiedLineAnalytics),
+    );
 
     // Guard (existing drafts only): the rebuilt contract must bill what the saved one did, unless the
     // user has seen and acknowledged the server-computed change. Throwing rolls the transaction back.
@@ -2433,7 +2458,9 @@ async function runClientContractWizardSave(
             Math.trunc(submission.notice_period_days as number) * 24 * 60 * 60 * 1000
         ).toISOString().slice(0, 10)
         : endDate;
-    renewalForWorkflow = endDate
+    // A draft is not a live contract: nobody has to decide on renewing one, so
+    // only an active save announces an upcoming renewal.
+    renewalForWorkflow = endDate && !isDraft
       ? computeContractRenewalUpcoming({
           renewalAt: endDate,
           decisionDueAt: clientContractAssignment.decision_due_date ?? decisionDueAtForWorkflow ?? undefined,
@@ -2518,6 +2545,10 @@ async function runClientContractWizardSave(
     }
   }
 
+  // Analytics follows the same rule as the events: announced once the lines are
+  // committed, never from inside a transaction that can still be rolled back.
+  await captureCopiedLineAnalytics(user, copiedLineAnalytics);
+
   return result;
   } catch (error) {
     if (error instanceof RecurringTotalChangeRequiresConfirmation) {
@@ -2527,6 +2558,9 @@ async function runClientContractWizardSave(
         resulting_monthly_cents: error.resultingMonthlyCents,
       };
     }
+    // A preset refusal keeps the message the standalone copy action gives it.
+    const presetRefusal = presetCopyActionErrorFrom(error);
+    if (presetRefusal) return presetRefusal;
     const expected = contractWizardActionErrorFrom(error);
     if (expected) return expected;
     throw error;
@@ -2567,11 +2601,26 @@ export type QuickAddContractSubmission = {
 };
 
 /**
+ * A refusal raised while copying a preset into a line, read with the SAME
+ * reader the standalone `copyPresetToContractLine` action uses — a preset
+ * deleted in another tab, a prepaid-block validation failure, a rejected rate —
+ * so the dialog renders the message it has always rendered instead of a thrown
+ * error that a production build masks.
+ */
+function presetCopyActionErrorFrom(error: unknown): ContractWizardActionError | null {
+  if (!(error instanceof ContractLinePresetCopyFailure)) return null;
+  return contractLinePresetActionErrorFrom(error.reason)
+    ?? contractWizardActionErrorFrom(error.reason);
+}
+
+/**
  * Assignment refusals (a billing profile of another client, a missing client)
  * carry their own message class; the wizard's mapper does not know it, and the
  * dialog renders returned action errors rather than thrown ones.
  */
 function quickAddActionErrorFrom(error: unknown): ContractWizardActionError | null {
+  const presetRefusal = presetCopyActionErrorFrom(error);
+  if (presetRefusal) return presetRefusal;
   if (error instanceof ClientContractError || error instanceof ContractUpdateError) {
     return actionError(error.message);
   }
@@ -2606,17 +2655,17 @@ export const saveQuickAddContract = withAuth(async (
   // The dialog's own effective permissions, not the wizard's: creating the
   // header needs billing:create (billing:update when editing one), copying a
   // preset into a line needs billing:create, and the client assignment needs
-  // client:create.
+  // client:create. The principal comes first: billing:create and client:create
+  // are both client-flagged and granted to the client-portal Admin role, so
+  // only the MSP gate keeps a portal user out of contract authoring.
+  const headerActions: Array<'create' | 'update'> = editingContractId
+    ? (presetLines.length === 0 ? ['update'] : ['update', 'create'])
+    : ['create'];
+  const headerRefusal = await contractAuthoringRefusal(user, tenant, headerActions);
+  if (headerRefusal) return headerRefusal;
+
   if (!isBypass) {
-    const [canCreateBilling, canUpdateBilling, canCreateClient] = await Promise.all([
-      hasPermission(user, 'billing', 'create'),
-      editingContractId ? hasPermission(user, 'billing', 'update') : Promise.resolve(true),
-      hasPermission(user, 'client', 'create'),
-    ]);
-    const canWriteHeader = editingContractId
-      ? canUpdateBilling && (presetLines.length === 0 || canCreateBilling)
-      : canCreateBilling;
-    if (!canWriteHeader || !canCreateClient) {
+    if (!await hasPermission(user, 'client', 'create')) {
       return permissionError(
         'Permission denied: Cannot create billing contracts',
         'msp/contracts:errors.wizard.permissions.createContracts',
@@ -2681,13 +2730,28 @@ export const saveQuickAddContract = withAuth(async (
   // Edit: the header update, the preset copies and the new assignment in one
   // transaction, with CONTRACT_UPDATED published after commit.
   const { knex } = await createTenantKnex();
+  const copiedLineAnalytics: ContractLineCopiedAnalytics[] = [];
   try {
     const { applied, result } = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const current = await Contract.getById(trx, tenant, editingContractId);
       if (!current) {
+        // Also the template case: `getById` reads `contracts`, and quick add
+        // does not author templates (`updateContract` has that fallback).
         throw new Error('Contract not found');
       }
 
+      // A contract is billed to its owner and the header update deliberately
+      // cannot move ownership, so assigning it to another client would bill the
+      // wrong one for the owner's lines.
+      if (current.owner_client_id && current.owner_client_id !== submission.client_id) {
+        throw new ClientContractError(
+          'INVALID',
+          'This contract belongs to a different client. Open it from that client to edit it.',
+        );
+      }
+
+      // System-managed, expired-status and draft-with-invoices refusals are the
+      // same ones `updateContract` makes: they come from the shared apply step.
       const headerUpdate = await applyContractHeaderUpdate(trx, tenant, current, {
         contract_name: submission.contract_name,
         contract_description: submission.description ?? null,
@@ -2698,19 +2762,9 @@ export const saveQuickAddContract = withAuth(async (
           current.currency_code ?? (await resolveClientContractCurrency(trx, tenant, submission.client_id)),
       });
 
-      const createdContractLineIds: string[] = [];
-      for (const entry of presetLines) {
-        createdContractLineIds.push(
-          await copyPresetToContractLineInTransaction(
-            trx,
-            user,
-            tenant,
-            editingContractId,
-            entry.preset_id.trim(),
-            entry.overrides,
-          ),
-        );
-      }
+      const createdContractLineIds = await copyPresetLinesInTransaction(
+        trx, user, tenant, editingContractId, presetLines, copiedLineAnalytics,
+      );
 
       const assignment = await createClientContractAssignment(trx, tenant, {
         client_id: submission.client_id,
@@ -2749,6 +2803,7 @@ export const saveQuickAddContract = withAuth(async (
     });
 
     await publishContractHeaderUpdated(tenant, applied, user.user_id);
+    await captureCopiedLineAnalytics(user, copiedLineAnalytics);
     return result;
   } catch (error) {
     console.error('Error saving quick add contract:', error);

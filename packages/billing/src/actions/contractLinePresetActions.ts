@@ -18,7 +18,6 @@ import {
     DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
     resolveRecurringAuthoringPolicy,
 } from '@shared/billingClients/recurringAuthoringPolicy';
-import { isContractLineTimingNotAllowedError } from '@shared/billingClients/contractLineTimingRule';
 
 
 
@@ -41,66 +40,20 @@ import {
 import { upsertBucketOverlayInTransaction } from './bucketOverlayActions';
 import {
     assertNonNegativeRate,
+    captureCopiedLineAnalytics,
     ContractLinePresetDomainError,
     copyPresetToContractLineInTransaction,
+    type ContractLineCopiedAnalytics,
     type ContractLinePresetCopyOverrides,
 } from '../services/contractLinePresetCopyService';
 import { validateContractLineWindow, normalizeContractLineDate } from '../lib/billing/contractLineWindow';
+import { actionError } from '@alga-psa/ui/lib/errorHandling';
+// One reader for preset refusals, shared with the quick-add save that copies
+// presets inside its own transaction (saveQuickAddContract).
 import {
-    actionError,
-    permissionError,
-    type ActionMessageError,
-    type ActionPermissionError,
-} from '@alga-psa/ui/lib/errorHandling';
-
-type ContractLinePresetActionError = ActionMessageError | ActionPermissionError;
-
-function contractLinePresetActionErrorFrom(error: unknown): ContractLinePresetActionError | null {
-    if (isContractLineTimingNotAllowedError(error)) {
-        return actionError(error.message, 'msp/contract-lines:errors.line.advanceTimingNotAllowed');
-    }
-
-    if (error instanceof ContractLinePresetDomainError) {
-        if (error.message.startsWith('Permission denied:')) {
-            return permissionError(error.message);
-        }
-        return actionError(error.message);
-    }
-
-    if (error instanceof Error && error.message.startsWith('Permission denied:')) {
-        return permissionError(error.message);
-    }
-
-    // Validation failures from the shared prepaid block config service.
-    if (error instanceof Error && error.message.startsWith('Cannot save prepaid block')) {
-        return actionError(error.message);
-    }
-
-    const dbError = error as { code?: string; column?: string; constraint?: string };
-    if (dbError?.code === '22P02') {
-        return actionError('One of the selected contract line preset values is invalid. Please refresh and try again.', 'msp/contract-lines:errors.preset.invalidValue');
-    }
-    if (dbError?.code === '23502') {
-        return dbError.column
-          ? actionError(
-              `Missing required contract line preset field: ${dbError.column}.`,
-              'msp/contract-lines:errors.preset.missingFieldNamed',
-              { field: dbError.column },
-            )
-          : actionError('Missing required contract line preset field.', 'msp/contract-lines:errors.preset.missingField');
-    }
-    if (dbError?.code === '23503') {
-        return actionError('The selected contract line preset, contract, or service no longer exists. Please refresh and try again.', 'msp/contract-lines:errors.preset.referenceMissing');
-    }
-    if (dbError?.code === '23505') {
-        return actionError('This contract line preset change conflicts with an existing record. Please refresh and try again.', 'msp/contract-lines:errors.preset.conflict');
-    }
-    if (dbError?.code === '23514') {
-        return actionError('One of the contract line preset values is not allowed. Please review the form and try again.', 'msp/contract-lines:errors.preset.notAllowed');
-    }
-
-    return null;
-}
+    contractLinePresetActionErrorFrom,
+    type ContractLinePresetActionError,
+} from './contractLinePresetActionErrors';
 
 export const getContractLinePresets = withAuth(async (user, { tenant }): Promise<IContractLinePreset[] | ContractLinePresetActionError> => {
     try {
@@ -485,13 +438,19 @@ export const copyPresetToContractLine = withAuth(async (
         // Capture tenant as a string for use in the transaction
         const tenantId: string = tenant;
 
-        return await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const copiedLineAnalytics: ContractLineCopiedAnalytics[] = [];
+        const contractLineId = await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!await hasPermission(user, 'billing', 'create', trx)) {
                 throw new ContractLinePresetDomainError('Permission denied: Cannot create contract lines from presets');
             }
 
-            return await copyPresetToContractLineInTransaction(trx, user, tenantId, contractId, presetId, overrides);
+            return await copyPresetToContractLineInTransaction(
+                trx, user, tenantId, contractId, presetId, overrides, copiedLineAnalytics,
+            );
         });
+        // Announced once the line is really there, not from inside the transaction.
+        await captureCopiedLineAnalytics(user, copiedLineAnalytics);
+        return contractLineId;
     } catch (error) {
         console.error(`Error copying preset ${presetId} to contract ${contractId}:`, error);
         const expected = contractLinePresetActionErrorFrom(error);
