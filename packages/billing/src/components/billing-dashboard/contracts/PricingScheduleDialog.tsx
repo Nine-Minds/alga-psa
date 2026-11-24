@@ -25,17 +25,13 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 
-/** Sentinel value for the whole-contract option; CustomSelect only speaks strings. */
-const WHOLE_CONTRACT_VALUE = '__whole_contract__';
-
-/**
- * Both scopes are real choices, so nothing is preselected for a new schedule:
- * '' until the user picks the whole contract or one of its fixed-fee lines. A
- * stored row opens on the scope it already has.
- */
-function initialScope(schedule?: IContractPricingSchedule | null): string {
-  if (schedule?.contract_line_id) return schedule.contract_line_id;
-  return schedule?.schedule_id ? WHOLE_CONTRACT_VALUE : '';
+/** New schedules name one line; legacy rows retain their stored scope. */
+function initialScope(
+  schedule: IContractPricingSchedule | null | undefined,
+  eligibleLines: PricingScheduleLineScope[],
+): string {
+  if (schedule?.schedule_id) return schedule.contract_line_id ?? '';
+  return eligibleLines.length === 1 ? eligibleLines[0].contract_line_id : '';
 }
 
 interface PricingScheduleDialogProps {
@@ -101,8 +97,8 @@ export function PricingScheduleDialog({
   // A stored row opens on the scope it already has — a whole-contract row
   // reprices every fixed-fee line and is kept exactly as stored unless the user
   // re-scopes it.
-  const [scope, setScope] = useState<string>(() => initialScope(schedule));
-  const isWholeContract = scope === WHOLE_CONTRACT_VALUE;
+  const [scope, setScope] = useState<string>(() => initialScope(schedule, eligibleLines));
+  const isWholeContract = Boolean(schedule?.schedule_id && !schedule.contract_line_id && !scope);
   const selectedLine = eligibleLines.find((line) => line.contract_line_id === scope) ?? null;
 
   useEffect(() => {
@@ -112,7 +108,7 @@ export function PricingScheduleDialog({
       setHasEndDate(!!schedule.end_date);
       setUseDefaultRate(schedule.custom_rate === undefined || schedule.custom_rate === null);
       setNotes(schedule.notes || '');
-      setScope(initialScope(schedule));
+      setScope(initialScope(schedule, eligibleLines));
       userEditedRateRef.current = false;
     }
   }, [schedule]);
@@ -139,11 +135,10 @@ export function PricingScheduleDialog({
       return;
     }
 
-    // Whole contract and one fixed-fee line are both offered, so neither is
-    // assumed: the user says which one.
-    if (!scope) {
+    // Only a stored contract-wide row may retain its legacy NULL scope.
+    if (!scope && !isWholeContract) {
       setError(t('pricingSchedules.dialog.validation.scopeRequired', {
-        defaultValue: 'Choose whether this schedule applies to the whole contract or to one fixed-fee line',
+        defaultValue: 'Choose a fixed-fee line for this schedule',
       }));
       return;
     }
@@ -235,10 +230,6 @@ export function PricingScheduleDialog({
   };
 
   const scopeOptions = [
-    {
-      value: WHOLE_CONTRACT_VALUE,
-      label: t('pricingSchedules.dialog.values.wholeContract', { defaultValue: 'Whole contract' }),
-    },
     ...eligibleLines.map((line) => ({
       value: line.contract_line_id,
       label: line.contract_line_name
@@ -324,14 +315,16 @@ export function PricingScheduleDialog({
                 value={scope}
                 onValueChange={setScope}
                 options={scopeOptions}
-                placeholder={t('pricingSchedules.dialog.fields.appliesToPlaceholder', {
-                  defaultValue: 'Select the whole contract or one fixed-fee line',
-                })}
+                placeholder={isWholeContract
+                  ? t('pricingSchedules.dialog.values.wholeContract', { defaultValue: 'Whole contract' })
+                  : t('pricingSchedules.dialog.fields.appliesToPlaceholder', {
+                    defaultValue: 'Select a fixed-fee line',
+                  })}
                 className="mt-1 w-full"
               />
               {isWholeContract && (
-                <p className="mt-1 text-xs text-[rgb(var(--color-text-600))]">
-                  {wholeContractRate && eligibleLines.length > 1
+                <Alert variant="warning" className="mt-1">
+                  <AlertDescription>{wholeContractRate && eligibleLines.length > 1
                     ? t('pricingSchedules.dialog.notices.wholeContractEffect', {
                       count: eligibleLines.length,
                       amount: wholeContractRate,
@@ -339,8 +332,8 @@ export function PricingScheduleDialog({
                     })
                     : t('pricingSchedules.dialog.notices.wholeContract', {
                       defaultValue: 'Whole contract: this schedule applies to every fixed-fee line on this contract.',
-                    })}
-                </p>
+                    })}</AlertDescription>
+                </Alert>
               )}
               {unitPricedLineCount > 0 && (
                 <p className="mt-1 text-xs text-[rgb(var(--color-text-600))]">

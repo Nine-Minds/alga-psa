@@ -1096,7 +1096,7 @@
         "useDefaultRate": "Använd standardtaxa",
         "useDuration": "Använd varaktighet",
         "appliesTo": "Gäller för",
-        "appliesToPlaceholder": "Välj hela avtalet eller en avtalsrad med fast avgift",
+        "appliesToPlaceholder": "Välj en avtalsrad med fast avgift",
         "lineFee": "Belopp per faktureringsperiod",
         "lineFeeHelp": "Vad raden debiterar varje faktureringsperiod som prisschemat omfattar, i stället för sin vanliga avgift.",
         "lineFeeHelpMixed": "Ersätter radens paketavgift varje faktureringsperiod som prisschemat omfattar. Tjänster med pris per enhet behåller sitt enhetspris.",
@@ -1114,7 +1114,7 @@
         "effectiveDateRequired": "Datum då ändringen börjar gälla krävs",
         "endDateAfterEffectiveDate": "Slutdatum måste vara efter datumet då ändringen börjar gälla",
         "endDateRequiredWhenEnabled": "Slutdatum krävs när ”Har slutdatum” är aktiverat",
-        "scopeRequired": "Välj om prisschemat gäller hela avtalet eller en enda avtalsrad med fast avgift"
+        "scopeRequired": "Välj en avtalsrad med fast avgift för prisschemat"
       },
       "values": {
         "wholeContract": "Hela avtalet",
@@ -2899,7 +2899,8 @@
       "notFound": "Prisschemat hittades inte",
       "invalidDate": "Datumet då ändringen börjar gälla och slutdatumet måste vara kalenderdatum (ÅÅÅÅ-MM-DD)",
       "lineNotEligible": "Prisscheman gäller för en rad med fast avgift i avtalet; välj en av dess fasta rader",
-      "lineUnitPriced": "Raden debiterar per enhet, så ett prisschema skulle inte ändra vad den debiterar. Ändra enhetspriset på raden i stället."
+      "lineUnitPriced": "Raden debiterar per enhet, så ett prisschema skulle inte ändra vad den debiterar. Ändra enhetspriset på raden i stället.",
+      "lineRequired": "Välj en avtalsrad med fast avgift för prisschemat"
     },
     "renewals": {
       "permissions": {

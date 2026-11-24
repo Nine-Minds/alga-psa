@@ -382,21 +382,18 @@ export const createPricingSchedule = withAuth(async (
     return actionError('End date must be after effective date', 'msp/contracts:errors.pricingSchedule.endAfterEffective');
   }
 
-  // Both scopes are offered: NULL applies to every fixed-fee line of the
-  // contract, a line id to that line only. Only a named line is validated — the
-  // NULL scope is the column's original meaning and stays accepted on any
-  // contract (a contract whose lines are added after its schedules still takes
-  // one), so no existing caller is refused.
-  const contractLineId = scheduleData.contract_line_id ?? null;
-  if (contractLineId) {
-    const scopeError = await getLineScopeValidationError(
-      tenantDb(knex, tenant),
-      scheduleData.contract_id,
-      contractLineId,
-    );
-    if (scopeError) {
-      return actionError(scopeError.message, scopeError.key);
-    }
+  // New schedules must name a line; NULL is reserved for existing legacy rows.
+  const contractLineId = scheduleData.contract_line_id;
+  if (!contractLineId) {
+    return actionError('Choose a fixed-fee line for this schedule', 'msp/contracts:errors.pricingSchedule.lineRequired');
+  }
+  const scopeError = await getLineScopeValidationError(
+    tenantDb(knex, tenant),
+    scheduleData.contract_id,
+    contractLineId,
+  );
+  if (scopeError) {
+    return actionError(scopeError.message, scopeError.key);
   }
 
   return knex.transaction(async (trx) => {
@@ -508,13 +505,17 @@ export const updatePricingSchedule = withAuth(async (
   }
 
   // Check for overlapping schedules (excluding current schedule) in the same
-  // line scope; an update may move a schedule between scopes in either
-  // direction. A NULL scope stays valid, so an existing whole-contract row is
-  // never rewritten by a save that does not re-scope it.
+  // line scope. Existing NULL scopes stay valid, but a line-scoped schedule
+  // cannot become a whole-contract override.
   const nextLineScope =
     scheduleData.contract_line_id !== undefined
       ? scheduleData.contract_line_id
       : existingSchedule.contract_line_id ?? null;
+
+  if ((!nextLineScope && existingSchedule.contract_line_id)
+    || nextLineScope === '') {
+    return actionError('Choose a fixed-fee line for this schedule', 'msp/contracts:errors.pricingSchedule.lineRequired');
+  }
 
   if (nextLineScope && nextLineScope !== existingSchedule.contract_line_id) {
     const lineScopeError = await getLineScopeValidationError(

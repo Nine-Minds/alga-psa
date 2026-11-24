@@ -1096,7 +1096,7 @@
         "useDefaultRate": "Użyj stawki domyślnej",
         "useDuration": "Użyj czasu trwania",
         "appliesTo": "Dotyczy",
-        "appliesToPlaceholder": "Wybierz cały kontrakt lub jedną linię z opłatą stałą",
+        "appliesToPlaceholder": "Wybierz linię z opłatą stałą",
         "lineFee": "Opłata za okres rozliczeniowy",
         "lineFeeHelp": "Kwota, którą ta linia nalicza w każdym okresie rozliczeniowym objętym harmonogramem, zamiast zwykłej opłaty.",
         "lineFeeHelpMixed": "Zastępuje opłatę pakietową tej linii w każdym okresie rozliczeniowym objętym harmonogramem. Usługi wycenione za jednostkę zachowują swoją cenę jednostkową.",
@@ -1114,7 +1114,7 @@
         "effectiveDateRequired": "Data wejścia w życie jest wymagana",
         "endDateAfterEffectiveDate": "Data zakończenia musi być późniejsza niż data wejścia w życie",
         "endDateRequiredWhenEnabled": "Data zakończenia jest wymagana, gdy włączono opcję „Ma datę zakończenia”",
-        "scopeRequired": "Wybierz, czy ten harmonogram dotyczy całego kontraktu, czy jednej linii z opłatą stałą"
+        "scopeRequired": "Wybierz linię z opłatą stałą dla tego harmonogramu"
       },
       "values": {
         "wholeContract": "Cały kontrakt",
@@ -2909,7 +2909,8 @@
       "notFound": "Nie znaleziono harmonogramu cen",
       "invalidDate": "Data wejścia w życie i data zakończenia muszą być datami kalendarzowymi (RRRR-MM-DD)",
       "lineNotEligible": "Harmonogramy cenowe dotyczą linii z opłatą stałą tego kontraktu; wybierz jedną z jego linii stałych",
-      "lineUnitPriced": "Ta linia nalicza za jednostkę, więc harmonogram cenowy nie zmieniłby naliczanej kwoty. Zmień cenę jednostkową na linii."
+      "lineUnitPriced": "Ta linia nalicza za jednostkę, więc harmonogram cenowy nie zmieniłby naliczanej kwoty. Zmień cenę jednostkową na linii.",
+      "lineRequired": "Wybierz linię z opłatą stałą dla tego harmonogramu"
     },
     "renewals": {
       "permissions": {

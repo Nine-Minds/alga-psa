@@ -154,11 +154,10 @@ describe('PricingSchedules contract-currency custom rate', () => {
 
     renderList();
 
-    // The column names the scope; the timeline spells out the effect.
-    expect((await screen.findAllByText('Whole contract')).length).toBeGreaterThanOrEqual(1);
-    expect(
-      screen.getByText('Whole contract — each of the 2 fixed-fee lines bills $900.00')
-    ).toBeInTheDocument();
+    // Both the column and timeline flag the legacy row and state its effect.
+    expect(await screen.findAllByText(
+      'Whole contract — each of the 2 fixed-fee lines bills $900.00'
+    )).toHaveLength(2);
   });
 
   it('does not count a unit-priced line in the whole-contract effect', async () => {

@@ -1096,7 +1096,7 @@
         "useDefaultRate": "Standaardtarief gebruiken",
         "useDuration": "Duur gebruiken",
         "appliesTo": "Geldt voor",
-        "appliesToPlaceholder": "Selecteer het hele contract of één contractregel met een vast tarief",
+        "appliesToPlaceholder": "Selecteer een contractregel met een vast tarief",
         "lineFee": "Bedrag per factureerperiode",
         "lineFeeHelp": "Wat deze regel factureert in elke factureerperiode die het prijsschema dekt, in plaats van het gebruikelijke tarief.",
         "lineFeeHelpMixed": "Vervangt het bundeltarief van deze regel in elke factureerperiode die het prijsschema dekt. Services met een prijs per eenheid houden hun eigen stukprijs.",
@@ -1114,7 +1114,7 @@
         "effectiveDateRequired": "Ingangsdatum is verplicht",
         "endDateAfterEffectiveDate": "Einddatum moet na de ingangsdatum liggen",
         "endDateRequiredWhenEnabled": "Einddatum is verplicht wanneer \"Heeft einddatum\" is ingeschakeld",
-        "scopeRequired": "Kies of dit prijsschema voor het hele contract of voor één contractregel met een vast tarief geldt"
+        "scopeRequired": "Kies een contractregel met een vast tarief voor dit prijsschema"
       },
       "values": {
         "wholeContract": "Hele contract",
@@ -2899,7 +2899,8 @@
       "notFound": "Prijsplanning niet gevonden",
       "invalidDate": "Ingangsdatum en einddatum moeten kalenderdatums zijn (JJJJ-MM-DD)",
       "lineNotEligible": "Prijsschema’s gelden voor een regel met een vast tarief van dit contract; kies een van de vaste regels",
-      "lineUnitPriced": "Deze regel factureert per eenheid, dus een prijsschema zou niets aan de facturatie veranderen. Wijzig in plaats daarvan de stukprijs op de regel."
+      "lineUnitPriced": "Deze regel factureert per eenheid, dus een prijsschema zou niets aan de facturatie veranderen. Wijzig in plaats daarvan de stukprijs op de regel.",
+      "lineRequired": "Kies een contractregel met een vast tarief voor dit prijsschema"
     },
     "renewals": {
       "permissions": {

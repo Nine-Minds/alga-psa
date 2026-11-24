@@ -1096,7 +1096,7 @@
         "useDefaultRate": "Utilizza tariffa predefinita",
         "useDuration": "Utilizza durata",
         "appliesTo": "Si applica a",
-        "appliesToPlaceholder": "Seleziona l'intero contratto o una linea contrattuale a tariffa fissa",
+        "appliesToPlaceholder": "Seleziona una linea contrattuale a tariffa fissa",
         "lineFee": "Importo per periodo di fatturazione",
         "lineFeeHelp": "Quanto fattura questa linea in ogni periodo di fatturazione coperto dalla pianificazione, al posto della sua tariffa consueta.",
         "lineFeeHelpMixed": "Sostituisce la tariffa forfettaria di questa linea in ogni periodo di fatturazione coperto dalla pianificazione. I servizi con prezzo per unità mantengono il loro prezzo unitario.",
@@ -1114,7 +1114,7 @@
         "effectiveDateRequired": "La data di decorrenza è obbligatoria",
         "endDateAfterEffectiveDate": "La data di fine deve essere successiva alla data di decorrenza",
         "endDateRequiredWhenEnabled": "La data di fine è obbligatoria quando è abilitato \"Ha data di fine\"",
-        "scopeRequired": "Scegli se questa pianificazione si applica all'intero contratto o a una sola linea contrattuale a tariffa fissa"
+        "scopeRequired": "Scegli una linea contrattuale a tariffa fissa per questa pianificazione"
       },
       "values": {
         "wholeContract": "Intero contratto",
@@ -2899,7 +2899,8 @@
       "notFound": "Pianificazione dei prezzi non trovata",
       "invalidDate": "La data di decorrenza e la data di fine devono essere date di calendario (AAAA-MM-GG)",
       "lineNotEligible": "Le pianificazioni dei prezzi si applicano a una linea a tariffa fissa di questo contratto; scegli una delle sue linee fisse",
-      "lineUnitPriced": "Questa linea fattura per unità, quindi una pianificazione dei prezzi non cambierebbe ciò che fattura. Modifica invece il prezzo unitario sulla linea."
+      "lineUnitPriced": "Questa linea fattura per unità, quindi una pianificazione dei prezzi non cambierebbe ciò che fattura. Modifica invece il prezzo unitario sulla linea.",
+      "lineRequired": "Scegli una linea contrattuale a tariffa fissa per questa pianificazione"
     },
     "renewals": {
       "permissions": {

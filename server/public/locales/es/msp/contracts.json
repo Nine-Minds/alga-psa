@@ -1096,7 +1096,7 @@
         "useDefaultRate": "Usar tarifa predeterminada",
         "useDuration": "Usar duración",
         "appliesTo": "Se aplica a",
-        "appliesToPlaceholder": "Seleccione todo el contrato o una línea de tarifa fija",
+        "appliesToPlaceholder": "Seleccione una línea de tarifa fija",
         "lineFee": "Tarifa por período de facturación",
         "lineFeeHelp": "Lo que factura esta línea en cada período de facturación que cubre el programa, en lugar de su tarifa habitual.",
         "lineFeeHelpMixed": "Reemplaza la tarifa del paquete de esta línea en cada período de facturación que cubre el programa. Los servicios con precio por unidad conservan su precio unitario.",
@@ -1114,7 +1114,7 @@
         "effectiveDateRequired": "La fecha de entrada en vigor es obligatoria",
         "endDateAfterEffectiveDate": "La fecha de finalización debe ser posterior a la fecha de entrada en vigor",
         "endDateRequiredWhenEnabled": "La fecha de finalización es obligatoria cuando \"Tiene fecha de finalización\" está habilitado",
-        "scopeRequired": "Elija si este programa se aplica a todo el contrato o a una sola línea de tarifa fija"
+        "scopeRequired": "Elija una línea de tarifa fija para este programa"
       },
       "values": {
         "wholeContract": "Todo el contrato",
@@ -2899,7 +2899,8 @@
       "notFound": "No se encontró el calendario de precios",
       "invalidDate": "La fecha de entrada en vigor y la fecha de finalización deben ser fechas de calendario (AAAA-MM-DD)",
       "lineNotEligible": "Los programas de precios se aplican a una línea de tarifa fija de este contrato; elija una de sus líneas fijas",
-      "lineUnitPriced": "Esta línea factura por unidad, por lo que un programa de precios no cambiaría lo que factura. Cambie el precio unitario en la línea."
+      "lineUnitPriced": "Esta línea factura por unidad, por lo que un programa de precios no cambiaría lo que factura. Cambie el precio unitario en la línea.",
+      "lineRequired": "Elija una línea de tarifa fija para este programa"
     },
     "renewals": {
       "permissions": {

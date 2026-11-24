@@ -1096,7 +1096,7 @@
         "useDefaultRate": "Use default rate",
         "useDuration": "Use duration",
         "appliesTo": "Applies to",
-        "appliesToPlaceholder": "Select the whole contract or one fixed-fee line",
+        "appliesToPlaceholder": "Select a fixed-fee line",
         "lineFee": "Fee per billing period",
         "lineFeeHelp": "What this line bills in every billing period the schedule covers, replacing its usual fee.",
         "lineFeeHelpMixed": "Replaces the bundle fee of this line in every billing period the schedule covers. Members priced per unit keep their own unit price.",
@@ -1114,7 +1114,7 @@
         "effectiveDateRequired": "Effective date is required",
         "endDateAfterEffectiveDate": "End date must be after effective date",
         "endDateRequiredWhenEnabled": "End date is required when \"Has end date\" is enabled",
-        "scopeRequired": "Choose whether this schedule applies to the whole contract or to one fixed-fee line"
+        "scopeRequired": "Choose a fixed-fee line for this schedule"
       },
       "values": {
         "wholeContract": "Whole contract",
@@ -2899,7 +2899,8 @@
       "notFound": "Pricing schedule not found",
       "invalidDate": "Effective date and end date must be calendar dates (YYYY-MM-DD)",
       "lineNotEligible": "Pricing schedules apply to a fixed-fee line of this contract; pick one of its fixed lines",
-      "lineUnitPriced": "This line bills per unit, so a pricing schedule would not change what it bills. Change the unit price on the line instead."
+      "lineUnitPriced": "This line bills per unit, so a pricing schedule would not change what it bills. Change the unit price on the line instead.",
+      "lineRequired": "Choose a fixed-fee line for this schedule"
     },
     "renewals": {
       "permissions": {

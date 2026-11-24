@@ -1096,7 +1096,7 @@
         "useDefaultRate": "Standardtarif verwenden",
         "useDuration": "Dauer verwenden",
         "appliesTo": "Gilt für",
-        "appliesToPlaceholder": "Wählen Sie den gesamten Vertrag oder eine Vertragslinie mit Festpreis",
+        "appliesToPlaceholder": "Wählen Sie eine Vertragslinie mit Festpreis",
         "lineFee": "Gebühr pro Abrechnungszeitraum",
         "lineFeeHelp": "Was diese Position in jedem vom Preisplan abgedeckten Abrechnungszeitraum berechnet – anstelle ihrer üblichen Gebühr.",
         "lineFeeHelpMixed": "Ersetzt die Paketgebühr dieser Position in jedem vom Preisplan abgedeckten Abrechnungszeitraum. Pro Einheit bepreiste Services behalten ihren Einzelpreis.",
@@ -1114,7 +1114,7 @@
         "effectiveDateRequired": "Gültigkeitsdatum ist erforderlich",
         "endDateAfterEffectiveDate": "Enddatum muss nach dem Gültigkeitsdatum liegen",
         "endDateRequiredWhenEnabled": "Enddatum ist erforderlich, wenn \"Hat Enddatum\" aktiviert ist",
-        "scopeRequired": "Wählen Sie, ob dieser Preisplan für den gesamten Vertrag oder für eine Vertragslinie mit Festpreis gilt"
+        "scopeRequired": "Wählen Sie eine Vertragslinie mit Festpreis für diesen Preisplan"
       },
       "values": {
         "wholeContract": "Gesamter Vertrag",
@@ -2899,7 +2899,8 @@
       "notFound": "Preiszeitplan nicht gefunden",
       "invalidDate": "Gültigkeitsdatum und Enddatum müssen Kalenderdaten sein (JJJJ-MM-TT)",
       "lineNotEligible": "Preispläne gelten für eine Position mit Festpreis dieses Vertrags; wählen Sie eine seiner festen Positionen",
-      "lineUnitPriced": "Diese Position rechnet pro Einheit ab, daher würde ein Preisplan nichts an ihrer Abrechnung ändern. Ändern Sie stattdessen den Einzelpreis der Position."
+      "lineUnitPriced": "Diese Position rechnet pro Einheit ab, daher würde ein Preisplan nichts an ihrer Abrechnung ändern. Ändern Sie stattdessen den Einzelpreis der Position.",
+      "lineRequired": "Wählen Sie eine Vertragslinie mit Festpreis für diesen Preisplan"
     },
     "renewals": {
       "permissions": {

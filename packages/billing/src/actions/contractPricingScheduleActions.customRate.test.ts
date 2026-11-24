@@ -74,7 +74,7 @@ function seedTables(schedulesFirstResults: unknown[], row: Record<string, unknow
     where: vi.fn().mockReturnThis(),
     first: vi.fn(async () => ({ is_system_managed_default: false })),
   };
-  // Either scope needs a fixed-fee line to apply to, so the contract owns one.
+  // New schedules require a fixed-fee line, so the contract owns one.
   const linesQuery: any = {
     where: vi.fn().mockReturnThis(),
     orderBy: vi.fn().mockReturnThis(),
@@ -97,6 +97,7 @@ function seedTables(schedulesFirstResults: unknown[], row: Record<string, unknow
 function createData(customRate: unknown) {
   return {
     contract_id: 'contract-1',
+    contract_line_id: 'line-1',
     effective_date: '2026-01-01T00:00:00.000Z',
     end_date: null,
     custom_rate: customRate,

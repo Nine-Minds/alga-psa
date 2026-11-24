@@ -1096,7 +1096,7 @@
         "useDefaultRate": "Utiliser le tarif par défaut",
         "useDuration": "Utiliser la durée",
         "appliesTo": "S'applique à",
-        "appliesToPlaceholder": "Sélectionnez tout le contrat ou une ligne à tarif fixe",
+        "appliesToPlaceholder": "Sélectionnez une ligne à tarif fixe",
         "lineFee": "Montant par période de facturation",
         "lineFeeHelp": "Ce que cette ligne facture sur chaque période de facturation couverte par le barème, à la place de son tarif habituel.",
         "lineFeeHelpMixed": "Remplace le forfait de cette ligne sur chaque période de facturation couverte par le barème. Les services tarifés à l'unité conservent leur prix unitaire.",
@@ -1114,7 +1114,7 @@
         "effectiveDateRequired": "La date d'effet est requise",
         "endDateAfterEffectiveDate": "La date de fin doit être postérieure à la date d'effet",
         "endDateRequiredWhenEnabled": "La date de fin est requise lorsque « A une date de fin » est activé",
-        "scopeRequired": "Choisissez si ce barème s'applique à tout le contrat ou à une seule ligne à tarif fixe"
+        "scopeRequired": "Choisissez une ligne à tarif fixe pour ce barème"
       },
       "values": {
         "wholeContract": "Tout le contrat",
@@ -2899,7 +2899,8 @@
       "notFound": "Planning tarifaire introuvable",
       "invalidDate": "La date d'effet et la date de fin doivent être des dates calendaires (AAAA-MM-JJ)",
       "lineNotEligible": "Les barèmes de prix s'appliquent à une ligne à tarif fixe de ce contrat ; choisissez l'une de ses lignes fixes",
-      "lineUnitPriced": "Cette ligne facture à l'unité : un barème de prix ne changerait pas ce qu'elle facture. Modifiez le prix unitaire sur la ligne."
+      "lineUnitPriced": "Cette ligne facture à l'unité : un barème de prix ne changerait pas ce qu'elle facture. Modifiez le prix unitaire sur la ligne.",
+      "lineRequired": "Choisissez une ligne à tarif fixe pour ce barème"
     },
     "renewals": {
       "permissions": {

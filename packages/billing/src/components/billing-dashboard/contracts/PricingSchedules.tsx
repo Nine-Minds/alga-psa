@@ -171,7 +171,8 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currenc
       && schedule.custom_rate !== undefined && schedule.custom_rate !== null;
 
     return (
-      <span>
+      <span className="text-amber-700 flex items-center gap-1">
+        <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
         {statesEffect
           ? t('pricingSchedules.list.values.wholeContractEffect', {
             count: bundleFeeLines.length,
@@ -199,7 +200,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currenc
     {
       title: t('pricingSchedules.list.columns.appliesTo', { defaultValue: 'Applies To' }),
       dataIndex: 'contract_line_id',
-      render: (_value, record) => <span>{scopeLabel(record)}</span>
+      render: (_value, record) => renderTimelineScope(record)
     },
     {
       title: t('pricingSchedules.list.columns.customRate', { defaultValue: 'Custom Rate' }),

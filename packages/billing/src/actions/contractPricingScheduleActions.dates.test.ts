@@ -66,7 +66,7 @@ type Fixtures = {
 };
 
 /**
- * Either scope needs a fixed-fee line to apply to, so every create below sees a
+ * New schedules need a fixed-fee line to apply to, so every create below sees a
  * contract that owns one unless the test says otherwise.
  */
 const DEFAULT_LINES = [{ contract_line_id: 'line-1', contract_line_name: 'Managed Services' }];
@@ -118,6 +118,7 @@ function seedTables(fixtures: Fixtures = {}) {
 function createData(overrides: Record<string, unknown> = {}) {
   return {
     contract_id: 'contract-1',
+    contract_line_id: 'line-1',
     effective_date: '2026-06-01',
     end_date: null,
     custom_rate: 90000,
@@ -244,50 +245,44 @@ describe('pricing schedule actions: line scope', () => {
     );
   });
 
-  it('accepts a new whole-contract schedule and stores a null scope', async () => {
-    const { schedulesQuery } = seedTables({
-      schedulesFirst: [undefined],
-      lines: [
-        { contract_line_id: 'line-1', contract_line_name: 'Managed Services' },
-        { contract_line_id: 'line-2', contract_line_name: 'Backup' },
-      ],
-      members: [{ contract_line_id: 'line-1', pricing_basis: 'bundle' }],
-    });
+  it.each([null, undefined, ''])('rejects a new schedule without a line (%s)', async (scope) => {
+    const { schedulesQuery } = seedTables();
 
-    await expect(callCreatePricingSchedule(user, ctx, createData({ contract_line_id: null })))
-      .resolves.toEqual(storedRow);
-
-    // Whole contract: the probe only looks at the other NULL-scope rows.
-    expect(schedulesQuery.whereNull).toHaveBeenCalledWith('contract_line_id');
-    expect(schedulesQuery.where).not.toHaveBeenCalledWith('contract_line_id', expect.anything());
-    expect(schedulesQuery.insert).toHaveBeenCalledWith(
-      expect.objectContaining({ contract_line_id: null })
-    );
-  });
-
-  it('still accepts a whole-contract schedule on a contract with no lines yet', async () => {
-    // The NULL scope is the column's original meaning, so only a named line is
-    // validated: a caller that writes schedules before the lines exist (the
-    // overlap-guard regression test does exactly that) is not refused.
-    const { schedulesQuery } = seedTables({ schedulesFirst: [undefined], lines: [] });
-
-    await expect(callCreatePricingSchedule(user, ctx, createData({ contract_line_id: null })))
-      .resolves.toEqual(storedRow);
-    expect(schedulesQuery.insert).toHaveBeenCalledWith(
-      expect.objectContaining({ contract_line_id: null, effective_date: '2026-06-01' })
-    );
-  });
-
-  it('refuses a whole-contract schedule overlapping another whole-contract one', async () => {
-    const overlapping = { ...storedRow, schedule_id: 'schedule-existing' };
-    const { schedulesQuery } = seedTables({ schedulesFirst: [overlapping] });
-
-    await expect(callCreatePricingSchedule(user, ctx, createData({ contract_line_id: null })))
+    await expect(callCreatePricingSchedule(user, ctx, createData({ contract_line_id: scope })))
       .resolves.toEqual({
-        actionError: 'This schedule overlaps with an existing pricing schedule',
-        messageKey: 'msp/contracts:errors.pricingSchedule.overlaps',
+        actionError: 'Choose a fixed-fee line for this schedule',
+        messageKey: 'msp/contracts:errors.pricingSchedule.lineRequired',
       });
     expect(schedulesQuery.insert).not.toHaveBeenCalled();
+  });
+
+  it('refuses new schedules on a contract without fixed-fee lines', async () => {
+    const { schedulesQuery } = seedTables({ lines: [] });
+
+    await expect(callCreatePricingSchedule(user, ctx, createData()))
+      .resolves.toMatchObject({ messageKey: 'msp/contracts:errors.pricingSchedule.lineNotEligible' });
+    expect(schedulesQuery.insert).not.toHaveBeenCalled();
+  });
+
+  it.each([null, ''])('refuses to change a line-scoped schedule to scope %s', async (scope) => {
+    const { schedulesQuery } = seedTables({
+      schedulesFirst: [{ ...storedRow, contract_line_id: 'line-1' }],
+    });
+
+    await expect(callUpdatePricingSchedule(user, ctx, 'schedule-1', { contract_line_id: scope }))
+      .resolves.toMatchObject({ messageKey: 'msp/contracts:errors.pricingSchedule.lineRequired' });
+    expect(schedulesQuery.update).not.toHaveBeenCalled();
+  });
+
+  it('still checks overlap when editing a legacy whole-contract schedule', async () => {
+    const { schedulesQuery } = seedTables({
+      schedulesFirst: [storedRow, { ...storedRow, schedule_id: 'other-schedule' }],
+    });
+
+    await expect(callUpdatePricingSchedule(user, ctx, 'schedule-1', { effective_date: '2026-07-01' }))
+      .resolves.toMatchObject({ messageKey: 'msp/contracts:errors.pricingSchedule.wouldOverlap' });
+    expect(schedulesQuery.whereNull).toHaveBeenCalledWith('contract_line_id');
+    expect(schedulesQuery.update).not.toHaveBeenCalled();
   });
 
   it('refuses a schedule overlapping another on the same line', async () => {
