@@ -2,6 +2,21 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-24 — Portal invitations: resend by invitation state, configurable validity
+
+**Affected endpoint:** `POST /api/v1/clients/{id}/portal-invitations`
+
+Invitations used to live for a fixed 24 hours, which made a rollout a manual chase. The validity is now a tenant setting (default 7 days, clamped to 1–30) and a batch can be aimed at the contacts whose invitation lapsed instead of listing their ids.
+
+**Changes:**
+
+- New optional `invitation_states`: an array of `expired` and/or `pending`, selecting the contacts of the client whose *latest* invitation is in one of those states. One of `contact_ids`, `all_eligible: true` or `invitation_states` is still required. Combined with `contact_ids` it narrows that list; combined with `all_eligible` it wins, because it is the narrower chase-up set.
+- Resending to a contact that already holds an unused, unexpired invitation now extends that invitation to the full validity and keeps the same token, so the link in the earlier email stays usable and matches the expiry the new email states.
+- Invitation lifetime comes from the tenant's client portal settings (default 7 days). The setting itself is not exposed over REST — client portal settings have no API surface — so it is read and written in the MSP app only.
+- New per-contact `error_code` values in `results`: `CONTACT_INACTIVE` (the contact is deactivated, so a link mailed to it could never be used), `INVITATION_STATE_MISMATCH` (an explicitly listed contact is no longer in the state the batch was aimed at) and `RATE_LIMITED` (previously reported as `INVITATION_FAILED`). A deactivated contact that used to come back `sent` now comes back `skipped` with `CONTACT_INACTIVE`.
+- A token is also refused at use time when the contact was deactivated or the contact's current email is no longer the address the invitation was sent to; resending re-points the address. Lapsed invitations are now retained for 90 days instead of being deleted on the next completed setup, so they stay visible as expired.
+- `POST /api/v1/portal-invitations/bulk` is unchanged and still takes `contact_ids` only.
+
 ## 2026-11-20 — Attaching a non-template contract line returns `400`, not `500`
 
 **Affected endpoints:** `POST /api/v1/contracts/{contractId}/contract-lines`, and contract creation that passes lines in the same call
