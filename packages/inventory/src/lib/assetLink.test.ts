@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createAndLinkDeliveredAsset, detachDeliveredAssetAssociation } from './assetLink';
+import { createAndLinkDeliveredAsset, unwindDeliveredAsset } from './assetLink';
 
 const h = vi.hoisted(() => ({
   createAsset: vi.fn(),
@@ -171,24 +171,51 @@ describe('delivered inventory asset identity', () => {
   });
 });
 
-describe('detachDeliveredAssetAssociation', () => {
+describe('unwindDeliveredAsset', () => {
+  const unwind = (parentType: 'ticket' | 'project', parentId: string) =>
+    unwindDeliveredAsset(database() as any, 'tenant-1', { unitId: 'unit-1', parentType, parentId, materialId: 'material-1' });
+
   beforeEach(() => {
     h.updates = [];
     h.deletes = [];
     h.firsts = {};
   });
 
-  it("is a no-op when the unit never produced an asset", async () => {
+  it('is a no-op when the unit never produced an asset', async () => {
     h.firsts.stock_units = { asset_id: null };
-    await detachDeliveredAssetAssociation(database() as any, 'tenant-1', 'unit-1', 'ticket', 'ticket-1');
+    await unwind('ticket', 'ticket-1');
     expect(h.deletes).toHaveLength(0);
+    expect(h.updates).toHaveLength(0);
   });
 
-  it("deletes the association rows for the unit's asset on the entity", async () => {
+  it('retires and unlinks the asset this delivery created so re-adding does not duplicate it', async () => {
     h.firsts.stock_units = { asset_id: 'asset-9' };
-    await detachDeliveredAssetAssociation(database() as any, 'tenant-1', 'unit-1', 'project', 'project-1');
+    h.firsts.stock_movements = { created_at: new Date('2026-11-01T10:00:00Z') };
+    h.firsts.assets = { created_at: new Date('2026-11-01T10:00:01Z') };
+    await unwind('project', 'project-1');
     expect(h.deletes).toEqual([
       { table: 'asset_associations', where: { asset_id: 'asset-9', entity_id: 'project-1', entity_type: 'project' } },
     ]);
+    expect(h.updates).toEqual([
+      { table: 'assets', values: expect.objectContaining({ status: 'retired', stock_unit_id: null }) },
+      { table: 'stock_units', values: expect.objectContaining({ asset_id: null }) },
+    ]);
+  });
+
+  it('only detaches an asset that predates the delivery', async () => {
+    h.firsts.stock_units = { asset_id: 'asset-9' };
+    h.firsts.stock_movements = { created_at: new Date('2026-11-01T10:00:00Z') };
+    h.firsts.assets = { created_at: new Date('2026-10-01T10:00:00Z') };
+    await unwind('ticket', 'ticket-1');
+    expect(h.deletes).toHaveLength(1);
+    expect(h.updates).toHaveLength(0);
+  });
+
+  it('leaves an asset that no longer points at the unit active', async () => {
+    h.firsts.stock_units = { asset_id: 'asset-9' };
+    h.firsts.stock_movements = { created_at: new Date('2026-11-01T10:00:00Z') };
+    await unwind('ticket', 'ticket-1');
+    expect(h.deletes).toHaveLength(1);
+    expect(h.updates).toHaveLength(0);
   });
 });

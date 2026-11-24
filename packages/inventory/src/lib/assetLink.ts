@@ -25,29 +25,66 @@ export interface PendingAssetLink {
   createdBy?: string | null;
 }
 
+export interface UnwindDeliveredAssetInput {
+  unitId: string;
+  parentType: 'ticket' | 'project';
+  parentId: string;
+  /** The ticket/project material whose delivery is being undone. */
+  materialId: string;
+}
+
 /**
- * Un-assign a delivered unit's asset from the ticket/project its material sat on.
- * Deleting the material restores the stock unit (client/delivery cleared on the stock
- * side); the ticket's asset section is fed by asset_associations, so those rows for
- * this (asset, entity) are removed here. No-op when the unit never produced an asset.
+ * Undo the asset side of a ticket/project material delivery whose material line is being
+ * removed (material delete, undo install, restock of an unbilled line). The stock side is
+ * restored by the caller.
+ *
+ * - The asset's association with the ticket/project (asset section) is removed.
+ * - When the unit's asset was created BY this delivery (still linked to the unit and created
+ *   after the delivery's consume movement), it is retired and unlinked from the unit. A wrong
+ *   serial can only be fixed by remove + re-add, and every delivery creates a new asset, so
+ *   leaving it active on the client would pile up duplicates. Assets that predate the delivery
+ *   (e.g. an RMA asset carried over to the unit) are left as they are.
+ *
+ * No-op when the unit never produced an asset.
  */
-export async function detachDeliveredAssetAssociation(
+export async function unwindDeliveredAsset(
   trx: Knex.Transaction,
   tenant: string,
-  unitId: string,
-  parentType: 'ticket' | 'project',
-  parentId: string,
+  input: UnwindDeliveredAssetInput,
 ): Promise<void> {
-  const unit = await trx('stock_units')
-    .where({ tenant, unit_id: unitId })
+  const db = tenantDb(trx, tenant);
+  const unit = await db.table('stock_units')
+    .where({ unit_id: input.unitId })
     .select('asset_id')
     .first();
   const assetId = (unit as { asset_id?: string | null } | undefined)?.asset_id;
   if (!assetId) return;
-  await tenantDb(trx, tenant)
-    .table('asset_associations')
-    .where({ asset_id: assetId, entity_id: parentId, entity_type: parentType })
+  await db.table('asset_associations')
+    .where({ asset_id: assetId, entity_id: input.parentId, entity_type: input.parentType })
     .delete();
+
+  const delivery = await db.table('stock_movements')
+    .where({
+      unit_id: input.unitId,
+      movement_type: 'consume',
+      source_doc_type: `${input.parentType}_material`,
+      source_doc_id: input.materialId,
+    })
+    .orderBy('created_at', 'desc')
+    .first('created_at');
+  const asset = await db.table('assets')
+    .where({ asset_id: assetId, stock_unit_id: input.unitId })
+    .first('created_at');
+  if (!delivery?.created_at || !asset?.created_at) return;
+  if (new Date(asset.created_at).getTime() < new Date(delivery.created_at).getTime()) return;
+
+  await admitOperationalWrite(trx, tenant, 'assets', 'asset-unwind-delivery');
+  await db.table('assets')
+    .where({ asset_id: assetId })
+    .update({ status: 'retired', stock_unit_id: null, updated_at: trx.fn.now() });
+  await db.table('stock_units')
+    .where({ unit_id: input.unitId })
+    .update({ asset_id: null, updated_at: trx.fn.now() });
 }
 
 /**

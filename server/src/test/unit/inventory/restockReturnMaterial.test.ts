@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
   recordStockMovement: vi.fn(async () => ({ movement_id: 'return-1' })),
   ensureStockLevel: vi.fn(async () => undefined),
   assertLocationWritable: vi.fn(async () => undefined),
-  detachDeliveredAssetAssociation: vi.fn(async () => undefined),
+  unwindDeliveredAsset: vi.fn(async () => undefined),
   revalidatePath: vi.fn(),
 }));
 
@@ -37,7 +37,7 @@ vi.mock('../../../../../packages/inventory/src/lib', () => ({
   assertLocationWritable: mocks.assertLocationWritable,
 }));
 vi.mock('../../../../../packages/inventory/src/lib/assetLink', () => ({
-  detachDeliveredAssetAssociation: mocks.detachDeliveredAssetAssociation,
+  unwindDeliveredAsset: mocks.unwindDeliveredAsset,
 }));
 
 import { restockReturn } from '../../../../../packages/inventory/src/actions/restockReturnActions';
@@ -122,9 +122,9 @@ describe('serialized material restock', () => {
       .toContain('tenant-1');
     expect(statements[releaseIndex].bindings).toEqual(expect.arrayContaining(['tenant-1', 'material-1']));
     expect(statements[deleteIndex].bindings).toEqual(expect.arrayContaining(['tenant-1', 'material-1']));
-    expect(mocks.detachDeliveredAssetAssociation).toHaveBeenCalledWith(
-      connection, 'tenant-1', 'unit-1', 'project', 'parent-1',
-    );
+    expect(mocks.unwindDeliveredAsset).toHaveBeenCalledWith(connection, 'tenant-1', {
+      unitId: 'unit-1', parentType: 'project', parentId: 'parent-1', materialId: 'material-1',
+    });
     expect(mocks.revalidatePath).toHaveBeenCalledWith('/msp/projects/parent-1');
     expect(mocks.createProjectReadAuthorizer).toHaveBeenCalledWith(connection, 'tenant-1', { user_id: 'user-1' }, 'update');
     expect(mocks.authorizeProject).toHaveBeenCalledWith({ project_id: 'parent-1', client_id: 'client-1', assigned_to: null });
@@ -139,7 +139,7 @@ describe('serialized material restock', () => {
       permissionError: expect.any(String),
     });
     expect(statements.some(({ sql }) => sql.startsWith('update ') || sql.startsWith('delete '))).toBe(false);
-    expect(mocks.detachDeliveredAssetAssociation).not.toHaveBeenCalled();
+    expect(mocks.unwindDeliveredAsset).not.toHaveBeenCalled();
   });
 
   it('retains ticket authorization and removes a ticket material without a staging update', async () => {
@@ -169,7 +169,7 @@ describe('serialized material restock', () => {
       unit_id: 'unit-1',
     }));
     expect(statements.some(({ sql }) => sql.startsWith('update ') || sql.startsWith('delete '))).toBe(false);
-    expect(mocks.detachDeliveredAssetAssociation).not.toHaveBeenCalled();
+    expect(mocks.unwindDeliveredAsset).not.toHaveBeenCalled();
   });
 
   it('leaves older material lines alone when the latest delivery was a sales order', async () => {
@@ -183,6 +183,6 @@ describe('serialized material restock', () => {
     expect(deliveryLookup?.bindings).toEqual(expect.arrayContaining(['tenant-1', 'unit-1', 'consume']));
     expect(statements.some(({ sql }) => sql.includes('ticket_materials'))).toBe(false);
     expect(mocks.authorizeTicketRecordAccess).not.toHaveBeenCalled();
-    expect(mocks.detachDeliveredAssetAssociation).not.toHaveBeenCalled();
+    expect(mocks.unwindDeliveredAsset).not.toHaveBeenCalled();
   });
 });

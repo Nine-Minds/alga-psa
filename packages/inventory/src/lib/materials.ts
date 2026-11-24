@@ -507,7 +507,8 @@ export interface RemovedMaterial {
 }
 
 /**
- * Delete an unbilled material and restore the stock it consumed, inside the caller's transaction.
+ * Delete an unbilled material and restore the stock it consumed (unwinding the asset a serialized
+ * delivery created), inside the caller's transaction.
  * Returns null when the material does not exist; throws on billed materials. Does not touch a
  * staging line that installed it (callers decide: deleteMaterial releases it, undo install
  * re-claims it).
@@ -523,7 +524,7 @@ export async function removeMaterialInTransaction(
   await admitOperationalWrite(trx, tenant, cfg.table, 'remove-material');
   const row = await trx(cfg.table)
     .where({ tenant, [cfg.pk]: materialId })
-    .select('is_billed', 'service_id', 'quantity')
+    .select('is_billed', 'service_id', 'quantity', cfg.parentCol)
     .forUpdate()
     .first();
 
@@ -540,6 +541,18 @@ export async function removeMaterialInTransaction(
     source_doc_id: materialId,
     performed_by: performedBy,
   });
+
+  // Serialized installs create a client asset linked to this ticket/project; undo it along
+  // with the delivery so remove + re-add does not leave a duplicate active asset behind.
+  if (restored.unit_id) {
+    const { unwindDeliveredAsset } = await import('./assetLink');
+    await unwindDeliveredAsset(trx, tenant, {
+      unitId: restored.unit_id,
+      parentType,
+      parentId: row[cfg.parentCol],
+      materialId,
+    });
+  }
 
   return {
     service_id: row.service_id,
@@ -562,19 +575,6 @@ export async function deleteMaterial(
   return runInTransaction(db, async (trx: Knex.Transaction) => {
     const removed = await removeMaterialInTransaction(trx, tenant, parentType, materialId, performedBy);
     if (!removed) return false;
-
-    // Serialized installs create a client asset linked to this ticket/project; removing the
-    // material un-assigns it again (stock side is restored by reverseStockConsumption).
-    if (removed.unit_id) {
-      const { detachDeliveredAssetAssociation } = await import('./assetLink');
-      const parentRow = await trx(cfg.table)
-        .where({ tenant, [cfg.pk]: materialId })
-        .select(cfg.parentCol)
-        .first();
-      if (parentRow) {
-        await detachDeliveredAssetAssociation(trx, tenant, removed.unit_id, parentType, parentRow[cfg.parentCol]);
-      }
-    }
 
     // C6 D8: a material installed from staging releases its line (never back to a claim: the
     // restored stock is free again, not silently re-reserved).

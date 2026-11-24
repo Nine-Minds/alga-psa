@@ -13,7 +13,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { recordStockMovement, ensureStockLevel, assertLocationWritable } from '../lib';
-import { detachDeliveredAssetAssociation } from '../lib/assetLink';
+import { unwindDeliveredAsset } from '../lib/assetLink';
 import { findLatestUnitDelivery } from '../lib/consume';
 import { restockReturnActionErrorFrom } from './loanerRestockErrors';
 
@@ -32,8 +32,8 @@ export type RestockReturnActionError = ActionMessageError | ActionPermissionErro
  * something else (sales order, RMA replacement, another material) they are left untouched.
  * A billed line is history too: the unit still comes back to stock (any restocking fee is
  * billed separately by the caller), but the invoiced line and its asset links stay as they are.
- * Otherwise mirrors deleteMaterial: un-assigns the unit's asset from that entity and releases
- * any staging line that installed it.
+ * Otherwise mirrors deleteMaterial: unwinds the asset this delivery created (association,
+ * retirement, unit link) and releases any staging line that installed it.
  */
 async function removeDeliveringMaterialLine(
   trx: Knex.Transaction,
@@ -97,7 +97,7 @@ async function removeDeliveringMaterialLine(
       });
   }
   await db.table(table).where(pk, materialId).del();
-  await detachDeliveredAssetAssociation(trx, tenant, unitId, parentType, material[parentCol]);
+  await unwindDeliveredAsset(trx, tenant, { unitId, parentType, parentId: material[parentCol], materialId });
 
   const base = parentType === 'ticket' ? '/msp/tickets' : '/msp/projects';
   revalidatePath(`${base}/${material[parentCol]}`);
