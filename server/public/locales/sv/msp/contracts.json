@@ -1084,7 +1084,6 @@
         "failedToSavePricingSchedule": "Det gick inte att spara prisschemat"
       },
       "fields": {
-        "customRate": "Anpassad taxa",
         "customRatePlaceholder": "0,00",
         "duration": "Varaktighet",
         "durationPlaceholder": "T.ex. 6",

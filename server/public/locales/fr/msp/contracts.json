@@ -1084,7 +1084,6 @@
         "failedToSavePricingSchedule": "Échec de l'enregistrement du barème de prix"
       },
       "fields": {
-        "customRate": "Tarif personnalisé",
         "customRatePlaceholder": "0.00",
         "duration": "Durée",
         "durationPlaceholder": "p. ex. 6",

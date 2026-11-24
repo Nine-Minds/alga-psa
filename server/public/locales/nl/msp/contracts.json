@@ -1084,7 +1084,6 @@
         "failedToSavePricingSchedule": "Prijsschema opslaan is mislukt"
       },
       "fields": {
-        "customRate": "Aangepast tarief",
         "customRatePlaceholder": "0.00",
         "duration": "Duur",
         "durationPlaceholder": "bijv. 6",

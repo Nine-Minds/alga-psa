@@ -252,6 +252,26 @@ describe('PricingScheduleDialog contract-currency custom rate', () => {
 describe('PricingScheduleDialog calendar dates', () => {
   const originalTz = process.env.TZ;
 
+  // Offset of each zone on the fixture date (June 2026, so DST is already in
+  // the number): Berlin UTC+2, Auckland UTC+12, Los Angeles UTC-7.
+  const ZONE_OFFSETS: Record<string, number> = {
+    'Europe/Berlin': -120,
+    'Pacific/Auckland': -720,
+    'America/Los_Angeles': 420,
+  };
+
+  /**
+   * Pin the process zone and prove Node honoured it — without the offset guard
+   * these cases would pass vacuously if setting TZ ever stopped taking effect.
+   */
+  function useTimeZone(zone: string) {
+    process.env.TZ = zone;
+    expect(
+      new Date('2026-06-01T12:00:00.000Z').getTimezoneOffset(),
+      `TZ=${zone} did not take effect`,
+    ).toBe(ZONE_OFFSETS[zone]);
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
     createPricingScheduleMock.mockResolvedValue(schedule());
@@ -259,14 +279,21 @@ describe('PricingScheduleDialog calendar dates', () => {
   });
 
   afterEach(() => {
-    process.env.TZ = originalTz;
+    // TZ is process-global and vitest isolation is module-level only: assigning
+    // an undefined original would set the literal string "undefined", a bogus
+    // zone that leaks into every later file in the same worker.
+    if (originalTz === undefined) {
+      delete process.env.TZ;
+    } else {
+      process.env.TZ = originalTz;
+    }
     cleanup();
   });
 
   it.each(['Europe/Berlin', 'Pacific/Auckland', 'America/Los_Angeles'])(
     'sends the picked effective date as a calendar date under TZ=%s',
     async (timeZone) => {
-      process.env.TZ = timeZone;
+      useTimeZone(timeZone);
       const { onSave } = renderDialog({ schedule: null });
 
       fireEvent.change(linePicker(), { target: { value: 'line-1' } });
@@ -283,7 +310,7 @@ describe('PricingScheduleDialog calendar dates', () => {
   it.each(['Europe/Berlin', 'Pacific/Auckland', 'America/Los_Angeles'])(
     'sends the picked end date as a calendar date under TZ=%s',
     async (timeZone) => {
-      process.env.TZ = timeZone;
+      useTimeZone(timeZone);
       const { onSave } = renderDialog({ schedule: null });
 
       fireEvent.change(linePicker(), { target: { value: 'line-1' } });
@@ -302,7 +329,7 @@ describe('PricingScheduleDialog calendar dates', () => {
   it.each(['Europe/Berlin', 'Pacific/Auckland', 'America/Los_Angeles'])(
     'round-trips a stored calendar date through the edit form under TZ=%s',
     async (timeZone) => {
-      process.env.TZ = timeZone;
+      useTimeZone(timeZone);
       const { onSave } = renderDialog({
         schedule: schedule({ effective_date: '2026-06-01', end_date: '2026-12-31' }),
       });
@@ -323,7 +350,7 @@ describe('PricingScheduleDialog calendar dates', () => {
   it.each(['Europe/Berlin', 'Pacific/Auckland', 'America/Los_Angeles'])(
     'round-trips a DATE column read back as a UTC-midnight Date under TZ=%s',
     async (timeZone) => {
-      process.env.TZ = timeZone;
+      useTimeZone(timeZone);
       // What the pg driver + server-action payload hand back for a DATE column
       // from a UTC server process.
       const stored = new Date('2026-06-01T00:00:00.000Z') as unknown as string;
@@ -495,6 +522,30 @@ describe('PricingScheduleDialog scope', () => {
     expect(
       (screen.getByText('Add Schedule').closest('button') as HTMLButtonElement)
     ).toBeDisabled();
+  });
+
+  it('keeps a stored schedule editable after its line stopped being repriceable', async () => {
+    // The line the row is scoped to now bills per unit, so it is not offered
+    // any more — the row's dates still have to be correctable, and saving keeps
+    // the scope it was stored with.
+    const { onSave } = renderDialog({
+      schedule: schedule({ contract_line_id: 'line-1', effective_date: '2026-01-01' }),
+      eligibleLines: [],
+      unitPricedLineCount: 1,
+    });
+
+    expect(
+      (screen.getByText('Update Schedule').closest('button') as HTMLButtonElement)
+    ).not.toBeDisabled();
+
+    fireEvent.change(dateInput('effective-date'), { target: { value: '2026-02-01' } });
+    submitForm();
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(updatePricingScheduleMock).toHaveBeenCalledWith(
+      'schedule-1',
+      expect.objectContaining({ contract_line_id: 'line-1', effective_date: '2026-02-01' })
+    );
   });
 
   it('notes the unit-priced lines left out of the picker', () => {

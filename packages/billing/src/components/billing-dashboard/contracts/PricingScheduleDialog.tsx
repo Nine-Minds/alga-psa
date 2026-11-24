@@ -98,9 +98,9 @@ export function PricingScheduleDialog({
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // A row already stored with no line scope: it reprices every fixed-fee line
-  // of the contract and is kept exactly as stored unless the user re-scopes it.
-  const isStoredWholeContract = Boolean(schedule?.schedule_id) && !schedule?.contract_line_id;
+  // A stored row opens on the scope it already has — a whole-contract row
+  // reprices every fixed-fee line and is kept exactly as stored unless the user
+  // re-scopes it.
   const [scope, setScope] = useState<string>(() => initialScope(schedule));
   const isWholeContract = scope === WHOLE_CONTRACT_VALUE;
   const selectedLine = eligibleLines.find((line) => line.contract_line_id === scope) ?? null;
@@ -245,8 +245,10 @@ export function PricingScheduleDialog({
         || t('pricingSchedules.dialog.values.unnamedLine', { defaultValue: 'Unnamed line' }),
     })),
   ];
-  // With no fixed-fee line there is nothing for either scope to apply to.
-  const canSave = eligibleLines.length > 0 || isStoredWholeContract;
+  // With no fixed-fee line there is nothing for a new schedule's scope to apply
+  // to. A row that already exists stays editable either way, so its dates can
+  // still be corrected after the contract's lines changed under it.
+  const canSave = eligibleLines.length > 0 || Boolean(schedule?.schedule_id);
   // What the rate currently in the form bills on each line, so the
   // whole-contract notice can state the effect in numbers while it is picked.
   const enteredRate = !useDefaultRate && customRate.trim() !== ''

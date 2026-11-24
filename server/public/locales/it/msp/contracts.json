@@ -1084,7 +1084,6 @@
         "failedToSavePricingSchedule": "Impossibile salvare la pianificazione dei prezzi"
       },
       "fields": {
-        "customRate": "Tariffa personalizzata",
         "customRatePlaceholder": "0.00",
         "duration": "Durata",
         "durationPlaceholder": "es. 6",

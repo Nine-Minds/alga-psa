@@ -1084,7 +1084,6 @@
         "failedToSavePricingSchedule": "Preisplan konnte nicht gespeichert werden"
       },
       "fields": {
-        "customRate": "Benutzerdefinierter Tarif",
         "customRatePlaceholder": "0.00",
         "duration": "Dauer",
         "durationPlaceholder": "z. B. 6",

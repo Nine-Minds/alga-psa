@@ -1084,7 +1084,6 @@
         "failedToSavePricingSchedule": "No se pudo guardar el programa de precios"
       },
       "fields": {
-        "customRate": "Tarifa personalizada",
         "customRatePlaceholder": "0.00",
         "duration": "Duración",
         "durationPlaceholder": "p. ej., 6",

@@ -1084,7 +1084,6 @@
         "failedToSavePricingSchedule": "Falha ao salvar a programação de preços"
       },
       "fields": {
-        "customRate": "Taxa personalizada",
         "customRatePlaceholder": "0.00",
         "duration": "Duração",
         "durationPlaceholder": "por exemplo, 6",

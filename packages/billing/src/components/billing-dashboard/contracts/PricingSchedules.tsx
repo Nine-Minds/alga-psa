@@ -72,9 +72,14 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currenc
         return;
       }
       setSchedules(data);
-      setLineScopes(
-        isActionMessageError(scopes) || isActionPermissionError(scopes) ? [] : scopes,
-      );
+      if (isActionMessageError(scopes) || isActionPermissionError(scopes)) {
+        // Without the lines the scope column cannot name anything; say so
+        // instead of rendering the rows as if the contract had no fixed line.
+        setLineScopes([]);
+        setError(getErrorMessage(scopes));
+        return;
+      }
+      setLineScopes(scopes);
     } catch (error) {
       console.error('Error fetching pricing schedules:', error);
       setError(t('pricingSchedules.list.errors.failedToLoadPricingSchedules', {

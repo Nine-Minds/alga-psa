@@ -1084,7 +1084,6 @@
         "failedToSavePricingSchedule": "Nie udało się zapisać harmonogramu cenowego"
       },
       "fields": {
-        "customRate": "Stawka niestandardowa",
         "customRatePlaceholder": "0.00",
         "duration": "Czas trwania",
         "durationPlaceholder": "np. 6",

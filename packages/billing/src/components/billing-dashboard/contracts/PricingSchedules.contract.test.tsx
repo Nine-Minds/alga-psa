@@ -177,4 +177,17 @@ describe('PricingSchedules contract-currency custom rate', () => {
     expect(screen.queryByText(/each of the/)).not.toBeInTheDocument();
   });
 
+  it('surfaces a failed line read instead of claiming the contract has no fixed line', async () => {
+    getPricingSchedulesByContractMock.mockResolvedValue([schedule()]);
+    getPricingScheduleLineScopesMock.mockResolvedValue({
+      actionError: 'Permission denied: billing read required',
+    });
+
+    renderList();
+
+    expect(
+      await screen.findByText('Permission denied: billing read required')
+    ).toBeInTheDocument();
+  });
+
 });

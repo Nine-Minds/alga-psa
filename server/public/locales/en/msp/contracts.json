@@ -1084,7 +1084,6 @@
         "failedToSavePricingSchedule": "Failed to save pricing schedule"
       },
       "fields": {
-        "customRate": "Custom Rate",
         "customRatePlaceholder": "0.00",
         "duration": "Duration",
         "durationPlaceholder": "e.g., 6",
