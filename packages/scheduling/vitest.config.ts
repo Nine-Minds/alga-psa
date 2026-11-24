@@ -17,6 +17,7 @@ export default defineConfig({
       'tests/timeEntryProvider.defaultService.test.tsx',
       'tests/calendarSharePicker.component.test.tsx',
       'tests/timeEntryDialog.saveFailure.test.tsx',
+      'src/components/time-management/time-entry/time-sheet/TimeEntryDialog.stopwatch.test.tsx',
       'tests/agentScheduleView.test.tsx',
       'tests/SchedulePage.accessRetry.test.tsx',
       'tests/SchedulePage.dialogRestore.test.tsx',

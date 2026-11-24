@@ -5,11 +5,9 @@ import { useCapability } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { ClientCoManagedIntegrationProps, ClientCoManagedSlots } from '@alga-psa/clients/context/ClientCrossFeatureContext';
 import { getCoManagedClientManagement, getCoManagedPurchaseState } from '@/lib/actions/coManagedActions';
-import CoManagedClientSummary from './CoManagedClientSummary';
 import CoManagedClientView from './CoManagedClientView';
 import { getCoManagedSeatClientState } from '@/lib/actions/coManagedSeatActions';
 import CoManagedSeatClientView, { type CoManagedSeatClientState } from './CoManagedSeatClientView';
-import CoManagedSeatSummary from './CoManagedSeatSummary';
 import { hasSeatTrialRecoveryAction } from '@enterprise/lib/actions/coManagedSeatTrialRecovery';
 import CoManagedSeatTrial from '@enterprise/components/co-managed/CoManagedSeatTrial';
 import CoManagedShapeChooser from './CoManagedShapeChooser';
@@ -18,11 +16,11 @@ type View = Awaited<ReturnType<typeof getCoManagedClientManagement>>;
 
 /**
  * App-owned co-managed integration for the client record. It owns capability
- * admission and the shared refresh state behind the summary and the co-managed
- * tab. When the capability does not admit this tenant it renders the ordinary
- * client with no feature slots and starts no feature read.
+ * admission and the shared refresh state behind the co-managed tab. When the
+ * capability does not admit this tenant it renders the ordinary client with no
+ * feature slots and starts no feature read.
  */
-export default function ClientCoManagedIntegration({ clientId, clientName, idPrefix, relationshipId, onOpenTab, children }: ClientCoManagedIntegrationProps) {
+export default function ClientCoManagedIntegration({ clientId, clientName, idPrefix, relationshipId, children }: ClientCoManagedIntegrationProps) {
   const { t } = useTranslation('msp/licensing');
   const { admitted } = useCapability('co-managed');
   // The seat shape is a second capability. With it closed nothing below reads or renders seat state.
@@ -156,10 +154,9 @@ export default function ClientCoManagedIntegration({ clientId, clientName, idPre
   };
   if (!workspaceReady || !view) {
     if (!seat) return <>{children(recoveryClient === clientId
-      ? { summary: null, tab: { ...tabBase, content: trial } } : null)}</>;
+      ? { tab: { ...tabBase, content: trial } } : null)}</>;
     // Seat-only: the workspace side is not open for this tenant, so the tab is the seat panel or chooser.
     const slots: ClientCoManagedSlots = {
-      summary: <CoManagedSeatSummary state={seat} idPrefix={idPrefix} onOpenTab={onOpenTab} />,
       tab: { ...tabBase, content: (<>
         {trial}
         <CoManagedSeatClientView key={resetKey} state={seat} clientName={clientName} idPrefix={idPrefix} onReload={reloadAll}>
@@ -170,10 +167,6 @@ export default function ClientCoManagedIntegration({ clientId, clientName, idPre
   }
 
   const slots: ClientCoManagedSlots = {
-    summary: seat?.panel
-      ? <CoManagedSeatSummary state={seat} idPrefix={idPrefix} onOpenTab={onOpenTab} />
-      : <CoManagedClientSummary view={view} clientId={clientId} idPrefix={idPrefix}
-        selectedRelationshipId={selectedRelationshipId} onSelectRelationship={selectRelationship} onOpenTab={onOpenTab} />,
     tab: {
       ...tabBase,
       content: <>{trial}{seat?.panel ? (

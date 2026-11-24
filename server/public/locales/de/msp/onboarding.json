@@ -334,7 +334,8 @@
     },
     "address": {
       "title": "Firmenadresse",
-      "description": "Aus Ihren Rechnungsdaten vorausgefüllt — bitte prüfen und bei Bedarf korrigieren. Diese Adresse erscheint auf Ihren Rechnungen und Angeboten.",
+      "description": "Diese Adresse erscheint auf Ihren Rechnungen und Angeboten.",
+      "prefilledFromBilling": "Einige dieser Werte wurden aus Ihren Rechnungsdaten übernommen. Bitte prüfen Sie sie.",
       "fields": {
         "addressLine1": {
           "label": "Adresszeile 1",

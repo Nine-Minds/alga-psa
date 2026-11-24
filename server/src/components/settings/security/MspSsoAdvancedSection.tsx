@@ -14,9 +14,10 @@ import {
 
 /**
  * Advanced, collapsed-by-default section under Security → Single Sign-On that hosts the
- * tenant-level login-domain routing panel (the "custom identity provider" path). On hosted
- * installs no tenant IdP credentials exist, so the panel is inert — we say so explicitly with
- * an info notice rather than leaving admins to discover it has no effect.
+ * tenant-level login-domain routing panel (the "custom identity provider" path). Until the
+ * tenant has its own IdP credentials (a Keycloak realm, or its own Google / Microsoft app) the
+ * panel is inert — we say so explicitly with an info notice rather than leaving admins to
+ * discover it has no effect.
  */
 export function MspSsoAdvancedSection(): React.JSX.Element {
   const { t } = useTranslation('msp/profile');
@@ -58,7 +59,7 @@ export function MspSsoAdvancedSection(): React.JSX.Element {
           <span className="text-sm text-muted-foreground">
             {t('security.sso.advanced.description', {
               defaultValue:
-                'Route MSP login SSO to your own identity provider using verified login domains. Only needed on custom or on-premise installations.',
+                'Route MSP login SSO to your own identity provider using verified login domains. Required when staff sign in through your own Keycloak realm or your own Google / Microsoft application.',
             })}
           </span>
         </span>
@@ -71,7 +72,7 @@ export function MspSsoAdvancedSection(): React.JSX.Element {
               <AlertDescription>
                 {t('security.sso.advanced.inertNotice', {
                   defaultValue:
-                    'No tenant identity provider credentials are configured, so domain claims currently have no effect. Users sign in with the hosted Google / Microsoft providers. Tenant credentials are provisioned on custom and on-premise installations.',
+                    'No tenant identity provider is configured, so domain claims currently have no effect. Configure Keycloak above, or on Enterprise Edition your Google / Microsoft app credentials, then claim your staff login domain here.',
                 })}
               </AlertDescription>
             </Alert>

@@ -27,6 +27,7 @@ import {
   coManagedAcceptancePendingError,
   isCoManagedAwaitingAcceptanceLazily,
 } from '@alga-psa/licensing/lifecycle';
+import { runWithBillingCatalogRequest } from '@alga-psa/licensing/billing-catalog-scope';
 import { getCurrentUserWithRevocationCheck } from './getCurrentUser';
 import { actionError } from '@alga-psa/ui/lib/errorHandling';
 import { coManagedRefusalMessageKey, isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
@@ -174,7 +175,10 @@ export function withAuth<TArgs extends unknown[], TResult>(
     // This ensures createTenantKnex() works without explicit tenant argument.
     // localizeActionError runs inside it because resolving the caller's locale
     // reads tenant_settings; it is a no-op unless the payload carries a messageKey.
-    return runWithTenant(user.tenant, () => runLocalized(() => action(user, ctx, ...args)));
+    // runWithBillingCatalogRequest opens the lazy per-request catalog scope: an action that reaches the
+    // co-managed offer gate loads the catalog context once however many checks it makes, and one that
+    // never does pays nothing. This is the one place every server action passes through.
+    return runWithTenant(user.tenant, () => runWithBillingCatalogRequest(() => runLocalized(() => action(user, ctx, ...args))));
   };
 }
 
@@ -212,7 +216,7 @@ export function withOptionalAuth<TArgs extends unknown[], TResult>(
 
     await assertCoManagedWorkspaceUsable(user.tenant, options);
 
-    return runWithTenant(user.tenant, () => runLocalized(() => action(user, ctx, ...args)));
+    return runWithTenant(user.tenant, () => runWithBillingCatalogRequest(() => runLocalized(() => action(user, ctx, ...args))));
   };
 }
 
@@ -243,6 +247,6 @@ export function withAuthCheck<TArgs extends unknown[], TResult>(
 
     await assertCoManagedWorkspaceUsable(user.tenant, options);
 
-    return action(user, ...args);
+    return runWithBillingCatalogRequest(() => action(user, ...args));
   };
 }

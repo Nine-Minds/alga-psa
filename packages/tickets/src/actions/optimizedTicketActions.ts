@@ -1464,7 +1464,7 @@ async function buildTicketListBaseQuery(
     const compiled = compilePredicateFragment(
       createTicketQuerySchema(() => codecContext.nowIso),
       filterGroup,
-      { rootAlias: 't', selfOrAnyChild: validatedFilters.bundleView === 'bundled' }
+      { rootAlias: 't', selfOrAnyChild: validatedFilters.bundleView === 'bundled', tenant }
     );
     if (compiled.sql !== 'TRUE') {
       baseQuery = baseQuery.whereRaw(compiled.sql, compiled.bindings as Knex.RawBinding[]);

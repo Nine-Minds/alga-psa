@@ -2243,6 +2243,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "true",
       "{{count}} ticket(s)",
       "{{actor}} • {{eventType}}",
       "Actor",

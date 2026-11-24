@@ -33,6 +33,7 @@ import { unwrapAssetActionResult } from '@alga-psa/assets/actions/assetActionErr
 import { getLinkedTasksForTicketAction } from '@alga-psa/projects/actions/projectTaskActions';
 import { findTagsByEntityId, isTagActionError } from '@alga-psa/tags/actions';
 import { getTeams, isTeamActionError } from '@alga-psa/teams/actions';
+import { isActivityOnMyList } from '@alga-psa/user-activities/actions';
 import { fetchTimeEntriesForTicket } from '@alga-psa/scheduling/actions/timeEntryTicketActions';
 import { AIChatContextBoundary } from '@product/chat/context';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
@@ -156,6 +157,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
       teams,
       displaySettings,
       tags,
+      onMyActivityList,
     ] = await Promise.all([
       getConsolidatedTicketData(id, capabilities),
       firstPaintPreloads.surveySummary,
@@ -167,6 +169,9 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
       getTeams().catch(() => null),
       getTicketingDisplaySettings().catch(() => null),
       findTagsByEntityId(id, 'ticket').catch(() => null),
+      // The hero's personal "My group" chip (MSP only): answered here so it is on the first paint
+      // rather than popping in above the hero form once a client check returns.
+      isAlgaDesk ? Promise.resolve(null) : isActivityOnMyList('ticket', id).catch(() => null),
     ]);
 
     const ticketDataError = getActionErrorMessage(ticketData);
@@ -208,6 +213,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
       teams: safeTeams,
       displaySettings,
       tags: safeTags,
+      onMyActivityList: typeof onMyActivityList === 'boolean' ? onMyActivityList : null,
       streams: {
         timelineEntries: getTicketTimelineEntries(id, {
           order: 'asc',

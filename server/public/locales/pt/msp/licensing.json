@@ -505,8 +505,7 @@
         "save": "Salvar padrões de transferência"
       },
       "client": {
-        "seatArrangement": "Acordo de lugares",
-        "summary": "Acordo de lugares: {{used}} de {{count}} lugares em uso"
+        "seatArrangement": "Acordo de lugares"
       },
       "technicians": {
         "sent": "Convite enviado.",
@@ -569,11 +568,11 @@
       "title": "Exportar espaço de trabalho",
       "description": "Baixe um arquivo portátil e criptografado com os registros e arquivos do seu espaço de trabalho.",
       "recovery": "Guarde a frase secreta de recuperação em um local seguro. Sem ela, o arquivo não pode ser aberto.",
-      "connections": "O arquivo contém os registros do seu espaço de trabalho e os arquivos armazenados nele. Registros e associações de documentos, além do histórico de tempo, agendamentos, reuniões e conversas, ainda não estão incluídos e chegarão em uma versão posterior. Dados de faturamento, dados privados do MSP e segredos de integração não estão incluídos.",
+      "connections": "O arquivo contém os registros do seu espaço de trabalho e os arquivos armazenados nele. Registros e associações de documentos, bem como o histórico de tempo, agenda, reuniões e conversas, ainda não estão incluídos e chegarão em uma versão posterior. Faturamento, dados privados do MSP e segredos de integração não estão incluídos.",
       "passphrase": "Frase secreta de recuperação",
       "confirmPassphrase": "Confirmar frase secreta de recuperação",
       "download": "Preparar e baixar arquivo",
-      "requested": "Sua solicitação será aberta em uma nova guia. A preparação pode levar alguns minutos; seu navegador baixará o arquivo quando estiver pronto.",
+      "requested": "Sua solicitação será aberta em uma nova aba. A preparação pode levar alguns minutos; seu navegador baixará o arquivo quando estiver pronto.",
       "loadError": "Você não pode exportar este espaço de trabalho com seu acesso atual.",
       "lengthError": "Use uma frase secreta entre 16 e 1024 bytes UTF-8.",
       "matchError": "As frases secretas de recuperação devem coincidir.",
@@ -606,8 +605,6 @@
     },
     "client": {
       "awaitingAcceptance": "O administrador do cliente deve aceitar antes que o acesso seja concedido.",
-      "chooseRelationship": "Escolher relação",
-      "endedHint": "Esta relação terminou. O histórico retido e os arquivos continuam disponíveis.",
       "endedOn": "Encerrada em {{date}}",
       "failedHint": "A configuração não foi concluída. As vagas continuam reservadas; tente novamente para continuar ou cancele a configuração.",
       "forClient": "TI cogerida para {{name}}",
@@ -624,12 +621,11 @@
       "setupHint": "Ative a TI cogerida neste cliente para reservar técnicos do cliente e convidar um administrador.",
       "tab": "TI cogerida",
       "viewDetails": "Ver detalhes",
-      "viewHistory": "Ver histórico",
       "workspace": "Espaço de trabalho do cliente",
       "seatUsage": "{{used}} de {{count}} lugares de técnico",
       "seatAllocation": "{{count}} lugares de técnico atribuídos"
     },
-    "description": "Gerencie os assentos de técnico disponíveis para os espaços de trabalho dos seus clientes.",
+    "description": "A cogestão de TI permite que a equipa de TI de um cliente trabalhe ao lado da sua equipa no AlgaPSA — nos mesmos tickets, com acesso limitado à sua empresa. Cada técnico do cliente usa um posto de um conjunto que compra aqui.",
     "directory": {
       "empty": "Não há espaços de trabalho cogeridos disponíveis para gerir.",
       "prompt": "Selecione o espaço de trabalho cogerido que deseja gerir."
@@ -639,7 +635,7 @@
       "descriptionWith": "{{name}} não tem mais acesso. O histórico do trabalho compartilhado é mantido somente para leitura.",
       "title": "TI cogerenciada encerrada em {{date}}"
     },
-    "loading": "Carregando a capacidade de assentos de cliente…",
+    "loading": "A carregar a capacidade de postos de cogestão…",
     "overview": {
       "shape": "Modelo",
       "state": "Estado",
@@ -720,15 +716,15 @@
       "description": "Este espaço de trabalho não está disponível no momento. Entre em contato com seu provedor de TI se você esperava usá-lo.",
       "title": "TI cogerenciada não está disponível"
     },
-    "capacity": "Postos comprados",
+    "capacity": "Comprados",
     "allocated": "Atribuídos a clientes",
-    "available": "Postos disponíveis",
-    "seatPool": "Postos de técnico para clientes",
-    "seatDescription": "Atribua postos deste conjunto partilhado. Os solicitantes são gratuitos e os técnicos do seu MSP não usam postos de clientes.",
+    "available": "Disponíveis",
+    "seatPool": "Postos de cogestão",
+    "seatDescription": "Só os técnicos dos seus clientes precisam de um posto. Os solicitantes e os seus próprios técnicos não.",
     "quantity": "Total de postos no seu conjunto",
     "reviewPurchase": "Rever compra",
     "resumePurchase": "Retomar compra",
-    "confirmTitle": "Rever a compra de postos de clientes",
+    "confirmTitle": "Rever a compra de postos de cogestão",
     "monthlyTotal_one": "{{count}} posto · {{amount}} por mês",
     "monthlyTotal_other": "{{count}} postos · {{amount}} por mês",
     "dueNow": "Valor estimado a pagar agora: {{amount}}",
@@ -736,7 +732,7 @@
     "checkoutTitle": "Concluir a compra de postos",
     "manageLicense": "Gerir a sua licença autoalojada",
     "proRequired": "É necessária uma subscrição PSA Pro para patrocinar espaços de trabalho de clientes.",
-    "loadError": "Não foi possível carregar a capacidade de postos de clientes. Tente novamente.",
+    "loadError": "Não foi possível carregar a capacidade de postos de cogestão. Tente novamente.",
     "purchaseError": "Não foi possível concluir a compra de postos. Pode retomá-la em segurança.",
     "termsChanged": "O preço mudou depois de ter revisto a compra. Reveja as condições atualizadas antes de confirmar.",
     "offerUnavailable": "A compra de novos lugares está temporariamente indisponível. Não foi cobrado nenhum valor.",
@@ -751,9 +747,6 @@
     "awaitingVerification_one": "A sua compra de {{count}} lugar aguarda a verificação do pagamento. O lugar aparecerá aqui quando o pagamento for confirmado.",
     "awaitingVerification_other": "A sua compra de {{count}} lugares aguarda a verificação do pagamento. Os lugares aparecerão aqui quando o pagamento for confirmado.",
     "refreshStatus": "Atualizar estado",
-    "purchaseOnly": {
-      "intro": "Compre aqui um conjunto de lugares de cogestão. Após a compra, atribua lugares aos clientes a partir de cada ficha de cliente."
-    },
     "previewError": "Não foi possível calcular o preço desta alteração. Atualize e tente novamente.",
     "billingCustomerUnlinked": "Não foi possível verificar uma conta de faturamento do Stripe para este espaço de trabalho. Entre em contato com o suporte para vinculá-la.",
     "proSubscriptionRequired": "As vagas cogerenciadas exigem uma assinatura Pro vigente. Verifique sua assinatura em Gerenciamento de contas.",
@@ -976,21 +969,6 @@
       "settings": "Gerenciar políticas de SLA",
       "mappingFor": "A prioridade do cliente {{name}} corresponde a",
       "unmapped": "Não mapeada"
-    },
-    "portableExport": {
-      "title": "Exportar espaço de trabalho",
-      "description": "Baixe um arquivo portátil e criptografado com os registros e arquivos do seu espaço de trabalho.",
-      "recovery": "Guarde a frase secreta de recuperação em um local seguro. Sem ela, o arquivo não pode ser aberto.",
-      "connections": "O arquivo contém os registros do seu espaço de trabalho e os arquivos armazenados nele. Registros e associações de documentos, bem como o histórico de tempo, agenda, reuniões e conversas, ainda não estão incluídos e chegarão em uma versão posterior. Faturamento, dados privados do MSP e segredos de integração não estão incluídos.",
-      "passphrase": "Frase secreta de recuperação",
-      "confirmPassphrase": "Confirmar frase secreta de recuperação",
-      "download": "Preparar e baixar arquivo",
-      "requested": "Sua solicitação será aberta em uma nova aba. A preparação pode levar alguns minutos; seu navegador baixará o arquivo quando estiver pronto.",
-      "loadError": "Você não pode exportar este espaço de trabalho com seu acesso atual.",
-      "lengthError": "Use uma frase secreta entre 16 e 1024 bytes UTF-8.",
-      "matchError": "As frases secretas de recuperação devem coincidir.",
-      "unavailable": "A exportação do espaço de trabalho não está disponível nesta edição.",
-      "loading": "Carregando…"
     },
     "section": {
       "title": "Cogerenciamento",
@@ -1275,6 +1253,49 @@
       "reviewSeatChange": "Revisar mudança de assentos",
       "billingError": "Não foi possível abrir a cobrança. Atualize o status e tente novamente.",
       "purchaseUnconfigured": "As compras não estão configuradas para esta implantação."
+    },
+    "howMany": "Quantos postos pretende?",
+    "noSeatsYet": "Ainda não tem postos.",
+    "perMonth": "por mês",
+    "priceBreakdown_one": "{{count}} posto × {{unit}}",
+    "priceBreakdown_other": "{{count}} postos × {{unit}}",
+    "reviewHint": "Nada é cobrado até confirmar no passo seguinte.",
+    "changeTitle": "Alterar o número de postos",
+    "adding_one": "A adicionar {{count}} posto",
+    "adding_other": "A adicionar {{count}} postos",
+    "removing_one": "A remover {{count}} posto",
+    "removing_other": "A remover {{count}} postos",
+    "fromTo": "{{from}} → {{to}} postos",
+    "monthlyWithDifference": "{{total}} por mês ({{difference}})",
+    "reviewChange": "Rever alteração",
+    "manageBilling": "Gerir a faturação",
+    "freeToAllocate_one": "{{count}} posto está livre para atribuir. Abra a ficha de um cliente para o atribuir.",
+    "freeToAllocate_other": "{{count}} postos estão livres para atribuir. Abra a ficha de um cliente para os atribuir.",
+    "noneFree": "Todos os postos estão atribuídos. Adicione postos abaixo ou liberte um de um cliente.",
+    "goToClients": "Ir para Clientes",
+    "belowAllocated_one": "Não pode descer abaixo de {{count}} posto: está atribuído a um cliente. Liberte-o primeiro nesse cliente.",
+    "belowAllocated_other": "Não pode descer abaixo de {{count}} postos: estão atribuídos a clientes. Liberte primeiro postos de um cliente.",
+    "decreaseSeats": "Diminuir postos",
+    "increaseSeats": "Aumentar postos",
+    "usage": "{{allocated}} de {{purchased}} postos atribuídos",
+    "howItWorks": {
+      "title": "Como funciona",
+      "buy": {
+        "title": "Compre postos",
+        "body": "Os postos vão para um único conjunto partilhado de todo o seu MSP. Altere o número em qualquer altura."
+      },
+      "enable": {
+        "title": "Ative a cogestão de TI para um cliente",
+        "body": "Abra a ficha do cliente e escolha quantos postos esse cliente recebe."
+      },
+      "signIn": {
+        "title": "Os técnicos deles iniciam sessão",
+        "body": "Cada técnico do cliente usa um posto e só vê o trabalho da sua própria empresa."
+      }
+    },
+    "whoNeedsSeat": {
+      "label": "Quem precisa de um posto?",
+      "answer": "Apenas os técnicos dos seus clientes. Quem só submete tickets não paga, e os seus próprios técnicos estão cobertos pelas suas licenças AlgaPSA."
     }
   },
   "common": {

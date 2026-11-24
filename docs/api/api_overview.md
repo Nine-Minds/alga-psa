@@ -423,6 +423,15 @@ The request body is JSON. Identify the target entity with `entity_type` (`ticket
 
 `file_name` and `mime_type` are optional. `POST /api/v1/documents` does not accept multipart; a multipart upload to a ticket goes through `POST /api/v1/tickets/{id}/documents`.
 
+**Client visibility:** documents attached through the API are internal-only by default. The optional boolean `is_client_visible` (default `false`) lets the caller make the document visible in the client portal. It is accepted in the `POST /api/v1/documents` JSON body, as a multipart form field on `POST /api/v1/tickets/{id}/documents` (the strings `true`/`false`; absent or empty means `false`), and on the `attach_file` MCP tool.
+
+- Only `ticket`, `project_task`, and `client` targets support `true`; no client portal page shows contact or asset documents, so `true` on a `contact` or `asset` target returns `400`.
+- `true` also requires `document:update`, the same rule the UI's visibility toggle applies, in addition to `document:create` and the target's update permission. Without it the request returns `403`.
+- A non-boolean value returns `400` (`AttachFileInputError` in MCP).
+- Both checks run in the shared `attachDocument` core before the upload to storage, so a refused request leaves no storage object.
+- A comment-attachment draft on the ticket multipart route is always client-visible; an explicit `false` does not override it.
+- The created document in the response carries the resulting `is_client_visible`.
+
 **Size limits:** every file is held to the default storage provider's per-file limit (`maxFileSize`, 500 MiB by default; see [file_storage_system.md](../architecture/file_storage_system.md#upload-size-limit)).
 
 - A `url` source streams, so it can reach the per-file limit. The download is cut off past the limit (`413 PAYLOAD_TOO_LARGE`). Each connection attempt has a 15 s timeout and the whole download a 10 min budget; a timed-out download returns `400`.

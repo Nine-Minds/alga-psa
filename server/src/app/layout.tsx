@@ -18,6 +18,8 @@ import { TenantProvider } from '@alga-psa/ui/components/providers/TenantProvider
 import { DynamicExtensionProvider } from '@alga-psa/ui/components/providers/DynamicExtensionProvider';
 import { PostHogProvider } from '@/components/providers/PostHogProvider';
 import { resolveCapabilityBootstrap } from '@/lib/capability/bootstrap';
+// Side effect: the render-wide billing catalog scope (one catalog context load per server render).
+import '@/lib/co-managed/billingCatalogRenderScope';
 import { AppThemeProvider } from '@/components/providers/AppThemeProvider';
 import { ThemeBridge } from '@/components/providers/ThemeBridge';
 import { ClientUIStateProvider } from '@alga-psa/ui/ui-reflection/ClientUIStateProvider';

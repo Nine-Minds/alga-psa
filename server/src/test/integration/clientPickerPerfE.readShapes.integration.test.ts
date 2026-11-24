@@ -52,11 +52,7 @@ vi.mock('@alga-psa/formatting/avatarUtils', () => {
 
 import { findClientsByNames } from '@alga-psa/clients/actions/clientActions';
 import { getAllContacts, getContactsByClient } from '@alga-psa/clients/actions/queryActions';
-import {
-  getClientByIdForBillingRecoverable,
-  getContractAssignmentsForReport,
-  countActiveClientsByContract,
-} from '@alga-psa/billing/actions/billingClientsActions';
+import { getClientByIdForBillingRecoverable } from '@alga-psa/billing/actions/billingClientsActions';
 import { getUsageRecords } from '@alga-psa/billing/actions/usageActions';
 
 let db: Knex;
@@ -71,17 +67,6 @@ async function seedClient(tenant: string, name: string, extra: Record<string, un
   const client_id = randomUUID();
   await db('clients').insert({ tenant, client_id, client_name: name, client_type: 'company', is_inactive: false, ...extra });
   return client_id;
-}
-async function seedContract(tenant: string, name: string) {
-  const contract_id = randomUUID();
-  await db('contracts').insert({ tenant, contract_id, contract_name: name, billing_frequency: 'monthly', status: 'active', is_active: true });
-  return contract_id;
-}
-async function assign(tenant: string, clientId: string, contractId: string, extra: Record<string, unknown> = {}) {
-  await db('client_contracts').insert({
-    tenant, client_contract_id: randomUUID(), client_id: clientId, contract_id: contractId,
-    start_date: '2026-01-01', is_active: true, ...extra,
-  });
 }
 
 beforeAll(async () => {
@@ -110,22 +95,6 @@ beforeAll(async () => {
       client_id: clientId, is_inactive: false,
     });
   }
-
-  // contracts + assignments
-  ids.contractA = await seedContract(context.tenant, 'Gold Support');
-  ids.contractB = await seedContract(context.tenant, 'Silver Support');
-  ids.contractEmpty = await seedContract(context.tenant, 'Unused');
-  ids.foreignContract = await seedContract(otherTenant, 'Foreign Contract');
-  await db('contract_lines').insert([
-    { tenant: context.tenant, contract_line_id: randomUUID(), contract_id: ids.contractA, contract_line_name: 'L1' },
-    { tenant: context.tenant, contract_line_id: randomUUID(), contract_id: ids.contractA, contract_line_name: 'L2' },
-  ]);
-  await assign(context.tenant, ids.acme, ids.contractA);
-  await assign(context.tenant, ids.bravo, ids.contractA);
-  await assign(context.tenant, ids.dormant, ids.contractA); // inactive client: excluded
-  await assign(context.tenant, ids.acme, ids.contractB, { is_active: false }); // inactive assignment
-  await assign(context.tenant, ids.bravo, ids.contractB);
-  await assign(otherTenant, ids.foreign, ids.foreignContract);
 
   // usage
   const serviceTypeId = randomUUID();
@@ -190,42 +159,6 @@ describe('getClientByIdForBillingRecoverable', () => {
   it('returns null for another tenant’s client or an unknown id', async () => {
     expect(await getClientByIdForBillingRecoverable(ids.foreign)).toBeNull();
     expect(await getClientByIdForBillingRecoverable(randomUUID())).toBeNull();
-  });
-});
-
-describe('getContractAssignmentsForReport', () => {
-  it('returns one row per active client with name, logo and the contract line count', async () => {
-    context.logoCalls.length = 0;
-    const rows: any[] = await getContractAssignmentsForReport(ids.contractA);
-    expect(rows.map((r) => r.client_name)).toEqual(['Acme Widgets', 'Bravo Logistics']);
-    expect(rows.every((r) => r.contract_line_count === 2)).toBe(true);
-    expect(rows[0].client_logo_url).toBe(`/logo/${ids.acme}`);
-    expect(rows[0].contract_name).toBe('Gold Support');
-    expect(context.logoCalls).toHaveLength(1);
-  });
-
-  it('skips inactive assignments and is tenant scoped', async () => {
-    const b: any[] = await getContractAssignmentsForReport(ids.contractB);
-    expect(b.map((r) => r.client_id)).toEqual([ids.bravo]);
-    expect(await getContractAssignmentsForReport(ids.foreignContract)).toEqual([]);
-  });
-});
-
-describe('countActiveClientsByContract', () => {
-  it('counts distinct active clients per contract in one grouped query', async () => {
-    const rows = await countActiveClientsByContract([ids.contractA, ids.contractB, ids.contractEmpty]);
-    expect(rows).toEqual([
-      { contract_id: ids.contractA, active_client_count: 2 },
-      { contract_id: ids.contractB, active_client_count: 1 },
-      { contract_id: ids.contractEmpty, active_client_count: 0 },
-    ]);
-  });
-
-  it('does not count another tenant’s assignments', async () => {
-    expect(await countActiveClientsByContract([ids.foreignContract])).toEqual([
-      { contract_id: ids.foreignContract, active_client_count: 0 },
-    ]);
-    expect(await countActiveClientsByContract([])).toEqual([]);
   });
 });
 

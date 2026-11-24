@@ -9025,6 +9025,13 @@ components:
           description: Declared MIME type. The server sniffs the bytes and a recognised
             type overrides this; the storage allowlist is applied to the
             resolved type.
+        is_client_visible:
+          type: boolean
+          description: Whether the client portal can show the document. Default false
+            (internal only). Only ticket, project_task and client support true;
+            contact and asset get 400. true also needs the document:update
+            permission. The created document in the response carries the
+            resulting is_client_visible.
       required:
         - entity_type
         - entity_id
@@ -19490,6 +19497,13 @@ components:
             - string
             - "null"
           format: uuid
+          description: The first time entry the session was logged as.
+        time_entry_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Every time entry the session was logged as, one per work day.
         closed_at:
           type:
             - string
@@ -19559,6 +19573,7 @@ components:
         - notes
         - status
         - time_entry_id
+        - time_entry_ids
         - closed_at
         - created_at
         - updated_at
@@ -19600,10 +19615,18 @@ components:
             time_entry:
               type: object
               additionalProperties: {}
-              description: The persisted time entry.
+              description: The persisted time entry (the first one when the session spans
+                several work days).
+            time_entries:
+              type: array
+              items:
+                type: object
+                additionalProperties: {}
+              description: Every persisted time entry, one per work day with active time.
           required:
             - session
             - time_entry
+            - time_entries
       required:
         - data
     WorkV1StopwatchConflictError:
@@ -50931,12 +50954,12 @@ paths:
         endpoint, not only MCP. Validation (size, MIME type allowlist), storage,
         the document row, the association, previews and DOCUMENT_ASSOCIATED
         events run in one shared upload core; ticket attachments also write a
-        ticket activity entry. Requires document:create and <entity>:update.
-        Errors: 400 invalid source, host not allowed (code
-        FETCH_HOST_NOT_ALLOWED; nothing is fetched and no document is created),
-        unsafe or unreachable URL (a remote error status is reported in the
-        message, never as our status), oversize, or disallowed type; 403
-        permission denied; 404 entity not found."
+        ticket activity entry. Requires document:create and <entity>:update,
+        plus document:update when is_client_visible is true. Errors: 400 invalid
+        source, host not allowed (code FETCH_HOST_NOT_ALLOWED; nothing is
+        fetched and no document is created), unsafe or unreachable URL (a remote
+        error status is reported in the message, never as our status), oversize,
+        or disallowed type; 403 permission denied; 404 entity not found."
       tags:
         - Documents
       security:
@@ -108017,10 +108040,14 @@ paths:
   /api/v1/stopwatch/{id}/log:
     post:
       summary: Log stopwatch as time entry
-      description: "Logs the session as exactly one time entry: start = first segment
-        start (to the minute), end = start + active duration, billable_duration
-        = active minutes (min 1). Any body field overrides the derived value.
-        The time sheet is resolved server-side from the start date; a locked
+      description: "Logs the session as one time entry per work day (in the entry user
+        timezone) that has active time: each entry starts at the first active
+        instant of that day (to the minute) and lasts the active minutes of that
+        day, ending no later than 23:59; paused time is never booked. A session
+        within one day is one entry (billable_duration = active minutes, min 1).
+        An explicit start_time/end_time in the body produces exactly one entry
+        over that span. Other body fields override the derived value. The time
+        sheet is resolved server-side from the start date; a locked
         (submitted/approved) sheet returns 409 and the session is left
         untouched."
       tags:
@@ -108916,9 +108943,12 @@ paths:
     post:
       summary: Upload a ticket document
       description: "Uploads a file as a document attachment to a ticket. Send
-        multipart/form-data with a `file` field. Returns the created document.
-        Multipart only: MCP and JSON clients should use `POST /api/v1/documents`
-        (or the `attach_file` MCP tool) instead."
+        multipart/form-data with a `file` field and, optionally,
+        `is_client_visible` (`true` or `false`, default `false`: internal only).
+        Client-visible needs document:update in addition to the ticket update
+        permission, and the returned document shows `is_client_visible`. Returns
+        the created document. Multipart only: MCP and JSON clients should use
+        `POST /api/v1/documents` (or the `attach_file` MCP tool) instead."
       tags:
         - Work Management v1
       security:

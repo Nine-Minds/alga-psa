@@ -18994,7 +18994,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/documents",
     "displayName": "Attach File to Record",
     "summary": "Attach one file to a ticket, project task, client, contact or asset",
-    "description": "Attaches ONE file to a ticket, project_task, client, contact or asset. Prefer source.type=url: give an https URL and the server downloads it (max size is the tenant storage limit). The URL host must be on the workspace's allowed download hosts (a tenant admin manages the list under Settings > MCP Server > Allowed download hosts; the ChatGPT file host is built in). If the call fails with 400 FETCH_HOST_NOT_ALLOWED, nothing was downloaded: tell the user an admin can add that host, and do not retry with other URLs. Use source.type=base64 only for small content you wrote yourself, never to relay a user's file, and file_name is then required. One file per call; make several calls for several files. In an MCP client with the attach_file tool, use that instead. Returns 201 with the stored document; 400 for a disallowed type, oversize file, unfetchable URL or a host that is not allowed (FETCH_HOST_NOT_ALLOWED), 403 without permission, 404 for a missing record.",
+    "description": "Attaches ONE file to a ticket, project_task, client, contact or asset. Prefer source.type=url: give an https URL and the server downloads it (max size is the tenant storage limit). The URL host must be on the workspace's allowed download hosts (a tenant admin manages the list under Settings > MCP Server > Allowed download hosts; the ChatGPT file host is built in). If the call fails with 400 FETCH_HOST_NOT_ALLOWED, nothing was downloaded: tell the user an admin can add that host, and do not retry with other URLs. Use source.type=base64 only for small content you wrote yourself, never to relay a user's file, and file_name is then required. One file per call; make several calls for several files. The file is internal-only unless you pass is_client_visible=true (only when the user asks for the client to see it; ticket, project_task and client only, contact and asset get 400; needs document:update); the returned document shows is_client_visible. In an MCP client with the attach_file tool, use that instead. Returns 201 with the stored document; 400 for a disallowed type, oversize file, unfetchable URL or a host that is not allowed (FETCH_HOST_NOT_ALLOWED), 403 without permission, 404 for a missing record.",
     "tags": [
       "Documents"
     ],
@@ -19070,6 +19070,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "mime_type": {
           "type": "string",
           "description": "Declared MIME type. The server sniffs the bytes and a recognised type overrides this; the storage allowlist is applied to the resolved type."
+        },
+        "is_client_visible": {
+          "type": "boolean",
+          "description": "Whether the client portal can show the document. Default false (internal only). Only ticket, project_task and client support true; contact and asset get 400. true also needs the document:update permission. The created document in the response carries the resulting is_client_visible."
         }
       },
       "required": [
@@ -54841,7 +54845,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/stopwatch/{id}/log",
     "displayName": "Log stopwatch as time entry",
     "summary": "Log stopwatch as time entry",
-    "description": "Logs the session as exactly one time entry: start = first segment start (to the minute), end = start + active duration, billable_duration = active minutes (min 1). Any body field overrides the derived value. The time sheet is resolved server-side from the start date; a locked (submitted/approved) sheet returns 409 and the session is left untouched.",
+    "description": "Logs the session as one time entry per work day (in the entry user timezone) that has active time: each entry starts at the first active instant of that day (to the minute) and lasts the active minutes of that day, ending no later than 23:59; paused time is never booked. A session within one day is one entry (billable_duration = active minutes, min 1). An explicit start_time/end_time in the body produces exactly one entry over that span. Other body fields override the derived value. The time sheet is resolved server-side from the start date; a locked (submitted/approved) sheet returns 409 and the session is left untouched.",
     "tags": [
       "Work Management v1"
     ],
@@ -54898,12 +54902,21 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "time_entry": {
               "type": "object",
               "additionalProperties": {},
-              "description": "The persisted time entry."
+              "description": "The persisted time entry (the first one when the session spans several work days)."
+            },
+            "time_entries": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "description": "Every persisted time entry, one per work day with active time."
             }
           },
           "required": [
             "session",
-            "time_entry"
+            "time_entry",
+            "time_entries"
           ]
         }
       },

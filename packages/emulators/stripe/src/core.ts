@@ -31,11 +31,47 @@ export interface StripeEmulatorConfig {
   hostedBaseUrl: string | null;
 }
 
+/** Stripe's Address object; every field is nullable, as Checkout may collect only country and postal code. */
+export interface StripeAddress {
+  line1: string | null;
+  line2: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
+  country: string | null;
+}
+
+export type StripeAddressInput = Partial<Record<keyof StripeAddress, string | null | undefined>>;
+
+/** Billing details a payer gives on the Checkout page. */
+export interface StripeBillingDetailsInput {
+  name?: string;
+  phone?: string;
+  address?: StripeAddressInput;
+}
+
+/** Normalizes partial input into a full Address, or null when no field carries a value. */
+export function toStripeAddress(input: StripeAddressInput | null | undefined): StripeAddress | null {
+  if (!input) return null;
+  const pick = (value: string | null | undefined) => (typeof value === 'string' && value.trim() ? value.trim() : null);
+  const address: StripeAddress = {
+    line1: pick(input.line1),
+    line2: pick(input.line2),
+    city: pick(input.city),
+    state: pick(input.state),
+    postal_code: pick(input.postal_code),
+    country: pick(input.country)?.toUpperCase() ?? null,
+  };
+  return Object.values(address).some((value) => value !== null) ? address : null;
+}
+
 export interface StripeCustomer {
   id: string;
   object: 'customer';
   email: string;
   name: string;
+  address: StripeAddress | null;
+  phone: string | null;
   metadata: Record<string, string>;
   created: number;
   livemode: false;
@@ -75,6 +111,15 @@ export interface StripeCheckoutSession {
   url: string;
   status: 'open' | 'complete' | 'expired';
   payment_status: 'unpaid' | 'paid' | 'no_payment_required';
+  /** 'auto' collects country and postal code only; 'required' collects the full address. */
+  billing_address_collection: 'auto' | 'required' | null;
+  /** Null until the payer completes the session, as in Stripe. */
+  customer_details: {
+    email: string | null;
+    name: string | null;
+    phone: string | null;
+    address: StripeAddress | null;
+  } | null;
   metadata: Record<string, string>;
   created: number;
   livemode: false;
@@ -328,13 +373,22 @@ export class StripeEmulatorCore implements EmulatorCore {
     return { object: 'list', url: '/v1/customers', has_more: false, data };
   }
 
-  createCustomer(input: { id?: string; email: string; name?: string; metadata?: Record<string, string> }): StripeCustomer {
+  createCustomer(input: {
+    id?: string;
+    email: string;
+    name?: string;
+    metadata?: Record<string, string>;
+    address?: StripeAddressInput | null;
+    phone?: string | null;
+  }): StripeCustomer {
     const id = input.id ?? this.newId('cus');
     const customer: StripeCustomer = {
       id,
       object: 'customer',
       email: input.email,
       name: input.name ?? '',
+      address: toStripeAddress(input.address),
+      phone: input.phone?.trim() || null,
       metadata: input.metadata ?? {},
       created: this.nowUnix(),
       livemode: false,
@@ -519,6 +573,7 @@ export class StripeEmulatorCore implements EmulatorCore {
       expires_at?: number;
       currency?: string;
       amount?: number;
+      billing_address_collection?: 'auto' | 'required';
     },
     hostedBaseUrl: string,
   ): StripeCheckoutSession {
@@ -562,6 +617,8 @@ export class StripeEmulatorCore implements EmulatorCore {
       url: `${hostedBaseUrl}/checkout/sessions/${sessionId}`,
       status: 'open',
       payment_status: input.mode === 'subscription' ? 'no_payment_required' : 'unpaid',
+      billing_address_collection: input.billing_address_collection ?? null,
+      customer_details: null,
       metadata: { ...input.metadata, ...(input.subscription_data?.metadata ?? {}) },
       created: this.nowUnix(),
       livemode: false,
@@ -612,14 +669,25 @@ export class StripeEmulatorCore implements EmulatorCore {
     return intent;
   }
 
-  /** Complete a session and its payment intent; emits checkout.session.completed. */
-  completeSession(sessionId: string): StripeEvent {
+  /**
+   * Complete a session and its payment intent; emits checkout.session.completed.
+   * `billing` is what the payer typed on the Checkout page; it becomes the
+   * session's customer_details. The Stripe customer record is not changed.
+   */
+  completeSession(sessionId: string, billing?: StripeBillingDetailsInput): StripeEvent {
     const session = this.getCheckoutSession(sessionId);
     if (session.status === 'expired') {
       // Stripe rejects completion of an expired Checkout Session; an expired
       // session must never become payable again.
       throw new StripeWireError(400, 'This Checkout Session has expired and cannot be completed.');
     }
+    const customer = session.customer ? this.customers.get(session.customer) : undefined;
+    session.customer_details = {
+      email: customer?.email ?? null,
+      name: billing?.name?.trim() || customer?.name || null,
+      phone: billing?.phone?.trim() || null,
+      address: toStripeAddress(billing?.address),
+    };
     session.status = 'complete';
     session.payment_status = session.mode === 'subscription' ? 'no_payment_required' : 'paid';
 

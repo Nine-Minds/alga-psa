@@ -46,6 +46,8 @@ export interface ComputedResolverContext {
   /** Always a non-complement operator: the compiler resolves `not_in` and `is_empty` by negation (`COMPLEMENTS`). */
   operator: PredicateOperator;
   value?: PredicateLiteral | PredicateLiteral[];
+  /** `CompileOptions.tenant`, when the caller gave one: a subquery the resolver opens must filter on it by value too. */
+  tenant?: string;
 }
 
 /**

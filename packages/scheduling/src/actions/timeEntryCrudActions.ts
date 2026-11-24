@@ -10,6 +10,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import {
   ITimeEntry,
   ITimeEntryWithWorkItem,
+  IUser,
 } from '@alga-psa/types';
 import { IWorkItem } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
@@ -30,7 +31,7 @@ import {
   createTimeEntryChangeRequestRecord,
   fetchTimeEntryChangeRequestsForEntryIdsFromDb,
 } from './timeEntryChangeRequestActions';
-import { deleteTimeEntryCore, persistTimeEntry, publishPersistedTimeEntryEvents } from '../lib/timeEntryWriteCore';
+import { deleteTimeEntryCore, persistTimeEntry, publishPersistedTimeEntryEvents, type PersistedTimeEntry } from '../lib/timeEntryWriteCore';
 import { logSession } from '../lib/stopwatch/stopwatchCore';
 import { resolveTimeEntryMode, serviceRequiredForTimeEntry } from '../lib/timeEntryMode';
 import { commercialEntriesOnly } from '../lib/timeApprovalScope';
@@ -337,18 +338,24 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
   }
 });
 
-export const saveTimeEntry = withAuth(async (
-  user,
-  { tenant },
-  timeEntry: Omit<ITimeEntry, 'tenant'> & { stopwatch_session_id?: string | null }
-): Promise<ITimeEntryWithWorkItem | TimeSheetActionError> => {
-  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
-  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id, workItemType: timeEntry.work_item_type, workItemId: timeEntry.work_item_id }, (source, ctx) => source.entries.admit(ctx, timeEntry));
-  if (delegated.handled) return delegated.value;
-  const {knex: db} = await createTenantKnex();
-  const tenantScopedDb = tenantDb(db, tenant) as any;
+interface PreparedTimeEntrySave {
+  mode: Awaited<ReturnType<typeof resolveTimeEntryMode>>;
+  requestCache: RequestLocalAuthorizationCache;
+  validatedTimeEntry: SaveTimeEntryParams;
+}
 
-  try {
+/**
+ * The preamble every time-entry save runs: permission for the create/update, the billing mode
+ * from the authenticated principal, payload validation and the service requirement. Shared by
+ * saveTimeEntry and logStopwatchSession so a stopwatch entry is checked exactly like a manual one.
+ */
+async function prepareTimeEntryForSave(
+  db: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
+  tenant: string,
+  user: IUser,
+  timeEntry: Omit<ITimeEntry, 'tenant'> & { stopwatch_session_id?: string | null },
+  requestCache: RequestLocalAuthorizationCache = new RequestLocalAuthorizationCache(),
+): Promise<PreparedTimeEntrySave> {
   // Check permission based on whether this is a create or update operation
   if (timeEntry.entry_id) {
     // Update operation
@@ -365,7 +372,6 @@ export const saveTimeEntry = withAuth(async (
   // The billing mode is decided here from the authenticated principal, never from the payload: a seat
   // technician always writes operational, everyone else always commercial. A commercial field arriving
   // on a seat save is rejected by the write core (OPERATIONAL_TIME_COMMERCIAL_FIELDS), not dropped.
-  const requestCache = new RequestLocalAuthorizationCache();
   const mode = await resolveTimeEntryMode(db, tenant, user.user_id, requestCache);
   const serviceRequired = serviceRequiredForTimeEntry({ participates: mode === 'operational', mode });
 
@@ -379,184 +385,280 @@ export const saveTimeEntry = withAuth(async (
     throw new Error('Service is required for time entries');
   }
 
-    // Everything from ownership checks to bucket/hour-block draws lives in the
-    // shared write core (D6); it runs inside this action-owned transaction.
-    // With a stopwatch session the entry and the session close together (logSession semantics):
-    // the drawer's values win over the session-derived ones, the session must be the acting
-    // user's own open session, and any failure rolls back both.
-    const stopwatchSessionId = validatedTimeEntry.stopwatch_session_id;
-    if (stopwatchSessionId && validatedTimeEntry.entry_id) {
+  return { mode, requestCache, validatedTimeEntry };
+}
+
+/** Work item details, analytics and the client-facing shape of one just-persisted entry. */
+async function buildSavedTimeEntryResult(
+  db: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
+  tenant: string,
+  user: IUser,
+  persisted: PersistedTimeEntry,
+  validatedTimeEntry: SaveTimeEntryParams,
+): Promise<ITimeEntryWithWorkItem> {
+  const tenantScopedDb = tenantDb(db, tenant) as any;
+  const entry = persisted.entry;
+  const entry_id = validatedTimeEntry.entry_id;
+  const { notes, service_id, tax_region, contract_line_id, approval_status } = validatedTimeEntry;
+  const finalBillableDuration = persisted.finalBillableDuration;
+
+  // Fetch work item details based on the saved entry
+  let workItemDetails: IWorkItem;
+  switch (entry.work_item_type) {
+    case 'project_task': {
+      const taskQuery = tenantScopedDb.table('project_tasks')
+        .where({
+          task_id: entry.work_item_id
+        });
+      tenantScopedDb.tenantJoin(taskQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
+      tenantScopedDb.tenantJoin(taskQuery, 'projects', 'project_phases.project_id', 'projects.project_id');
+      const [task] = await taskQuery
+        .select(
+          'task_id as work_item_id',
+          'task_name as name',
+          'project_tasks.description',
+          'projects.project_name as project_name',
+          'project_phases.phase_name as phase_name'
+        );
+      workItemDetails = {
+        ...task,
+        type: 'project_task',
+        is_billable: entry.billable_duration > 0,
+        project_name: task.project_name,
+        phase_name: task.phase_name
+      };
+      break;
+    }
+    case 'ad_hoc': {
+      const schedule = await tenantScopedDb.table('schedule_entries')
+        .where({
+          entry_id: entry.work_item_id
+        })
+        .first();
+      workItemDetails = {
+        work_item_id: entry.work_item_id,
+        name: schedule?.title || 'Ad Hoc Entry',
+        description: '',
+        type: 'ad_hoc',
+        is_billable: entry.billable_duration > 0
+      };
+      break;
+    }
+    case 'ticket': {
+      const [ticket] = await tenantScopedDb.table('tickets')
+        .where({
+          ticket_id: entry.work_item_id
+        })
+        .select(
+          'ticket_id as work_item_id',
+          'title as name',
+          'url as description',
+          'ticket_number'
+        );
+      workItemDetails = {
+        ...ticket,
+        type: 'ticket',
+        is_billable: entry.billable_duration > 0,
+        ticket_number: ticket.ticket_number
+      };
+      break;
+    }
+    case 'non_billable_category':
+      workItemDetails = {
+        work_item_id: entry.work_item_id,
+        name: entry.work_item_id,
+        description: '',
+        type: 'non_billable_category',
+        is_billable: false
+      };
+      break;
+    case 'interaction': {
+      const interactionQuery = tenantScopedDb.table('interactions')
+        .where({
+          'interactions.interaction_id': entry.work_item_id
+        });
+      tenantScopedDb.tenantJoin(interactionQuery, 'clients', 'interactions.client_id', 'clients.client_id', { type: 'left' });
+      tenantScopedDb.tenantJoin(interactionQuery, 'contacts', 'interactions.contact_name_id', 'contacts.contact_name_id', { type: 'left' });
+      tenantScopedDb.tenantJoin(interactionQuery, 'interaction_types', 'interactions.type_id', 'interaction_types.type_id', { type: 'left' });
+      const [interaction] = await interactionQuery
+        .select(
+          'interactions.interaction_id as work_item_id',
+          'interactions.title as name',
+          db.raw("'' as description"), // Don't copy interaction notes to time entry
+          'clients.client_name',
+          'contacts.full_name as contact_name',
+          'interaction_types.type_name as interaction_type'
+        );
+      workItemDetails = {
+        ...interaction,
+        type: 'interaction',
+        is_billable: entry.billable_duration > 0,
+        client_name: interaction.client_name,
+        contact_name: interaction.contact_name,
+        interaction_type: interaction.interaction_type
+      };
+      break;
+    }
+    default:
+      throw new Error(`Unknown work item type: ${entry.work_item_type}`);
+  }
+
+  // Track time entry analytics
+  const isUpdate = !!entry_id;
+  captureAnalytics(isUpdate ? 'time_entry_updated' : 'time_entry_created', {
+    work_item_type: entry.work_item_type,
+    duration_minutes: finalBillableDuration,
+    is_billable: finalBillableDuration > 0,
+    has_notes: !!notes,
+    has_service: !!service_id,
+    has_tax_region: !!tax_region,
+    has_contract_line: !!contract_line_id,
+    approval_status: approval_status || 'pending',
+    // Track if this was a duration adjustment
+    duration_changed: isUpdate ? (entry.billable_duration !== finalBillableDuration) : false,
+    duration_delta: isUpdate ? (finalBillableDuration - entry.billable_duration) : finalBillableDuration,
+  }, user.user_id);
+
+  // Return the complete time entry with work item details
+  // Format work_date properly (DATE column comes back as Date object)
+  const result: ITimeEntryWithWorkItem = {
+    ...entry,
+    work_date: (entry.work_date as unknown) instanceof Date
+      ? (entry.work_date as unknown as Date).toISOString().slice(0, 10)
+      : (typeof entry.work_date === 'string' ? entry.work_date.slice(0, 10) : undefined),
+    workItem: workItemDetails
+  };
+  return result;
+}
+
+/**
+ * Log a stopwatch session as the given prepared entries, atomically (logSession semantics): the
+ * session must be the acting user's own open session, and any failure rolls back every entry and
+ * leaves the session as it was. Events are published after commit.
+ */
+async function logPreparedStopwatchEntries(
+  db: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
+  tenant: string,
+  user: IUser,
+  sessionId: string,
+  prepared: PreparedTimeEntrySave[],
+): Promise<ITimeEntryWithWorkItem[]> {
+  if (prepared.length === 0) {
+    throw new Error('Validation failed: a stopwatch session needs at least one time entry');
+  }
+  for (const { validatedTimeEntry, mode } of prepared) {
+    if (validatedTimeEntry.entry_id) {
       throw new Error('Validation failed: a stopwatch session can only be logged as a new time entry');
     }
     // The stopwatch log writes a commercial entry; an operational principal never takes that path.
-    if (stopwatchSessionId && mode === 'operational') {
+    if (mode === 'operational') {
       throw new Error('Validation failed: a stopwatch session cannot be logged on the operational surface');
     }
+    // One session has one subject: the split and every sheet are resolved in that user's timezone.
+    if ((validatedTimeEntry.user_id ?? user.user_id) !== (prepared[0].validatedTimeEntry.user_id ?? user.user_id)) {
+      throw new Error('Validation failed: all entries of a stopwatch session must belong to the same user');
+    }
+  }
+
+  const persisted = await db.transaction(async (trx) => {
+    const logged = await logSession(trx, tenant, user, sessionId, {
+      entries: prepared.map(({ validatedTimeEntry: entry }) => ({
+        work_item_id: entry.work_item_id,
+        work_item_type: entry.work_item_type,
+        start_time: entry.start_time,
+        end_time: entry.end_time,
+        billable_duration: entry.billable_duration,
+        notes: entry.notes,
+        service_id: entry.service_id,
+        contract_line_id: entry.contract_line_id,
+        tax_region: entry.tax_region,
+        tax_rate_id: entry.tax_rate_id,
+        time_sheet_id: entry.time_sheet_id,
+        user_id: entry.user_id,
+      })),
+    });
+    return logged.persisted;
+  });
+
+  // Post-commit: publish only after the transaction above has committed.
+  for (const item of persisted) {
+    await publishPersistedTimeEntryEvents(item);
+  }
+
+  const results: ITimeEntryWithWorkItem[] = [];
+  for (let index = 0; index < persisted.length; index += 1) {
+    results.push(await buildSavedTimeEntryResult(db, tenant, user, persisted[index], prepared[index].validatedTimeEntry));
+  }
+  return results;
+}
+
+export const saveTimeEntry = withAuth(async (
+  user,
+  { tenant },
+  timeEntry: Omit<ITimeEntry, 'tenant'> & { stopwatch_session_id?: string | null }
+): Promise<ITimeEntryWithWorkItem | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id, workItemType: timeEntry.work_item_type, workItemId: timeEntry.work_item_id }, (source, ctx) => source.entries.admit(ctx, timeEntry));
+  if (delegated.handled) return delegated.value;
+  const {knex: db} = await createTenantKnex();
+  const tenantScopedDb = tenantDb(db, tenant) as any;
+
+  try {
+    const prepared = await prepareTimeEntryForSave(db, tenant, user, timeEntry);
+    const { mode, requestCache, validatedTimeEntry } = prepared;
+
+    // With a stopwatch session the entry and the session close together: a one-element call to the
+    // same path logStopwatchSession uses.
+    if (validatedTimeEntry.stopwatch_session_id) {
+      const [saved] = await logPreparedStopwatchEntries(db, tenant, user, validatedTimeEntry.stopwatch_session_id, [prepared]);
+      return saved;
+    }
+
+    // Everything from ownership checks to bucket/hour-block draws lives in the
+    // shared write core (D6); it runs inside this action-owned transaction.
     // A seat technician edits only their own operational entries; the write core refuses a commercial row, and this
     // refuses someone else's, by principal, before anything is written.
     if (mode === 'operational' && validatedTimeEntry.entry_id) {
       const target = await tenantScopedDb.table('time_entries').where({ entry_id: validatedTimeEntry.entry_id }).first('user_id', 'billing_mode');
       if (target) assertSeatOwnOperationalEntry(target, user.user_id);
     }
-    const persisted = await db.transaction(async (trx) => {
-      if (!stopwatchSessionId) {
-        return persistTimeEntry(trx, { tenant, actor: user, entry: validatedTimeEntry, requestCache, ...(mode === 'operational' ? { mode } : {}) });
-      }
-      const logged = await logSession(trx, tenant, user, stopwatchSessionId, {
-        work_item_id: validatedTimeEntry.work_item_id,
-        work_item_type: validatedTimeEntry.work_item_type,
-        start_time: validatedTimeEntry.start_time,
-        end_time: validatedTimeEntry.end_time,
-        billable_duration: validatedTimeEntry.billable_duration,
-        notes: validatedTimeEntry.notes,
-        service_id: validatedTimeEntry.service_id,
-        contract_line_id: validatedTimeEntry.contract_line_id,
-        tax_region: validatedTimeEntry.tax_region,
-        tax_rate_id: validatedTimeEntry.tax_rate_id,
-        time_sheet_id: validatedTimeEntry.time_sheet_id,
-        user_id: validatedTimeEntry.user_id,
-      });
-      return logged.persisted;
-    });
+    const persisted = await db.transaction(async (trx) =>
+      persistTimeEntry(trx, { tenant, actor: user, entry: validatedTimeEntry, requestCache, ...(mode === 'operational' ? { mode } : {}) }),
+    );
 
     // Post-commit: publish only after the transaction above has committed.
     await publishPersistedTimeEntryEvents(persisted);
 
-    const entry = persisted.entry;
-    const entry_id = validatedTimeEntry.entry_id;
-    const { notes, service_id, tax_region, contract_line_id, approval_status } = validatedTimeEntry;
-    const finalBillableDuration = persisted.finalBillableDuration;
-
-    // Fetch work item details based on the saved entry
-    let workItemDetails: IWorkItem;
-    switch (entry.work_item_type) {
-      case 'project_task': {
-        const taskQuery = tenantScopedDb.table('project_tasks')
-          .where({
-            task_id: entry.work_item_id
-          });
-        tenantScopedDb.tenantJoin(taskQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
-        tenantScopedDb.tenantJoin(taskQuery, 'projects', 'project_phases.project_id', 'projects.project_id');
-        const [task] = await taskQuery
-          .select(
-            'task_id as work_item_id',
-            'task_name as name',
-            'project_tasks.description',
-            'projects.project_name as project_name',
-            'project_phases.phase_name as phase_name'
-          );
-        workItemDetails = {
-          ...task,
-          type: 'project_task',
-          is_billable: entry.billable_duration > 0,
-          project_name: task.project_name,
-          phase_name: task.phase_name
-        };
-        break;
-      }
-      case 'ad_hoc': {
-        const schedule = await tenantScopedDb.table('schedule_entries')
-          .where({
-            entry_id: entry.work_item_id
-          })
-          .first();
-        workItemDetails = {
-          work_item_id: entry.work_item_id,
-          name: schedule?.title || 'Ad Hoc Entry',
-          description: '',
-          type: 'ad_hoc',
-          is_billable: entry.billable_duration > 0
-        };
-        break;
-      }
-      case 'ticket': {
-        const [ticket] = await tenantScopedDb.table('tickets')
-          .where({
-            ticket_id: entry.work_item_id
-          })
-          .select(
-            'ticket_id as work_item_id',
-            'title as name',
-            'url as description',
-            'ticket_number'
-          );
-        workItemDetails = {
-          ...ticket,
-          type: 'ticket',
-          is_billable: entry.billable_duration > 0,
-          ticket_number: ticket.ticket_number
-        };
-        break;
-      }
-      case 'non_billable_category':
-        workItemDetails = {
-          work_item_id: entry.work_item_id,
-          name: entry.work_item_id,
-          description: '',
-          type: 'non_billable_category',
-          is_billable: false
-        };
-        break;
-      case 'interaction': {
-        const interactionQuery = tenantScopedDb.table('interactions')
-          .where({
-            'interactions.interaction_id': entry.work_item_id
-          });
-        tenantScopedDb.tenantJoin(interactionQuery, 'clients', 'interactions.client_id', 'clients.client_id', { type: 'left' });
-        tenantScopedDb.tenantJoin(interactionQuery, 'contacts', 'interactions.contact_name_id', 'contacts.contact_name_id', { type: 'left' });
-        tenantScopedDb.tenantJoin(interactionQuery, 'interaction_types', 'interactions.type_id', 'interaction_types.type_id', { type: 'left' });
-        const [interaction] = await interactionQuery
-          .select(
-            'interactions.interaction_id as work_item_id',
-            'interactions.title as name',
-            db.raw("'' as description"), // Don't copy interaction notes to time entry
-            'clients.client_name',
-            'contacts.full_name as contact_name',
-            'interaction_types.type_name as interaction_type'
-          );
-        workItemDetails = {
-          ...interaction,
-          type: 'interaction',
-          is_billable: entry.billable_duration > 0,
-          client_name: interaction.client_name,
-          contact_name: interaction.contact_name,
-          interaction_type: interaction.interaction_type
-        };
-        break;
-      }
-      default:
-        throw new Error(`Unknown work item type: ${entry.work_item_type}`);
-    }
-
-    // Track time entry analytics
-    const isUpdate = !!entry_id;
-    captureAnalytics(isUpdate ? 'time_entry_updated' : 'time_entry_created', {
-      work_item_type: entry.work_item_type,
-      duration_minutes: finalBillableDuration,
-      is_billable: finalBillableDuration > 0,
-      has_notes: !!notes,
-      has_service: !!service_id,
-      has_tax_region: !!tax_region,
-      has_contract_line: !!contract_line_id,
-      approval_status: approval_status || 'pending',
-      // Track if this was a duration adjustment
-      duration_changed: isUpdate ? (entry.billable_duration !== finalBillableDuration) : false,
-      duration_delta: isUpdate ? (finalBillableDuration - entry.billable_duration) : finalBillableDuration,
-    }, user.user_id);
-
-    // Return the complete time entry with work item details
-    // Format work_date properly (DATE column comes back as Date object)
-    const result: ITimeEntryWithWorkItem = {
-      ...entry,
-      work_date: (entry.work_date as unknown) instanceof Date
-        ? (entry.work_date as unknown as Date).toISOString().slice(0, 10)
-        : (typeof entry.work_date === 'string' ? entry.work_date.slice(0, 10) : undefined),
-      workItem: workItemDetails
-    };
-    return result;
-
+    return await buildSavedTimeEntryResult(db, tenant, user, persisted, validatedTimeEntry);
   } catch (error) {
     console.error('Error saving time entry:', error);
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+/**
+ * Log a stopwatch session as one time entry per work day, atomically. `entries` are the drawer's
+ * reviewed days; each is checked like a manual save and resolves its own sheet from its own date.
+ * Any failure rolls back every entry and leaves the session paused.
+ */
+export const logStopwatchSession = withAuth(async (
+  user,
+  { tenant },
+  sessionId: string,
+  entries: Array<Omit<ITimeEntry, 'tenant'>>,
+): Promise<ITimeEntryWithWorkItem[] | TimeSheetActionError> => {
+  const { knex: db } = await createTenantKnex();
+  try {
+    const requestCache = new RequestLocalAuthorizationCache();
+    const prepared: PreparedTimeEntrySave[] = [];
+    for (const entry of entries) {
+      prepared.push(await prepareTimeEntryForSave(db, tenant, user, { ...entry, stopwatch_session_id: sessionId }, requestCache));
+    }
+    return await logPreparedStopwatchEntries(db, tenant, user, sessionId, prepared);
+  } catch (error) {
+    console.error('Error logging stopwatch session:', error);
     const expected = timeSheetActionErrorFrom(error);
     if (expected) return expected;
     throw error;

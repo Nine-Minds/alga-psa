@@ -567,6 +567,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'hour_block_time_allocations', deletion: 'ordered' },
   { table: 'hour_blocks', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
   { table: 'contract_line_block_issuances', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
+  { table: 'time_tracking_session_entries', deletion: 'ordered' },
   { table: 'time_tracking_session_segments', deletion: 'ordered' },
   { table: 'time_tracking_sessions', deletion: 'ordered' },
   { table: 'time_entry_suggestion_dismissals', deletion: 'ordered' },

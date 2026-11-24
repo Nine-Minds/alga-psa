@@ -42,7 +42,7 @@ async function readStates(trx: Knex.Transaction, tenant: string, ticketIds: read
   if (ticketIds.length === 0) return result;
   const schema = createTicketQuerySchema();
   const [clientIt, msp] = RESPONSIBILITIES.map((value) =>
-    compilePredicateFragment(schema, { join: 'and', clauses: [{ path: 'seat_responsibility', operator: 'equals', value }] }, { rootAlias: 't' }));
+    compilePredicateFragment(schema, { join: 'and', clauses: [{ path: 'seat_responsibility', operator: 'equals', value }] }, { rootAlias: 't', tenant }));
   const rows: Array<{ ticket_id: string; responsibility: TicketResponsibility | null; revision: number | string | null }> = (await trx.raw(
     `SELECT t.ticket_id,
             CASE WHEN ${clientIt.sql} THEN 'client_it' WHEN ${msp.sql} THEN 'msp' END AS responsibility,

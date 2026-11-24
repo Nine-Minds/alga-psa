@@ -20,6 +20,7 @@ import type {
 } from '@alga-psa/types';
 import { formatTemplateDateValue, formatTemplateFieldValue } from './fieldFormatting';
 import { templateI18nTextToString } from './i18nLabels';
+import { formatTemplateValue } from './valueFormatting';
 
 // Last-resort currency when template metadata carries an invalid code.
 const FALLBACK_CURRENCY = 'USD';
@@ -52,6 +53,8 @@ type RenderContext = {
   /** The recipient country's date shape: digit order, separator and clock. */
   dateFormat: CountryDateFormat;
   currencyCode: string;
+  /** The `documents` label translator, for default wording such as Yes/No. */
+  t?: TemplateLabelTranslator;
   /**
    * Barcode SVGs from the async server prepass, keyed by node id. Undefined means "no prepass"
    * (designer / client preview): barcode nodes render a placeholder. When provided, a barcode node
@@ -321,10 +324,26 @@ const resolveSyntheticRootDocumentStyle = (ast: TemplateAst): React.CSSPropertie
   };
 };
 
-const formatValue = (value: unknown, format: TemplateValueFormat | undefined, ctx: RenderContext): string => {
+const formatValue = (
+  value: unknown,
+  format: TemplateValueFormat | undefined,
+  ctx: RenderContext,
+  valueLabels?: Record<string, TemplateI18nText>
+): string => {
   if (value === null || value === undefined) {
     return '';
   }
+
+  return formatTemplateValue({
+    value,
+    valueLabels,
+    t: ctx.t,
+    fallback: (unlabeled) => formatUnlabeledValue(unlabeled, format, ctx),
+  });
+};
+
+// LEVERAGE: pattern value-format-paths — currency/number/date formatting is written twice (here and in fieldFormatting.ts formatPrimitiveValue) with different coercion rules; only the label/boolean layer is shared via formatTemplateValue.
+const formatUnlabeledValue = (value: unknown, format: TemplateValueFormat | undefined, ctx: RenderContext): string => {
 
   const normalizedFormat: TemplateValueFormat = format ?? 'text';
 
@@ -404,7 +423,7 @@ const resolveColumnCellLines = (
     const raw = resolveExpressionValue(line.value, evaluation, scope, ctx);
     const { className: lineClassName, style: lineStyle } = resolveStyleRef(line.style);
     return {
-      text: formatValue(raw ?? '', line.format ?? column.format, ctx),
+      text: formatValue(raw ?? '', line.format ?? column.format, ctx, line.valueLabels ?? column.valueLabels),
       style: lineStyle,
       className: lineClassName,
     };
@@ -431,7 +450,7 @@ const resolveColumnCellLines = (
   }
   if (supplemental.length > 0) {
     const value = resolveExpressionValue(column.value, evaluation, scope, ctx);
-    const flat: RenderedCellLine = { text: formatValue(value ?? '', column.format, ctx) };
+    const flat: RenderedCellLine = { text: formatValue(value ?? '', column.format, ctx, column.valueLabels) };
     return withoutRepeats([...(nonEmpty(flat) ? [flat] : []), ...supplemental]);
   }
   return null;
@@ -464,7 +483,7 @@ const renderTableCellContent = (
   }
 
   const value = resolveExpressionValue(column.value, evaluation, rowScope, ctx);
-  const cell = resolveTableCellText(formatValue(value ?? '', column.format, ctx));
+  const cell = resolveTableCellText(formatValue(value ?? '', column.format, ctx, column.valueLabels));
   return cell.multiline ? <span style={{ whiteSpace: 'pre-line' }}>{cell.text}</span> : cell.text;
 };
 
@@ -493,7 +512,12 @@ const resolveSignedChange = (
 };
 
 /** Child-row numbers follow the document locale (quantities may be fractional). */
-const formatChildValue = (value: unknown, format: TemplateValueFormat | undefined, ctx: RenderContext): string => {
+const formatChildValue = (
+  value: unknown,
+  format: TemplateValueFormat | undefined,
+  ctx: RenderContext,
+  valueLabels?: Record<string, TemplateI18nText>
+): string => {
   // An unbound value is blank whatever the format (currency would otherwise render $0.00).
   if (value === undefined || value === null || value === '') return '';
   if (format === 'number' && value !== null && value !== undefined && value !== '') {
@@ -506,7 +530,7 @@ const formatChildValue = (value: unknown, format: TemplateValueFormat | undefine
       }
     }
   }
-  return formatValue(value ?? '', format, ctx);
+  return formatValue(value ?? '', format, ctx, valueLabels);
 };
 
 const resolveChildItems = (childRows: TemplateChildRows, parentRow: UnknownRecord, parentBinding: string, scope: RenderScope): UnknownRecord[] => {
@@ -552,13 +576,13 @@ const renderChildRow = (
           ? cell.lines.map((line) => {
               const { className, style: lineStyle } = resolveStyleRef(line.style);
               return {
-                text: formatChildValue(resolveExpressionValue(line.value, evaluation, childScope, ctx), line.format ?? cell.format, ctx),
+                text: formatChildValue(resolveExpressionValue(line.value, evaluation, childScope, ctx), line.format ?? cell.format, ctx, line.valueLabels ?? cell.valueLabels),
                 className,
                 style: lineStyle,
               };
             }).filter((line) => line.text.trim().length > 0)
           : [];
-        const flat = formatChildValue(resolveExpressionValue(cell.value, evaluation, childScope, ctx), cell.format, ctx);
+        const flat = formatChildValue(resolveExpressionValue(cell.value, evaluation, childScope, ctx), cell.format, ctx, cell.valueLabels);
         const lineEntries = lineSource.length > 0 ? lineSource : flat.trim().length > 0 ? [{ text: flat, className: null as string | null, style: undefined as React.CSSProperties | undefined }] : [];
         const isMarkerColumn = columnIndex === 0;
         return (
@@ -980,6 +1004,8 @@ const renderNode = (
         locale: ctx.locale,
         dateFormat: ctx.dateFormat,
         displayFormat: node.displayFormat,
+        valueLabels: node.valueLabels,
+        t: ctx.t,
       });
       const multilineFieldAdjustments: React.CSSProperties | null = formattedValue.multiline
         ? {
@@ -1216,7 +1242,7 @@ const renderNode = (
                 <span className={joinClassNames('ast-totals-label', labelClassName) || undefined} style={labelStyle}>
                   {displayText(row.label)}
                 </span>
-                <span className="ast-totals-value">{formatValue(raw, row.format, ctx)}</span>
+                <span className="ast-totals-value">{formatValue(raw, row.format, ctx, row.valueLabels)}</span>
               </div>
             );
           })}
@@ -1253,6 +1279,7 @@ export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({
   locale: localeOverride,
   dateFormat,
   barcodes,
+  t,
 }) => {
   const invoiceRecord = isRecord(evaluation.bindings.invoice) ? evaluation.bindings.invoice : {};
   const invoiceRecordUntyped = invoiceRecord as Record<string, unknown>;
@@ -1275,6 +1302,7 @@ export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({
           dateFormat: dateFormat ?? SYSTEM_DATE_FORMAT,
           barcodes,
           trailingNodeIds: collectTrailingNodeIds(ast.layout),
+          t,
         },
         rootDocumentStyleOverride
       )}
@@ -1333,6 +1361,7 @@ export const renderEvaluatedTemplateAst = async (
         locale={options.locale}
         dateFormat={options.dateFormat}
         barcodes={options.barcodes}
+        t={options.t}
       />
     ),
     css: buildAstCss(normalizedAst),

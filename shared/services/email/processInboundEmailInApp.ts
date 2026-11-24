@@ -1,4 +1,5 @@
 import { InboundRetryLaterError, isInboundRetryLaterError } from './inboundRetryLaterError';
+import { countNonInlineAttachments } from './countNonInlineAttachments';
 import { classifyReplyToken, coManagedDeliverySeam, coManagedInboundCommentSeam, coManagedInboundOperationId, parseCm2Metadata } from '../../lib/coManagedDelivery';
 import { resolveCommentAudienceForRead, type CommentAudience } from '../../lib/commentAudience';
 import { readNotificationAudience, resolveInboundReplyAudience } from '../../lib/notificationAudience';
@@ -2509,9 +2510,10 @@ export async function processInboundEmailInApp(
       ticket_id: ticketResult.ticket_id,
       content: serializedBlocks,
       source: 'email',
-      // First comment on a brand-new ticket: the TICKET_CREATED email already notifies
-      // the tech with the same body, so keep this comment in-app only to avoid a duplicate.
-      suppressTechEmailNotification: true,
+      // First comment on a brand-new ticket: marked as the opener. `opensTicket` implies in-app
+      // only (the TICKET_CREATED email already notifies the tech with the same body).
+      opensTicket: true,
+      attachmentCount: countNonInlineAttachments(emailData.attachments),
       // Unmatched inbound senders are still customer-originated replies even
       // when we cannot resolve them to an existing contact record.
       author_type: commentAuthorType,

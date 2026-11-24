@@ -334,7 +334,8 @@
     },
     "address": {
       "title": "Bedrijfsadres",
-      "description": "Vooraf ingevuld op basis van uw factuurgegevens — controleer en corrigeer indien nodig. Dit adres verschijnt op uw facturen en offertes.",
+      "description": "Dit adres verschijnt op uw facturen en offertes.",
+      "prefilledFromBilling": "Een deel van deze waarden is ingevuld op basis van uw factuurgegevens. Controleer ze.",
       "fields": {
         "addressLine1": {
           "label": "Adresregel 1",

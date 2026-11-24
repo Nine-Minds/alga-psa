@@ -510,8 +510,6 @@
     "po": {
       "amountLabel": "Bestellbetrag (optional)",
       "amountPlaceholder": "0.00",
-      "comingSoon": "Rechnungsintegration folgt in Kürze. Einstellungen werden gespeichert, aber die Durchsetzung von Bestellnummern wird erst in einer zukünftigen Version aktiv.",
-      "noteLabel": "Hinweis:",
       "numberLabel": "Bestellnummer *",
       "numberPlaceholder": "z. B. PO-2024-12345",
       "requirePurchaseOrder": "Bestellung erforderlich",
