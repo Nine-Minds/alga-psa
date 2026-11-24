@@ -144,14 +144,19 @@ describe('vendor cores (DB)', () => {
     const before = Number((await trx('vendors').where({ tenant }).count({ count: '*' }).first())!.count);
 
     const duplicate = await createVendorCore(trx, tenant, { vendor_name: '  tech DATA ' });
-    expect(duplicate).toEqual({ ok: false, code: 'duplicate_name', name: 'tech DATA' });
+    expect(duplicate).toEqual({
+      ok: false,
+      code: 'duplicate_name',
+      name: 'tech DATA',
+      existing: { vendor_id: first.vendor.vendor_id, vendor_name: 'Tech Data' },
+    });
     expect(Number((await trx('vendors').where({ tenant }).count({ count: '*' }).first())!.count)).toBe(before);
 
     // Renaming another vendor onto the same normalized name is refused too, and names the holder.
     const other = await createVendorCore(trx, tenant, { vendor_name: 'Synnex' });
     if (other.ok !== true) throw new Error('create failed');
     const clash = await thrown(() => updateVendorCore(trx, tenant, other.vendor.vendor_id, { vendor_name: ' TECH data' }));
-    expect(clash).toMatchObject({ kind: 'conflict', code: 'duplicate_name', details: { existing_vendor_id: first.vendor.vendor_id } });
+    expect(clash).toMatchObject({ kind: 'conflict', code: 'duplicate_name', details: { existing_vendor_id: first.vendor.vendor_id, existing_vendor_name: 'Tech Data' } });
     expect((await queryVendor(trx, tenant, other.vendor.vendor_id))?.vendor_name).toBe('Synnex');
 
     // A vendor may be saved under its own name with different casing.

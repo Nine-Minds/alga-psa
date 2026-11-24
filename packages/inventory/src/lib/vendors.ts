@@ -23,7 +23,8 @@ export interface CreateVendorInput {
 export type CreateVendorCoreResult =
   | { ok: true; vendor: IVendor }
   | { ok: false; code: 'name_required' }
-  | { ok: false; code: 'duplicate_name'; name: string };
+  /** `name` is the requested (normalized) name; `existing` is the vendor that already holds it. */
+  | { ok: false; code: 'duplicate_name'; name: string; existing: { vendor_id: string; vendor_name: string } };
 
 /** Trim a vendor name for storage and matching. */
 export function normalizeVendorName(name: string | null | undefined): string {
@@ -60,7 +61,14 @@ export async function createVendorCore(
 
   // vendor_name is unique per tenant; surface a clean result instead of a raw constraint violation.
   const existing = await findVendorByNameCore(trx, tenant, vendorName);
-  if (existing) return { ok: false, code: 'duplicate_name', name: vendorName };
+  if (existing) {
+    return {
+      ok: false,
+      code: 'duplicate_name',
+      name: vendorName,
+      existing: { vendor_id: existing.vendor_id, vendor_name: existing.vendor_name },
+    };
+  }
 
   const [row] = await trx('vendors')
     .insert({
@@ -197,6 +205,7 @@ export async function updateVendorCore(
       throw new VendorCoreError('conflict', 'duplicate_name', `A vendor named "${vendorName}" already exists`, {
         name: vendorName,
         existing_vendor_id: conflict.vendor_id,
+        existing_vendor_name: conflict.vendor_name,
       });
     }
   }

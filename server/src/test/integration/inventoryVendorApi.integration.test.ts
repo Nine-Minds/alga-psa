@@ -174,6 +174,33 @@ describe('vendor REST API (alga-2026-0003114)', () => {
     await db?.destroy().catch(() => undefined);
   }, HOOK_TIMEOUT);
 
+  it('T002: a rename onto another vendor\'s normalized name is a 409 naming that vendor, and the renamed vendor is unchanged', async () => {
+    const fx = await seedFixture();
+    const vendor = new ApiInventoryController('vendor');
+    const path = '/api/v1/inventory/vendors';
+
+    const first = await vendor.createVendor()(call(fx, fx.keys.full, path, { method: 'POST', body: { vendor_name: 'Ingram Micro' } }));
+    expect(first.status).toBe(201);
+    const firstId = (await first.json()).data.vendor_id as string;
+    const second = await vendor.createVendor()(call(fx, fx.keys.full, path, { method: 'POST', body: { vendor_name: 'TD Synnex' } }));
+    expect(second.status).toBe(201);
+    const secondId = (await second.json()).data.vendor_id as string;
+    const before = await table(fx.tenantId, 'vendors').where({ vendor_id: secondId }).first();
+
+    const clash = await vendor.updateVendor()(
+      call(fx, fx.keys.full, `${path}/${secondId}`, { method: 'PUT', body: { vendor_name: ' ingram MICRO ' }, params: { vendorId: secondId } }),
+    );
+    expect(clash.status).toBe(409);
+    const body = await clash.json();
+    expect(body.error.message).toContain('Ingram Micro');
+    expect(body.error.message).toContain(firstId);
+    expect(body.error.details).toMatchObject({ existing_vendor_id: firstId, existing_vendor_name: 'Ingram Micro' });
+
+    const after = await table(fx.tenantId, 'vendors').where({ vendor_id: secondId }).first();
+    expect(after.vendor_name).toBe(before.vendor_name);
+    expect(new Date(after.updated_at).getTime()).toBe(new Date(before.updated_at).getTime());
+  });
+
   it('T001/T002/T003/T004: creates, updates, deactivates, 409s on a duplicate name, manages the price list and deletes entries over HTTP', async () => {
     const fx = await seedFixture();
     const vendor = new ApiInventoryController('vendor');

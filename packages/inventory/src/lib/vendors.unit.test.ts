@@ -41,6 +41,7 @@ describe('vendor cores', () => {
       ok: false,
       code: 'duplicate_name',
       name: 'ingram MICRO',
+      existing: { vendor_id: 'v0', vendor_name: 'Ingram Micro' },
     });
     expect(rows).toHaveLength(1);
   });

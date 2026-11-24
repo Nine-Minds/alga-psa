@@ -23,7 +23,7 @@ export class VendorCoreError extends Error {
     readonly code: VendorCoreErrorCode,
     message: string,
     /** Message parameters, e.g. the clashing vendor name; also the field path for validation errors. */
-    readonly details: { name?: string; existing_vendor_id?: string; field?: string } = {},
+    readonly details: { name?: string; existing_vendor_id?: string; existing_vendor_name?: string; field?: string } = {},
   ) {
     super(message);
   }

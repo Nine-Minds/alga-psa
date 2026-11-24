@@ -14,7 +14,6 @@ import {
   createVendorCore,
   deactivateVendorCore,
   deleteVendorProductCore,
-  findVendorByNameCore,
   queryVendor,
   queryVendorProducts,
   queryVendors,
@@ -288,7 +287,18 @@ function throwInventoryApiError(error: unknown): never {
   if (error instanceof VendorCoreError) {
     // Typed core errors carry their own meaning; never infer it from the message text.
     if (error.kind === 'not_found') throw new NotFoundError(error.message);
-    if (error.kind === 'conflict') throw new ConflictError(error.message);
+    if (error.kind === 'conflict') {
+      if (error.code === 'duplicate_name') {
+        const { existing_vendor_id, existing_vendor_name } = error.details;
+        if (existing_vendor_id && existing_vendor_name) {
+          throw new ConflictError(
+            `A vendor named "${existing_vendor_name}" already exists (vendor_id ${existing_vendor_id})`,
+            { existing_vendor_id, existing_vendor_name },
+          );
+        }
+      }
+      throw new ConflictError(error.message);
+    }
     throw new ValidationError(error.message, error.details.field ? [{ path: [error.details.field], message: error.message }] : undefined);
   }
   if ('statusCode' in error) throw error;
@@ -1038,15 +1048,11 @@ export class InventoryService extends BaseService<any> {
         if (result.code === 'name_required') {
           throw new VendorCoreError('validation', 'name_required', 'Vendor name is required', { field: 'vendor_name' });
         }
-        const existing = await findVendorByNameCore(trx, context.tenant, result.name);
-        throw new VendorCoreError(
-          'conflict',
-          'duplicate_name',
-          existing
-            ? `A vendor named "${existing.vendor_name}" already exists (vendor_id ${existing.vendor_id})`
-            : `A vendor named "${result.name}" already exists`,
-          { name: result.name, existing_vendor_id: existing?.vendor_id },
-        );
+        throw new VendorCoreError('conflict', 'duplicate_name', `A vendor named "${result.name}" already exists`, {
+          name: result.name,
+          existing_vendor_id: result.existing.vendor_id,
+          existing_vendor_name: result.existing.vendor_name,
+        });
       });
     } catch (error) {
       throwInventoryApiError(error);
