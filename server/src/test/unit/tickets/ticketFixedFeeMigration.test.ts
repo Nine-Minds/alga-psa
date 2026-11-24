@@ -50,7 +50,7 @@ describe('ticket fixed-fee migration foreign keys', () => {
       'ticket_fixed_fee_service_fk',
     ]));
     expect(db.statements).toEqual(expect.arrayContaining([
-      expect.stringContaining('FOREIGN KEY (tenant, ticket_id) REFERENCES tickets (tenant, ticket_id) ON DELETE CASCADE'),
+      expect.stringContaining('FOREIGN KEY (tenant, ticket_id) REFERENCES tickets (tenant, ticket_id) ON DELETE RESTRICT'),
       expect.stringContaining('FOREIGN KEY (tenant, client_id) REFERENCES clients (tenant, client_id) ON DELETE RESTRICT'),
       expect.stringContaining('FOREIGN KEY (tenant, service_id) REFERENCES service_catalog (tenant, service_id) ON DELETE RESTRICT'),
     ]));

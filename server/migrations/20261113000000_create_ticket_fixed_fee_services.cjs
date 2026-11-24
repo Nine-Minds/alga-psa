@@ -33,7 +33,7 @@ exports.up = async function up(knex) {
     );
   }
   for (const { constraint, column, referencedTable, onDelete } of [
-    { constraint: 'ticket_fixed_fee_ticket_fk', column: 'ticket_id', referencedTable: 'tickets', onDelete: 'CASCADE' },
+    { constraint: 'ticket_fixed_fee_ticket_fk', column: 'ticket_id', referencedTable: 'tickets', onDelete: 'RESTRICT' },
     { constraint: 'ticket_fixed_fee_client_fk', column: 'client_id', referencedTable: 'clients', onDelete: 'RESTRICT' },
     { constraint: 'ticket_fixed_fee_service_fk', column: 'service_id', referencedTable: 'service_catalog', onDelete: 'RESTRICT' },
   ]) {

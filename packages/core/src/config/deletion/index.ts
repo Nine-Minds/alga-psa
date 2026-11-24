@@ -443,6 +443,7 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
       },
       { type: 'interaction', table: 'interactions', foreignKey: 'ticket_id', label: 'interaction' },
       { type: 'ticket_material', table: 'ticket_materials', foreignKey: 'ticket_id', label: 'material' },
+      { type: 'ticket_fixed_fee_service', table: 'ticket_fixed_fee_services', foreignKey: 'ticket_id', label: 'fixed-fee service' },
       {
         type: 'asset_association',
         table: 'asset_associations',
@@ -638,6 +639,7 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
       { type: 'invoice_charge_target', table: 'invoice_charges', foreignKey: 'applies_to_service_id', label: 'invoice charge target' },
       { type: 'invoice_charge_detail', table: 'invoice_charge_details', foreignKey: 'service_id', label: 'invoice charge detail' },
       { type: 'ticket_material', table: 'ticket_materials', foreignKey: 'service_id', label: 'ticket material' },
+      { type: 'ticket_fixed_fee_service', table: 'ticket_fixed_fee_services', foreignKey: 'service_id', label: 'ticket fixed-fee service' },
       { type: 'project_material', table: 'project_materials', foreignKey: 'service_id', label: 'project material' }
     ]
   },
