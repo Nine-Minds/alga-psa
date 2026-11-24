@@ -222,6 +222,23 @@
       "missingDescription": "Nessun watch di Gmail è registrato per {{mailbox}}, quindi non arriverà posta in entrata. Usa Aggiorna Pub/Sub e guarda per registrarne uno.",
       "expiringTitle": "Il recapito push di Gmail scade entro un giorno",
       "expiringDescription": "I watch di Gmail durano sette giorni. Usa Aggiorna Pub/Sub e guarda prima che scada, altrimenti la posta in entrata si fermerà senza altro preavviso."
+    },
+    "trustedGateway": {
+      "title": "Gateway in entrata attendibile",
+      "description": "Se un gateway di sicurezza della posta riscrive i messaggi prima che questa casella li riceva, il server ricevente può considerare fallita l’autenticazione del mittente anche se il gateway l’ha verificata. Scegli come fidarti del verdetto del gateway. Riguarda solo l’associazione del mittente a un contatto del cliente, mai gli utenti interni.",
+      "modeLabel": "Modalità di fiducia del gateway",
+      "modes": {
+        "off": "Disattivato (solo server di posta ricevente)",
+        "arcSealed": "Verifica il sigillo ARC del gateway",
+        "mtaArcPass": "Affidati al risultato ARC del server di posta"
+      },
+      "idsLabel": "authserv-id attendibili",
+      "idsPlaceholder": "mx.example.net",
+      "idsHelp": "Separati da virgole. Usa il nome che il gateway mette all’inizio della sua intestazione Authentication-Results (ad esempio mx.avanan.net). Un nome non corrispondente non è mai attendibile: anche il sigillo ARC deve essere verificato.",
+      "contactOnly": "Solo associazione ai contatti. I messaggi da indirizzi di utenti interni continuano a essere verificati solo dal server ricevente.",
+      "save": "Salva",
+      "saved": "Impostazioni del gateway attendibile salvate",
+      "saveFailed": "Impossibile salvare le impostazioni del gateway attendibile"
     }
   },
   "forms": {

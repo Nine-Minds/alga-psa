@@ -65,14 +65,6 @@ vi.mock('@alga-psa/event-bus/publishers', async (importOriginal) =>
 vi.mock('@/lib/eventBus', async () =>
   (await import('../../../test-utils/webhookSinkHarness')).eventBusMockFactory(state));
 
-// parseStagedMimeIntoEmailDetails drops message headers, so a staged reply never carries
-// Authentication-Results and the sender-auth gate would discard every contact match.
-// Stand in for a DKIM-aligned sender; this card does not test the gate itself.
-vi.mock('@alga-psa/shared/lib/email/senderAuthVerification', async (importOriginal) => ({
-  ...(await importOriginal<any>()),
-  allowsContactSenderAttribution: () => true,
-}));
-
 vi.mock('@/lib/webhooks/autoDisable', () => ({ maybeAutoDisable: vi.fn(async () => undefined) }));
 vi.mock('@/lib/webhooks/WebhookDeliveryQueue', async (importOriginal) => {
   const actual = await importOriginal<any>();
@@ -336,7 +328,11 @@ describe('portal and email client replies emit ticket.response_state_changed (37
     });
 
     const messageId = `reply-${randomUUID()}@example.com`;
+    // The staged source carries its wire headers to the sender-auth gate, so the reply
+    // arrives the way a DKIM-aligned client mail does: the receiving MTA's own block.
+    const fromDomain = from.split('@')[1];
     const rawMime = Buffer.from([
+      `Authentication-Results: mx.google.com; dkim=pass header.d=${fromDomain}; spf=pass smtp.mailfrom=${fromDomain}; dmarc=pass header.from=${fromDomain}`,
       `From: Sender <${from}>`,
       'To: Support <support@example.com>',
       'Subject: Re: Client reply ticket',

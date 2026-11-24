@@ -222,6 +222,23 @@
       "missingDescription": "Für {{mailbox}} ist kein Gmail-Watch registriert, daher gehen keine E-Mails ein. Aktualisieren Sie Pub/Sub-Watch, um einen zu registrieren.",
       "expiringTitle": "Gmail-Push-Zustellung läuft innerhalb eines Tages ab",
       "expiringDescription": "Ein Gmail-Watch gilt sieben Tage. Aktualisieren Sie Pub/Sub-Watch, bevor dieser abläuft, sonst bleiben eingehende E-Mails ohne weitere Meldung aus."
+    },
+    "trustedGateway": {
+      "title": "Vertrauenswürdiges Eingangs-Gateway",
+      "description": "Wenn ein E-Mail-Sicherheits-Gateway Nachrichten umschreibt, bevor dieses Postfach sie empfängt, kann der empfangende Server die Authentifizierung des Absenders als fehlgeschlagen werten, obwohl das Gateway sie bestätigt hat. Legen Sie fest, wie dem Ergebnis des Gateways vertraut wird. Dies betrifft nur die Zuordnung des Absenders zu einem Kundenkontakt – niemals interne Benutzer.",
+      "modeLabel": "Vertrauensmodus des Gateways",
+      "modes": {
+        "off": "Aus (nur empfangender Mailserver)",
+        "arcSealed": "ARC-Siegel des Gateways prüfen",
+        "mtaArcPass": "ARC-Ergebnis des Mailservers übernehmen"
+      },
+      "idsLabel": "Vertrauenswürdige authserv-ids",
+      "idsPlaceholder": "mx.example.net",
+      "idsHelp": "Kommagetrennt. Verwenden Sie den Namen, den das Gateway an den Anfang seines Authentication-Results-Headers setzt (zum Beispiel mx.avanan.net). Einem abweichenden Namen wird nie vertraut: Auch das ARC-Siegel muss gültig sein.",
+      "contactOnly": "Nur für die Kontaktzuordnung. Nachrichten von Adressen interner Benutzer werden weiterhin allein vom empfangenden Server geprüft.",
+      "save": "Speichern",
+      "saved": "Einstellungen für das vertrauenswürdige Gateway gespeichert",
+      "saveFailed": "Einstellungen für das vertrauenswürdige Gateway konnten nicht gespeichert werden"
     }
   },
   "forms": {

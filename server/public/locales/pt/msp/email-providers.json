@@ -222,6 +222,23 @@
       "missingDescription": "Nenhuma observação do Gmail está registrada para {{mailbox}}, então nenhuma mensagem recebida chegará. Use Atualizar Pub/Sub e assistir para registrar uma.",
       "expiringTitle": "A entrega push do Gmail expira em menos de um dia",
       "expiringDescription": "As observações do Gmail duram sete dias. Use Atualizar Pub/Sub e assistir antes que esta expire, ou as mensagens recebidas vão parar sem outro aviso."
+    },
+    "trustedGateway": {
+      "title": "Gateway de entrada confiável",
+      "description": "Se um gateway de segurança de e-mail reescrever as mensagens antes de esta caixa de correio as receber, o servidor recetor pode considerar falhada a autenticação do remetente, embora o gateway a tenha verificado. Escolha como confiar no veredito do gateway. Isto afeta apenas a associação do remetente a um contacto do cliente — nunca se aplica a utilizadores internos.",
+      "modeLabel": "Modo de confiança do gateway",
+      "modes": {
+        "off": "Desativado (apenas o servidor de correio recetor)",
+        "arcSealed": "Verificar o selo ARC do gateway",
+        "mtaArcPass": "Confiar no resultado ARC do servidor de correio"
+      },
+      "idsLabel": "authserv-ids confiáveis",
+      "idsPlaceholder": "mx.example.net",
+      "idsHelp": "Separados por vírgulas. Use o nome que o gateway coloca no início do cabeçalho Authentication-Results (por exemplo, mx.avanan.net). Um nome que não corresponda nunca é confiável: o selo ARC também tem de ser verificado.",
+      "contactOnly": "Apenas associação de contactos. As mensagens de endereços de utilizadores internos continuam a ser verificadas apenas pelo servidor recetor.",
+      "save": "Guardar",
+      "saved": "Definições do gateway confiável guardadas",
+      "saveFailed": "Não foi possível guardar as definições do gateway confiável"
     }
   },
   "forms": {

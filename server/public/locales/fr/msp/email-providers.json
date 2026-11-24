@@ -222,6 +222,23 @@
       "missingDescription": "Aucune surveillance Gmail n'est enregistrée pour {{mailbox}}, aucun e-mail entrant n'arrivera donc. Actualisez Pub/Sub et regardez pour en enregistrer une.",
       "expiringTitle": "La distribution push Gmail expire dans moins d’un jour",
       "expiringDescription": "Une surveillance Gmail dure sept jours. Actualisez Pub/Sub et regardez avant son expiration, sinon les e-mails entrants cesseront sans autre avertissement."
+    },
+    "trustedGateway": {
+      "title": "Passerelle entrante de confiance",
+      "description": "Si une passerelle de sécurité de messagerie réécrit les messages avant que cette boîte aux lettres ne les reçoive, le serveur destinataire peut considérer l’authentification de l’expéditeur comme échouée alors que la passerelle l’a vérifiée. Choisissez comment faire confiance au verdict de la passerelle. Cela concerne uniquement l’association de l’expéditeur à un contact client, jamais les utilisateurs internes.",
+      "modeLabel": "Mode de confiance de la passerelle",
+      "modes": {
+        "off": "Désactivé (serveur de messagerie destinataire uniquement)",
+        "arcSealed": "Vérifier le sceau ARC de la passerelle",
+        "mtaArcPass": "Se fier au résultat ARC du serveur de messagerie"
+      },
+      "idsLabel": "authserv-ids de confiance",
+      "idsPlaceholder": "mx.example.net",
+      "idsHelp": "Séparés par des virgules. Utilisez le nom que la passerelle place au début de son en-tête Authentication-Results (par exemple mx.avanan.net). Un nom qui ne correspond pas n’est jamais approuvé : le sceau ARC doit aussi être valide.",
+      "contactOnly": "Association des contacts uniquement. Les messages provenant d’adresses d’utilisateurs internes restent vérifiés par le seul serveur destinataire.",
+      "save": "Enregistrer",
+      "saved": "Paramètres de la passerelle de confiance enregistrés",
+      "saveFailed": "Échec de l’enregistrement des paramètres de la passerelle de confiance"
     }
   },
   "forms": {

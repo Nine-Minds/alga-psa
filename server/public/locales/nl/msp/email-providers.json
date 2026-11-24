@@ -222,6 +222,23 @@
       "missingDescription": "Er is geen Gmail-watch geregistreerd voor {{mailbox}}, dus er komt geen inkomende e-mail binnen. Gebruik Vernieuw Pub/Sub en kijk om er een te registreren.",
       "expiringTitle": "Gmail-pushbezorging verloopt binnen een dag",
       "expiringDescription": "Een Gmail-watch duurt zeven dagen. Gebruik Vernieuw Pub/Sub en kijk voordat deze verloopt, anders stopt inkomende e-mail zonder verdere melding."
+    },
+    "trustedGateway": {
+      "title": "Vertrouwde inkomende gateway",
+      "description": "Als een e-mailbeveiligingsgateway berichten herschrijft voordat deze mailbox ze ontvangt, kan de ontvangende server de authenticatie van de afzender als mislukt beoordelen, ook al heeft de gateway die geverifieerd. Kies hoe het oordeel van de gateway wordt vertrouwd. Dit geldt alleen voor het koppelen van de afzender aan een klantcontact, nooit voor interne gebruikers.",
+      "modeLabel": "Vertrouwensmodus van de gateway",
+      "modes": {
+        "off": "Uit (alleen ontvangende mailserver)",
+        "arcSealed": "ARC-zegel van de gateway verifiëren",
+        "mtaArcPass": "Vertrouwen op het ARC-resultaat van de mailserver"
+      },
+      "idsLabel": "Vertrouwde authserv-ids",
+      "idsPlaceholder": "mx.example.net",
+      "idsHelp": "Kommagescheiden. Gebruik de naam die de gateway vooraan in zijn Authentication-Results-header zet (bijvoorbeeld mx.avanan.net). Een afwijkende naam wordt nooit vertrouwd: het ARC-zegel moet ook geldig zijn.",
+      "contactOnly": "Alleen voor contactkoppeling. Berichten van adressen van interne gebruikers worden nog steeds uitsluitend door de ontvangende server geverifieerd.",
+      "save": "Opslaan",
+      "saved": "Instellingen voor vertrouwde gateway opgeslagen",
+      "saveFailed": "Instellingen voor vertrouwde gateway konden niet worden opgeslagen"
     }
   },
   "forms": {

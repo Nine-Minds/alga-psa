@@ -222,6 +222,23 @@
       "missingDescription": "No hay ninguna vigilancia de Gmail registrada para {{mailbox}}, por lo que no llegará correo entrante. Use Actualizar Pub/Sub y Ver para registrar una.",
       "expiringTitle": "La entrega push de Gmail caduca en menos de un día",
       "expiringDescription": "Las vigilancias de Gmail duran siete días. Use Actualizar Pub/Sub y Ver antes de que caduque, o el correo entrante se detendrá sin más aviso."
+    },
+    "trustedGateway": {
+      "title": "Puerta de enlace de entrada de confianza",
+      "description": "Si una puerta de enlace de seguridad de correo reescribe los mensajes antes de que lleguen a este buzón, el servidor receptor puede dar por fallida la autenticación del remitente aunque la puerta de enlace la haya verificado. Elija cómo confiar en el veredicto de la puerta de enlace. Esto solo afecta a la asociación del remitente con un contacto del cliente; nunca se aplica a usuarios internos.",
+      "modeLabel": "Modo de confianza de la puerta de enlace",
+      "modes": {
+        "off": "Desactivado (solo el servidor de correo receptor)",
+        "arcSealed": "Verificar el sello ARC de la puerta de enlace",
+        "mtaArcPass": "Confiar en el resultado ARC del servidor de correo"
+      },
+      "idsLabel": "authserv-ids de confianza",
+      "idsPlaceholder": "mx.example.net",
+      "idsHelp": "Separados por comas. Use el nombre que la puerta de enlace pone al inicio de su encabezado Authentication-Results (por ejemplo, mx.avanan.net). Nunca se confía en un nombre que no coincida: el sello ARC también debe verificarse.",
+      "contactOnly": "Solo para la asociación de contactos. Los mensajes de direcciones que pertenecen a usuarios internos siguen verificándose únicamente por el servidor receptor.",
+      "save": "Guardar",
+      "saved": "Configuración de la puerta de enlace de confianza guardada",
+      "saveFailed": "No se pudo guardar la configuración de la puerta de enlace de confianza"
     }
   },
   "forms": {

@@ -222,6 +222,23 @@
       "missingDescription": "Ingen Gmail-bevakning har registrerats för {{mailbox}}, så ingen inkommande e-post kommer fram. Förnya Pub/Sub och bevakning för att registrera en.",
       "expiringTitle": "Pushleveransen från Gmail går ut inom ett dygn",
       "expiringDescription": "Gmail-bevakningar gäller i sju dagar. Förnya Pub/Sub och bevakning innan den här går ut, annars upphör inkommande e-post utan ytterligare avisering."
+    },
+    "trustedGateway": {
+      "title": "Betrodd inkommande gateway",
+      "description": "Om en e-postsäkerhetsgateway skriver om meddelanden innan den här brevlådan tar emot dem kan den mottagande servern underkänna avsändarens autentisering trots att gatewayen har verifierat den. Välj hur gatewayens bedömning ska betros. Detta påverkar bara kopplingen av avsändaren till en kundkontakt – aldrig interna användare.",
+      "modeLabel": "Gatewayens förtroendeläge",
+      "modes": {
+        "off": "Av (endast mottagande e-postserver)",
+        "arcSealed": "Verifiera gatewayens ARC-försegling",
+        "mtaArcPass": "Lita på e-postserverns ARC-resultat"
+      },
+      "idsLabel": "Betrodda authserv-id:n",
+      "idsPlaceholder": "mx.example.net",
+      "idsHelp": "Kommaavgränsade. Använd namnet som gatewayen sätter först i sin Authentication-Results-rubrik (till exempel mx.avanan.net). Ett namn som inte stämmer betros aldrig: ARC-förseglingen måste också verifieras.",
+      "contactOnly": "Endast kontaktkoppling. Meddelanden från adresser som tillhör interna användare verifieras fortfarande enbart av den mottagande servern.",
+      "save": "Spara",
+      "saved": "Inställningarna för betrodd gateway har sparats",
+      "saveFailed": "Det gick inte att spara inställningarna för betrodd gateway"
     }
   },
   "forms": {
