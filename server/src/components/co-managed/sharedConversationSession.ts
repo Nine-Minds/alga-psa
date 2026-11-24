@@ -30,6 +30,15 @@ export function sharedWriteFailureText(t: SharedConversationTranslate, code: str
  */
 export function createSharedConversationSession(resource: CoManagedSharedResource, options: { t: SharedConversationTranslate; kind?: string }) {
   let snapshot: SharedConversationSnapshot | null = null;
+  const listeners = new Set<() => void>();
+  const subscribe = (listener: () => void) => {
+    listeners.add(listener);
+    return () => listeners.delete(listener);
+  };
+  const publishSnapshot = (next: SharedConversationSnapshot) => {
+    snapshot = next;
+    for (const listener of listeners) listener();
+  };
   const writer = createTicketCommentWriter({
     kind: options.kind ?? PLAIN_TEXT_WRITER,
     resource,
@@ -41,11 +50,12 @@ export function createSharedConversationSession(resource: CoManagedSharedResourc
   });
   const comments = () => snapshot ? mapConversation(snapshot.items, resource.id, snapshot.actor) : [];
   const load = async () => {
-    snapshot = await loadSharedConversation(before => getCoManagedTicketConversationScreenAction(resource, before));
+    publishSnapshot(await loadSharedConversation(before => getCoManagedTicketConversationScreenAction(resource, before)));
     return snapshot;
   };
   return {
     load,
+    subscribe,
     snapshot: () => snapshot,
     /** Audiences the signed-in viewer may write to (server-resolved; empty until loaded). */
     writeAudiences: (): readonly CommentAudience[] => snapshot?.writeAudiences ?? [],

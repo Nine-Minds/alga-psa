@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import TicketDetailsContainer from '@alga-psa/tickets/components/ticket/TicketDetailsContainer';
 import { TicketDataSourceProvider } from '@alga-psa/tickets/components/ticket/TicketDataSourceContext';
 import type { CoManagedSharedWorkSummary } from '@alga-psa/co-managed';
@@ -22,6 +22,7 @@ export default function CoManagedSharedTicket({ summary, backHref }: { summary: 
   const tRef = useRef(t);
   tRef.current = t;
   const session = useMemo(() => createSharedConversationSession(summary.resource, { t: (key, fallback) => tRef.current(key, fallback) }), [summary.resource]);
+  const snapshot = useSyncExternalStore(session.subscribe, session.snapshot, session.snapshot);
   const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading');
   const load = useCallback(() => {
     setState('loading');
@@ -35,14 +36,13 @@ export default function CoManagedSharedTicket({ summary, backHref }: { summary: 
     [summary, backHref, session, state],
   );
   const ticketData = useMemo(() => {
-    const snapshot = state === 'ready' ? session.snapshot() : null;
-    const maps = snapshot ? conversationAuthorMaps(snapshot.items, snapshot.actor) : { userMap: {}, contactMap: {} };
+    const maps = state === 'ready' && snapshot ? conversationAuthorMaps(snapshot.items, snapshot.actor) : { userMap: {}, contactMap: {} };
     return {
       ticket: sharedTicketRecord(summary), comments: session.comments(), documents: [], client: null, contacts: [], contactInfo: null,
       createdByUser: null, board: null, additionalAgents: [], availableAgents: [], userMap: maps.userMap,
       options: sharedTicketOptions(summary), categories: [], clients: [], locations: [], agentSchedules: [],
     };
-  }, [summary, session, state]);
+  }, [summary, session, snapshot, state]);
 
   if (state === 'loading') {
     return <p id="co-managed-shared-ticket-loading" role="status" className="p-6 text-sm text-[rgb(var(--color-text-600))]">

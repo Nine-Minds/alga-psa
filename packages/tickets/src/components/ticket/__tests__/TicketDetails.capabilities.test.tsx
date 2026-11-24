@@ -111,7 +111,12 @@ vi.mock('../TicketCredentialsSection', () => ({ TicketCredentialsSection: () => 
 vi.mock('../TicketExternalLinksSection', () => ({ TicketExternalLinksSection: () => <div data-testid="external-links-section" /> }));
 vi.mock('../TicketDocumentsSection', () => ({ default: () => <div data-testid="ticket-documents" /> }));
 vi.mock('../TicketEmailNotifications', () => ({ default: () => <div data-testid="ticket-email-notifications" /> }));
-vi.mock('../TicketConversation', () => ({ default: () => <div data-testid="ticket-conversation" /> }));
+vi.mock('../TicketConversation', async () => {
+  const { resolveCommentAuthor } = await import('../../../lib/commentAuthorResolution');
+  return { default: (props: any) => <div data-testid="ticket-conversation">
+    {props.conversations.map((comment: any) => <span key={comment.comment_id}>{resolveCommentAuthor(comment, { userMap: props.userMap, contactMap: props.contactMap }).displayName}</span>)}
+  </div> };
+});
 vi.mock('../AgentScheduleDrawer', () => ({ default: () => <div data-testid="agent-schedule" /> }));
 vi.mock('../TicketNavigation', () => ({ default: () => <div data-testid="ticket-navigation" /> }));
 vi.mock('../../TicketOriginBadge', () => ({ default: () => <div data-testid="ticket-origin" /> }));
@@ -359,6 +364,24 @@ describe('T002 TicketDetails Entry layout capability gates (mounted)', () => {
     for (const [key, present] of PROBES) {
       expect(present(), `${key} present for native`).toBe(true);
     }
+  });
+
+  it('uses a refreshed author map without remounting the ticket consumer', () => {
+    const comment = { comment_id: 'first-reply', user_id: 'sponsor-user', note: 'First reply' } as any;
+    const props = {
+      bootstrap: entryLayoutBootstrap as any,
+      initialTicket: ticket as any,
+      initialComments: [comment],
+      initialUserMap: {},
+    };
+    const view = render(<TicketDataSourceProvider dataSource={nativeTicketDataSource}><TicketDetails {...props} /></TicketDataSourceProvider>);
+    expect(screen.getByTestId('ticket-conversation')).toHaveTextContent('Unknown User');
+
+    view.rerender(<TicketDataSourceProvider dataSource={nativeTicketDataSource}><TicketDetails {...props} initialUserMap={{
+      'sponsor-user': { user_id: 'sponsor-user', first_name: 'Sponsor QA', last_name: '', user_type: 'internal', avatarUrl: null },
+    }} /></TicketDataSourceProvider>);
+
+    expect(screen.getByTestId('ticket-conversation')).toHaveTextContent('Sponsor QA');
   });
 
   it.each(PROBES.map(([key]) => [key]))('%s off removes only its own section', (key) => {
