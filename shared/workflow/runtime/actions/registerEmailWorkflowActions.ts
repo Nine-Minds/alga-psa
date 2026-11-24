@@ -18,7 +18,7 @@ import {
   saveEmailClientAssociation
 } from '../../actions/emailWorkflowActions';
 import { extractEmailDomain } from '../../../lib/email/addressUtils';
-import { substantiveReplyBody } from '../../../services/email/inboundReplyBody';
+import { hasSubstantiveReplyContent, substantiveReplyBody } from '../../../services/email/inboundReplyBody';
 
 // =============================================================================
 // SHARED OUTPUT SCHEMAS FOR EMAIL ACTIONS
@@ -717,13 +717,24 @@ export function registerEmailWorkflowActionsV2(): void {
       source: z.string().optional().describe('Source of the comment (e.g., "email")')
     }),
     outputSchema: z.object({
-      comment_id: z.string().describe('Created comment unique identifier')
+      comment_id: z.string().optional().describe('Created comment unique identifier, absent when the reply held no content')
     }),
     sideEffectful: true,
     idempotency: { mode: 'engineProvided' },
     ui: { label: 'Create Comment from Parsed Email', category: 'Email' },
     handler: async (input, ctx) => {
       const tenant = ctx.tenantId ?? '';
+      if (!hasSubstantiveReplyContent(input.parsedEmail, input.emailData?.body)) {
+        // The in-app processor drops a token-only reply before it ever reaches a comment. The
+        // workflow definition has no such step, so the action makes the same judgement here
+        // rather than leaving a blank comment on the ticket (alga-2026-0003353).
+        console.info('create_comment_from_parsed_email: skipping reply with no content', {
+          tenantId: tenant,
+          ticketId: input.ticketId,
+          emailId: input.emailData?.id,
+        });
+        return {};
+      }
       const bodyBlocks = await buildInboundBodyBlocks(input.parsedEmail, input.emailData);
       const senderEmail = input.emailData?.from?.email;
       const matchedContact =

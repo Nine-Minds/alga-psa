@@ -515,13 +515,23 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
       }
     };
 
-    const writtenComment = async (parsedEmail: any, inboundEmail: any = emailData) => {
+    const commentActionResult = async (parsedEmail: any, inboundEmail: any = emailData) => {
       const { registerEmailWorkflowActionsV2 } = await import('../registerEmailWorkflowActions');
       registerEmailWorkflowActionsV2();
       const action = registeredActions.find((entry) => entry.id === 'create_comment_from_parsed_email');
       expect(action).toBeDefined();
 
-      await action!.handler({ ticketId: 'ticket-own-reply', emailData: inboundEmail, parsedEmail }, { tenantId: 'tenant-1' });
+      const result = await action!.handler(
+        { ticketId: 'ticket-own-reply', emailData: inboundEmail, parsedEmail },
+        { tenantId: 'tenant-1' }
+      );
+      // Whatever the handler decides, its output still has to satisfy the registered schema.
+      action!.outputSchema!.parse(result);
+      return result as any;
+    };
+
+    const writtenComment = async (parsedEmail: any, inboundEmail: any = emailData) => {
+      await commentActionResult(parsedEmail, inboundEmail);
 
       expect(createCommentFromEmailMock).toHaveBeenCalledTimes(1);
       return createCommentFromEmailMock.mock.calls[0][0] as any;
@@ -579,20 +589,21 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
       expectNoLeaks(comment.content);
     });
 
-    it('keeps an empty parse empty instead of reviving the quoted mail', async () => {
-      const comment = await writtenComment(EMPTY_PARSE);
+    // Same judgement the in-app processor makes before a comment exists: a reply that held
+    // nothing above the Alga boundary leaves no comment at all, rather than a blank one.
+    it('writes no comment at all for an empty parse', async () => {
+      const result = await commentActionResult(EMPTY_PARSE);
 
-      expect(visibleText(comment.content)).toBe('');
-      expectNoLeaks(comment.content);
+      expect(createCommentFromEmailMock).not.toHaveBeenCalled();
+      expect(result.comment_id).toBeUndefined();
     });
 
     // The parser reports an empty reply through sanitizedText alone; its HTML side may still
     // hold the quoted notification when no blockquote wrapped it.
     it('ignores the retained HTML of a reply the parser reported as empty', async () => {
-      const comment = await writtenComment({ ...EMPTY_PARSE, sanitizedHtml: QUOTED_MAIL.html });
+      await commentActionResult({ ...EMPTY_PARSE, sanitizedHtml: QUOTED_MAIL.html });
 
-      expect(visibleText(comment.content)).toBe('');
-      expectNoLeaks(comment.content);
+      expect(createCommentFromEmailMock).not.toHaveBeenCalled();
     });
 
     it('stores a trimmed HTML-only reply as blocks, not as literal markup', async () => {
