@@ -60,6 +60,37 @@ afterAll(async () => {
 });
 
 describe('Letter customer worksheet PDF', () => {
+  it('wraps a long unbroken code line and measures the fit at the printable width', async () => {
+    const longLine = `ERROR ${'0123456789abcdef'.repeat(40)} END-OF-LOG`;
+    const richText = [{ type: 'codeBlock', props: { language: 'text' }, content: [{ type: 'text', text: longLine }] }];
+    const { html, printOptions } = await renderLabelBatchHtml([{
+      ...item(), viewModel: { ...viewModel, ticketDescriptionRichText: JSON.stringify(richText) },
+    }], pageLayout);
+
+    await expect(renderHtmlToPdf(html, printOptions)).resolves.toBeInstanceOf(Buffer);
+
+    const browser = await browserPoolService.getBrowser();
+    const page = await browser.newPage();
+    try {
+      // The fit check runs at Puppeteer's default 800px viewport; the cell must still be page-wide only.
+      await page.setViewport({ width: 800, height: 600 });
+      await page.setContent(html, { waitUntil: 'load' });
+      await page.emulateMediaType('print');
+      const measured = await page.$eval('.label-cell-flow', (cell) => {
+        const pre = cell.querySelector('pre');
+        if (!pre) throw new Error('Code block is missing');
+        return { cellWidth: cell.getBoundingClientRect().width, preWidth: pre.scrollWidth };
+      });
+      const marginMm = Number(/@page label-flow-1 \{[^}]*margin: ([\d.]+)mm/.exec(html)?.[1]);
+      expect(marginMm).toBeGreaterThan(0);
+      const printableWidthPx = ((215.9 - 2 * marginMm) * 96) / 25.4;
+      expect(Math.abs(measured.cellWidth - printableWidthPx)).toBeLessThan(1);
+      expect(measured.preWidth).toBeLessThanOrEqual(measured.cellWidth + 1);
+    } finally {
+      await page.close();
+    }
+  });
+
   it('prints a rich description with visible tables, heading hierarchy and checklist states', async () => {
     const richText = [
       { type: 'heading', props: { level: 2 }, content: [{ type: 'text', text: 'New Equipment / System Setup' }] },

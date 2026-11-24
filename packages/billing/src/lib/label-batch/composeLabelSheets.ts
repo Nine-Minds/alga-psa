@@ -101,11 +101,13 @@ export function composeLabelSheets(
         page = { name: `label-flow-${flowPages.size + 1}`, marginMm };
         flowPages.set(key, page);
       }
+      // The explicit width is the page's margin box, so the browser measures text against the
+      // printable width rather than the (wider) screen viewport the fit check runs in.
       sheets.push({
         flow: true,
         plannedSheet: p.sheet,
         pageName: page.name,
-        cells: [`<div class="label-cell label-cell-flow" ${attrs}>${cell.html}</div>`],
+        cells: [`<div class="label-cell label-cell-flow" ${attrs} style="width:${mmCss(p.widthMm - 2 * marginMm)};">${cell.html}</div>`],
       });
       return;
     }
@@ -155,6 +157,8 @@ html, body { margin: 0; padding: 0; background: #fff; }
   width: auto !important; max-width: 100%; height: auto !important; min-height: 0 !important;
 }
 .label-cell-flow:last-child { break-after: auto; page-break-after: auto; }
+/* A pasted log or command in a code block must wrap on paper instead of running off the page. */
+.label-cell-flow pre { white-space: pre-wrap; overflow-wrap: anywhere; }
     </style>
   </head>
   <body>
