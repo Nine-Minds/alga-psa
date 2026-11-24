@@ -1160,17 +1160,28 @@ async function loadPricingSchedules(
     )
     .where({ [isTemplate ? "template_id" : "contract_id"]: contractId })
     .orderBy("effective_date", "asc")
-    .select("effective_date", "end_date", "custom_rate");
+    // A live schedule carries its line scope; the template table has no
+    // contract_line_id column, so a template schedule is whole-contract.
+    .select(
+      "effective_date",
+      "end_date",
+      "custom_rate",
+      ...(isTemplate ? [] : ["contract_line_id"]),
+    );
 
   return rows.map(
     (row: {
       effective_date: unknown;
       end_date: unknown;
       custom_rate: number | string | null;
+      contract_line_id?: string | null;
     }) => ({
       effective_date: toMidnightIso(row.effective_date),
       end_date: row.end_date ? toMidnightIso(row.end_date) : null,
       custom_rate: toCents(row.custom_rate),
+      // Scenario line keys are the contract_line_id for a snapshot, so the
+      // stored scope carries over unchanged.
+      contract_line_key: row.contract_line_id ?? null,
     }),
   );
 }

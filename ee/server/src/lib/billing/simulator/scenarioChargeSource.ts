@@ -803,7 +803,8 @@ export class ScenarioChargeSource implements ContractChargeSource {
 /**
  * Mirrors the engine's load-phase pricing-schedule selection: among schedules
  * overlapping the due service period (effective_date < servicePeriodEndExclusive
- * AND (end_date null OR end_date > servicePeriodStartExclusive)) the latest
+ * AND (end_date null OR end_date > servicePeriodStartExclusive)) that apply to
+ * this line — its own scope first, then the whole-contract rows — the latest
  * effective_date wins; its custom_rate applies only when non-null (a null-rate
  * latest schedule does NOT fall back to earlier schedules, matching the
  * engine's `.first()` + null check). Otherwise the assignment custom rate.
@@ -822,7 +823,10 @@ function resolveEffectiveCustomRate(
   const latest = selectActivePricingSchedule(
     schedules.map((schedule) => ({
       schedule_id: null,
-      contract_line_id: null,
+      // The stored line scope, so the simulator reprices the same lines the
+      // engine does: a line-scoped schedule applies to its line only (and wins
+      // there), a null scope to every fixed-fee line.
+      contract_line_id: schedule.contract_line_key ?? null,
       effective_date: schedule.effective_date,
       end_date: schedule.end_date,
       custom_rate: schedule.custom_rate,

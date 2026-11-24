@@ -217,6 +217,14 @@ export interface ScenarioPricingSchedule {
   end_date: ISO8601String | null;
   /** Cents. */
   custom_rate: number | null;
+  /**
+   * Scenario line key this schedule is scoped to (snapshot keys are the
+   * `contract_line_id`), matching `contract_pricing_schedules.contract_line_id`.
+   * Null or absent is the whole-contract scope: the rate becomes the period fee
+   * of every fixed-fee line, and a line-scoped row wins on its own line — the
+   * same precedence the engine applies.
+   */
+  contract_line_key?: string | null;
 }
 
 export interface ScenarioDiscount {
