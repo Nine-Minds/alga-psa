@@ -6,6 +6,8 @@ import { UsagePeriodTotalQuickEntry } from './UsagePeriodTotalQuickEntry';
 import { toPlainDate } from '@alga-psa/core';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { BillingProfilePicker } from '@alga-psa/ui/components/BillingProfilePicker';
+import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/billingProfileActions';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
@@ -192,6 +194,7 @@ interface RecurringInvoiceParentGroup {
 }
 
 type RecurringSelectionGroup = {
+  billingProfileId?: string;
   expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
   expectedRecurringPricingSources?: IExpectedRecurringPricingSource[];
   groupKey: string;
@@ -704,6 +707,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const { formatDate } = useFormatters();
   const { money } = useCurrencyFormat();
   const router = useRouter();
+  const [selectedBillingProfiles, setSelectedBillingProfiles] = useState<Record<string, string | undefined>>({});
   const translateAssignmentContext = (contextValue: string | null): string | null => {
     if (!contextValue) {
       return null;
@@ -818,6 +822,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   // State to hold preview data and the canonical selector metadata used to generate it.
   const [previewState, setPreviewState] = useState<{    previews: Array<{
       previewGroupKey: string;
+      billingProfileId?: string;
       data: WasmInvoiceViewModel;
       selectorInputs: IRecurringDueSelectionInput[];
       usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
@@ -899,6 +904,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             selectorInput: IRecurringDueSelectionInput;
             executionWindow: IRecurringDueSelectionInput['executionWindow'];
             billingCycleId: string | null;
+            billingProfileId?: string;
           }>;
           allowPoOverage?: boolean;
         }
@@ -1196,7 +1202,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             ? member.billingCycleId ?? null
             : null,
       })),
-  ].filter((group) => group.selectorInputs.length > 0);
+  ].filter((group) => group.selectorInputs.length > 0)
+    .map((group) => ({ ...group, billingProfileId: selectedBillingProfiles[group.groupKey] }));
 
   const isGroupFullySelected = (group: RecurringInvoiceParentGroup): boolean => {
     if (selectedTargets.has(group.parentSummary.parentSelectionKey)) {
@@ -1713,6 +1720,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       groups.map((group) => ({
         previewGroupKey: group.groupKey,
         selectorInputs: group.selectorInputs,
+        billingProfileId: group.billingProfileId,
       })),
       // Operator dialog keeps its per-service layout; template-rendered previews consolidate.
       { consolidateFixedBundles: false },
@@ -1785,6 +1793,15 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     }
   }, []);
 
+  const hasCreatedInvoice = (result: { invoicesCreated: number }, fromPreview = false): boolean => {
+    if (result.invoicesCreated > 0) return true;
+    setErrors({ [fromPreview ? 'preview' : 'generation']: t('automaticInvoices.errors.noInvoicesCreated', {
+      defaultValue: 'No invoice was created. Refresh the list and check whether this period was already invoiced or has nothing to bill.',
+    }) });
+    onRefreshNeeded?.();
+    return false;
+  };
+
   const handleGenerateInvoices = async () => {
     const selectedExecutionPeriods = selectedExecutionRows.filter((period) => period.canGenerate);
     if (selectedExecutionPeriods.length === 0) {
@@ -1851,6 +1868,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       const groupedTargets = selectedSelectionGroups.map((group) => ({
         groupKey: group.groupKey,
         selectorInputs: group.selectorInputs,
+        billingProfileId: group.billingProfileId,
         billingCycleId: group.billingCycleId,
       }));
       const runResult = await generateGroupedInvoicesAsRecurringBillingRun({
@@ -1886,6 +1904,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         return;
       }
 
+      if (!hasCreatedInvoice(runResult)) return;
       setSelectedTargets(new Set());
       // Let onGenerateSuccess trigger refresh via refreshTrigger - no need to manually reload
       onGenerateSuccess();
@@ -1917,6 +1936,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         setErrors({ [group.parentSummary.clientName ?? 'generation']: getErrorMessage(runResult) });
         return;
       }
+      if (!hasCreatedInvoice(runResult)) return;
       setMonthEndCloseGroup(null);
       // Let onGenerateSuccess trigger refresh via refreshTrigger.
       onGenerateSuccess();
@@ -1969,6 +1989,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         groupKey: `child-selection:${period.executionIdentityKey}`,
         selectorInputs: [period.selectorInput],
         billingCycleId: period.billingCycleId ?? null,
+        billingProfileId: selectedSelectionGroups.find((group) =>
+          group.selectorInputs.some((selector) => selector.executionWindow.identityKey === period.executionIdentityKey),
+        )?.billingProfileId,
       }));
       const runResult = await generateGroupedInvoicesAsRecurringBillingRun({
         groupedTargets,
@@ -2003,6 +2026,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         return;
       }
 
+      if (!hasCreatedInvoice(runResult)) return;
       setSelectedTargets(new Set());
       // Let onGenerateSuccess trigger refresh via refreshTrigger - no need to manually reload
       onGenerateSuccess();
@@ -2102,6 +2126,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
       const targets = previewState.selectorInput ? [
         {
+          billingProfileId: previewState.previews[0]?.billingProfileId,
           ...buildRecurringRunTargetFromSelection({
             selectorInput: previewState.selectorInput,
             billingCycleId: previewState.billingCycleId,
@@ -2120,6 +2145,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       const groupedTargets = previewState.previews.map(preview => ({
         groupKey: preview.previewGroupKey,
         selectorInputs: preview.selectorInputs,
+        billingProfileId: preview.billingProfileId,
         billingCycleId: lastPreviewGroupsRef.current.find(group => group.groupKey === preview.previewGroupKey)?.billingCycleId ?? null,
         expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals,
         expectedRecurringPricingSources: preview.expectedRecurringPricingSources,
@@ -2150,6 +2176,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         });
         return;
       }
+      if (!hasCreatedInvoice(runResult, true)) return;
       setShowPreviewDialog(false); // Close dialog on success
       setPreviewState({
         previews: [],
@@ -2195,6 +2222,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     try {
       const targets = [
         {
+          billingProfileId: previewState.previews[0]?.billingProfileId,
           ...buildRecurringRunTargetFromSelection({
             selectorInput,
             billingCycleId: poOverageSingleConfirm.billingCycleId,
@@ -2233,6 +2261,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         });
         return;
       }
+      if (!hasCreatedInvoice(runResult, true)) return;
       setShowPreviewDialog(false);
       setPreviewState({
         previews: [],
@@ -2299,6 +2328,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         setErrors(newErrors);
         return;
       }
+      if (!hasCreatedInvoice(runResult, fromPreview)) return;
       if (fromPreview) {
         setShowPreviewDialog(false);
         setPreviewState({
@@ -2752,32 +2782,54 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           <div
             className={`sticky top-0 z-10 mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border px-4 py-3 shadow-sm ${
               hasSelection
-                ? 'border-transparent bg-gradient-to-r from-primary-600 to-primary-500 text-white'
+                ? 'border-transparent bg-gradient-to-r from-primary-600 to-primary-500 text-primary-foreground dark:from-primary-700 dark:to-primary-600'
                 : 'border-border bg-card text-foreground'
             }`}
             data-testid="automatic-invoices-summary-bar"
           >
             {hasSelection ? (
               <>
-                <span className="text-sm font-semibold">
-                  {t('automaticInvoices.summary.selected', {
-                    count: selectedExecutionRows.length,
-                    defaultValue: `${selectedExecutionRows.length} selected`,
-                  })}
-                </span>
-                <span className="text-xs text-white/80">
-                  {t('automaticInvoices.summary.breakdown', {
-                    invoices: selectionInvoiceCount,
-                    combine: selectionCombineCount,
-                    separate: selectionSeparateCount,
-                    defaultValue: `${selectionInvoiceCount} invoice(s) · ${selectionCombineCount} combined · ${selectionSeparateCount} separate`,
-                  })}
-                </span>
+                <div className="shrink-0 leading-tight">
+                  <span className="block text-sm font-semibold">
+                    {t('automaticInvoices.summary.selected', {
+                      count: selectedExecutionRows.length,
+                      defaultValue: `${selectedExecutionRows.length} selected`,
+                    })}
+                  </span>
+                  <span className="block text-xs text-primary-foreground/80">
+                    {t('automaticInvoices.summary.breakdown', {
+                      invoices: selectionInvoiceCount,
+                      combine: selectionCombineCount,
+                      separate: selectionSeparateCount,
+                      defaultValue: `${selectionInvoiceCount} invoice(s) · ${selectionCombineCount} combined · ${selectionSeparateCount} separate`,
+                    })}
+                  </span>
+                </div>
+                {selectedSelectionGroups.map((group, index) => (
+                  <BillingProfilePicker
+                    key={group.groupKey}
+                    id={`automatic-invoice-billing-profile-${index}`}
+                    clientId={group.selectorInputs[0]?.clientId}
+                    loadProfiles={getClientBillingProfilesForBilling}
+                    value={group.billingProfileId}
+                    onChange={(billingProfileId) => {
+                      setSelectedBillingProfiles((current) => ({ ...current, [group.groupKey]: billingProfileId ?? undefined }));
+                    }}
+                    label={t('automaticInvoices.billingProfile.label', {
+                      client: readyRows.find((row) => row.clientId === group.selectorInputs[0]?.clientId)?.clientName ?? '',
+                      index: index + 1,
+                      defaultValue: 'Billing profile — {{client}}, invoice {{index}}',
+                    })}
+                    unassignedLabel={t('automaticInvoices.billingProfile.automatic', { defaultValue: 'Use the profile assigned to the selected work' })}
+                    disabled={isGenerating || isPreviewLoading || isGeneratingFromPreview}
+                    className="w-64 max-w-full shrink-0 [&>div]:mb-0 [&_label]:mb-0.5 [&_label]:truncate [&_label]:text-xs [&_label]:text-primary-foreground/90 [&_button]:bg-card [&_button]:text-card-foreground [&_button]:hover:bg-muted"
+                  />
+                ))}
                 <div className="ml-auto text-right leading-tight">
                   {selectionKnownCents > 0 ? (
                     <>
                       <div className="font-semibold font-mono tabular-nums">{money(selectionKnownCents, selectionCurrencyCode)}</div>
-                      <div className="text-2xs text-white/80">
+                      <div className="text-2xs text-primary-foreground/80">
                         {selectionAtGenerationCount > 0
                           ? t('automaticInvoices.summary.knownPlusAtGeneration', {
                               count: selectionAtGenerationCount,
@@ -2791,7 +2843,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       <div className="text-sm font-semibold">
                         {t('automaticInvoices.amount.atGeneration', { defaultValue: 'Calculated at generation' })}
                       </div>
-                      <div className="text-2xs text-white/80">
+                      <div className="text-2xs text-primary-foreground/80">
                         {t('automaticInvoices.summary.atGenerationLines', {
                           count: selectionAtGenerationCount,
                           defaultValue: `${selectionAtGenerationCount} line item${selectionAtGenerationCount === 1 ? '' : 's'}`,
@@ -2804,7 +2856,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                   <Button
                     id="preview-selected-button"
                     variant="outline"
-                    className="border-white/40 bg-white/10 text-white hover:bg-white/20"
+                    className="border-primary-foreground/40 bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground"
                     onClick={() => {
                       if (selectedSelectionGroups.length > 0) {
                         handlePreviewSelection(selectedSelectionGroups);
@@ -2819,7 +2871,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                   </Button>
                   <Button
                     id="generate-invoices-button"
-                    className="bg-white text-primary-700 hover:bg-white/90"
+                    variant="outline"
+                    className="border-card bg-card text-primary-700 hover:bg-muted"
                     onClick={handleGenerateInvoices}
                     disabled={selectedExecutionRows.length === 0 || isGenerating}
                   >
@@ -2843,7 +2896,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               </span>
             )}
           </div>
-
 
           {/* LEVERAGE: friction datatable-column-sizing — column proportions here are coaxed via
               per-column dataIndex tricks (select/tags → compact ids) + mixed px/% widths because
@@ -3617,6 +3669,16 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       defaultValue: `Invoice ${previewIndex + 1}`,
                     })}
                   </h3>
+                  <BillingProfilePicker
+                    id={`preview-billing-profile-${previewIndex}`}
+                    clientId={previewEntry.selectorInputs[0]?.clientId}
+                    loadProfiles={getClientBillingProfilesForBilling}
+                    value={previewEntry.billingProfileId}
+                    onChange={() => {}}
+                    disabled
+                    label={t('manualInvoices.fields.billingProfile', { defaultValue: 'Billing Profile' })}
+                    unassignedLabel={t('automaticInvoices.billingProfile.automatic', { defaultValue: 'Use the profile assigned to the selected work' })}
+                  />
                   {previewEntry.billingEmailWarning && (
                     // The invoice still generates; it just cannot be emailed or
                     // paid online until the client has an address.

@@ -16,6 +16,11 @@ import * as recurringBillingRunActions from '@alga-psa/billing/actions/recurring
 import * as recurringServicePeriodActions from '@alga-psa/billing/actions/recurringServicePeriodActions';
 import type { IRecurringDueWorkInvoiceCandidate } from '@alga-psa/types';
 
+const profileMocks = vi.hoisted(() => ({ load: vi.fn(async () => [] as any[]) }));
+vi.mock('@alga-psa/billing/actions/billingProfileActions', () => ({
+  getClientBillingProfilesForBilling: profileMocks.load,
+}));
+
 type Row = Record<string, any>;
 
 function normalizeTableName(tableName: string): string {
@@ -509,6 +514,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
   });
 
   beforeEach(() => {
+    profileMocks.load.mockResolvedValue([]);
     cleanup();
     vi.clearAllMocks();
     dbMocks.missingTables.clear();
@@ -639,7 +645,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       runId: 'run-1',
       selectionKey: 'selection-1',
       retryKey: 'retry-1',
-      invoicesCreated: 0,
+      invoicesCreated: 1,
       failedCount: 0,
       failures: [],
     });
@@ -647,7 +653,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       runId: 'legacy-run-1',
       selectionKey: 'legacy-selection-1',
       retryKey: 'legacy-retry-1',
-      invoicesCreated: 0,
+      invoicesCreated: 1,
       failedCount: 0,
       failures: [],
     });
@@ -1788,6 +1794,61 @@ describe('AutomaticInvoices recurring due-work UI', () => {
 
     const [generateCall] = generateInvoicesAsRecurringBillingRunMock.mock.calls;
     expect(generateCall?.[0]?.groupedTargets?.[0]?.billingCycleId).toBeNull();
+  });
+
+  it.each(['selection', 'preview'])('does not announce success when %s generation creates zero invoices', async (flow) => {
+    const onSuccess = vi.fn();
+    const onRefresh = vi.fn();
+    generateInvoicesAsRecurringBillingRunMock.mockResolvedValue({
+      runId: 'empty', selectionKey: 'empty', retryKey: 'empty', invoicesCreated: 0, failedCount: 0, failures: [],
+    });
+    generateLegacyInvoicesAsRecurringBillingRunMock.mockResolvedValue({
+      runId: 'empty', selectionKey: 'empty', retryKey: 'empty', invoicesCreated: 0, failedCount: 0, failures: [],
+    });
+    render(<AutomaticInvoices onGenerateSuccess={onSuccess} onRefreshNeeded={onRefresh} />);
+    await screen.findByText('Zenith Health');
+    const table = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
+    fireEvent.click(within(table).getAllByRole('checkbox')[0]!);
+    if (flow === 'preview') {
+      fireEvent.click(screen.getByRole('button', { name: /Preview Selected/i }));
+      fireEvent.click(await screen.findByRole('button', { name: /^Generate Invoice$/i }));
+    } else {
+      fireEvent.click(screen.getByRole('button', { name: /Generate Invoices \(1\)/i }));
+    }
+    expect((await screen.findAllByText(/No invoice was created/)).length).toBeGreaterThan(0);
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(onRefresh).toHaveBeenCalledOnce();
+  });
+
+  it('passes the selected profile to preview and the resolved preview profile to generation', async () => {
+    const row = createClientRow();
+    profileMocks.load.mockResolvedValue([
+      { billing_profile_id: 'profile-default', client_id: row.clientId, name: 'Default billing', is_default: true, is_active: true },
+      { billing_profile_id: 'profile-site', client_id: row.clientId, name: 'Site billing', is_default: false, is_active: true },
+    ]);
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      invoiceCandidates: [buildInvoiceCandidate([row])], materializationGaps: [], total: 1, page: 1, pageSize: 10, totalPages: 1,
+    });
+    const preview = await previewInvoiceForSelectionInputMock.getMockImplementation()!([]);
+    previewInvoiceForSelectionInputMock.mockResolvedValue({
+      ...preview as any,
+      previews: [{ ...(preview as any).previews[0], billingProfileId: 'profile-site', selectorInputs: [row.selectorInput] }],
+    });
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+    await screen.findByText('Acme Co');
+    const table = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
+    fireEvent.click(within(table).getAllByRole('checkbox')[0]!);
+    const picker = await screen.findByRole('combobox', { name: /Billing profile/ });
+    fireEvent.click(picker);
+    fireEvent.click(await screen.findByRole('option', { name: 'Site billing' }));
+    fireEvent.click(screen.getByRole('button', { name: /Preview Selected/i }));
+    await waitFor(() => expect(previewInvoiceForSelectionInputMock).toHaveBeenCalledWith([
+      expect.objectContaining({ billingProfileId: 'profile-site' }),
+    ], expect.anything()));
+    fireEvent.click(await screen.findByRole('button', { name: /^Generate Invoice$/i }));
+    await waitFor(() => expect(generateLegacyInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
+      targets: [expect.objectContaining({ billingProfileId: 'profile-site' })],
+    }));
   });
 
   it('T027/T031/T035: mixed selection generates with execution-window targets and maps failures back to unbridged contract rows', async () => {
