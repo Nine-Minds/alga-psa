@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import { projectedPeopleForCaller } from '@alga-psa/user-composition/lib/seatPeople';
 
-type WatchEntry = Record<string, unknown>;
+type WatchEntry = { entity_id?: unknown; entity_type?: unknown; email?: unknown };
 
 /**
  * A ticket row as the CALLER may read its watch list.
@@ -24,21 +24,37 @@ export async function projectTicketWatchListForCaller<T extends { attributes?: u
   const watchList = (attributes as Record<string, unknown>).watch_list;
   if (!Array.isArray(watchList)) return ticket;
 
-  const people = await projectedPeopleForCaller(trx, tenant, user, { kinds: ['msp_staff', 'client_technician', 'contact'] });
-  if (people === null) return ticket;
-
-  const byUser = new Map(people.flatMap((person) => (person.userId ? [[person.userId, person] as const] : [])));
-  const byContact = new Map(people.flatMap((person) => (person.contactId ? [[person.contactId, person] as const] : [])));
-  const released = (watchList as WatchEntry[]).flatMap((entry) => {
-    const entityId = typeof entry.entity_id === 'string' ? entry.entity_id : null;
-    const person = entityId ? (entry.entity_type === 'contact' ? byContact : byUser).get(entityId) : undefined;
-    if (!person) return [];
-    const { email: _stored, ...rest } = entry;
-    return [person.email ? { ...rest, email: person.email } : rest];
-  });
+  const released = await projectWatchEntriesForCaller(trx, tenant, user, watchList as WatchEntry[]);
+  if (released === watchList) return ticket;
 
   const next: Record<string, unknown> = { ...(attributes as Record<string, unknown>) };
   if (released.length > 0) next.watch_list = released;
   else delete next.watch_list;
   return { ...ticket, attributes: next };
+}
+
+/**
+ * Watch-list entries (the stored mirror, or `TicketWatcherService`'s watchers) as the CALLER may read them: the
+ * same rule as `projectTicketWatchListForCaller`, for every response that lists a ticket's watchers (the ticket
+ * screen, and each watcher add/remove/toggle answer). The same array comes back for a caller nothing restricts.
+ */
+export async function projectWatchEntriesForCaller<E extends WatchEntry>(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  user: { user_id?: string; user_type?: string },
+  entries: readonly E[],
+): Promise<E[]> {
+  if (entries.length === 0) return entries as E[];
+  const people = await projectedPeopleForCaller(trx, tenant, user, { kinds: ['msp_staff', 'client_technician', 'contact'] });
+  if (people === null) return entries as E[];
+
+  const byUser = new Map(people.flatMap((person) => (person.userId ? [[person.userId, person] as const] : [])));
+  const byContact = new Map(people.flatMap((person) => (person.contactId ? [[person.contactId, person] as const] : [])));
+  return entries.flatMap((entry) => {
+    const entityId = typeof entry.entity_id === 'string' ? entry.entity_id : null;
+    const person = entityId ? (entry.entity_type === 'contact' ? byContact : byUser).get(entityId) : undefined;
+    if (!person) return [];
+    const { email: _stored, ...rest } = entry;
+    return [(person.email ? { ...rest, email: person.email } : rest) as E];
+  });
 }

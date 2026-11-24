@@ -127,6 +127,7 @@ import { createTicketReadScopeFromRules, createTicketReadScope, type TicketReadS
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
 import { markAssignableAgents } from '../lib/assignableAgents';
+import { projectTicketWatchListForCaller } from '../lib/watchListProjection';
 import { resolveOperationBoardIds } from '@alga-psa/authorization/operationScope';
 import { authorizeTicketRecordAccess, type TicketRecordRow } from '../lib/ticketRecordAuthorization';
 import { isRecordFieldHidden, projectReadableRecord } from '@alga-psa/authorization/recordProjection';
@@ -1126,7 +1127,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       ...ticketData
     } = ticket;
 
-    const normalizedTicketData = convertDates(ticketData);
+    // The stored watch list keeps every recipient's email for delivery (board defaults included); the screen gets
+    // it as the caller may read it, the same projection the create response uses.
+    const normalizedTicketData = convertDates(await projectTicketWatchListForCaller(trx, tenant, user, ticketData));
 
     // Bundle context (master/child + settings + children list)
     const masterTicketId = normalizedTicketData.master_ticket_id ?? null;

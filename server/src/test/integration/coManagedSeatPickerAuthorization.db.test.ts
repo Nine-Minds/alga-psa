@@ -74,6 +74,7 @@ import * as boardActions from '../../../../packages/tickets/src/actions/board-ac
 import * as ticketFormActions from '../../../../packages/tickets/src/actions/ticketFormActions';
 import * as optimizedTicketActions from '../../../../packages/tickets/src/actions/optimizedTicketActions';
 import * as ticketActions from '../../../../packages/tickets/src/actions/ticketActions';
+import * as ticketWatcherActions from '../../../../packages/tickets/src/actions/ticketWatcherActions';
 import * as statusActions from '../../../../packages/reference-data/src/actions/status-actions/statusActions';
 import * as documentActions from '../../../../packages/documents/src/actions/documentActions';
 import * as workItemActions from '../../../../packages/scheduling/src/actions/workItemActions';
@@ -94,6 +95,7 @@ const getTicketFormData = inTenant(ticketFormActions.getTicketFormData);
 const getTicketFormOptions = inTenant(optimizedTicketActions.getTicketFormOptions);
 const getConsolidatedTicketData = inTenant(optimizedTicketActions.getConsolidatedTicketData);
 const addTicket = inTenant(ticketActions.addTicket);
+const addTicketWatchers = inTenant(ticketWatcherActions.addTicketWatchers);
 const getTicketStatuses = inTenant(statusActions.getTicketStatuses);
 const searchAssociations = inTenant(documentActions.searchDocumentAssociationEntities);
 const getAssociationContacts = inTenant(documentActions.getDocumentAssociationContactsForPicker);
@@ -442,11 +444,25 @@ describeDb('seat pickers and actions return only what the operation allows', { s
     const storedEmails = (stored.watch_list as Array<{ email: string }>).map((entry) => entry.email);
     expect(storedEmails).toEqual(expect.arrayContaining([`sable.${tag}@msp-secret.test`, `bravo.${tag}@client.test`]));
 
-    // Positive control: an authorized MSP user is returned the full recipient list.
+    // The ticket screen and the watcher write answer use the same projection: opening the ticket it just created
+    // ("Create + View") or adding a watcher never hands the seat the board's default MSP recipient.
+    const screen = await getConsolidatedTicketData(created.ticket_id) as any;
+    const screenWatchers = JSON.stringify(screen.ticket.attributes?.watch_list ?? []);
+    expect(screenWatchers).toContain(s.B);
+    expect(screenWatchers).not.toContain('msp-secret.test');
+    expect(screenWatchers).not.toContain(s.S2);
+    const added = await addTicketWatchers(created.ticket_id, [{ user_id: s.A }]) as any;
+    expect(added.watchers.map((watcher: any) => watcher.entity_id)).toEqual(expect.arrayContaining([s.A, s.B]));
+    expect(JSON.stringify(added.watchers)).not.toContain('msp-secret.test');
+
+    // Positive control: an authorized MSP user is returned the full recipient list, on create and on the screen.
     as(s.admin);
     const adminCreated = await addTicket(form([s.S1], 'Watcher admin')) as any;
     const adminEmails = (adminCreated.attributes.watch_list as Array<{ email: string }>).map((entry) => entry.email);
     expect(adminEmails).toEqual(expect.arrayContaining([`sable.${tag}@msp-secret.test`, `sierra.${tag}@msp-secret.test`]));
+    const adminScreen = await getConsolidatedTicketData(created.ticket_id) as any;
+    expect((adminScreen.ticket.attributes.watch_list as Array<{ email: string }>).map((entry) => entry.email))
+      .toEqual(expect.arrayContaining([`sable.${tag}@msp-secret.test`, `bravo.${tag}@client.test`, `alpha.${tag}@client.test`]));
   });
 
   // ---------------------------------------------------------------- T007 / F002 F003 F004
