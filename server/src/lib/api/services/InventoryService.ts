@@ -9,7 +9,16 @@ import {
   withTransaction,
 } from '@alga-psa/db';
 import {
+  VendorCoreError,
   adjustStockCore,
+  createVendorCore,
+  deactivateVendorCore,
+  deleteVendorProductCore,
+  queryVendor,
+  queryVendorProducts,
+  queryVendors,
+  updateVendorCore,
+  upsertVendorProductCore,
   assertLocationWritable,
   publishInventoryEvent,
   queryPurchaseOrder,
@@ -31,6 +40,8 @@ import {
   timestampPayload,
 } from '@alga-psa/inventory';
 import type {
+  IVendor,
+  IVendorProduct,
   IPurchaseOrder,
   IPurchaseOrderLine,
   IStockTransfer,
@@ -53,6 +64,10 @@ import type {
   InventoryStockListQuery,
   InventoryTransferListQuery,
   InventoryUnitListQuery,
+  InventoryVendorCreateApi,
+  InventoryVendorListQuery,
+  InventoryVendorProductUpsertApi,
+  InventoryVendorUpdateApi,
 } from '../schemas/inventorySchemas';
 
 type InventoryProduct = Extract<InventoryLookupResult, { type: 'product' }>['product'];
@@ -93,6 +108,11 @@ function pageSlice<T>(rows: T[], page: number, limit: number): ListResult<T> {
 
 function numeric(value: unknown): number {
   return Number(value ?? 0);
+}
+
+// LEVERAGE: pattern bigint-money-as-string — vendor_products.unit_cost is a bigint, which pg returns as a string; the REST contract is integer minor units, so the service coerces it.
+function vendorProductApiRow<T extends { unit_cost?: unknown }>(row: T): T {
+  return row.unit_cost == null ? row : { ...row, unit_cost: Number(row.unit_cost) };
 }
 
 function escapeLike(value: string): string {
@@ -264,6 +284,23 @@ function conflictWithCode(code: 'DUPLICATE_SERIAL' | 'DUPLICATE_MAC', message: s
 
 function throwInventoryApiError(error: unknown): never {
   if (!(error instanceof Error)) throw error;
+  if (error instanceof VendorCoreError) {
+    // Typed core errors carry their own meaning; never infer it from the message text.
+    if (error.kind === 'not_found') throw new NotFoundError(error.message);
+    if (error.kind === 'conflict') {
+      if (error.code === 'duplicate_name') {
+        const { existing_vendor_id, existing_vendor_name } = error.details;
+        if (existing_vendor_id && existing_vendor_name) {
+          throw new ConflictError(
+            `A vendor named "${existing_vendor_name}" already exists (vendor_id ${existing_vendor_id})`,
+            { existing_vendor_id, existing_vendor_name },
+          );
+        }
+      }
+      throw new ConflictError(error.message);
+    }
+    throw new ValidationError(error.message, error.details.field ? [{ path: [error.details.field], message: error.message }] : undefined);
+  }
   if ('statusCode' in error) throw error;
 
   const message = error.message;
@@ -978,6 +1015,109 @@ export class InventoryService extends BaseService<any> {
           to_location_name: to?.name ?? null,
           line_count: received.lines?.length ?? 0,
         };
+      });
+    } catch (error) {
+      throwInventoryApiError(error);
+    }
+  }
+
+  async listVendors(
+    input: InventoryVendorListQuery,
+    context: ServiceContext,
+  ): Promise<ListResult<IVendor>> {
+    const knex = await this.getDbForContext(context);
+    return withTransaction(knex, (trx) => queryVendors(trx, context.tenant, {
+      search: input.search,
+      includeInactive: input.include_inactive,
+      page: input.page,
+      limit: input.limit,
+    }));
+  }
+
+  async getVendor(vendorId: string, context: ServiceContext): Promise<IVendor | null> {
+    const knex = await this.getDbForContext(context);
+    return withTransaction(knex, (trx) => queryVendor(trx, context.tenant, vendorId));
+  }
+
+  async createVendor(data: InventoryVendorCreateApi, context: ServiceContext): Promise<IVendor> {
+    const knex = await this.getDbForContext(context);
+    try {
+      return await withTransaction(knex, async (trx) => {
+        const result = await createVendorCore(trx, context.tenant, data);
+        if (result.ok === true) return result.vendor;
+        if (result.code === 'name_required') {
+          throw new VendorCoreError('validation', 'name_required', 'Vendor name is required', { field: 'vendor_name' });
+        }
+        throw new VendorCoreError('conflict', 'duplicate_name', `A vendor named "${result.name}" already exists`, {
+          name: result.name,
+          existing_vendor_id: result.existing.vendor_id,
+          existing_vendor_name: result.existing.vendor_name,
+        });
+      });
+    } catch (error) {
+      throwInventoryApiError(error);
+    }
+  }
+
+  async updateVendor(vendorId: string, data: InventoryVendorUpdateApi, context: ServiceContext): Promise<IVendor> {
+    const knex = await this.getDbForContext(context);
+    try {
+      return await withTransaction(knex, (trx) => updateVendorCore(trx, context.tenant, vendorId, data));
+    } catch (error) {
+      throwInventoryApiError(error);
+    }
+  }
+
+  async deactivateVendor(vendorId: string, context: ServiceContext): Promise<IVendor> {
+    const knex = await this.getDbForContext(context);
+    try {
+      return await withTransaction(knex, (trx) => deactivateVendorCore(trx, context.tenant, vendorId));
+    } catch (error) {
+      throwInventoryApiError(error);
+    }
+  }
+
+  async listVendorProducts(vendorId: string, context: ServiceContext) {
+    const knex = await this.getDbForContext(context);
+    try {
+      return await withTransaction(knex, async (trx) => {
+        if (!(await queryVendor(trx, context.tenant, vendorId))) {
+          throw new VendorCoreError('not_found', 'vendor_not_found', 'Vendor not found');
+        }
+        return (await queryVendorProducts(trx, context.tenant, { vendor_id: vendorId })).map(vendorProductApiRow);
+      });
+    } catch (error) {
+      throwInventoryApiError(error);
+    }
+  }
+
+  async upsertVendorProduct(
+    vendorId: string,
+    serviceId: string,
+    data: InventoryVendorProductUpsertApi,
+    context: ServiceContext,
+  ): Promise<IVendorProduct> {
+    const knex = await this.getDbForContext(context);
+    try {
+      return vendorProductApiRow(await withTransaction(knex, (trx) => upsertVendorProductCore(trx, context.tenant, {
+        ...data,
+        vendor_id: vendorId,
+        service_id: serviceId,
+      })));
+    } catch (error) {
+      throwInventoryApiError(error);
+    }
+  }
+
+  async deleteVendorProduct(vendorId: string, serviceId: string, context: ServiceContext): Promise<{ removed: true }> {
+    const knex = await this.getDbForContext(context);
+    try {
+      return await withTransaction(knex, async (trx) => {
+        const { removed } = await deleteVendorProductCore(trx, context.tenant, vendorId, serviceId);
+        if (!removed) {
+          throw new VendorCoreError('not_found', 'vendor_product_not_found', 'Vendor price list entry not found');
+        }
+        return { removed: true as const };
       });
     } catch (error) {
       throwInventoryApiError(error);

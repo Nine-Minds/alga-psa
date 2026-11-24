@@ -31,9 +31,13 @@ import {
   inventoryStockListQuerySchema,
   inventoryTransferListQuerySchema,
   inventoryUnitListQuerySchema,
+  inventoryVendorCreateSchema,
+  inventoryVendorListQuerySchema,
+  inventoryVendorProductUpsertSchema,
+  inventoryVendorUpdateSchema,
 } from '../schemas/inventorySchemas';
 
-export type InventoryApiResource = 'inventory' | 'purchase_order' | 'cycle_count' | 'stock_transfer';
+export type InventoryApiResource = 'inventory' | 'purchase_order' | 'cycle_count' | 'stock_transfer' | 'vendor';
 
 export class ApiInventoryController extends ApiBaseController {
   private inventoryService: InventoryService;
@@ -71,7 +75,7 @@ export class ApiInventoryController extends ApiBaseController {
 
   private async routeId(
     req: AuthenticatedApiRequest,
-    key: 'unitId' | 'sessionId' | 'poId' | 'lineId' | 'transferId',
+    key: 'unitId' | 'sessionId' | 'poId' | 'lineId' | 'transferId' | 'vendorId' | 'serviceId',
   ): Promise<string> {
     try {
       const params = await req.params;
@@ -296,5 +300,86 @@ export class ApiInventoryController extends ApiBaseController {
       undefined,
       request,
     ));
+  }
+
+  listVendors() {
+    return this.execute('read', async (request) => {
+      const query = this.validateQuery(request, inventoryVendorListQuerySchema);
+      const result = await this.inventoryService.listVendors(query, request.context);
+      const { page, limit, ...filters } = query;
+      return createPaginatedResponse(result.data, result.total, page, limit, { filters }, request);
+    });
+  }
+
+  getVendor() {
+    return this.execute('read', async (request) => {
+      const vendor = await this.inventoryService.getVendor(await this.routeId(request, 'vendorId'), request.context);
+      if (!vendor) throw new NotFoundError('Vendor not found');
+      return createSuccessResponse(vendor, 200, undefined, request);
+    });
+  }
+
+  createVendor() {
+    return this.execute('create', async (request) => {
+      const data = await this.validateData(request, inventoryVendorCreateSchema);
+      return createSuccessResponse(await this.inventoryService.createVendor(data, request.context), 201, undefined, request);
+    });
+  }
+
+  updateVendor() {
+    return this.execute('update', async (request) => {
+      const vendorId = await this.routeId(request, 'vendorId');
+      const data = await this.validateData(request, inventoryVendorUpdateSchema);
+      return createSuccessResponse(await this.inventoryService.updateVendor(vendorId, data, request.context), 200, undefined, request);
+    });
+  }
+
+  deactivateVendor() {
+    return this.execute('update', async (request) => createSuccessResponse(
+      await this.inventoryService.deactivateVendor(await this.routeId(request, 'vendorId'), request.context),
+      200,
+      undefined,
+      request,
+    ));
+  }
+
+  listVendorProducts() {
+    return this.execute('read', async (request) => createSuccessResponse(
+      await this.inventoryService.listVendorProducts(await this.routeId(request, 'vendorId'), request.context),
+      200,
+      undefined,
+      request,
+    ));
+  }
+
+  upsertVendorProduct() {
+    return this.execute('update', async (request) => {
+      const [vendorId, serviceId] = await Promise.all([
+        this.routeId(request, 'vendorId'),
+        this.routeId(request, 'serviceId'),
+      ]);
+      const data = await this.validateData(request, inventoryVendorProductUpsertSchema);
+      return createSuccessResponse(
+        await this.inventoryService.upsertVendorProduct(vendorId, serviceId, data, request.context),
+        200,
+        undefined,
+        request,
+      );
+    });
+  }
+
+  deleteVendorProduct() {
+    return this.execute('update', async (request) => {
+      const [vendorId, serviceId] = await Promise.all([
+        this.routeId(request, 'vendorId'),
+        this.routeId(request, 'serviceId'),
+      ]);
+      return createSuccessResponse(
+        await this.inventoryService.deleteVendorProduct(vendorId, serviceId, request.context),
+        200,
+        undefined,
+        request,
+      );
+    });
   }
 }

@@ -238,8 +238,52 @@ export const inventoryIdParamsSchema = z.object({
   poId: uuidSchema.optional(),
   lineId: uuidSchema.optional(),
   transferId: uuidSchema.optional(),
+  vendorId: uuidSchema.optional(),
+  serviceId: uuidSchema.optional(),
 });
 
+const vendorTextField = z.string().trim().max(255).nullable().optional();
+
+const vendorFieldsShape = {
+  contact_name: vendorTextField,
+  email: vendorTextField,
+  phone: vendorTextField,
+  website: vendorTextField,
+  payment_terms: vendorTextField,
+  account_number: vendorTextField,
+  notes: z.string().trim().max(5000).nullable().optional(),
+};
+
+export const inventoryVendorListQuerySchema = paginationQuerySchema.extend({
+  search: z.string().trim().min(1).max(255).optional(),
+  include_inactive: z.enum(['true', 'false']).transform((value) => value === 'true').optional(),
+});
+
+export const inventoryVendorCreateSchema = z.object({
+  vendor_name: z.string().trim().min(1).max(255),
+  ...vendorFieldsShape,
+});
+
+/** `is_active` lets a caller reactivate a vendor, as the MSP UI does. */
+export const inventoryVendorUpdateSchema = z.object({
+  vendor_name: z.string().trim().min(1).max(255).optional(),
+  ...vendorFieldsShape,
+  is_active: z.boolean().optional(),
+}).refine((value) => Object.keys(value).length > 0, { message: 'At least one field is required' });
+
+/** The vendor and product come from the path. A missing `cost_currency` resolves in the core, as in the UI. */
+export const inventoryVendorProductUpsertSchema = z.object({
+  vendor_sku: z.string().trim().max(255).nullable().optional(),
+  unit_cost: z.number().int().min(0).nullable().optional(),
+  cost_currency: z.string().trim().regex(/^[A-Za-z]{3}$/, 'cost_currency must be a 3-letter currency code').transform((value) => value.toUpperCase()).optional(),
+  lead_time_days: z.number().int().min(0).nullable().optional(),
+  is_preferred: z.boolean().optional(),
+});
+
+export type InventoryVendorListQuery = z.infer<typeof inventoryVendorListQuerySchema>;
+export type InventoryVendorCreateApi = z.infer<typeof inventoryVendorCreateSchema>;
+export type InventoryVendorUpdateApi = z.infer<typeof inventoryVendorUpdateSchema>;
+export type InventoryVendorProductUpsertApi = z.infer<typeof inventoryVendorProductUpsertSchema>;
 export type InventoryReceiptApi = z.infer<typeof inventoryReceiptSchema>;
 export type InventoryAdjustmentApi = z.infer<typeof inventoryAdjustmentSchema>;
 export type InventoryStockListQuery = z.infer<typeof inventoryStockListQuerySchema>;

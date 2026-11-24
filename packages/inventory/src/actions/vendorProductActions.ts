@@ -11,7 +11,13 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-import { upsertVendorProductCore } from '../lib/vendorProducts';
+import {
+  deleteVendorProductCore,
+  queryVendorProducts,
+  upsertVendorProductCore,
+  type VendorProductListRow,
+} from '../lib/vendorProducts';
+import { isVendorCoreError } from '../lib/vendorErrors';
 
 // NOTE: 'use server' file — export ONLY async functions (+ erased types).
 
@@ -29,11 +35,16 @@ function vendorProductActionErrorFrom(error: unknown): VendorProductActionError 
       return permissionError(error.message);
     }
 
-    switch (error.message) {
-      case 'vendor_id and service_id are required':
-        return actionError('Choose both a vendor and a product before saving the offer.', 'features/inventory:errors.vendorProducts.vendorAndProductRequired');
-      case 'unit_cost must be a non-negative integer (cents)':
-        return actionError('Vendor cost must be a non-negative amount.', 'features/inventory:errors.vendorProducts.costNonNegative');
+    if (isVendorCoreError(error)) {
+      switch (error.code) {
+        case 'vendor_and_product_required':
+          return actionError('Choose both a vendor and a product before saving the offer.', 'features/inventory:errors.vendorProducts.vendorAndProductRequired');
+        case 'unit_cost_invalid':
+          return actionError('Vendor cost must be a non-negative amount.', 'features/inventory:errors.vendorProducts.costNonNegative');
+        case 'vendor_not_found':
+        case 'product_not_found':
+          return actionError('The selected vendor or product is no longer valid. Please refresh and try again.', 'features/inventory:errors.vendorProducts.recordInvalid');
+      }
     }
   }
 
@@ -69,25 +80,11 @@ export const listVendorProducts = withAuth(
     user,
     { tenant },
     filter?: { vendor_id?: string; service_id?: string },
-  ): Promise<Array<IVendorProduct & { service_name: string | null; sku: string | null; vendor_name: string | null }> | VendorProductActionError> => {
+  ): Promise<VendorProductListRow[] | VendorProductActionError> => {
     return withVendorProductActionErrors(async () => {
       await requireVendorPerm(user, 'read');
       const { knex: db } = await createTenantKnex();
-      return withTransaction(db, async (trx: Knex.Transaction) => {
-        const q = trx('vendor_products as vp')
-          .leftJoin('service_catalog as sc', function () {
-            this.on('sc.service_id', '=', 'vp.service_id').andOn('sc.tenant', '=', 'vp.tenant');
-          })
-          .leftJoin('vendors as v', function () {
-            this.on('v.vendor_id', '=', 'vp.vendor_id').andOn('v.tenant', '=', 'vp.tenant');
-          })
-          .where('vp.tenant', tenant)
-          .select('vp.*', 'sc.service_name', 'sc.sku', 'v.vendor_name')
-          .orderBy('sc.service_name', 'asc');
-        if (filter?.vendor_id) q.andWhere('vp.vendor_id', filter.vendor_id);
-        if (filter?.service_id) q.andWhere('vp.service_id', filter.service_id);
-        return (await q) as any;
-      });
+      return withTransaction(db, (trx: Knex.Transaction) => queryVendorProducts(trx, tenant, filter));
     });
   },
 );
@@ -119,12 +116,7 @@ export const deleteVendorProduct = withAuth(
     return withVendorProductActionErrors(async () => {
       await requireVendorPerm(user, 'update');
       const { knex: db } = await createTenantKnex();
-      return withTransaction(db, async (trx: Knex.Transaction) => {
-        const removed = await trx('vendor_products')
-          .where({ tenant, vendor_id: vendorId, service_id: serviceId })
-          .del();
-        return { removed: removed > 0 };
-      });
+      return withTransaction(db, (trx: Knex.Transaction) => deleteVendorProductCore(trx, tenant, vendorId, serviceId));
     });
   },
 );
