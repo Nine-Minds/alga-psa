@@ -219,6 +219,18 @@ On Thu, Nov 20, 2025 at 7:58 AM Software <support@nineminds.com> wrote:
       expect(htmlToVisibleText(result.sanitizedHtml ?? '')).toContain('Jane');
     });
 
+    it('closes the paragraph above a banner that follows it as plain text', () => {
+      const result = parseEmailReply({
+        text: '',
+        html: '<p>Yes, Thursday works, please book it.</p>--- Please reply above this line ---'
+          + '<div>New comment added</div>',
+      });
+
+      expect(result.sanitizedHtml).toContain('</p>');
+      expect(htmlToVisibleText(result.sanitizedHtml ?? '')).toContain('Yes, Thursday works, please book it.');
+      expect(htmlToVisibleText(result.sanitizedHtml ?? '')).not.toContain('New comment added');
+    });
+
     it('keeps the answer of an HTML-only reply below an old-layout notification', () => {
       const result = parseEmailReply({
         text: '',

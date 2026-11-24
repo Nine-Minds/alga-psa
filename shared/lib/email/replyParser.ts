@@ -558,16 +558,30 @@ function trimQuotedHistoryBlockquotes(html: string, config: ReplyParserConfig): 
   return { html: result, removedQuote };
 }
 
+/**
+ * Where to cut for a marker found at `index`: the start of the tag that carries it, so an
+ * HTML-only reply retains no incomplete `<div` or `<p` and the element wrapping a marker goes
+ * with it. A closing tag is never severed from the element it closes — cutting at the `</p>`
+ * before a banner would leave the paragraph above it open.
+ */
+function cutOffsetForHtmlMarker(html: string, index: number): number {
+  const tagStart = html.lastIndexOf('<', index);
+  if (tagStart < 0) {
+    return index;
+  }
+  const insideTag = html.lastIndexOf('>', index) < tagStart;
+  if (insideTag) {
+    return tagStart;
+  }
+  return html.startsWith('</', tagStart) ? index : tagStart;
+}
+
 function trimHtmlAtBoundary(html: string, config: ReplyParserConfig): TrimResult {
   const attributeIndex = html.toLowerCase().indexOf(config.htmlBoundaryAttribute.toLowerCase());
 
   if (attributeIndex >= 0) {
-    // Cut before the marker's opening tag, not inside its attribute list.
-    // Otherwise an HTML-only reply retains an incomplete `<div` or `<p`.
-    const tagStart = html.lastIndexOf('<', attributeIndex);
-    const boundaryStart = tagStart >= 0 && html.lastIndexOf('>', attributeIndex) < tagStart ? tagStart : attributeIndex;
     return {
-      text: html.slice(0, boundaryStart).trim(),
+      text: html.slice(0, cutOffsetForHtmlMarker(html, attributeIndex)).trim(),
       matched: config.htmlBoundaryAttribute,
       heuristic: 'html-boundary',
     };
@@ -591,9 +605,8 @@ function trimHtmlAtBoundary(html: string, config: ReplyParserConfig): TrimResult
   // the text, was what the comment stored (alga-2026-0003353).
   const markerIndex = earliestMarkerIndex(html, config);
   if (markerIndex >= 0) {
-    const tagStart = html.lastIndexOf('<', markerIndex);
     return {
-      text: html.slice(0, tagStart >= 0 ? tagStart : markerIndex).trim(),
+      text: html.slice(0, cutOffsetForHtmlMarker(html, markerIndex)).trim(),
       matched: 'alga-reply-marker',
       heuristic: 'html-marker-boundary',
     };
