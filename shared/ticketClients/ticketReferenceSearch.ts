@@ -51,60 +51,28 @@ export function ticketNumberMatchesQuery(
 
 /**
  * Resolve number matches against the loaded rows. Exact literal identifiers win when a leading
- * TICKET could also be read as an email label. Explicit references match segment prefixes, while
- * numeric-only references retain their suffix search behavior.
+ * TICKET could also be read as an email label. All comparisons use the compact number.
  */
 export function resolveTicketNumberMatches(
   ticketNumbers: readonly (string | null | undefined)[],
   query: TicketSearchQuery
 ): ReadonlySet<string> {
-  const numbers = ticketNumbers
-    .map((raw) => ({ raw: raw ?? '', compact: compactTicketReference(raw ?? '') }))
-    .filter(({ compact }) => Boolean(compact));
-  if (!query.reference && !query.literalReference) return new Set();
+  const references = [query.literalReference, query.reference].filter(Boolean);
+  if (!references.length) return new Set();
 
-  const exactLiteral = query.literalReference
-    ? numbers.filter(({ compact }) => compact === query.literalReference)
-    : [];
-  if (exactLiteral.length > 0) return new Set(exactLiteral.map(({ compact }) => compact));
-
-  const exactReference = query.reference
-    ? numbers.filter(({ compact }) => compact === query.reference)
-    : [];
-  if (exactReference.length > 0) return new Set(exactReference.map(({ compact }) => compact));
-
-  if (query.isExplicitLabel) {
-    const references = [query.reference, query.literalReference].filter(Boolean);
-    return new Set(numbers
-      .filter(({ raw, compact }) => references.some((reference) => matchesExplicitReference(raw, compact, reference)))
-      .map(({ compact }) => compact));
+  const numbers = ticketNumbers.map((number) => compactTicketReference(number ?? ''));
+  for (const reference of references) {
+    if (numbers.includes(reference)) return new Set([reference]);
   }
 
-  const references = [query.literalReference, query.reference];
-  return new Set(numbers
-    .filter(({ compact }) => references.some((reference) => reference && compact.includes(reference)))
-    .map(({ compact }) => compact));
-}
-
-/**
- * Explicit ticket references match at the start of a loaded number or as a partial prefix of a
- * number segment. A reference embedded at the end of a longer identifier is a different ticket.
- * Pure numeric references keep their existing suffix-search behavior.
- */
-function matchesExplicitReference(rawNumber: string, compactNumber: string, reference: string): boolean {
-  if (/^\d+$/.test(reference)) return compactNumber.includes(reference);
-  const index = compactNumber.indexOf(reference);
-  if (index === 0) return true;
-  if (index < 0 || index + reference.length === compactNumber.length) return false;
-
-  let compactIndex = 0;
-  for (const character of rawNumber) {
-    if (/[\s-]/.test(character)) {
-      if (compactIndex === index) return true;
-      continue;
-    }
-    if (compactIndex === index) return false;
-    compactIndex += 1;
+  if (query.isExplicitLabel && !/^\d+$/.test(query.reference)) {
+    // An alphanumeric reference can be a partial match while more of the number
+    // follows. A match occurring only as another identifier's suffix is a different ticket.
+    return new Set(numbers.filter((number) => {
+      const start = number.indexOf(query.reference);
+      return start >= 0 && start + query.reference.length < number.length;
+    }));
   }
-  return false;
+
+  return new Set(numbers.filter((number) => references.some((reference) => number.includes(reference))));
 }

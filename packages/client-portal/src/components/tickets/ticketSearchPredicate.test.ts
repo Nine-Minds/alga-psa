@@ -156,6 +156,16 @@ describe('buildTicketSearchPredicate', () => {
     }
   });
 
+  it.each([
+    'TICKET-ALGA-2026-0002826',
+    'TICKET ALGA 2026 0002826',
+    'TICKETALGA20260002826',
+  ])('matches a partial email reference independently of how %s is stored', (ticket_number) => {
+    const rows = [{ ticket_number }];
+    expect(rows.filter(buildTicketSearchPredicate('Ticket #ALGA-2026', rows))).toEqual(rows);
+    expect(rows.filter(buildTicketSearchPredicate('Ticket #ALGA-2026-0002826', rows))).toEqual([]);
+  });
+
   it('does not match a complete explicit reference at the end of a longer identifier', () => {
     const rows = [{ ...ticketPrefixNumber, ticket_number: 'OLD-TIC0002826' }];
     const results = rows
