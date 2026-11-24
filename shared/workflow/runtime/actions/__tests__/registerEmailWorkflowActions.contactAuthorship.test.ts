@@ -473,4 +473,77 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
     expect(action!.outputSchema!.parse(result)).toMatchObject({ success, source: 'replyToken' });
   });
 
+  // alga-2026-0003353: a successful parse owns the comment body on this path too. When the
+  // parser's safety net rejects its own HTML trim it hands back only the text, and the raw
+  // body — still carrying every level of quoted history — must not be revived.
+  describe('comment body after a safety-net rejection', () => {
+    const AUTHORED = 'Thursday afternoon works for us. Please go ahead and book it.';
+    const QUOTED_MAIL = {
+      text: `${AUTHORED}\n\nOn Mon, Nov 17, 2026 at 8:42 AM Jane Client <jane.client@example.test>\nwrote:\n\n> [ALGA-REPLY-TOKEN OWNREPLY-TOKEN-11]\n> --- Please reply above this line ---\n> Comment from Dana Tech\n`,
+      html: `<div>${AUTHORED}</div><blockquote class="gmail_quote"><div>[ALGA-REPLY-TOKEN OWNREPLY-TOKEN-11]</div><div>--- Please reply above this line ---</div><div>Comment from Dana Tech</div></blockquote>`,
+    };
+    const LEAKS = ['[ALGA-REPLY-TOKEN', 'Please reply above this line', 'Comment from Dana Tech'];
+
+    const writtenComment = async (parsedEmail: any) => {
+      const { registerEmailWorkflowActionsV2 } = await import('../registerEmailWorkflowActions');
+      registerEmailWorkflowActionsV2();
+      const action = registeredActions.find((entry) => entry.id === 'create_comment_from_parsed_email');
+      expect(action).toBeDefined();
+
+      await action!.handler(
+        {
+          ticketId: 'ticket-own-reply',
+          emailData: {
+            id: 'email-own-reply',
+            subject: 'Re: Laptop deployment',
+            body: QUOTED_MAIL,
+            from: { email: 'jane.client@example.test' },
+            to: [{ email: 'support@example.com' }],
+          },
+          parsedEmail,
+        },
+        { tenantId: 'tenant-1' }
+      );
+
+      expect(createCommentFromEmailMock).toHaveBeenCalledTimes(1);
+      return createCommentFromEmailMock.mock.calls[0][0] as any;
+    };
+
+    it('writes the parsed text, not the untrimmed original body', async () => {
+      const comment = await writtenComment({
+        sanitizedText: AUTHORED,
+        sanitizedHtml: undefined,
+        confidence: 'high',
+        strategy: 'custom-boundary',
+        appliedHeuristics: ['token-strip', 'explicit-boundary', 'html-blockquote-trim', 'html-trim-rejected'],
+        warnings: [
+          'HTML blockquote trim removed significantly more content than text heuristics; using text result.',
+        ],
+        metadata: {},
+      });
+
+      expect(comment).toMatchObject({ content: AUTHORED, format: 'text' });
+      for (const leaked of LEAKS) {
+        expect(comment.content).not.toContain(leaked);
+      }
+    });
+
+    it('keeps an empty parse empty instead of reviving the quoted mail', async () => {
+      const comment = await writtenComment({
+        sanitizedText: '',
+        sanitizedHtml: undefined,
+        confidence: 'high',
+        strategy: 'custom-boundary',
+        appliedHeuristics: ['token-strip', 'explicit-boundary'],
+        warnings: [],
+        metadata: {},
+      });
+
+      expect(comment.content).toBe('');
+      for (const leaked of LEAKS) {
+        expect(comment.content).not.toContain(leaked);
+      }
+    });
+  });
+
 });
