@@ -389,6 +389,18 @@ async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?
 
 type TicketAuthorizationContext = Awaited<ReturnType<typeof createTicketAuthorizationContext>>;
 
+/** Tenant-wide key catalog used to validate dynamic ticket attribute redactions consistently across batches. */
+export async function getTenantTicketAttributeKeys(
+  trx: Knex.Transaction,
+  tenant: string
+): Promise<string[]> {
+  const rows = await tenantDb(trx, tenant)
+    .table('tickets')
+    .whereNotNull('attributes')
+    .select(trx.raw("DISTINCT jsonb_object_keys(CASE WHEN jsonb_typeof(attributes) = 'object' THEN attributes ELSE '{}'::jsonb END) AS key"));
+  return rows.map((row: { key: string }) => row.key);
+}
+
 /** Per-ticket kernel decisions for callers that forward ticket data outside the list action. */
 export const authorizeTicketIdsWithRedactions = withAuth(async (
   user,
@@ -2420,9 +2432,9 @@ export const loadTicketListItemsByIds = withAuth(async (
       const freshDecisions = await authorizeTicketRowsWithRedactions(trx, authorizationContext, authorizationRecords);
       const freshById = new Map(freshDecisions.map(({ ticket, redactedFields }) => [ticket.ticket_id!, redactedFields] as const));
       const attributesById = new Map(authorizationRecords.map((row: any) => [row.ticket_id, row.attributes] as const));
-      const knownAttributeKeys: string[] = [...new Set<string>(authorizationRecords
-        .filter((row: any) => freshById.has(row.ticket_id))
-        .flatMap((row: any) => Object.keys(row.attributes ?? {})))];
+      // Resolve dynamic field validity against the tenant catalog so a policy
+      // keeps its meaning when candidate/scoring batches contain no example key.
+      const knownAttributeKeys = await getTenantTicketAttributeKeys(trx, tenant);
       const redactionsById = new Map<string, string[]>();
       for (const id of requestedIds) {
         if (!freshById.has(id)) continue;
