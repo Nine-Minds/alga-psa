@@ -241,6 +241,14 @@ interface RenderedPdf {
   renderedLocale: string;
 }
 
+export function escapeHtmlText(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 /** Appended to the sent copy's file name to name the signed copy. */
 export const SIGNED_QUOTE_FILE_SUFFIX = '-signed';
 
@@ -1338,10 +1346,7 @@ export class PDFGenerationService {
       // templates can retain their trusted inline SVG barcodes and QR codes.
       htmlContent = (await sanitizeEmailHtml(htmlContent)) ?? '';
 
-      const escapedTitle = (document.document_name || 'Document')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+      const escapedTitle = escapeHtmlText(document.document_name || 'Document');
 
       return `<!DOCTYPE html>
 <html lang="en">
