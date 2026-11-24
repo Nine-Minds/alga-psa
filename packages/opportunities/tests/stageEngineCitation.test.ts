@@ -242,6 +242,53 @@ describe('declaration patch semantics', () => {
   });
 });
 
+describe('a declaration citing a source that has since been removed', () => {
+  const seed = () => declareStage(trx, 'tenant-1', 'opp-1', 'qualified', 'user-1', { note: 'Original', citations: [doc('doc-1'), interaction('int-mine')] });
+  const amend = (content: any) => amendDeclaration(trx, 'tenant-1', 'opp-1', 'qualified', 'user-2', content);
+  const unlink = (id: string) => {
+    store.tables.document_associations = store.tables.document_associations.filter((row) => row.document_id !== id);
+  };
+
+  it('a note-only edit saves, keeps the dead citation, and supersedes once', async () => {
+    await seed();
+    unlink('doc-1');
+    const evidenceBefore = store.tables.opportunity_evidence.length;
+    await amend({ note: 'Reworded', citations: [doc('doc-1'), interaction('int-mine')] });
+    expect(store.tables.opportunity_evidence).toHaveLength(evidenceBefore + 1);
+    expect(store.tables.opportunity_evidence.filter((row) => row.corrected_at)).toHaveLength(1);
+    const [live] = activeDeclarations('qualified');
+    expect(live.detail).toBe('Reworded');
+    expect(citationsOf(live.evidence_id)).toEqual(['document:doc-1', 'interaction:int-mine']);
+  });
+
+  it('still refuses a new foreign citation and writes nothing', async () => {
+    await seed();
+    unlink('doc-1');
+    const before = JSON.stringify(store.tables);
+    const error = await amend({ note: 'Reworded', citations: [doc('doc-1'), interaction('int-mine'), doc('doc-ticket')] }).catch((e) => e);
+    expect(error).toBeInstanceOf(OpportunityEvidenceRefError);
+    expect(JSON.stringify(store.tables)).toBe(before);
+  });
+
+  it('dropping the dead citation writes the declaration without it', async () => {
+    await seed();
+    unlink('doc-1');
+    await amend({ note: 'Reworded', citations: [interaction('int-mine')] });
+    const [live] = activeDeclarations('qualified');
+    expect(citationsOf(live.evidence_id)).toEqual(['interaction:int-mine']);
+  });
+
+  it('re-adding a dropped, still-detached source in a later edit is refused', async () => {
+    await seed();
+    unlink('doc-1');
+    await amend({ citations: [interaction('int-mine')] });
+    const before = JSON.stringify(store.tables);
+    const error = await amend({ citations: [doc('doc-1'), interaction('int-mine')] }).catch((e) => e);
+    expect(error).toBeInstanceOf(OpportunityEvidenceRefError);
+    expect(JSON.stringify(store.tables)).toBe(before);
+  });
+});
+
 describe('amendDeclaration', () => {
   it('does not move the deal, correct other checkpoints, or publish a stage change', async () => {
     await declareStage(trx, 'tenant-1', 'opp-1', 'qualified', 'user-1', { note: 'Q' });

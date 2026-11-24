@@ -240,8 +240,13 @@ async function writeDeclaration(
   if (supplied && supplied.length > MAX_DECLARATION_CITATIONS) {
     throw new OpportunityDeclarationError('too_many_citations', `A declaration can cite at most ${MAX_DECLARATION_CITATIONS} sources`);
   }
-  // One bad citation refuses the whole write, before anything is changed.
+  // Only a citation this edit introduces is guarded. One already on the live declaration
+  // is carried forward as-is, even if its source has since been detached ("Source removed"):
+  // it was validated when recorded. One bad new citation refuses the whole write, before
+  // anything is changed.
+  const alreadyCited = new Set(current.citations.map((citation) => `${citation.type}:${citation.id}`));
   for (const citation of supplied ?? []) {
+    if (alreadyCited.has(`${citation.type}:${citation.id}`)) continue;
     await assertRefBelongsToOpportunity(db, tenant, opportunityId, citation);
   }
   const next: ResolvedDeclaration = {
