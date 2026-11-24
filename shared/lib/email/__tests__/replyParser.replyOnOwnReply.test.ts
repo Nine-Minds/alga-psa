@@ -157,6 +157,32 @@ describe('Gmail reply to the contact’s own reply (alga-2026-0003353)', () => {
       expect(htmlToVisibleText(result.sanitizedHtml ?? '')).toContain(answer);
       expect(result.appliedHeuristics).not.toContain('html-marker-boundary');
     });
+
+    it.each(['', 'See my answer below.'])('preserves a multipart bottom answer with preface %j', (preface) => {
+      const answer = 'No, do not restart it. Payroll is still running.';
+      const text = `${preface}\n\n${QUOTED_TEXT}\n\n${answer}`;
+      const html = QUOTED_HTML.replace('ANSWER', preface) + `<p>${answer}</p>`;
+      const result = parseEmailReply({ text, html });
+
+      expect(result.sanitizedText).toContain(answer);
+      expect(htmlToVisibleText(result.sanitizedHtml ?? '')).toContain(answer);
+      expect(result.appliedHeuristics).not.toContain('html-marker-boundary');
+      expect(result.appliedHeuristics).not.toContain('explicit-boundary');
+      expect(result.appliedHeuristics).toContain('legacy-boundary-ambiguous');
+      expect(result.warnings).toContain('Legacy reply marker has no confirmed trailing quote; preserving the body.');
+      expect(result.confidence).not.toBe('high');
+    });
+
+    it('preserves a multipart bottom answer when the notification has no quote prefixes', () => {
+      const answer = 'No, do not restart it. Payroll is still running.';
+      const text = `See my answer below.\n\n${QUOTED_TEXT.replace(/^> ?/gm, '')}\n\n${answer}`;
+      const html = QUOTED_HTML.replace('ANSWER', 'See my answer below.') + `<p>${answer}</p>`;
+      const result = parseEmailReply({ text, html });
+
+      expect(result.sanitizedText).toContain(answer);
+      expect(htmlToVisibleText(result.sanitizedHtml ?? '')).toContain(answer);
+      expect(result.appliedHeuristics).not.toContain('html-marker-boundary');
+    });
   });
 
   it('keeps rejecting an HTML trim that genuinely destroys authored content', () => {

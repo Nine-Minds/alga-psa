@@ -87,6 +87,18 @@ describe('inbound reply body', () => {
     }
   });
 
+  it.each(['', 'See my answer below.'])('stores a multipart bottom answer with preface %j', async (preface) => {
+    const answer = 'No, do not restart it. Payroll is still running.';
+    const body = {
+      text: `${preface}\n\n${QUOTED_TEXT}\n\n${answer}`,
+      html: quotedHtml(preface) + `<p>${answer}</p>`,
+    };
+    const parsed = parseEmailReply(body);
+
+    expect(hasSubstantiveReplyContent(parsed, body)).toBe(true);
+    expect(await storedBody(body)).toContain(answer);
+  });
+
   it('preserves ambiguous HTML-only history when a preface precedes the attribution', async () => {
     // Without a text baseline, the parser cannot know whether the notification ends
     // with an authored answer. Keep the whole HTML even when the preface is substantive.

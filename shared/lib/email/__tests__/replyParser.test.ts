@@ -234,7 +234,8 @@ On Thu, Nov 20, 2025 at 7:58 AM Software <support@nineminds.com> wrote:
 
     it('closes the paragraph above a banner when the text part confirms the boundary', () => {
       const result = parseEmailReply({
-        text: 'Yes, Thursday works, please book it.\n--- Please reply above this line ---\nNew comment added',
+        // Quote prefixes independently confirm that nothing authored follows the banner.
+        text: 'Yes, Thursday works, please book it.\n> --- Please reply above this line ---\n> New comment added',
         html: '<p>Yes, Thursday works, please book it.</p>--- Please reply above this line ---'
           + '<div>New comment added</div>',
       });

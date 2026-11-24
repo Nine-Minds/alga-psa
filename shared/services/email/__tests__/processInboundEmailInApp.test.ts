@@ -1586,7 +1586,10 @@ describe('processInboundEmailInApp', () => {
       'runbooks/laptop-imaging',
     ];
 
-    const storedCommentContent = async (emailId: string): Promise<string> => {
+    const storedCommentContent = async (emailId: string, body = {
+      text: readEmailFixture('gmail-reply-own-reply.txt'),
+      html: readEmailFixture('gmail-reply-own-reply.html'),
+    }): Promise<string> => {
       findTicketByReplyTokenMock.mockResolvedValue({ ticketId: 'ticket-own-reply' });
       let content = '';
       createCommentFromEmailMock.mockImplementation(async (data: any) => {
@@ -1601,10 +1604,7 @@ describe('processInboundEmailInApp', () => {
         emailData: buildEmailData({
           id: emailId,
           from: { email: 'jane.client@example.test', name: 'Jane Client' },
-          body: {
-            text: readEmailFixture('gmail-reply-own-reply.txt'),
-            html: readEmailFixture('gmail-reply-own-reply.html'),
-          },
+          body,
         }),
       });
 
@@ -1649,6 +1649,21 @@ describe('processInboundEmailInApp', () => {
       expect(texts[0]).toBe(AUTHORED);
       expect(texts).toHaveLength(2);
       expect(texts[1]).toMatch(/^On Mon, .*wrote:$/);
+    });
+
+    it('stores a multipart bottom answer below a legacy notification', async () => {
+      parseEmailReplyBodyMock.mockImplementation(async (body: any) => parseEmailReply(body));
+      const answer = 'No, do not restart it. Payroll is still running.';
+      const content = await storedCommentContent('email-multipart-bottom-reply', {
+        text: 'See my answer below.\nOn Mon, Nov 17, 2026 Dana Tech wrote:\n'
+          + '[ALGA-REPLY-TOKEN OWNREPLY-TOKEN-11]\n--- Please reply above this line ---\n'
+          + `Old notification\n${answer}`,
+        html: '<p>See my answer below.</p><div>On Mon, Nov 17, 2026 Dana Tech wrote:</div>'
+          + '<div style="display:none">[ALGA-REPLY-TOKEN OWNREPLY-TOKEN-11]</div>'
+          + `<p>--- Please reply above this line ---</p><p>Old notification</p><p>${answer}</p>`,
+      });
+
+      expect(content).toContain(answer);
     });
   });
 });

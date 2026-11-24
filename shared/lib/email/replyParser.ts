@@ -108,6 +108,10 @@ interface TrimResult {
   heuristic?: string;
 }
 
+interface HtmlTrimResult extends TrimResult {
+  preserveUntrimmedText?: boolean;
+}
+
 type QuotedHeaderField = 'from' | 'sent' | 'to' | 'cc' | 'subject';
 
 /**
@@ -591,7 +595,7 @@ function cutOffsetForHtmlMarker(html: string, index: number): number {
   return html.startsWith('</', tagStart) ? index : tagStart;
 }
 
-function trimHtmlAtBoundary(html: string, config: ReplyParserConfig, hasTextBaseline: boolean): TrimResult {
+function trimHtmlAtBoundary(html: string, config: ReplyParserConfig, originalText: string): HtmlTrimResult {
   const attributeIndex = html.toLowerCase().indexOf(config.htmlBoundaryAttribute.toLowerCase());
 
   if (attributeIndex >= 0) {
@@ -620,11 +624,14 @@ function trimHtmlAtBoundary(html: string, config: ReplyParserConfig, hasTextBase
   // the text, was what the comment stored (alga-2026-0003353).
   const markerIndex = earliestMarkerIndex(html, config);
   if (markerIndex >= 0) {
-    // A legacy marker does not establish where the customer's answer ends. Without
-    // an independent text part, preserve ambiguous HTML: even a substantive preface
-    // with no provider attribution can introduce an answer below the notification.
-    if (!hasTextBaseline) {
-      return { text: html.trim() };
+    // A text part is evidence only when its original suffix is entirely quoted history.
+    // Comparing already-trimmed renditions cannot detect an answer below the same marker
+    // in both parts. Preserve both renditions when that suffix is ambiguous, including
+    // HTML-only mail and notifications rendered without quote prefixes.
+    const textLines = normalizeText(originalText).split('\n');
+    const markerLine = textLines.findIndex((line) => earliestMarkerIndex(line, config) >= 0);
+    if (markerLine < 0 || !isTrailingQuotedHistory(textLines, markerLine, config)) {
+      return { text: html.trim(), preserveUntrimmedText: true };
     }
     return {
       text: html.slice(0, cutOffsetForHtmlMarker(html, markerIndex)).trim(),
@@ -638,7 +645,7 @@ function trimHtmlAtBoundary(html: string, config: ReplyParserConfig, hasTextBase
 
 /**
  * Index of the first Alga reply marker (hidden token or reply banner) in an HTML body,
- * or -1. Only markers our own outbound mail writes, so authored content is never cut.
+ * or -1. A marker identifies a notification, but does not establish where its quote ends.
  */
 function earliestMarkerIndex(html: string, config: ReplyParserConfig): number {
   const haystack = html.toLowerCase();
@@ -889,21 +896,26 @@ export function parseEmailReply(input: ReplyParserInput, config: Partial<ReplyPa
   const textTokens = extractTokensFromText(originalText, mergedConfig);
   const tokens = mergeTokenMetadata(htmlTokens, textTokens);
 
-  // Step 1: explicit boundary trimming (text + html)
-  let { text: trimmedText, matched: textBoundary, heuristic: textBoundaryHeuristic } = trimAtExplicitDelimiter(
-    originalText,
-    mergedConfig,
-  );
+  // Step 1: explicit boundary trimming (text + html). An ambiguous legacy HTML boundary
+  // also invalidates the text cut: an authored bottom reply may follow it in both parts.
+  const trimmedHtmlResult = originalHtml
+    ? trimHtmlAtBoundary(originalHtml, mergedConfig, originalText)
+    : undefined;
+  const preserveUntrimmedText = trimmedHtmlResult?.preserveUntrimmedText;
+  const textTrim: TrimResult = preserveUntrimmedText
+    ? { text: originalText }
+    : trimAtExplicitDelimiter(originalText, mergedConfig);
+  let { text: trimmedText, matched: textBoundary, heuristic: textBoundaryHeuristic } = textTrim;
+
+  if (preserveUntrimmedText) {
+    appliedHeuristics.push('legacy-boundary-ambiguous');
+    warnings.push('Legacy reply marker has no confirmed trailing quote; preserving the body.');
+  }
 
   const tokenStrip = stripTokenArtifacts(trimmedText, mergedConfig);
   trimmedText = tokenStrip.text;
   if (tokenStrip.heuristic) {
     appliedHeuristics.push(tokenStrip.heuristic);
-  }
-
-  let trimmedHtmlResult: TrimResult | undefined;
-  if (originalHtml) {
-    trimmedHtmlResult = trimHtmlAtBoundary(originalHtml, mergedConfig, Boolean(originalText.trim()));
   }
 
   if (textBoundaryHeuristic) {
@@ -921,7 +933,9 @@ export function parseEmailReply(input: ReplyParserInput, config: Partial<ReplyPa
   // attributions and quoted lines. Strip those too, but when the boundary already matched keep
   // the result only if authored text survives: an empty reply above the boundary must stay
   // empty, and ambiguous mail keeps preserving too much.
-  const providerTrim = stripProviderHeaders(trimmedText, mergedConfig);
+  const providerTrim: TrimResult = preserveUntrimmedText
+    ? { text: trimmedText }
+    : stripProviderHeaders(trimmedText, mergedConfig);
   if (providerTrim.heuristic && (!textBoundary || providerTrim.text.trim())) {
     trimmedText = providerTrim.text;
     appliedHeuristics.push(providerTrim.heuristic);
@@ -931,7 +945,9 @@ export function parseEmailReply(input: ReplyParserInput, config: Partial<ReplyPa
     }
   }
 
-  const signatureTrim = stripSignature(trimmedText, mergedConfig);
+  const signatureTrim: TrimResult = preserveUntrimmedText
+    ? { text: trimmedText }
+    : stripSignature(trimmedText, mergedConfig);
   if (signatureTrim.heuristic) {
     trimmedText = signatureTrim.text;
     appliedHeuristics.push(signatureTrim.heuristic);

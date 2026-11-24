@@ -616,17 +616,26 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
       expectNoLeaks(comment.content);
     });
 
-    it.each(['', '<div>On Mon, Nov 17, 2026 Dana Tech wrote:</div>'])(
-      'keeps an HTML-only bottom answer after a preface and legacy notification with attribution %j', async (attribution) => {
+    it.each([
+      ['', false],
+      ['<div>On Mon, Nov 17, 2026 Dana Tech wrote:</div>', false],
+      ['', true],
+      ['<div>On Mon, Nov 17, 2026 Dana Tech wrote:</div>', true],
+    ])(
+      'keeps a bottom answer with attribution %j and text part %j', async (attribution, multipart) => {
         const { parseEmailReply } = await import('../../../../lib/email/replyParser');
         const answer = 'No, do not restart it. Payroll is still running.';
         const html = '<p>See my answer below.</p>' + attribution
           + '<div style="display:none">[ALGA-REPLY-TOKEN bottom-token]</div>'
           + '<p>--- Please reply above this line ---</p><p>Old notification</p>'
           + `<p>${answer}</p>`;
+        const text = multipart ? 'See my answer below.\n'
+          + (attribution ? 'On Mon, Nov 17, 2026 Dana Tech wrote:\n' : '')
+          + '[ALGA-REPLY-TOKEN bottom-token]\n--- Please reply above this line ---\nOld notification\n'
+          + answer : '';
         const comment = await writtenComment(
-          parseEmailReply({ text: '', html }),
-          { ...emailData, body: { html } },
+          parseEmailReply({ text, html }),
+          { ...emailData, body: { text, html } },
         );
 
         expect(visibleText(comment.content)).toContain(answer);
