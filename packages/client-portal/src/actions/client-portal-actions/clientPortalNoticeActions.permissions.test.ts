@@ -92,6 +92,48 @@ describe('client portal notice actions: permission guard', () => {
     noWrites();
   });
 
+  describe('malformed ids', () => {
+    const BAD = ['not-a-uuid', '', "x' or '1'='1"];
+    const GOOD = '00000000-0000-4000-8000-000000000001';
+
+    it.each(BAD)('get/update/delete with noticeId %j return not_found and touch no DB lib', async (bad) => {
+      grant('read', 'update');
+      expect(await (getClientPortalNotice as any)(bad)).toEqual({ success: false, code: 'not_found' });
+      expect(await (updateClientPortalNotice as any)(bad, input)).toEqual({ success: false, code: 'not_found' });
+      expect(await (deleteClientPortalNotice as any)(bad)).toEqual({ success: false, code: 'not_found' });
+      noWrites();
+    });
+
+    it('create with a non-UUID target id returns invalid_targets without findMissingTargetIds', async () => {
+      grant('update');
+      const res = await (createClientPortalNotice as any)({
+        ...input, audience_type: 'clients', audience_client_ids: [GOOD, 'nope'],
+      });
+      expect(res).toEqual({ success: false, code: 'invalid_targets', missingTargetIds: ['nope'] });
+      expect(dbLib.findMissingTargetIds).not.toHaveBeenCalled();
+      expect(dbLib.insertNotice).not.toHaveBeenCalled();
+    });
+
+    it('update with a non-UUID tag id returns invalid_targets without findMissingTargetIds', async () => {
+      grant('update');
+      const res = await (updateClientPortalNotice as any)(GOOD, {
+        ...input, audience_type: 'tags', audience_tag_ids: ['bad-tag'],
+      });
+      expect(res).toMatchObject({ success: false, code: 'invalid_targets', missingTargetIds: ['bad-tag'] });
+      expect(dbLib.findMissingTargetIds).not.toHaveBeenCalled();
+      expect(dbLib.updateNotice).not.toHaveBeenCalled();
+    });
+
+    it('preview refuses an unknown audienceType and non-UUID targetIds', async () => {
+      grant('read');
+      expect(await (previewClientPortalNoticeAudience as any)({ audienceType: 'bogus', targetIds: [] }))
+        .toEqual({ success: false, code: 'invalid_audience_type' });
+      expect(await (previewClientPortalNoticeAudience as any)({ audienceType: 'tags', targetIds: ['x'] }))
+        .toEqual({ success: false, code: 'invalid_targets', missingTargetIds: ['x'] });
+      expect(dbLib.previewAudienceClientNames).not.toHaveBeenCalled();
+    });
+  });
+
   it('proceeds for an MSP user with permission', async () => {
     grant('read');
     dbLib.listNoticesWithAudience.mockResolvedValue([]);

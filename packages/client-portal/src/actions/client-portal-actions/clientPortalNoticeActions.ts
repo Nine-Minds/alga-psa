@@ -3,8 +3,10 @@
 import { hasPermission, withAuth } from '@alga-psa/auth';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
+import { isUuidShaped } from '@alga-psa/validation';
 import type { Knex } from 'knex';
 import {
+  NOTICE_AUDIENCE_TYPES,
   normalizeNoticeInput,
   validateNoticeInput,
   type ClientPortalNoticeInput,
@@ -28,7 +30,8 @@ import {
 export type NoticeActionFailure =
   | { success: false; code: 'validation'; errors: NoticeValidationError[] }
   | { success: false; code: 'invalid_targets'; missingTargetIds: string[] }
-  | { success: false; code: 'not_found' };
+  | { success: false; code: 'not_found' }
+  | { success: false; code: 'invalid_audience_type' };
 
 const KEYS = {
   read: 'client-portal:errors.access.settingsRead',
@@ -63,8 +66,12 @@ async function validateAndCheckTargets(
   if (!result.valid) return { success: false, code: 'validation', errors: result.errors };
   const input = normalizeNoticeInput(rawInput as ClientPortalNoticeInput);
   if (input.audience_type !== 'all') {
+    const ids = targetIdsForInput(input);
+    // Malformed ids never reach Postgres (would throw invalid input syntax for uuid).
+    const malformed = ids.filter((id) => !isUuidShaped(id));
+    if (malformed.length > 0) return { success: false, code: 'invalid_targets', missingTargetIds: malformed };
     const missing = await findMissingTargetIds(
-      knex, tenant, input.audience_type === 'clients' ? 'client' : 'tag', targetIdsForInput(input),
+      knex, tenant, input.audience_type === 'clients' ? 'client' : 'tag', ids,
     );
     if (missing.length > 0) return { success: false, code: 'invalid_targets', missingTargetIds: missing };
   }
@@ -82,6 +89,7 @@ export const getClientPortalNotice = withAuth(async (user, { tenant }, noticeId:
   const { knex } = await createTenantKnex();
   const denied = await guard(user, knex, 'read');
   if (denied) return denied;
+  if (!isUuidShaped(noticeId)) return { success: false as const, code: 'not_found' as const };
   const notice = await getNoticeDetail(knex, tenant, noticeId, new Date());
   if (!notice) return { success: false as const, code: 'not_found' as const };
   return { success: true as const, notice };
@@ -109,6 +117,7 @@ export const updateClientPortalNotice = withAuth(async (user, { tenant }, notice
   const { knex } = await createTenantKnex();
   const denied = await guard(user, knex, 'update');
   if (denied) return denied;
+  if (!isUuidShaped(noticeId)) return { success: false as const, code: 'not_found' as const };
 
   return withTransaction(knex, async (trx) => {
     const checked = await validateAndCheckTargets(trx, tenant, rawInput);
@@ -123,6 +132,7 @@ export const deleteClientPortalNotice = withAuth(async (user, { tenant }, notice
   const { knex } = await createTenantKnex();
   const denied = await guard(user, knex, 'update');
   if (denied) return denied;
+  if (!isUuidShaped(noticeId)) return { success: false as const, code: 'not_found' as const };
 
   return withTransaction(knex, async (trx) => {
     const found = await deleteNotice(trx, tenant, noticeId);
@@ -134,5 +144,14 @@ export const previewClientPortalNoticeAudience = withAuth(async (user, { tenant 
   const { knex } = await createTenantKnex();
   const denied = await guard(user, knex, 'read');
   if (denied) return denied;
-  return previewAudienceClientNames(knex, tenant, audience);
-}) as (audience: NoticeAudienceSelection) => Promise<string[]>;
+  if (!audience || !(NOTICE_AUDIENCE_TYPES as readonly string[]).includes(audience.audienceType)) {
+    return { success: false as const, code: 'invalid_audience_type' as const };
+  }
+  // Non-UUID target ids are REFUSED (not silently dropped), matching create/update.
+  const targetIds = Array.isArray(audience.targetIds) ? audience.targetIds : [];
+  const malformed = targetIds.filter((id) => !isUuidShaped(id));
+  if (malformed.length > 0) return { success: false as const, code: 'invalid_targets' as const, missingTargetIds: malformed };
+  return previewAudienceClientNames(knex, tenant, { audienceType: audience.audienceType, targetIds });
+}) as (audience: NoticeAudienceSelection) => Promise<
+  string[] | Extract<NoticeActionFailure, { code: 'invalid_audience_type' | 'invalid_targets' }>
+>;
