@@ -234,8 +234,12 @@
       },
       "idsLabel": "Zaufane authserv-id",
       "idsPlaceholder": "mx.example.net",
-      "idsHelp": "Rozdzielone przecinkami. Użyj nazwy, którą bramka umieszcza na początku nagłówka Authentication-Results (na przykład mx.avanan.net). Niezgodna nazwa nigdy nie jest zaufana: pieczęć ARC również musi zostać zweryfikowana.",
+      "idsHelp": "Rozdzielone przecinkami. Użyj nazwy, którą bramka umieszcza na początku nagłówka Authentication-Results (na przykład mx.avanan.net). Zaufane są tylko bramki wymienione tutaj.",
       "contactOnly": "Tylko przypisanie kontaktu. Wiadomości z adresów należących do użytkowników wewnętrznych są nadal weryfikowane wyłącznie przez serwer odbierający.",
+      "verifies": {
+        "arcSealed": "Alga samodzielnie sprawdza pieczęcie ARC wiadomości. Wymieniona bramka jest zaufana tylko wtedy, gdy pieczęć zostanie zweryfikowana, domena podpisu pieczęci jest identyfikatorem authserv-id bramki lub jego domeną nadrzędną, a bramka zgłasza zgodny wynik SPF lub DKIM pass.",
+        "mtaArcPass": "Alga nie sprawdza samodzielnie pieczęci ARC. Polega na tym, że odbierający serwer poczty zgłasza arc=pass. Wymieniona bramka jest zaufana tylko wtedy, gdy domena podpisu pieczęci jest jej authserv-id lub jego domeną nadrzędną, a bramka zgłasza zgodny wynik SPF lub DKIM pass."
+      },
       "save": "Zapisz",
       "saved": "Zapisano ustawienia zaufanej bramki",
       "saveFailed": "Nie udało się zapisać ustawień zaufanej bramki"

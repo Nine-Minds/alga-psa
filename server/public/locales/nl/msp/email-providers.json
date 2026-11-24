@@ -234,8 +234,12 @@
       },
       "idsLabel": "Vertrouwde authserv-ids",
       "idsPlaceholder": "mx.example.net",
-      "idsHelp": "Kommagescheiden. Gebruik de naam die de gateway vooraan in zijn Authentication-Results-header zet (bijvoorbeeld mx.avanan.net). Een afwijkende naam wordt nooit vertrouwd: het ARC-zegel moet ook geldig zijn.",
+      "idsHelp": "Kommagescheiden. Gebruik de naam die de gateway vooraan in zijn Authentication-Results-header zet (bijvoorbeeld mx.avanan.net). Alleen gateways die u hier opgeeft, worden vertrouwd.",
       "contactOnly": "Alleen voor contactkoppeling. Berichten van adressen van interne gebruikers worden nog steeds uitsluitend door de ontvangende server geverifieerd.",
+      "verifies": {
+        "arcSealed": "Alga controleert de ARC-zegels van het bericht zelf. Een opgegeven gateway wordt alleen vertrouwd als het zegel geldig is, het ondertekeningsdomein van het zegel de authserv-id van de gateway of een bovenliggend domein daarvan is, en de gateway een uitgelijnde SPF- of DKIM-pass meldt.",
+        "mtaArcPass": "Alga controleert het ARC-zegel niet zelf. Het vertrouwt erop dat uw ontvangende mailserver arc=pass meldt. Een opgegeven gateway wordt alleen vertrouwd als het ondertekeningsdomein van het zegel zijn authserv-id of een bovenliggend domein daarvan is, en hij een uitgelijnde SPF- of DKIM-pass meldt."
+      },
       "save": "Opslaan",
       "saved": "Instellingen voor vertrouwde gateway opgeslagen",
       "saveFailed": "Instellingen voor vertrouwde gateway konden niet worden opgeslagen"

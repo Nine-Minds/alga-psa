@@ -84,7 +84,7 @@ export function TrustedGatewaySettings({ provider, onSave: save }: TrustedGatewa
           />
           <p className="mt-1 text-xs text-muted-foreground">
             {t('providerCard.trustedGateway.idsHelp', {
-              defaultValue: 'Comma-separated. Use the name the gateway puts at the start of its Authentication-Results header (for example mx.avanan.net). A mismatched name is never trusted: the ARC seal must also verify.',
+              defaultValue: 'Comma-separated. Use the name the gateway puts at the start of its Authentication-Results header (for example mx.avanan.net). Only gateways you list here are trusted.',
             })}
           </p>
         </div>
@@ -94,6 +94,10 @@ export function TrustedGatewaySettings({ provider, onSave: save }: TrustedGatewa
               {t('providerCard.trustedGateway.contactOnly', {
                 defaultValue: 'Contact attribution only. Messages from addresses that belong to internal users are still verified by the receiving server alone.',
               })}
+              {' '}
+              {mode === 'arc-sealed'
+                ? t('providerCard.trustedGateway.verifies.arcSealed', { defaultValue: "Alga checks the message's ARC seals itself. A listed gateway is trusted only when the seal verifies, the seal's signing domain is the gateway's authserv-id or a parent domain of it, and the gateway reports an aligned SPF or DKIM pass." })
+                : t('providerCard.trustedGateway.verifies.mtaArcPass', { defaultValue: "Alga does not check the ARC seal itself. It relies on your receiving mail server reporting arc=pass. A listed gateway is trusted only when the seal's signing domain is its authserv-id or a parent domain of it, and it reports an aligned SPF or DKIM pass." })}
             </AlertDescription>
           </Alert>
         )}

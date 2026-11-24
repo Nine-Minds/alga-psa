@@ -234,8 +234,12 @@
       },
       "idsLabel": "authserv-ids de confianza",
       "idsPlaceholder": "mx.example.net",
-      "idsHelp": "Separados por comas. Use el nombre que la puerta de enlace pone al inicio de su encabezado Authentication-Results (por ejemplo, mx.avanan.net). Nunca se confía en un nombre que no coincida: el sello ARC también debe verificarse.",
+      "idsHelp": "Separados por comas. Use el nombre que la puerta de enlace pone al inicio de su encabezado Authentication-Results (por ejemplo, mx.avanan.net). Solo se confía en las puertas de enlace que figuran aquí.",
       "contactOnly": "Solo para la asociación de contactos. Los mensajes de direcciones que pertenecen a usuarios internos siguen verificándose únicamente por el servidor receptor.",
+      "verifies": {
+        "arcSealed": "Alga comprueba por sí mismo los sellos ARC del mensaje. Solo se confía en una puerta de enlace de la lista cuando el sello se verifica, el dominio de firma del sello es el authserv-id de la puerta de enlace o un dominio superior de este, y la puerta de enlace informa de un resultado SPF o DKIM alineado correcto.",
+        "mtaArcPass": "Alga no comprueba por sí mismo el sello ARC. Se basa en que su servidor de correo receptor informe arc=pass. Solo se confía en una puerta de enlace de la lista cuando el dominio de firma del sello es su authserv-id o un dominio superior de este, y esta informa de un resultado SPF o DKIM alineado correcto."
+      },
       "save": "Guardar",
       "saved": "Configuración de la puerta de enlace de confianza guardada",
       "saveFailed": "No se pudo guardar la configuración de la puerta de enlace de confianza"

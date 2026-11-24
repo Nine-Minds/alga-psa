@@ -234,8 +234,12 @@
       },
       "idsLabel": "Betrodda authserv-id:n",
       "idsPlaceholder": "mx.example.net",
-      "idsHelp": "Kommaavgränsade. Använd namnet som gatewayen sätter först i sin Authentication-Results-rubrik (till exempel mx.avanan.net). Ett namn som inte stämmer betros aldrig: ARC-förseglingen måste också verifieras.",
+      "idsHelp": "Kommaavgränsade. Använd namnet som gatewayen sätter först i sin Authentication-Results-rubrik (till exempel mx.avanan.net). Endast gatewayer som anges här betros.",
       "contactOnly": "Endast kontaktkoppling. Meddelanden från adresser som tillhör interna användare verifieras fortfarande enbart av den mottagande servern.",
+      "verifies": {
+        "arcSealed": "Alga kontrollerar meddelandets ARC-förseglingar själv. En angiven gateway betros endast när förseglingen verifieras, förseglingens signeringsdomän är gatewayens authserv-id eller en överordnad domän till det, och gatewayen rapporterar ett justerat SPF- eller DKIM-godkännande.",
+        "mtaArcPass": "Alga kontrollerar inte ARC-förseglingen själv utan förlitar sig på att din mottagande e-postserver rapporterar arc=pass. En angiven gateway betros endast när förseglingens signeringsdomän är dess authserv-id eller en överordnad domän till det, och den rapporterar ett justerat SPF- eller DKIM-godkännande."
+      },
       "save": "Spara",
       "saved": "Inställningarna för betrodd gateway har sparats",
       "saveFailed": "Det gick inte att spara inställningarna för betrodd gateway"

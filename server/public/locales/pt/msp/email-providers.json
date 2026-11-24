@@ -234,8 +234,12 @@
       },
       "idsLabel": "authserv-ids confiáveis",
       "idsPlaceholder": "mx.example.net",
-      "idsHelp": "Separados por vírgulas. Use o nome que o gateway coloca no início do cabeçalho Authentication-Results (por exemplo, mx.avanan.net). Um nome que não corresponda nunca é confiável: o selo ARC também tem de ser verificado.",
+      "idsHelp": "Separados por vírgulas. Use o nome que o gateway coloca no início do cabeçalho Authentication-Results (por exemplo, mx.avanan.net). Só se confia nos gateways listados aqui.",
       "contactOnly": "Apenas associação de contactos. As mensagens de endereços de utilizadores internos continuam a ser verificadas apenas pelo servidor recetor.",
+      "verifies": {
+        "arcSealed": "O Alga verifica por conta própria os selos ARC da mensagem. Um gateway listado só é confiável quando o selo é verificado, o domínio de assinatura do selo é o authserv-id do gateway ou um domínio pai dele, e o gateway informa um SPF ou DKIM alinhado aprovado.",
+        "mtaArcPass": "O Alga não verifica o selo ARC por conta própria. Ele depende de o servidor de e-mail receptor informar arc=pass. Um gateway listado só é confiável quando o domínio de assinatura do selo é o seu authserv-id ou um domínio pai dele, e ele informa um SPF ou DKIM alinhado aprovado."
+      },
       "save": "Guardar",
       "saved": "Definições do gateway confiável guardadas",
       "saveFailed": "Não foi possível guardar as definições do gateway confiável"

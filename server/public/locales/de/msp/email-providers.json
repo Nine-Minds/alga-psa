@@ -234,8 +234,12 @@
       },
       "idsLabel": "Vertrauenswürdige authserv-ids",
       "idsPlaceholder": "mx.example.net",
-      "idsHelp": "Kommagetrennt. Verwenden Sie den Namen, den das Gateway an den Anfang seines Authentication-Results-Headers setzt (zum Beispiel mx.avanan.net). Einem abweichenden Namen wird nie vertraut: Auch das ARC-Siegel muss gültig sein.",
+      "idsHelp": "Kommagetrennt. Verwenden Sie den Namen, den das Gateway an den Anfang seines Authentication-Results-Headers setzt (zum Beispiel mx.avanan.net). Nur hier aufgeführten Gateways wird vertraut.",
       "contactOnly": "Nur für die Kontaktzuordnung. Nachrichten von Adressen interner Benutzer werden weiterhin allein vom empfangenden Server geprüft.",
+      "verifies": {
+        "arcSealed": "Alga prüft die ARC-Siegel der Nachricht selbst. Einem aufgeführten Gateway wird nur vertraut, wenn das Siegel gültig ist, die Signaturdomain des Siegels die authserv-id des Gateways oder eine übergeordnete Domain davon ist und das Gateway ein ausgerichtetes SPF- oder DKIM-Pass meldet.",
+        "mtaArcPass": "Alga prüft das ARC-Siegel nicht selbst, sondern verlässt sich darauf, dass Ihr empfangender Mailserver arc=pass meldet. Einem aufgeführten Gateway wird nur vertraut, wenn die Signaturdomain des Siegels seine authserv-id oder eine übergeordnete Domain davon ist und es ein ausgerichtetes SPF- oder DKIM-Pass meldet."
+      },
       "save": "Speichern",
       "saved": "Einstellungen für das vertrauenswürdige Gateway gespeichert",
       "saveFailed": "Einstellungen für das vertrauenswürdige Gateway konnten nicht gespeichert werden"
