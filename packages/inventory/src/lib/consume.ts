@@ -340,6 +340,29 @@ export async function recordStockConsumption(
   return { consumed: true };
 }
 
+export interface UnitDelivery {
+  movement_id: string;
+  source_doc_type: StockMovementSourceDocType | null;
+  source_doc_id: string | null;
+  created_at: Date | string;
+}
+
+/**
+ * A serialized unit's most recent delivery: its latest `consume` movement from ANY source
+ * (ticket/project material, sales order fulfillment, RMA replacement, ...). Only this delivery
+ * describes where the unit currently is; older material lines are history.
+ */
+export async function findLatestUnitDelivery(
+  trx: Knex.Transaction,
+  tenant: string,
+  unitId: string,
+): Promise<UnitDelivery | undefined> {
+  return trx('stock_movements')
+    .where({ tenant, unit_id: unitId, movement_type: 'consume' })
+    .orderBy('created_at', 'desc')
+    .first('movement_id', 'source_doc_type', 'source_doc_id', 'created_at');
+}
+
 /** Restore stock for an unbilled consumption being reversed (e.g. deleting an unbilled material). */
 export async function reverseStockConsumption(
   trx: Knex.Transaction,
@@ -357,6 +380,17 @@ export async function reverseStockConsumption(
       .orderBy('created_at', 'desc')
       .first();
     if (!mv || !mv.unit_id) return { restored: false };
+    // The unit may have come back and gone out again since (restock, RMA, sales order). Only
+    // restore it while this source doc is still its latest delivery and it is still out —
+    // otherwise reversing an old line would pull the unit back from its current holder.
+    const latest = await findLatestUnitDelivery(trx, tenant, mv.unit_id);
+    const unit = await trx('stock_units')
+      .where({ tenant, unit_id: mv.unit_id })
+      .forUpdate()
+      .first('status');
+    if (latest?.movement_id !== mv.movement_id || !unit || !['delivered', 'returned'].includes(unit.status)) {
+      return { restored: false };
+    }
     const loc = mv.from_location_id || (await resolveLocation(trx, tenant, settings));
     if (!loc) return { restored: false };
     await recordStockMovement(trx, tenant, {

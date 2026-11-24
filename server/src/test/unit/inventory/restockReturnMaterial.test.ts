@@ -47,7 +47,14 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-function setupReturn(parentType: 'ticket' | 'project', isBilled = false) {
+function setupReturn(
+  parentType: 'ticket' | 'project',
+  isBilled = false,
+  latestDelivery: { source_doc_type: string; source_doc_id: string } = {
+    source_doc_type: `${parentType}_material`,
+    source_doc_id: 'material-1',
+  },
+) {
   const statements: Array<{ sql: string; bindings: readonly unknown[] }> = [];
   let stagingReferenceExists = parentType === 'project';
   const connection = new Proxy(compiler, {
@@ -64,7 +71,7 @@ function setupReturn(parentType: 'ticket' | 'project', isBilled = false) {
               client_id: 'client-1', serial_number: 'serial-1',
             };
           } else if (sql.includes('from "stock_movements"')) {
-            result = { source_doc_type: `${parentType}_material`, source_doc_id: 'material-1' };
+            result = { movement_id: 'delivery-1', created_at: new Date(), ...latestDelivery };
           } else if (sql.startsWith(`select`) && sql.includes(`from "${parentType}_materials"`)) {
             result = { is_billed: isBilled, [`${parentType}_id`]: 'parent-1' };
           } else if (sql.startsWith('update "project_staging_lines"')) {
@@ -126,13 +133,33 @@ describe('serialized material restock', () => {
       .toEqual(expect.arrayContaining(['tenant-1', 'material-1']));
   });
 
-  it('does not release staging or remove a billed material', async () => {
+  it('restocks a unit on a billed material without touching the invoiced line', async () => {
     const { statements } = setupReturn('project', true);
 
-    await expect(restockReturn({ unit_id: 'unit-1' })).resolves.toMatchObject({
-      messageKey: 'features/inventory:errors.restock.billedMaterialLine',
+    await expect(restockReturn({ unit_id: 'unit-1', restocking_fee_cents: 2500 })).resolves.toMatchObject({
+      movement: { movement_id: 'return-1' },
+      restocking_fee_cents: 2500,
+      client_id: 'client-1',
     });
+    expect(mocks.recordStockMovement).toHaveBeenCalledWith(expect.anything(), 'tenant-1', expect.objectContaining({
+      movement_type: 'return_restock',
+      unit_id: 'unit-1',
+    }));
     expect(statements.some(({ sql }) => sql.startsWith('update ') || sql.startsWith('delete '))).toBe(false);
+    expect(mocks.detachDeliveredAssetAssociation).not.toHaveBeenCalled();
+  });
+
+  it('leaves older material lines alone when the latest delivery was a sales order', async () => {
+    const { statements } = setupReturn('ticket', false, { source_doc_type: 'sales_order', source_doc_id: 'so-line-1' });
+
+    await expect(restockReturn({ unit_id: 'unit-1' })).resolves.toMatchObject({
+      movement: { movement_id: 'return-1' },
+    });
+    const deliveryLookup = statements.find(({ sql }) => sql.includes('from "stock_movements"'));
+    expect(deliveryLookup?.sql).toContain('where "tenant" = ? and "unit_id" = ? and "movement_type" = ? order by "created_at" desc');
+    expect(deliveryLookup?.bindings).toEqual(expect.arrayContaining(['tenant-1', 'unit-1', 'consume']));
+    expect(statements.some(({ sql }) => sql.includes('ticket_materials'))).toBe(false);
+    expect(mocks.authorizeTicketRecordAccess).not.toHaveBeenCalled();
     expect(mocks.detachDeliveredAssetAssociation).not.toHaveBeenCalled();
   });
 });

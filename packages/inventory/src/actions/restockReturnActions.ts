@@ -13,6 +13,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { recordStockMovement, ensureStockLevel, assertLocationWritable } from '../lib';
 import { detachDeliveredAssetAssociation } from '../lib/assetLink';
+import { findLatestUnitDelivery } from '../lib/consume';
 import { restockReturnActionErrorFrom } from './loanerRestockErrors';
 
 async function requireInvPerm(user: IUserWithRoles, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
@@ -24,14 +25,16 @@ async function requireInvPerm(user: IUserWithRoles, action: 'create' | 'read' | 
 export type RestockReturnActionError = ActionMessageError | ActionPermissionError;
 
 /**
- * Find and delete the ticket/project material line that consumed this unit (its
- * `consume` stock movement carries the source doc). Fails fast when the line is
- * already billed — restocking a billed install would silently un-invoice hardware.
- * Also un-assigns the unit's asset from that entity and releases any staging line
- * that installed it, mirroring deleteMaterial. No-op when the unit was delivered
- * straight from fulfillment (no material line).
+ * When the unit's LATEST delivery is a ticket/project material line, remove that line: this
+ * restock is the stock reversal, so leaving it would let a later material delete restore the
+ * unit a second time. Older material lines are history — once the unit went out again through
+ * something else (sales order, RMA replacement, another material) they are left untouched.
+ * A billed line is history too: the unit still comes back to stock (any restocking fee is
+ * billed separately by the caller), but the invoiced line and its asset links stay as they are.
+ * Otherwise mirrors deleteMaterial: un-assigns the unit's asset from that entity and releases
+ * any staging line that installed it.
  */
-async function removeConsumingMaterialLine(
+async function removeDeliveringMaterialLine(
   trx: Knex.Transaction,
   tenant: string,
   unitId: string,
@@ -39,24 +42,22 @@ async function removeConsumingMaterialLine(
   user: IUserWithRoles,
 ): Promise<void> {
   const db = tenantDb(trx, tenant);
-  const movement = await db.table('stock_movements')
-    .where({ unit_id: unitId, movement_type: 'consume' })
-    .whereIn('source_doc_type', ['ticket_material', 'project_material'])
-    .orderBy('created_at', 'desc')
-    .first('source_doc_id', 'source_doc_type');
-  if (!movement) return;
+  const delivery = await findLatestUnitDelivery(trx, tenant, unitId);
+  if (!delivery?.source_doc_id) return;
+  if (delivery.source_doc_type !== 'ticket_material' && delivery.source_doc_type !== 'project_material') return;
+  const materialId = delivery.source_doc_id;
 
-  const parentType = movement.source_doc_type === 'ticket_material' ? 'ticket' : 'project';
+  const parentType = delivery.source_doc_type === 'ticket_material' ? 'ticket' : 'project';
   const table = parentType === 'ticket' ? 'ticket_materials' : 'project_materials';
   const pk = parentType === 'ticket' ? 'ticket_material_id' : 'project_material_id';
   const parentCol = parentType === 'ticket' ? 'ticket_id' : 'project_id';
 
   const material = await db.table(table)
-    .where({ [pk]: movement.source_doc_id })
+    .where({ [pk]: materialId })
     .forUpdate()
     .first('is_billed', parentCol);
-  // Already billed (or the row was deleted out from under us): leave history alone.
-  if (!material) return;
+  // The line was already removed, or it is billed: leave the invoiced history alone.
+  if (!material || material.is_billed) return;
   if (!(await hasPermission(user, parentType, 'update'))) {
     throw new Error(`Permission denied: ${parentType} update required`);
   }
@@ -69,15 +70,12 @@ async function removeConsumingMaterialLine(
       action: 'update',
     });
   }
-  if (material.is_billed) {
-    throw new Error('The unit is installed on a billed material line; credit or unbilled the invoice before restocking it');
-  }
 
   // Release the staging reference before deleting the material: its foreign key
   // does not cascade.
   if (parentType === 'project') {
     await db.table('project_staging_lines')
-      .where({ project_material_id: movement.source_doc_id })
+      .where({ project_material_id: materialId })
       .update({
         status: 'released',
         project_material_id: null,
@@ -86,7 +84,7 @@ async function removeConsumingMaterialLine(
         updated_at: trx.fn.now(),
       });
   }
-  await db.table(table).where(pk, movement.source_doc_id).del();
+  await db.table(table).where(pk, materialId).del();
   await detachDeliveredAssetAssociation(trx, tenant, unitId, parentType, material[parentCol]);
 
   const base = parentType === 'ticket' ? '/msp/tickets' : '/msp/projects';
@@ -176,10 +174,10 @@ export const restockReturn = withAuth(
         });
 
         // The unit may still sit on a ticket/project as an unbilled material line (the
-        // common MSP "put it back" flow). This restock IS the stock reversal, so the
-        // material row is removed here — otherwise the line would linger and a later
-        // material delete would double-restore stock. Billed lines fail fast instead.
-        await removeConsumingMaterialLine(trx, tenant, input.unit_id, user.user_id, user);
+        // common MSP "put it back" flow). This restock IS the stock reversal, so that
+        // line is removed here — otherwise a later material delete would double-restore
+        // stock. Billed lines and older deliveries are left as history.
+        await removeDeliveringMaterialLine(trx, tenant, input.unit_id, user.user_id, user);
 
         return {
           movement,
