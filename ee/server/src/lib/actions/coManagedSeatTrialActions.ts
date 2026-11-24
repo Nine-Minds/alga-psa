@@ -17,7 +17,7 @@ import { sendTeamInvitationEmail } from '@alga-psa/email';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { coManagedBrowserActor } from '../../../../../server/src/lib/co-managed/browserActor';
 import logger from '@alga-psa/core/logger';
-import { refused, type CoManagedRejection } from '../../../../../server/src/lib/actions/coManagedRejection';
+import { refused, type CoManagedRejection } from '../../../../../server/src/lib/co-managed/rejection';
 import { readSeatTrialSponsorEligibility } from '../co-managed/seatTrialEligibility';
 import { prepareCoManagedSeatTrial, replaceCoManagedSeatTrialTechnician, resumeCoManagedSeatTrialInvitation, cancelCoManagedSeatTrial } from '../co-managed/seatTrial';
 

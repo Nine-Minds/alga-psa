@@ -187,3 +187,12 @@ The first audit grepped `leftJoin|innerJoin|joinRaw` and missed a join written a
 - `grep` for `customer_tenant|sponsor_tenant|owner_tenant` equated to a tenant column next to `join|on(|andOn`: no hit.
 
 Seat marker (`users.seat_reader`): the only path that binds a user to an assignment is `acceptCoManagedSeatInvitation`; it now inserts the user with `seat_reader: true`. Invite, refresh, revoke-invitation, trial replace/resume/conversion and arrangement end do not write a binding state or `user_id`; revocation clears the marker (unchanged).
+
+## Review preparation corrections
+
+Found while preparing the human review; CI on `da097072b7` was red on three PR-caused unit groups.
+
+- **Invitation lookup routed to one shard.** `findInternalEmailClaim` read each customer tenant's invitations through `tenantDb(...).unscoped(...)`, which adds no tenant predicate, so on Citus every lookup was a multi-shard query by `invitation_id` alone. It now uses `tenantDb(db, customerTenant).table('user_invitations')`: one shard, by its `(tenant, invitation_id)` key. `user.internalEmailClaim.test.ts` answers awaited list queries and asserts the setup scan has no join and the invitation lookup carries the customer tenant.
+- **Trial discovery uses the one rule.** `canDiscoverSeatTrial` (the `/msp/co-managed` trial root and the sidebar entry) still checked only the trial base, so a manual-billed or non-Pro sponsor was led to a trial root whose panel is now empty. It calls `readSeatTrialSponsorEligibility` like the offer and `prepareCoManagedSeatTrial`. `coManagedCatalogLoadsPerRequest.test.ts` now models an eligible Pro sponsor whose actor lacks billing permission (the trial path), and both it and `coManagedPurchaseDiscovery.test.ts` assert a manual-billed sponsor is neither discovered nor offered.
+- **Rejection helper moved out of the actions glob.** `refused()`/`CoManagedRejection` live in `server/src/lib/co-managed/rejection.ts`; in `server/src/lib/actions/` the capability entry-point contract counted it as a 29th server-action file.
+- **Seat-invitation suite runs on Citus.** Its capacity case bound an unmarked user; it now marks `seat_reader` as acceptance does, and the file is in the Citus runtime inventory.

@@ -27,7 +27,7 @@ import { listSimulationTicketOptions } from '@alga-psa/authorization/bundles/sim
 import { runAuthorizationBundleSimulationAction } from '@enterprise/lib/actions/auth/authorizationBundleActions';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
 import { admitCoManagedSponsor } from '../co-managed/admitSponsor';
-import { refused } from './coManagedRejection';
+import { refused } from '../co-managed/rejection';
 
 /**
  * Server actions behind the seat shape's administration: the chooser and panel on a client's

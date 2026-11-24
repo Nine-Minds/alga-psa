@@ -208,8 +208,9 @@ const User = {
     // invitation_id -> used_at, keyed per tenant; a missing key means the invitation row does not exist.
     const invitations = new Map<string, Map<string, unknown>>();
     for (const [customerTenant, ids] of idsByTenant) {
+      // Scoped to the customer tenant: one shard, by its (tenant, invitation_id) key, not every shard.
       const rows: Array<{ invitation_id: string; used_at: unknown }> = await tenantDb(db, customerTenant)
-        .unscoped('user_invitations', INTERNAL_EMAIL_CLAIM_REASON)
+        .table('user_invitations')
         .whereIn('invitation_id', [...ids])
         .select('invitation_id', 'used_at');
       invitations.set(customerTenant, new Map(rows.map(row => [row.invitation_id, row.used_at])));
