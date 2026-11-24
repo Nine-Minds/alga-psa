@@ -14,17 +14,20 @@ const createTenantKnexMock = vi.hoisted(() => vi.fn());
 const withTransactionMock = vi.hoisted(() => vi.fn());
 /** Rows the next awaited query resolves to. */
 const rowsRef = vi.hoisted(() => ({ value: [] as any[] }));
+const tagRowsRef = vi.hoisted(() => ({ value: [] as any[] }));
+const projectActivityReadMock = vi.hoisted(() => vi.fn());
+const authorizationMode = vi.hoisted(() => ({ value: 'allowed' }));
 
 /** Chainable, awaitable query stub resolving to the registered rows. */
-function queryStub(): any {
+function queryStub(resultRows = rowsRef): any {
   const builder: any = new Proxy(
     {},
     {
       get(_t, prop) {
         if (prop === 'then') {
-          return (resolve: (v: any) => unknown) => resolve(rowsRef.value);
+          return (resolve: (v: any) => unknown) => resolve(resultRows.value);
         }
-        if (prop === 'first') return async () => rowsRef.value[0];
+        if (prop === 'first') return async () => resultRows.value[0];
         return () => builder;
       },
     },
@@ -35,7 +38,7 @@ function queryStub(): any {
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
   tenantDb: () => ({
-    table: () => queryStub(),
+    table: (table: string) => queryStub(table === 'tag_mappings' ? tagRowsRef : rowsRef),
     tenantJoin: (query: any) => query,
     unscoped: () => queryStub(),
   }),
@@ -48,6 +51,10 @@ vi.mock('@alga-psa/auth', () => ({
   hasPermission: vi.fn(async () => true),
 }));
 
+vi.mock('@alga-psa/projects/activityRead', () => ({
+  loadAuthorizedProjectTaskActivities: projectActivityReadMock,
+}));
+
 vi.mock('@alga-psa/core', () => ({ isFeatureFlagEnabled: vi.fn(async () => false) }));
 
 vi.mock('@alga-psa/scheduling/actions/scheduleActivityCore', () => ({
@@ -58,7 +65,7 @@ vi.mock('@alga-psa/user-activities/server/workflow-tasks', () => ({
   fetchWorkflowTaskActivities: vi.fn(async () => []),
 }));
 
-import { fetchProjectActivities, fetchTicketActivities } from './activityAggregationActions';
+import { fetchProjectActivities, fetchTicketActivities, fetchUserActivitiesForApi } from './activityAggregationActions';
 
 /** Distinct user per call so the module's in-memory cache cannot bleed across tests. */
 let userSeq = 0;
@@ -135,15 +142,24 @@ function knexStub(): any {
 beforeEach(() => {
   vi.clearAllMocks();
   rowsRef.value = [];
+  tagRowsRef.value = [];
+  authorizationMode.value = 'allowed';
   createTenantKnexMock.mockResolvedValue({ knex: knexStub(), tenant: 'tenant-1' });
   withTransactionMock.mockImplementation(async (_db: unknown, cb: any) => cb(knexStub()));
+  projectActivityReadMock.mockImplementation(async (_trx: unknown, _tenant: string, _reader: unknown, identities: any[]) =>
+    identities.map(({ taskId }) => {
+      const row = rowsRef.value.find((candidate) => candidate.task_id === taskId);
+      return { task: row, projectName: row?.project_name, projectIsClosed: row?.project_is_closed, phaseName: row?.phase_name,
+        statusName: authorizationMode.value === 'redacted' ? null : row?.status_name, isClosed: row?.is_closed, priorityName: row?.priority_name, priorityColor: row?.priority_color,
+        ...(authorizationMode.value === 'redacted' ? { task: { ...row, task_name: 'Project task', description: null, wbs_code: null, project_status_mapping_id: null }, phaseName: 'Project phase' } : {}) };
+    }).filter((entry) => entry.task));
 });
 
 describe('fetchProjectActivities mapping', () => {
   it('maps a task row onto the activity shape the dashboard renders', async () => {
     setRows([projectTaskRow()]);
 
-    const [activity] = await fetchProjectActivities(nextUser(), 'tenant-1', {});
+    const [activity] = await fetchProjectActivities(nextUser(), 'tenant-1', {}, { user_id: 'reader-1', user_type: 'internal' } as any);
 
     expect(activity).toMatchObject({
       id: 'task-1',
@@ -164,7 +180,7 @@ describe('fetchProjectActivities mapping', () => {
   it('falls back to a default status when the task has none', async () => {
     setRows([projectTaskRow({ status_name: null })]);
 
-    const [activity] = await fetchProjectActivities(nextUser(), 'tenant-1', {});
+    const [activity] = await fetchProjectActivities(nextUser(), 'tenant-1', {}, { user_id: 'reader-1', user_type: 'internal' } as any);
 
     expect(activity.status).toBe('To Do');
   });
@@ -174,7 +190,7 @@ describe('fetchProjectActivities mapping', () => {
     // work on everyone's dashboard.
     setRows([projectTaskRow({ is_closed: false, project_is_closed: true })]);
 
-    const [activity] = await fetchProjectActivities(nextUser(), 'tenant-1', {});
+    const [activity] = await fetchProjectActivities(nextUser(), 'tenant-1', {}, { user_id: 'reader-1', user_type: 'internal' } as any);
 
     expect(activity.isClosed).toBe(true);
   });
@@ -186,7 +202,7 @@ describe('fetchProjectActivities mapping', () => {
       ['Something bespoke', ActivityPriority.MEDIUM],
     ] as const) {
       setRows([projectTaskRow({ priority_name: name })]);
-      const [activity] = await fetchProjectActivities(nextUser(), 'tenant-1', {});
+      const [activity] = await fetchProjectActivities(nextUser(), 'tenant-1', {}, { user_id: 'reader-1', user_type: 'internal' } as any);
       expect(activity.priority, `priority_name: ${name}`).toBe(tier);
     }
   });
@@ -194,7 +210,7 @@ describe('fetchProjectActivities mapping', () => {
   it('filters on the normalised tier, not the tenant priority name', async () => {
     setRows([projectTaskRow({ priority_name: 'High' }), projectTaskRow({ task_id: 't2', priority_name: 'Low' })]);
 
-    const activities = await fetchProjectActivities(nextUser(), 'tenant-1', { priority: [ActivityPriority.HIGH] });
+    const activities = await fetchProjectActivities(nextUser(), 'tenant-1', { priority: [ActivityPriority.HIGH] }, { user_id: 'reader-1', user_type: 'internal' } as any);
 
     expect(activities).toHaveLength(1);
     expect(activities[0].id).toBe('task-1');
@@ -203,7 +219,7 @@ describe('fetchProjectActivities mapping', () => {
   it('leaves the due date unset when the task has none', async () => {
     setRows([projectTaskRow({ due_date: null })]);
 
-    const [activity] = await fetchProjectActivities(nextUser(), 'tenant-1', {});
+    const [activity] = await fetchProjectActivities(nextUser(), 'tenant-1', {}, { user_id: 'reader-1', user_type: 'internal' } as any);
 
     expect(activity.dueDate).toBeUndefined();
   });
@@ -215,7 +231,7 @@ describe('fetchProjectActivities mapping', () => {
     // section of the dashboard rather than losing a single field.
     setRows([projectTaskRow({ due_date: 'not-a-date' })]);
 
-    const activities = await fetchProjectActivities(nextUser(), 'tenant-1', {});
+    const activities = await fetchProjectActivities(nextUser(), 'tenant-1', {}, { user_id: 'reader-1', user_type: 'internal' } as any);
 
     expect(activities).toHaveLength(1);
     expect(activities[0].id).toBe('task-1');
@@ -229,7 +245,7 @@ describe('fetchProjectActivities mapping', () => {
       projectTaskRow({ task_id: 'good-2' }),
     ]);
 
-    const activities = await fetchProjectActivities(nextUser(), 'tenant-1', {});
+    const activities = await fetchProjectActivities(nextUser(), 'tenant-1', {}, { user_id: 'reader-1', user_type: 'internal' } as any);
 
     expect(activities.map(a => a.id)).toEqual(expect.arrayContaining(['good-1', 'good-2']));
   });
@@ -237,7 +253,7 @@ describe('fetchProjectActivities mapping', () => {
   it('survives an unusable created or updated timestamp', async () => {
     setRows([projectTaskRow({ created_at: 'nonsense', updated_at: 'nonsense' })]);
 
-    const activities = await fetchProjectActivities(nextUser(), 'tenant-1', {});
+    const activities = await fetchProjectActivities(nextUser(), 'tenant-1', {}, { user_id: 'reader-1', user_type: 'internal' } as any);
 
     expect(activities).toHaveLength(1);
     expect(() => new Date(activities[0].createdAt).toISOString()).not.toThrow();
@@ -245,7 +261,59 @@ describe('fetchProjectActivities mapping', () => {
 
   it('returns an empty list when the user has no tasks', async () => {
     setRows([]);
-    await expect(fetchProjectActivities(nextUser(), 'tenant-1', {})).resolves.toEqual([]);
+    await expect(fetchProjectActivities(nextUser(), 'tenant-1', {}, { user_id: 'reader-1', user_type: 'internal' } as any)).resolves.toEqual([]);
+  });
+
+  it('rechecks warmed activity results across allowed, redacted, denied, and restored reads', async () => {
+    const reader = { user_id: 'reader-1', user_type: 'internal' } as any;
+    setRows([projectTaskRow()]);
+    const fetch = () => fetchUserActivitiesForApi(reader, 'tenant-1', { types: [ActivityType.PROJECT_TASK] }, 1, 1);
+
+    authorizationMode.value = 'allowed';
+    const allowed = await fetch();
+    expect(allowed).toMatchObject({ totalCount: 1, pageCount: 1, activities: [{ title: 'Rack the switch', phaseName: 'Cutover', wbsCode: '1.2', statusMappingId: 'psm-1' }] });
+
+    authorizationMode.value = 'redacted';
+    const redacted = await fetch();
+    expect(redacted).toMatchObject({ totalCount: 1, pageCount: 1, activities: [{ title: 'Project task', phaseName: 'Project phase', wbsCode: null, statusMappingId: null }] });
+
+    authorizationMode.value = 'denied';
+    projectActivityReadMock.mockImplementationOnce(async () => []);
+    const denied = await fetch();
+    expect(denied).toMatchObject({ totalCount: 0, pageCount: 0, activities: [] });
+
+    authorizationMode.value = 'allowed';
+    const restored = await fetch();
+    expect(restored.activities[0]).toMatchObject({ title: 'Rack the switch', phaseName: 'Cutover', wbsCode: '1.2', statusMappingId: 'psm-1' });
+    expect(projectActivityReadMock.mock.calls.at(-1)?.[2]).toBe(reader);
+  });
+
+  it('paginates only the authorized task set', async () => {
+    setRows([projectTaskRow(), projectTaskRow({ task_id: 'task-2' })]);
+    const reader = { user_id: 'reader-1', user_type: 'internal' } as any;
+
+    const first = await fetchUserActivitiesForApi(reader, 'tenant-1', { types: [ActivityType.PROJECT_TASK] }, 1, 1);
+    const second = await fetchUserActivitiesForApi(reader, 'tenant-1', { types: [ActivityType.PROJECT_TASK] }, 2, 1);
+
+    expect(first).toMatchObject({ totalCount: 2, pageCount: 2, activities: [{ id: 'task-1' }] });
+    expect(second).toMatchObject({ totalCount: 2, pageCount: 2, activities: [{ id: 'task-2' }] });
+  });
+
+  it('applies phase, status, and tag filters after project authorization', async () => {
+    setRows([
+      projectTaskRow({ task_id: 'task-1', phase_id: 'phase-1', status_name: 'In Progress' }),
+      projectTaskRow({ task_id: 'task-2', phase_id: 'phase-2', status_name: 'Done' }),
+    ]);
+    tagRowsRef.value = [{ tagged_id: 'task-2', tag_id: 'tag-1' }];
+    const reader = { user_id: 'reader-1', user_type: 'internal' } as any;
+
+    const phase = await fetchProjectActivities('owner-1', 'tenant-1', { phaseId: 'phase-2' }, reader);
+    const status = await fetchProjectActivities('owner-1', 'tenant-1', { status: ['In Progress'] }, reader);
+    const tagged = await fetchProjectActivities('owner-1', 'tenant-1', { projectTaskTagIds: ['tag-1'] }, reader);
+
+    expect(phase.map(({ id }) => id)).toEqual(['task-2']);
+    expect(status.map(({ id }) => id)).toEqual(['task-1']);
+    expect(tagged.map(({ id }) => id)).toEqual(['task-2']);
   });
 });
 

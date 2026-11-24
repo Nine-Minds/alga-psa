@@ -24,6 +24,10 @@
     "./services": {
       "types": "./dist/services/index.d.ts",
       "import": "./dist/services/index.mjs"
+    },
+    "./activityRead": {
+      "types": "./src/lib/projectTaskActivityRead.ts",
+      "import": "./src/lib/projectTaskActivityRead.ts"
     }
   },
   "scripts": {

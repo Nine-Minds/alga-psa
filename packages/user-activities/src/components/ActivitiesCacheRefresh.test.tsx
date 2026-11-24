@@ -102,6 +102,7 @@ import { ActivitiesDataTableSection } from './ActivitiesDataTableSection';
 import { ActivityDrawerProvider, useActivityDrawer } from './ActivityDrawerProvider';
 import { ActivitiesCacheProvider } from '../hooks/ActivitiesCacheProvider';
 import { useActivitiesCache } from '../hooks/useActivitiesCache';
+import { ActivityType } from '@alga-psa/types';
 
 const ticket = { type: 'ticket', id: 't1', title: 'T1', status: 'open', priority: 'low' } as any;
 
@@ -123,7 +124,7 @@ describe('drawer completion refreshes the activities list', () => {
     const { container } = render(
       <ActivityDrawerProvider>
         <Opener activity={ticket} />
-        <ActivitiesDataTableSection initialFilters={{ isClosed: false } as any} />
+        <ActivitiesDataTableSection initialFilters={{ isClosed: false, types: [ActivityType.TICKET] } as any} />
       </ActivityDrawerProvider>
     );
     await waitFor(() => expect(mocks.getActivities).toHaveBeenCalledTimes(1));
@@ -142,7 +143,7 @@ describe('drawer completion refreshes the activities list', () => {
   it('does not refetch on mount beyond the initial load', async () => {
     render(
       <ActivityDrawerProvider>
-        <ActivitiesDataTableSection initialFilters={{ isClosed: false } as any} />
+      <ActivitiesDataTableSection initialFilters={{ isClosed: false, types: [ActivityType.TICKET] } as any} />
       </ActivityDrawerProvider>
     );
     await waitFor(() => expect(mocks.getActivities).toHaveBeenCalledTimes(1));
@@ -175,6 +176,20 @@ describe('shared activities cache', () => {
     await act(async () => { await result.current.b.getActivities(filters, 1, 10); });
     expect(mocks.getActivities).toHaveBeenCalledTimes(2);
   });
+
+  it('revalidates project task decisions instead of serving a warmed client cache entry', async () => {
+    const { result } = renderHook(() => useActivitiesCache(), {
+      wrapper: ({ children }) => <ActivitiesCacheProvider>{children}</ActivitiesCacheProvider>,
+    });
+    const projectFilters = { types: [ActivityType.PROJECT_TASK] } as any;
+
+    await act(async () => { await result.current.getActivities(projectFilters, 1, 10); });
+    mocks.getActivities.mockResolvedValueOnce({ activities: [], totalCount: 0 });
+    await act(async () => { await result.current.getActivities(projectFilters, 1, 10); });
+
+    expect(mocks.getActivities).toHaveBeenCalledTimes(2);
+    expect(result.current.getCacheStats().cacheHits).toBe(0);
+  });
 });
 
 describe('remounting the table section under a surviving shared cache (Cards -> Table toggle)', () => {
@@ -184,7 +199,7 @@ describe('remounting the table section under a surviving shared cache (Cards -> 
       return (
         <>
           <button id="toggle" onClick={() => setShow((s) => !s)}>toggle</button>
-          {show && <ActivitiesDataTableSection initialFilters={{ isClosed: false } as any} />}
+          {show && <ActivitiesDataTableSection initialFilters={{ isClosed: false, types: [ActivityType.TICKET] } as any} />}
         </>
       );
     }

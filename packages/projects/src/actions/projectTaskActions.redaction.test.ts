@@ -59,8 +59,9 @@ vi.mock('@alga-psa/db', () => {
       const title = nameMask?.args?.[0] ?? state.taskName;
       const descriptionMask = selection.flat().find((column) => column?.args?.includes('description') || column?.sql?.includes('as description'));
       const wbsMask = selection.flat().some((column) => column?.sql?.includes('NULL::') && column?.args?.includes('wbs_code'));
+      const statusMappingMask = selection.flat().some((column) => column?.sql?.includes('NULL::') && column?.args?.includes('project_status_mapping_id'));
       const all = [
-        { tenant: 't1', project_id: 'project1', task_id: 'task1', phase_id: 'ph1', task_name: title, description: descriptionMask ? null : 'Visible body', description_rich_text: descriptionMask ? null : 'Visible rich body', order_key: 'a', wbs_code: wbsMask ? null : '1' },
+        { tenant: 't1', project_id: 'project1', task_id: 'task1', phase_id: 'ph1', task_name: title, description: descriptionMask ? null : 'Visible body', description_rich_text: descriptionMask ? null : 'Visible rich body', order_key: 'a', wbs_code: wbsMask ? null : '1', project_status_mapping_id: statusMappingMask ? null : 'mapping1' },
         { tenant: 't1', project_id: 'project2', task_id: 'pred', phase_id: 'ph2', task_name: title, description: descriptionMask ? null : 'Visible body', description_rich_text: descriptionMask ? null : 'Visible rich body', order_key: 'b', wbs_code: wbsMask ? null : '2' },
         { tenant: 't1', project_id: 'project3', task_id: 'succ', phase_id: 'ph3', task_name: title, description: descriptionMask ? null : 'Visible body', description_rich_text: descriptionMask ? null : 'Visible rich body', order_key: 'c', wbs_code: wbsMask ? null : '3' },
       ];
@@ -245,6 +246,13 @@ describe('getProjectTaskData project redactions', () => {
     ]);
     expect(phaseHidden.tasks).toEqual([]);
     expect(listHidden.tasks).toEqual([]);
+  });
+
+  it('masks activity source aliases for task WBS and status mapping fields in the shared projection', async () => {
+    state.decision = { allowed: true, redactedFields: ['wbsCode', 'statusMappingId'] };
+    const result: any = await getProjectTaskData('project1');
+    expect(result.tasks[0].wbs_code).toBeNull();
+    expect(result.tasks[0].project_status_mapping_id).toBeNull();
   });
 
   it('uses shared projections for phase, list, and detail reads', async () => {

@@ -29,13 +29,14 @@ export async function loadAuthorizedProjectTasks(
   ];
   const hidden = coManagedHiddenColumns(redactedFields, 'project_tasks', CO_MANAGED_TASK_COLUMNS);
   const aliasesByField: Record<string, string[]> = {
-    project_status_mapping_id: ['status', 'statuses', 'project_status_mappings', 'mapping_id'],
+    project_status_mapping_id: ['status', 'status_name', 'statuses', 'project_status_mappings', 'mapping_id', 'statusMappingId'],
     priority_id: ['priority', 'priority_name'],
     assigned_to: ['assignee', 'assignee_name', 'assigned_to_name', 'users', 'teams'],
     assigned_team_id: ['assignee', 'assigned_to_name', 'teams'],
   };
   for (const field of fields) {
-    if (coManagedColumnHidden(redactedFields, 'project_tasks', field, aliasesByField[field] ?? []) || (mask.body && field.startsWith('description'))) {
+    if (coManagedColumnHidden(redactedFields, 'project_tasks', field,
+      field === 'wbs_code' ? ['wbsCode'] : aliasesByField[field] ?? []) || (mask.body && field.startsWith('description'))) {
       hidden.add(field);
     }
   }

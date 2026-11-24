@@ -6,12 +6,10 @@ import {
   ActivityResponse,
   ActivityType,
   ActivityPriority,
-  IWorkflowExecution,
+  ProjectTaskActivity,
   NotificationActivity,
   scheduleEntryToActivity,
-  projectTaskToActivity,
   timeEntryToActivity,
-  workflowTaskToActivity,
 } from '@alga-psa/types';
 // Identity-explicit core (NOT the withAuth `getScheduleActivityEntries`): the v1 REST API
 // resolves the user from an API key, so withAuth — which reads the NextAuth session — would
@@ -21,7 +19,8 @@ import { getScheduleActivityEntriesForUser } from '@alga-psa/scheduling/actions/
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { isFeatureFlagEnabled } from '@alga-psa/core';
 import { ISO8601String } from '@alga-psa/types';
-import { IProjectTask } from '@alga-psa/types';
+import { IUserWithRoles } from '@alga-psa/types';
+import { loadAuthorizedProjectTaskActivities } from '@alga-psa/projects/activityRead';
 
 // Workflow tasks are the only EE-specific activity source. The base package resolves
 // this to a CE stub (returns []); the EE app build aliases the specifier to the real
@@ -253,7 +252,7 @@ async function collectProcessedActivities(
     promises.push(fetchMarketingActivities(effectiveUserId, tenantId, filters, user));
   }
   if (typesToFetch.includes(ActivityType.PROJECT_TASK)) {
-    promises.push(fetchProjectActivities(effectiveUserId, tenantId, filters));
+    promises.push(fetchProjectActivities(effectiveUserId, tenantId, filters, user));
   }
   if (typesToFetch.includes(ActivityType.TICKET)) {
     promises.push(fetchTicketActivities(effectiveUserId, tenantId, filters));
@@ -662,7 +661,8 @@ function toIsoOrNull(value: unknown): string | null {
 export async function fetchProjectActivities(
   userId: string,
   tenantId: string,
-  filters: ActivityFilters
+  filters: ActivityFilters,
+  reader: IUserWithRoles
 ): Promise<Activity[]> {
   try {
     const { knex: db, tenant } = await createTenantKnex(tenantId);
@@ -672,221 +672,29 @@ export async function fetchProjectActivities(
 
     // Query for project tasks assigned to the user
     const tasks = await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(reader, 'project', 'read', trx)) return [];
       const scopedDb = tenantDb(trx, tenant);
       const projectTasksQuery = scopedDb.table("project_tasks")
-        .select(
-          "project_tasks.*",
-          "project_phases.phase_name",
-          "project_phases.project_id",
-          "projects.project_name",
-          // Resolve status name and is_closed from either custom or standard status,
-          // preferring psm.custom_name if provided.
-          db.raw(
-            "COALESCE(project_status_mappings.custom_name, custom_statuses.name, standard_statuses.name) as status_name"
-          ),
-          db.raw(
-            "COALESCE(custom_statuses.is_closed, standard_statuses.is_closed, false) as is_closed"
-          ),
-          // Whether the parent PROJECT itself is closed (its status maps to a closed status).
-          db.raw(
-            "COALESCE(project_statuses.is_closed, false) as project_is_closed"
-          ),
-          "priorities.priority_name",
-          "priorities.color as priority_color",
-          db.raw("'#3b82f6' as status_color") // Blue color for consistency
-        );
+        // Candidate selection contains only task/project identity; protected resource values
+        // are loaded only after the project/read decision below.
+        .select("project_tasks.task_id", "project_phases.project_id");
 
       scopedDb.tenantJoin(projectTasksQuery, "project_phases", "project_tasks.phase_id", "project_phases.phase_id", { type: "left" });
-      scopedDb.tenantJoin(projectTasksQuery, "projects", "project_phases.project_id", "projects.project_id", { type: "left" });
-      scopedDb.tenantJoin(projectTasksQuery, "statuses as project_statuses", "projects.status", "project_statuses.status_id", { type: "left" });
-      scopedDb.tenantJoin(projectTasksQuery, "priorities", "project_tasks.priority_id", "priorities.priority_id", { type: "left" });
-      scopedDb.tenantJoin(
-        projectTasksQuery,
-        "project_status_mappings",
-        "project_tasks.project_status_mapping_id",
-        "project_status_mappings.project_status_mapping_id",
-        { type: "left" }
-      );
-      scopedDb.tenantJoin(
-        projectTasksQuery,
-        "standard_statuses",
-        "project_status_mappings.standard_status_id",
-        "standard_statuses.standard_status_id",
-        { type: "left" }
-      );
-      scopedDb.tenantJoin(
-        projectTasksQuery,
-        "statuses as custom_statuses",
-        "project_status_mappings.status_id",
-        "custom_statuses.status_id",
-        { type: "left" }
-      );
-
-      return await projectTasksQuery
-        .where(whereProjectTaskOnUsersList(scopedDb, db, userId))
-      // Apply filters
-      .modify(function(queryBuilder) {
-        // Apply status filter if provided
-        if (filters.status && filters.status.length > 0) {
-          const statusMappingIdsForNames = scopedDb.table("project_status_mappings")
-            .select("project_status_mappings.project_status_mapping_id")
-            .whereIn("standard_statuses.name", filters.status || []);
-          scopedDb.tenantJoin(
-            statusMappingIdsForNames,
-            "standard_statuses",
-            "project_status_mappings.standard_status_id",
-            "standard_statuses.standard_status_id"
-          );
-          queryBuilder.whereIn(
-            "project_tasks.project_status_mapping_id",
-            statusMappingIdsForNames
-          );
-        }
-        
-        // Apply due date filter if provided
-        if (filters.dueDateStart) {
-          queryBuilder.where("project_tasks.due_date", ">=", toPlainDate(filters.dueDateStart));
-        }
-        
-        if (filters.dueDateEnd) {
-          queryBuilder.where("project_tasks.due_date", "<=", toPlainDate(filters.dueDateEnd));
-        }
-
-        // Apply created-date ("date entered") filter if provided. created_at is a full
-        // timestamp, so compare against the raw ISO bounds (not toPlainDate, which would
-        // truncate the time-of-day and drop rows created later on the end day).
-        if (filters.createdAtStart) {
-          queryBuilder.where("project_tasks.created_at", ">=", filters.createdAtStart);
-        }
-        if (filters.createdAtEnd) {
-          queryBuilder.where("project_tasks.created_at", "<=", filters.createdAtEnd);
-        }
-
-        // Apply closed filter if provided
-        if (filters.isClosed === false) {
-          // If isClosed is false, only show open tasks. A task is "closed" when
-          // its mapping resolves to a status (custom OR standard) with is_closed=true.
-          // Tasks with NULL project_status_mapping_id are treated as open.
-          queryBuilder.where(function() {
-            const openStatusMappingIds = scopedDb.table("project_status_mappings as psm")
-              .select("psm.project_status_mapping_id")
-              .whereRaw("COALESCE(cs.is_closed, ss.is_closed, false) = false");
-            scopedDb.tenantJoin(openStatusMappingIds, "statuses as cs", "psm.status_id", "cs.status_id", { type: "left" });
-            scopedDb.tenantJoin(
-              openStatusMappingIds,
-              "standard_statuses as ss",
-              "psm.standard_status_id",
-              "ss.standard_status_id",
-              { type: "left" }
-            );
-            this.whereNull("project_tasks.project_status_mapping_id")
-              .orWhereIn(
-                "project_tasks.project_status_mapping_id",
-                openStatusMappingIds
-              );
-          });
-
-          // Also hide tasks whose parent PROJECT is closed. When the whole project is
-          // done, its tasks shouldn't surface in the open activities view regardless of
-          // each task's own status. Projects with a NULL/open status are treated as open.
-          queryBuilder.whereRaw("COALESCE(project_statuses.is_closed, false) = false");
-        }
-        
-        // Client filter
-        if (filters.clientId) {
-          queryBuilder.where("projects.client_id", filters.clientId);
-        }
-
-        // Apply project and phase filters with OR semantics:
-        // A task matches if its project is selected OR its phase is selected.
-        const hasProjectIds = filters.projectIds && filters.projectIds.length > 0;
-        const hasPhaseIds = filters.phaseIds && filters.phaseIds.length > 0;
-
-        if (hasProjectIds || hasPhaseIds) {
-          queryBuilder.where(function() {
-            if (hasProjectIds) {
-              this.whereExists(
-                tenantDb(trx, tenant).table("project_phases")
-                  .select(db.raw(1))
-                  .whereRaw("project_phases.phase_id = project_tasks.phase_id")
-                  .whereIn("project_phases.project_id", filters.projectIds!)
-              );
-            }
-            if (hasPhaseIds) {
-              this.orWhereIn("project_tasks.phase_id", filters.phaseIds!);
-            }
-          });
-        } else if (filters.projectId) {
-          queryBuilder.whereExists(
-            tenantDb(trx, tenant).table("project_phases")
-              .select(db.raw(1))
-              .whereRaw("project_phases.phase_id = project_tasks.phase_id")
-              .andWhere("project_phases.project_id", filters.projectId)
-          );
-        }
-
-        // Apply singular phase filter if provided (backward compat, combined with AND)
-        if (filters.phaseId) {
-          queryBuilder.where("project_tasks.phase_id", filters.phaseId);
-        }
-        
-        // Project task-specific status filter by mapping ID
-        if (filters.projectStatusMappingIds && filters.projectStatusMappingIds.length > 0) {
-          queryBuilder.whereIn("project_tasks.project_status_mapping_id", filters.projectStatusMappingIds);
-        }
-
-        // Exclude tasks whose project is in the excluded set
-        if (filters.excludeProjectIds && filters.excludeProjectIds.length > 0) {
-          queryBuilder.whereNotExists(
-            tenantDb(trx, tenant).table("project_phases")
-              .select(db.raw(1))
-              .whereRaw("project_phases.phase_id = project_tasks.phase_id")
-              .whereIn("project_phases.project_id", filters.excludeProjectIds!)
-          );
-        }
-
-        // Exclude tasks in the excluded phases
-        if (filters.excludePhaseIds && filters.excludePhaseIds.length > 0) {
-          queryBuilder.whereNotIn("project_tasks.phase_id", filters.excludePhaseIds);
-        }
-
-        // Exclude tasks in the excluded project statuses
-        if (filters.excludeProjectStatusMappingIds && filters.excludeProjectStatusMappingIds.length > 0) {
-          queryBuilder.whereNotIn("project_tasks.project_status_mapping_id", filters.excludeProjectStatusMappingIds);
-        }
-
-        // Apply priority filter by priority IDs if provided
-        if (filters.priorityIds && filters.priorityIds.length > 0) {
-          queryBuilder.whereIn("project_tasks.priority_id", filters.priorityIds);
-        }
-
-        // Tag filter: task must have at least one of the requested tags
-        if (filters.projectTaskTagIds && filters.projectTaskTagIds.length > 0) {
-          queryBuilder.whereExists(
-            tenantDb(trx, tenant).table("tag_mappings")
-              .select(db.raw(1))
-              .whereRaw("tag_mappings.tagged_id = project_tasks.task_id::text")
-              .andWhere("tag_mappings.tagged_type", "project_task")
-              .whereIn("tag_mappings.tag_id", filters.projectTaskTagIds!)
-          );
-        }
-
-        // Apply search filter if provided
-        if (filters.search) {
-          const searchTerm = `%${filters.search}%`;
-          queryBuilder.where(function() {
-            this.where("project_tasks.task_name", 'ilike', searchTerm)
-              .orWhere("project_tasks.description", 'ilike', searchTerm);
-          });
-        }
-      });
+      const candidates = await projectTasksQuery
+        .where(whereProjectTaskOnUsersList(scopedDb, db, userId));
+      return loadAuthorizedProjectTaskActivities(trx, tenant, reader, candidates.map((candidate: any) => ({
+        taskId: candidate.task_id,
+        projectId: candidate.project_id,
+      })));
     });
 
-    // Convert to activities
-    const activities = tasks.map((task: any) => {
+    // Convert authorized, masked projections to activities.
+    const clientIdsByTask = new Map(tasks.map(({ task, clientId }: any) => [task.task_id, clientId]));
+    const priorityIdsByTask = new Map(tasks.map(({ task }: any) => [task.task_id, task.priority_id]));
+    const activities: ProjectTaskActivity[] = tasks.map(({ task, projectName, projectIsClosed, phaseName, statusName, isClosed, priorityName, priorityColor }: any): ProjectTaskActivity => {
       // Map priority from project task to ActivityPriority
       let priority: ActivityPriority;
-      switch (task.priority_name?.toLowerCase()) {
+      switch (priorityName?.toLowerCase()) {
         case 'high':
         case 'urgent':
         case 'critical':
@@ -905,21 +713,21 @@ export async function fetchProjectActivities(
         title: task.task_name,
         description: task.description || undefined,
         type: ActivityType.PROJECT_TASK,
-        status: task.status_name || 'To Do', // Use the status name from standard_statuses
+        status: statusName || 'To Do', // Use the status name from standard_statuses
         statusColor: task.status_color || '#3b82f6', // Use the blue color for consistency
         // A task is effectively closed when its own status is closed OR its project is closed.
-        isClosed: Boolean(task.is_closed) || Boolean(task.project_is_closed),
+        isClosed: Boolean(isClosed) || Boolean(projectIsClosed),
         priority,
-        priorityName: task.priority_name || undefined,
-        priorityColor: task.priority_color || undefined,
+        priorityName: priorityName || undefined,
+        priorityColor: priorityColor || undefined,
         dueDate: toIsoOrNull(task.due_date) ?? undefined,
         assignedTo: task.assigned_to ? [task.assigned_to] : [],
         sourceId: task.task_id,
         sourceType: ActivityType.PROJECT_TASK,
         projectId: task.project_id || task.phase_id,
         phaseId: task.phase_id,
-        projectName: task.project_name,
-        phaseName: task.phase_name,
+        projectName,
+        phaseName,
         statusMappingId: task.project_status_mapping_id,
         estimatedHours: task.estimated_hours || undefined,
         actualHours: task.actual_hours || undefined,
@@ -934,8 +742,50 @@ export async function fetchProjectActivities(
       };
     });
 
-    // Apply priority filter post-mapping (priority is derived from priority_name, defaulting to Medium)
-    let filteredActivities = activities;
+    // Authorization and projection precede all activity filters so denied rows never
+    // affect result membership, counts, or pagination.
+    let filteredActivities = activities.filter((activity) => {
+      const activityDate = activity.dueDate ? activity.dueDate.slice(0, 10) : null;
+      if (filters.dueDateStart && (!activityDate || activityDate < toPlainDate(filters.dueDateStart))) return false;
+      if (filters.dueDateEnd && (!activityDate || activityDate > toPlainDate(filters.dueDateEnd))) return false;
+      if (filters.createdAtStart && (!activity.createdAt || activity.createdAt < filters.createdAtStart)) return false;
+      if (filters.createdAtEnd && (!activity.createdAt || activity.createdAt > filters.createdAtEnd)) return false;
+      if (filters.isClosed === false && activity.isClosed) return false;
+      if (filters.clientId && clientIdsByTask.get(activity.id) !== filters.clientId) return false;
+      const hasProjectIds = Boolean(filters.projectIds?.length);
+      const hasPhaseIds = Boolean(filters.phaseIds?.length);
+      if (hasProjectIds || hasPhaseIds) {
+        const projectIds = filters.projectIds ?? [];
+        const phaseIds = filters.phaseIds ?? [];
+        if (!(hasProjectIds && projectIds.includes(activity.projectId ?? '') || hasPhaseIds && phaseIds.includes(activity.phaseId ?? ''))) return false;
+      } else if (filters.projectId && activity.projectId !== filters.projectId) return false;
+      if (filters.phaseId && activity.phaseId !== filters.phaseId) return false;
+      if (filters.status?.length && !filters.status.includes(activity.status)) return false;
+      if (filters.projectStatusMappingIds?.length && !filters.projectStatusMappingIds.includes(activity.statusMappingId ?? '')) return false;
+      if (filters.excludeProjectStatusMappingIds?.length && filters.excludeProjectStatusMappingIds.includes(activity.statusMappingId ?? '')) return false;
+      if (filters.excludeProjectIds?.length && filters.excludeProjectIds.includes(activity.projectId ?? '')) return false;
+      if (filters.excludePhaseIds?.length && filters.excludePhaseIds.includes(activity.phaseId ?? '')) return false;
+      if (filters.priorityIds?.length && !filters.priorityIds.includes(priorityIdsByTask.get(activity.id) ?? '')) return false;
+      if (filters.search) {
+        const search = filters.search.toLocaleLowerCase();
+        if (!`${activity.title ?? ''} ${activity.description ?? ''}`.toLocaleLowerCase().includes(search)) return false;
+      }
+      return true;
+    });
+
+    if (filters.projectTaskTagIds?.length && filteredActivities.length) {
+      const { knex: tagDb } = await createTenantKnex(tenantId);
+      const scopedTagDb = tenantDb(tagDb, tenant);
+      const mappings = await scopedTagDb.table('tag_mappings')
+        .where({ tagged_type: 'project_task' })
+        .whereIn('tagged_id', filteredActivities.map(({ id }) => id))
+        .whereIn('tag_id', filters.projectTaskTagIds)
+        .select('tagged_id');
+      const tagged = new Set(mappings.map(({ tagged_id }: any) => tagged_id));
+      filteredActivities = filteredActivities.filter(({ id }) => tagged.has(id));
+    }
+
+    // Priority tier is derived from the projected priority name, defaulting to Medium.
     if (filters.priority && filters.priority.length > 0) {
       const normalizedFilterPriorities = filters.priority.map(p => p.toLowerCase());
       filteredActivities = activities.filter((activity: Activity) =>

@@ -25,6 +25,7 @@ export default defineConfig({
       { find: /^next\/server$/, replacement: path.resolve(__dirname, '../../node_modules/next/server.js') },
       { find: /^@alga-psa\/types$/, replacement: path.resolve(__dirname, '../types/src/index.ts') },
       { find: /^@alga-psa\/types\/(.*)$/, replacement: `${path.resolve(__dirname, '../types/src')}/$1` },
+      { find: /^@alga-psa\/projects\/activityRead$/, replacement: path.resolve(__dirname, '../projects/src/lib/projectTaskActivityRead.ts') },
       { find: /^@alga-psa\/user-activities\/(.*)$/, replacement: `${path.resolve(__dirname, 'src')}/$1` },
       { find: /^@alga-psa\/ui$/, replacement: path.resolve(__dirname, '../ui/src/index.ts') },
       // @alga-psa/core's i18n exports live under src/lib, like @alga-psa/db's below.

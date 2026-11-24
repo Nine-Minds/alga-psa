@@ -72,13 +72,16 @@ export function useActivitiesCache() {
     async (filters: ActivityFilters, page: number, pageSize: number): Promise<ActivityResponse> => {
       const cacheKey = generateCacheKey(filters, page, pageSize);
       const now = Date.now();
+      // Project task authorization can change independently of this client cache's TTL.
+      // Always ask the shared server boundary to reapply the reader's current decision.
+      const needsCurrentProjectAuthorization = !filters.types?.length || filters.types.includes(ActivityType.PROJECT_TASK);
 
       if (!isInitialLoad) {
         setIsLoading(true);
       }
 
       try {
-        if (cache.current.has(cacheKey)) {
+        if (!needsCurrentProjectAuthorization && cache.current.has(cacheKey)) {
           const entry = cache.current.get(cacheKey)!;
           if (entry.expiresAt > now) {
             console.log('Cache hit for activities data');
@@ -115,12 +118,14 @@ export function useActivitiesCache() {
           cacheTtl = CACHE_TTL.DRAWER;
         }
 
-        cache.current.set(cacheKey, {
-          activities: result.activities,
-          totalCount: result.totalCount,
-          timestamp: now,
-          expiresAt: now + cacheTtl,
-        });
+        if (!needsCurrentProjectAuthorization) {
+          cache.current.set(cacheKey, {
+            activities: result.activities,
+            totalCount: result.totalCount,
+            timestamp: now,
+            expiresAt: now + cacheTtl,
+          });
+        }
 
         if (cache.current.size > CACHE_SIZE_LIMIT) {
           const entries = Array.from(cache.current.entries());

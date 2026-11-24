@@ -15,7 +15,7 @@ import {
 } from "@alga-psa/types";
 import { createTenantKnex, tenantDb } from "@alga-psa/db";
 import {
-  fetchUserActivities,
+  fetchUserActivitiesForApi,
   fetchScheduleActivities as fetchScheduleActivitiesInternal,
   fetchProjectActivities as fetchProjectActivitiesInternal,
   fetchTicketActivities as fetchTicketActivitiesInternal,
@@ -49,15 +49,15 @@ import type {
  * @returns Promise resolving to ActivityResponse containing activities and pagination info
  */
 export const fetchActivities = withAuth(async (
-  _user,
-  _ctx,
+  user,
+  { tenant },
   filters: ActivityFilters = {},
   page: number = 1,
   pageSize: number = 10
 ): Promise<ActivityResponse> => {
   try {
     // Pass pagination parameters to the aggregation function
-    return await fetchUserActivities(filters, page, pageSize);
+    return await fetchUserActivitiesForApi(user, tenant, filters, page, pageSize);
   } catch (error) {
     console.error(`Error fetching activities (page ${page}, size ${pageSize}):`, error);
     throw error;
@@ -97,7 +97,7 @@ export const fetchProjectActivities = withAuth(async (
 ): Promise<ProjectTaskActivity[]> => {
   try {
     // This function already handles tenant isolation internally
-    return await fetchProjectActivitiesInternal(user.user_id, tenant, filters) as ProjectTaskActivity[];
+    return await fetchProjectActivitiesInternal(user.user_id, tenant, filters, user) as ProjectTaskActivity[];
   } catch (error) {
     console.error("Error fetching project activities:", error);
     throw error;
@@ -232,7 +232,7 @@ export const fetchActivityById = withAuth(async (
         activities = await fetchScheduleActivitiesInternal(user.user_id, tenant, {});
         break;
       case ActivityType.PROJECT_TASK:
-        activities = await fetchProjectActivitiesInternal(user.user_id, tenant, {});
+        activities = await fetchProjectActivitiesInternal(user.user_id, tenant, {}, user);
         break;
       case ActivityType.TICKET:
         activities = await fetchTicketActivitiesInternal(user.user_id, tenant, {});
@@ -316,7 +316,7 @@ export const fetchDashboardActivities = withAuth(async (
       workflowTaskActivities
     ] = await Promise.all([
       fetchScheduleActivitiesInternal(user.user_id, tenant, filters),
-      fetchProjectActivitiesInternal(user.user_id, tenant, filters),
+      fetchProjectActivitiesInternal(user.user_id, tenant, filters, user),
       fetchTicketActivitiesInternal(user.user_id, tenant, filters),
       fetchTimeEntryActivitiesInternal(user.user_id, tenant, filters),
       fetchWorkflowTaskActivitiesInternal(user.user_id, tenant, filters)
