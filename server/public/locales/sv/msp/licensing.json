@@ -453,6 +453,8 @@
       },
       "error": {
         "operationConflict": "Begäran har redan skickats med andra uppgifter. Uppdatera och börja om.",
+        "trialClaimUnavailable": "Den här provperioden används redan eller startades för en annan kund. Uppdatera och försök igen.",
+        "trialSponsorNotEligible": "Den här arbetsytan är inte berättigad till en Seat-provperiod. Kontrollera kontots plan och faktureringsstatus.",
         "invalidSeats": "Ange ett heltal för antal platser, minst 1.",
         "invalidInvitation": "Välj en kontakt att bjuda in.",
         "contactNotFound": "Den här kontakten finns inte längre. Välj en annan kontakt.",

@@ -3,6 +3,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
 import { admits } from '@alga-psa/core/capability';
 import { isCoManagedPurchaseSurfaceOpen } from '@alga-psa/licensing';
+import { readSeatTrialSponsorEligibility } from './seatTrialEligibility';
 
 /** Operational discovery for the trial-only root and recovery tab. No billing or client listing. */
 export async function canDiscoverSeatTrial(user: { user_type?: string; tenant?: string | null; user_id: string }, tenant: string, clientId?: string) {
@@ -16,7 +17,8 @@ export async function canDiscoverSeatTrial(user: { user_type?: string; tenant?: 
     return (await createClientScopeContext(knex, tenant, user as never)).permits('client', pilot.client_id);
   }
   // A client lookup from a closed tab is only for recovery of an existing pilot.
-  // Check local trial eligibility before the offer probe can call Stripe from the sidebar.
-  return !clientId && Boolean(await home.table('co_managed_trial_sponsors').where('base_until', '>', knex.fn.now()).first('tenant')) &&
+  // Check local trial eligibility before the offer probe can call Stripe from the sidebar. The same rule
+  // as the offer and prepare, so the trial root is never discovered for a sponsor whose panel would be empty.
+  return !clientId && (await readSeatTrialSponsorEligibility(knex, tenant)).eligible &&
     (await admits('co-managed-seat', tenant)).admitted && await isCoManagedPurchaseSurfaceOpen(tenant);
 }

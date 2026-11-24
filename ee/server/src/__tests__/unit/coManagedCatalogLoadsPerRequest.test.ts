@@ -12,7 +12,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const holder = vi.hoisted(() => ({
   user: { user_id: 'actor', tenant: 'sponsor', user_type: 'internal' } as Record<string, unknown>,
-  plan: 'basic',
+  // An eligible hosted Pro sponsor. The actor operates co-managed IT but holds no billing permission, so the
+  // root resolves to the trial path (commercial discovery needs account_management); `billing` opens it.
+  plan: 'pro',
+  billingSource: 'stripe',
+  billing: false,
   gateChecks: 0,
 }));
 
@@ -29,7 +33,7 @@ vi.mock('@alga-psa/auth', async () => ({
   getCurrentUser: async () => holder.user,
   getSession: async () => ({ user: holder.user }),
 }));
-vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: async () => true }));
+vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: async (_user: unknown, resource: string) => resource !== 'account_management' || holder.billing }));
 vi.mock('@alga-psa/authorization/clientScopeAuthorization', () => ({ createClientScopeContext: async () => ({ permits: async () => true }) }));
 vi.mock('@alga-psa/core/capability/server', async () => {
   const { admits } = await import('@alga-psa/core/capability');
@@ -49,7 +53,7 @@ vi.mock('@alga-psa/licensing', async (importOriginal) => {
 });
 vi.mock('@alga-psa/db', async (importOriginal) => {
   const rows = (name: string) => ({
-    tenants: { product_code: 'psa', plan: holder.plan, billing_source: 'stripe' },
+    tenants: { product_code: 'psa', plan: holder.plan, billing_source: holder.billingSource },
     co_managed_trial_sponsors: { tenant: 'sponsor' },
   } as Record<string, unknown>)[name];
   const chain = (name: string): Record<string, unknown> => {
@@ -98,7 +102,9 @@ beforeEach(() => {
   delete process.env.FORCE_CAPABILITIES;
   loader.mockReset().mockResolvedValue(sellable);
   registerBillingCatalogContextLoader(loader);
-  holder.plan = 'basic';
+  holder.plan = 'pro';
+  holder.billingSource = 'stripe';
+  holder.billing = false;
   holder.gateChecks = 0;
 });
 
@@ -123,7 +129,7 @@ describe('catalog context loads once per request at the entry points', () => {
   });
 
   it('resolveCoManagedRootAccess on the commercial path also loads once', async () => {
-    holder.plan = 'pro';
+    holder.billing = true;
     expect(await resolveCoManagedRootAccess('sponsor')).toMatchObject({ commercial: true });
     expect(loader).toHaveBeenCalledTimes(1);
   });
@@ -141,6 +147,13 @@ describe('catalog context loads once per request at the entry points', () => {
     expect(await getSeatTrialOfferAction()).toBeNull();
     await expect(prepareCoManagedSeatTrialAction({ clientId: 'c', contactId: 'k', operationId: 'o', boards: [] })).rejects.toThrow();
     delete process.env.STRIPE_CO_MANAGED_USER_PRICE_ID;
+  });
+
+  it('one eligibility rule: a sponsor prepare refuses is neither discovered nor offered the trial', async () => {
+    holder.billingSource = 'manual';
+    expect(await canDiscoverSeatTrial(holder.user as never, 'sponsor')).toBe(false);
+    expect(await resolveCoManagedRootAccess('sponsor')).not.toHaveProperty('trial');
+    expect(await getSeatTrialOfferAction()).toBeNull();
   });
 
   it('canDiscoverSeatTrial called directly (no entry scope) still answers the same, loading per check', async () => {
