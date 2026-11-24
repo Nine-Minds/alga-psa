@@ -35,7 +35,11 @@ export async function parseEmailBodyWithFallback(
     }
 
     const parsed = parseResult.parsed;
-    const sanitizedText = parsed.sanitizedText || params.text || '';
+    // A successful parse owns the body. An empty sanitizedText is the parser's suppression
+    // signal for a reply that held nothing above the boundary, so only a missing field falls
+    // back to the raw text: reviving it there puts the quoted notification back into the
+    // comment the v2 workflow writes (alga-2026-0003353).
+    const sanitizedText = parsed.sanitizedText ?? params.text ?? '';
     const sanitizedHtml = await sanitizeEmailHtml(parsed.sanitizedHtml || undefined);
     const parserMeta: Record<string, unknown> = {
       confidence: parsed.confidence,
