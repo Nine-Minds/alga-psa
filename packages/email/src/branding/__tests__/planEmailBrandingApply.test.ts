@@ -619,6 +619,46 @@ describe('enterprise brand assets in the plan', () => {
   });
 
   /**
+   * The footer row is ours to take only where it is the layout's own. A tenant
+   * who restyled their footer cell owns that row even with our words still in
+   * it: the apply leaves it alone until they tick it, and "Remove branding"
+   * never deletes it (see layoutFooter.ts).
+   */
+  it('neither rewrites nor deletes a footer cell the tenant restyled', () => {
+    const tenantRows = NAMES.map((name, index) => {
+      const row = brandedRow(960 + index, name, 'en');
+      const html = row.html_content.replace(
+        /<td style="padding:18px 32px;background:[^"]*">/,
+        '<td style="padding:24px 32px;background:#000000;color:#ffffff;font-size:12px;text-align:left;">',
+      );
+
+      expect(html).not.toBe(row.html_content);
+      return { ...row, html_content: html };
+    });
+
+    const plan = planEmailBrandingApply({
+      systemRows: SYSTEM_ROWS,
+      tenantRows,
+      target: FOREST,
+      appliedPalette: TERRACOTTA,
+      scope: { names: NAMES, languages: ['en'] },
+      decorate,
+    });
+
+    expect(plan.updates).toEqual([]);
+    expect(plan.skipped.every((skip) => skip.state === 'customized' && skip.reason === 'customized')).toBe(true);
+
+    const removal = planEmailBrandingRemoval({
+      systemRows: SYSTEM_ROWS,
+      tenantRows,
+      appliedPalette: TERRACOTTA,
+    });
+
+    expect(removal.deletable).toEqual([]);
+    expect(removal.kept).toHaveLength(3);
+  });
+
+  /**
    * The consequence of reading a missing footer row as ours
    * (see classifyTenantTemplate.ts): a tenant who deleted the row by hand gets
    * it back on the next apply, because deleting it is indistinguishable from

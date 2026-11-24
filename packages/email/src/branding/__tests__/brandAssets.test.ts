@@ -21,6 +21,11 @@ const LOGO = { variant: 'wide' as const, alt: 'Acme MSP' };
 
 const countLogos = (html: string) => (html.match(new RegExp(BRAND_LOGO_MARKER, 'g')) ?? []).length;
 
+/** The layout's footer row as the templates write it, in a tenant's colors. */
+const stockFooterRow = (content: string) =>
+  '<tr>\n      <td style="padding:18px 32px;background:#f8f5ff;color:#1f1147;font-size:12px;text-align:center;">\n'
+  + `        ${content}\n      </td>\n    </tr>`;
+
 describe('applyBrandLogo', () => {
   it('puts the logo inside the gradient header cell of a layout template', () => {
     const template = loadSystemTemplate('ticket-created');
@@ -307,7 +312,7 @@ describe('stripBrandAttribution', () => {
   });
 
   it('removes a localized attribution and its slogan as one unit', () => {
-    const footer = '<tr>\n<td style="padding:18px 32px;text-align:center;">\n  Drivs av AlgaPSA &middot; För samspelta team\n</td>\n</tr>';
+    const footer = stockFooterRow('Drivs av AlgaPSA &middot; För samspelta team');
 
     expect(stripBrandAttribution(`<table>${footer}</table>`)).toBe('<table></table>');
   });
@@ -395,16 +400,36 @@ describe('stripBrandAttribution', () => {
     ['their own line instead of our slogan', 'Acme MSP, your IT partner', 'Acme MSP, your IT partner'],
     ['their own line after our slogan', 'Keeping teams aligned &middot; +1 555 0100', '+1 555 0100'],
   ])('keeps a footer reworded with %s when only our own may go', (_shape, tail, theirs) => {
-    const footer = '<table><tr><td style="padding:18px 32px;background:#f8f5ff;text-align:center;">'
-      + `Powered by AlgaPSA &middot; ${tail}</td></tr></table>`;
+    const footer = `<table>${stockFooterRow(`Powered by AlgaPSA &middot; ${tail}`)}</table>`;
 
     const stripped = stripBrandAttribution(footer, { footerRow: 'shipped-slogan' });
 
     expect(stripped).toContain(theirs);
-    expect(stripped).toMatch(/<tr><td/);
+    expect(stripped).toMatch(/<tr>\s*<td/);
     expect(containsBrandAttribution(stripped)).toBe(false);
     // The apply path decorates the standard template, where the row is ours.
     expect(stripBrandAttribution(footer)).toBe('<table></table>');
+  });
+
+  /**
+   * The row goes whole only where it is the layout's own (see layoutFooter.ts).
+   * A footer cell the tenant restyled is theirs: the attribution and our slogan
+   * go, the cell they typed stays, and the difference stays visible to the
+   * classifier — a row removed from both sides of its comparison could not
+   * differ, and the apply would silently rewrite their styling.
+   */
+  it('leaves the row of a footer cell the tenant restyled', () => {
+    const theirCell = '<tr><td style="padding:24px;background:#000000;color:#ffffff;'
+      + 'font-size:12px;text-align:left;">Powered by AlgaPSA &middot; Keeping teams aligned</td></tr>';
+
+    for (const footerRow of ['any-tail', 'shipped-slogan'] as const) {
+      const stripped = stripBrandAttribution(`<table>${theirCell}</table>`, { footerRow });
+
+      expect(stripped).toContain('background:#000000');
+      expect(stripped).toContain('text-align:left');
+      expect(containsBrandAttribution(stripped)).toBe(false);
+      expect(stripped).not.toContain('Keeping teams aligned');
+    }
   });
 });
 
@@ -456,9 +481,24 @@ describe('decorateBrandedHtml', () => {
    * decorates a ticked customization, the one row it rewrites in place.
    */
   it.each(['any-tail', 'shipped-slogan'] as const)('repairs an orphaned slogan in %s mode', (footerRow) => {
-    const leftover = '<table><tr><td style="padding:18px 32px;background:#f8f5ff;text-align:center;">'
-      + '\n          Teams auf Kurs halten\n        </td></tr></table>';
+    const leftover = `<table>${stockFooterRow('Teams auf Kurs halten')}</table>`;
 
     expect(decorateBrandedHtml(leftover, { hideAttribution: true, footerRow })).toBe('<table></table>');
+  });
+
+  /**
+   * That repair rides on everything the apply writes, a ticked `customized` row
+   * included, so it may only ever take our own emptied band. A coloured rule or
+   * spacer row is a cell with nothing in it too, and it is the tenant's.
+   */
+  it("keeps a coloured spacer row of the tenant's own making", () => {
+    const accent = '<table><tr><td style="background:#b4552f;height:6px;line-height:6px;font-size:0;">'
+      + '</td></tr>' + stockFooterRow('Powered by AlgaPSA &middot; Keeping teams aligned') + '</table>';
+
+    const decorated = decorateBrandedHtml(accent, { hideAttribution: true, footerRow: 'shipped-slogan' });
+
+    expect(decorated).toContain('background:#b4552f');
+    expect(decorated).not.toContain('Keeping teams aligned');
+    expect(containsBrandAttribution(decorated)).toBe(false);
   });
 });

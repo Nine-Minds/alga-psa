@@ -32,10 +32,13 @@
  * A list is unavoidable: a bare slogan in a stored row carries no structural
  * marker that tells it apart from footer text a tenant typed, and blanking
  * footer cells wholesale would clobber hand-edited footers. The empty row needs
- * no list — a cell with nothing in it holds nothing a tenant wrote — only the
- * coloured band's own `background`, which every stock footer cell carries and a
- * content cell does not.
+ * no list — a cell with nothing in it holds nothing a tenant wrote — but it does
+ * need the same anchor: the stock footer cell and no other (see layoutFooter.ts),
+ * so a coloured spacer or accent row of the tenant's own, which is also a cell
+ * with nothing in it, is not swept away with our emptied band.
  */
+
+import { layoutFooterRow } from './layoutFooter';
 
 /** Every slogan the stock templates have shipped behind the attribution. */
 export const LEGACY_BRAND_SLOGANS: readonly string[] = [
@@ -68,18 +71,15 @@ const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\
 /** The shipped slogans as one alternation, shared with the attribution strip. */
 export const LEGACY_BRAND_SLOGAN_PATTERN = `(?:${LEGACY_BRAND_SLOGANS.map(escapeRegExp).join('|')})`;
 
-const SLOGAN_ROW = new RegExp(
-  `<tr[^>]*>\\s*<td[^>]*>\\s*${LEGACY_BRAND_SLOGAN_PATTERN}\\s*</td>\\s*</tr>`,
-  'gi',
-);
+const SLOGAN_ROW = layoutFooterRow(LEGACY_BRAND_SLOGAN_PATTERN);
 
 /**
  * What the old strip left of a footer that was the attribution alone: the
- * coloured band with nothing in it. Tied to the band's own `background` so an
- * emptied content cell, which a tenant may well have cleared on purpose, is not
- * normalized away with it.
+ * coloured band with nothing in it. Tied to the stock footer cell, so neither an
+ * emptied content cell nor a coloured spacer row a tenant laid out themselves is
+ * normalized — or written — away with it.
  */
-const EMPTY_ROW = /<tr[^>]*>\s*<td[^>]*background:[^>]*>\s*<\/td>\s*<\/tr>/gi;
+const EMPTY_ROW = layoutFooterRow('');
 
 /** Removes a footer row left holding nothing but one of our slogans, or an empty coloured band. */
 export function stripOrphanedBrandFooter(html: string): string {

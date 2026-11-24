@@ -202,6 +202,31 @@ describe('classifyTenantTemplate with enterprise brand assets', () => {
   });
 
   /**
+   * The same rule reaches the footer cell's own markup, not only its words. The
+   * strip removes the layout's footer row whole, which takes it off both sides
+   * of this comparison, so a row it recognizes can no longer differ there — and
+   * a tenant who restyled their footer cell would see that edit reported as
+   * nothing, overwritten by the next apply and deleted by "Remove branding".
+   * Hence the stock cell and no other counts as ours (see layoutFooter.ts).
+   */
+  it('calls a footer cell the tenant restyled customized', () => {
+    const stored = brandedRow.html_content.replace(
+      /<td style="padding:18px 32px;background:[^"]*">/,
+      '<td style="padding:24px 32px;background:#000000;color:#ffffff;font-size:12px;text-align:left;">',
+    );
+    expect(stored).not.toBe(brandedRow.html_content);
+
+    const result = classifyTenantTemplate({
+      tenantRow: { ...brandedRow, html_content: stored },
+      systemRow,
+      appliedPalette: TERRACOTTA,
+    });
+
+    expect(result.state).toBe('customized');
+    expect(result.differs).toContain('text');
+  });
+
+  /**
    * A footer row deleted by hand is the same bytes as the row an apply writes
    * with the attribution hidden, so it reads as ours and an apply puts it back.
    * That is the deliberate side to take: the row carries nothing but our

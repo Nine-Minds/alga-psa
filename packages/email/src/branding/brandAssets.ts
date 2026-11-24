@@ -6,6 +6,7 @@
  * leaves exactly one logo and one footer.
  */
 
+import { layoutFooterRow } from './layoutFooter';
 import { LEGACY_BRAND_SLOGAN_PATTERN, stripOrphanedBrandFooter } from './orphanedSlogan';
 import type { EmailBrandingLogoArtwork, EmailBrandingLogoShape, EmailBrandingLogoVariant } from './types';
 
@@ -208,14 +209,16 @@ const ATTRIBUTION = `(?:${ATTRIBUTION_PREFIXES.join('|')}) Alga\\s?PSA`;
 const SEPARATOR = '(?:&middot;|&#183;|·|•)';
 
 /**
- * The layout's footer row when the attribution opens it: the cell holds nothing
- * but the attribution and, after the separator, whatever tail the mode allows.
+ * The layout's own footer row when the attribution opens it: the stock footer
+ * cell (see layoutFooter.ts) holding nothing but the attribution and, after the
+ * separator, whatever tail the mode allows.
  */
-const footerRow = (tail: string) => new RegExp(
-  `<tr[^>]*>\\s*<td[^>]*>\\s*${ATTRIBUTION}(?:\\s*${SEPARATOR}\\s*${tail})?\\s*</td>\\s*</tr>`,
-  'gi',
-);
-/** The same attribution-and-tail pair outside a row of its own. */
+const footerRow = (tail: string) =>
+  layoutFooterRow(`${ATTRIBUTION}(?:\\s*${SEPARATOR}\\s*${tail})?`);
+/**
+ * The same attribution-and-tail pair anywhere else — a footer cell the tenant
+ * laid out themselves, where the row stays and only our own words go.
+ */
 const attributionWithTail = (tail: string) =>
   new RegExp(`${ATTRIBUTION}\\s*${SEPARATOR}\\s*${tail}`, 'gi');
 
@@ -263,7 +266,8 @@ export interface BrandAttributionStripOptions {
  *   attribution: the copyright is the tenant's.
  * - the standalone <p>Powered by AlgaPSA</p> older portal-invitation rows carry.
  * - anything else the attribution sits in loses the attribution and the
- *   separator behind it, and keeps the rest.
+ *   separator behind it, and keeps the rest — a footer cell the tenant laid out
+ *   themselves is not the layout's row, so the row itself stays theirs.
  *
  * Idempotent: a second pass has nothing left to match.
  */
