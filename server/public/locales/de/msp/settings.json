@@ -269,6 +269,7 @@
         "sendInvitation": "Einladung konnte nicht gesendet werden",
         "sendInvitationManual": "Einladung konnte nicht gesendet werden. Sie können sie manuell aus der Benutzerliste senden.",
         "createClientPortalUser": "Kundenportal-Benutzer konnte nicht erstellt werden",
+        "portalRoleNotConfigured": "Für diese Organisation ist keine Kundenportalrolle konfiguriert. Konfigurieren Sie eine Kundenportalrolle und versuchen Sie es erneut.",
         "clipboardUnavailable": "Zwischenablage-API ist in diesem Browser nicht verfügbar.",
         "copyPortalLink": "Portal-Anmeldelink konnte nicht kopiert werden",
         "fillRequiredFields": "Bitte füllen Sie alle Pflichtfelder aus",

@@ -183,6 +183,23 @@ describe('ContactPortalTab portal-admin refresh', () => {
     });
   });
 
+  it.each([
+    { role_name: 'aDmIn', client: true, msp: true, expected: true },
+    { role_name: 'Admin', client: false, msp: true, expected: false },
+  ])('uses the authoritative Admin predicate for $role_name client=$client msp=$msp', async ({ expected, ...role }) => {
+    const assignedRole = { role_id: 'dual-scope-admin', ...role };
+    getRolesMock.mockResolvedValue([assignedRole, CLIENT_USER]);
+    getUserByContactIdMock.mockResolvedValue({ user: { user_id: 'user-1', roles: [assignedRole] } });
+    const onPortalAdminChanged = vi.fn();
+
+    render(<ContactPortalTab contact={contact}
+      currentUserPermissions={{ canInvite: true, canUpdateRoles: true, canRead: true }}
+      onPortalAdminChanged={onPortalAdminChanged} />);
+
+    await waitFor(() => expect(onPortalAdminChanged).toHaveBeenCalledWith(expected));
+    expect(onPortalAdminChanged).not.toHaveBeenCalledWith(!expected);
+  });
+
   it('reports the flag as false once the client Admin role is removed', async () => {
     getUserByContactIdMock
       .mockResolvedValueOnce({ user: { user_id: 'user-1', roles: [CLIENT_ADMIN, CLIENT_USER] } })

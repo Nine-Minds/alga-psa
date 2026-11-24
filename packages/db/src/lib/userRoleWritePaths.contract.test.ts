@@ -44,6 +44,7 @@ const SYNCED_WRITERS: Record<string, string> = {
   'shared/models/userModel.ts': 'addUserRoles',
   'ee/server/src/lib/integrations/entra/sync/clientPortalProvisioning.ts': 'addUserRoles',
   'ee/server/src/lib/integrations/entra/sync/workflowPortalAccessActions.ts': 'addUserRoles',
+  'ee/server/src/lib/co-managed/portableWorkspaceRestoreDatabase.ts': 'syncContactClientAdminFlag',
 };
 
 /**
@@ -74,6 +75,20 @@ const EXEMPT_WRITERS: Record<string, string> = {
     'deletes a user and its role rows; with the portal user gone the contact flag is the invitation pre-seed again',
   'ee/temporal-workflows/src/db/tenant-operations.ts':
     'tenant deletion removes every row of the tenant, contacts included',
+  'ee/temporal-workflows/src/activities/tenant-deletion-activities.ts':
+    'the dynamic tenant deletion manifest removes user_roles together with all tenant rows, contacts included',
+};
+
+/**
+ * Manifest-driven writers have no literal table name at their write statement.
+ * Keep their entry points in the inventory explicitly, with a write marker so
+ * changing the dynamic implementation requires reviewing this classification.
+ * Restore is synced after ALL tables and deferred links have been written;
+ * tenant deletion is exempt because it removes the contacts as well.
+ */
+const DYNAMIC_WRITERS: Record<string, string> = {
+  'ee/server/src/lib/co-managed/portableWorkspaceRestoreDatabase.ts': 'own.table(table).insert(',
+  'ee/temporal-workflows/src/activities/tenant-deletion-activities.ts': 'explicitTenantDeletionTableQuery(k, tenantId, tableBoundary).delete()',
 };
 
 /**
@@ -116,7 +131,7 @@ function writersOfUserRoles(): string[] {
         (/['"`]user_roles['"`]/.test(line) && WRITE_VERB.test(lines.slice(i, i + 9).join(' '))) ||
         RAW_WRITE.test(line)
     );
-    if (writes) writers.push(file);
+    if (writes || file in DYNAMIC_WRITERS) writers.push(file);
   }
   return writers.sort();
 }
@@ -128,6 +143,15 @@ describe('user_roles writer classification', () => {
     expect(writers).toContain(WRITE_OWNER);
     expect(writers).toContain('packages/co-managed/src/seatInvitation.ts');
     expect(writers).toContain('ee/server/src/lib/service-principals/service.ts');
+    expect(writers).toContain('ee/server/src/lib/co-managed/portableWorkspaceRestoreDatabase.ts');
+    expect(writers).toContain('ee/temporal-workflows/src/activities/tenant-deletion-activities.ts');
+  });
+
+  it.each(Object.entries(DYNAMIC_WRITERS))('%s keeps its manifest-driven write classified', (file, marker) => {
+    expect(writers).toContain(file);
+    expect(read(file)).toContain(marker);
+    expect(WRITE_VERB.test(read(file))).toBe(true);
+    expect(file in SYNCED_WRITERS || file in EXEMPT_WRITERS).toBe(true);
   });
 
   it('every writer carries the flag sync or is classified as exempt', () => {

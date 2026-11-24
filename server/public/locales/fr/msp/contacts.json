@@ -380,7 +380,7 @@
     },
     "portalAdmin": {
       "label": "Administrateur du portail",
-      "helper": "Lorsqu’il est activé, l’utilisateur sera créé avec le rôle Administrateur client. Lorsqu’il est désactivé, il obtiendra le rôle Utilisateur client."
+      "helper": "Les invitations utilisent le rôle Administrateur client si cette option est activée et Utilisateur client sinon. L’inscription et le provisionnement utilisent le rôle attribué."
     },
     "roles": {
       "label": "Rôles du portail",

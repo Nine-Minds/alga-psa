@@ -378,7 +378,7 @@
     },
     "portalAdmin": {
       "label": "Portaalbeheerder",
-      "helper": "Wanneer ingeschakeld, wordt de gebruiker aangemaakt met de rol Klantbeheerder. Wanneer uitgeschakeld, krijgt die de rol Klantgebruiker."
+      "helper": "Uitnodigingen gebruiken Klantbeheerder als deze optie is ingeschakeld en Klantgebruiker als deze is uitgeschakeld. Registratie en provisioning gebruiken de toegewezen rol."
     },
     "roles": {
       "label": "Portaalrollen",

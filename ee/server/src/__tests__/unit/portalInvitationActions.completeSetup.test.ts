@@ -116,8 +116,9 @@ function buildKnexHarness(params: {
   const knexMock: any = vi.fn((table: string) => {
     if (table === 'contacts') {
       return {
+        select: () => knexMock(table),
         where: vi.fn(() => ({
-          first: vi.fn(async () => ({ contact_kind: 'person' })),
+          first: vi.fn(async () => ({ ...contactPayload, contact_kind: 'person' })),
         })),
       };
     }
@@ -314,6 +315,26 @@ describe('completePortalSetup', () => {
     expect(portalRoleFixture.roleWrites).toEqual([
       { tenant: 'tenant-1', userId: 'new-user-1', roleIds: ['client-admin-role'] },
     ]);
+  });
+
+  it('returns a translatable code when manual creation cannot resolve a portal role', async () => {
+    const harness = buildKnexHarness({});
+    harness.transactionMock.mockImplementation(async (callback: (trx: any) => Promise<unknown>) => callback(harness.knexMock));
+    createTenantKnexMock.mockResolvedValue({ knex: harness.knexMock, tenant: 'tenant-1' });
+    portalRoleFixture.initialRoleId = null;
+
+    const { createClientPortalUser } = await import(
+      '../../../../../packages/portal-shared/src/actions/portalInvitationActions'
+    );
+    const result = await (createClientPortalUser as any)(
+      { user_id: 'actor', user_type: 'internal' }, { tenant: 'tenant-1' },
+      { contactId: 'contact-1', password: 'ruby-slippers-3' }
+    );
+
+    expect(result).toMatchObject({ success: false, errorCode: 'PORTAL_ROLE_NOT_CONFIGURED' });
+    expect(harness.usersInsertMock).toHaveBeenCalledOnce();
+    expect(portalRoleFixture.roleWrites).toEqual([]);
+    expect(harness.preferenceInserts).toEqual([]);
   });
 
   it('fails the setup when no portal role can be resolved, instead of creating a role-less account', async () => {

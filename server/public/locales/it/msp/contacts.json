@@ -380,7 +380,7 @@
     },
     "portalAdmin": {
       "label": "Amministratore del portale",
-      "helper": "Se abilitato, l'utente verrà creato con il ruolo di Amministratore cliente. Se disabilitato, riceverà il ruolo di Utente cliente."
+      "helper": "Gli inviti utilizzano il ruolo Amministratore cliente quando questa opzione è attiva e Utente cliente quando è disattivata. La registrazione e il provisioning utilizzano il ruolo assegnato."
     },
     "roles": {
       "label": "Ruoli del portale",

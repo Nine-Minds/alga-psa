@@ -380,7 +380,7 @@
     },
     "portalAdmin": {
       "label": "Administrador do Portal",
-      "helper": "Quando ativado, o usuário será criado com a função de administrador do cliente. Quando desativados, eles receberão a função de usuário cliente."
+      "helper": "Os convites usam a função administrador do cliente quando esta opção está ativada e usuário do cliente quando está desativada. O registro e o aprovisionamento usam a função atribuída."
     },
     "roles": {
       "label": "Funções do portal",

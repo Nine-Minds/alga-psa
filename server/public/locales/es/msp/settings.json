@@ -269,6 +269,7 @@
         "sendInvitation": "Error al enviar la invitación",
         "sendInvitationManual": "Error al enviar la invitación. Puede enviarla manualmente desde la lista de usuarios.",
         "createClientPortalUser": "Error al crear el usuario del portal del cliente",
+        "portalRoleNotConfigured": "No hay ningún rol del portal del cliente configurado para esta organización. Configure un rol del portal del cliente e inténtelo de nuevo.",
         "clipboardUnavailable": "La API del portapapeles no está disponible en este navegador.",
         "copyPortalLink": "Error al copiar el enlace de inicio de sesión del portal",
         "fillRequiredFields": "Complete todos los campos obligatorios",

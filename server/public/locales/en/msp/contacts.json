@@ -380,7 +380,7 @@
     },
     "portalAdmin": {
       "label": "Portal Administrator",
-      "helper": "When enabled, the user will be created with Client Admin role. When disabled, they'll get Client User role."
+      "helper": "Invitations use Client Admin when enabled and Client User when disabled. Registration and provisioning use their assigned role."
     },
     "roles": {
       "label": "Portal Roles",

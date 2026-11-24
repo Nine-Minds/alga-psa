@@ -561,7 +561,10 @@ export const createClientPortalUser = withAuth(async (
           // 'User' — invitation creation deliberately honors the pre-seed.
           targetRoleId = (await resolveInitialPortalRoleId(trx, tenant, contact.contact_name_id)) ?? undefined;
           if (!targetRoleId) {
-            throw new Error('No client portal role found for this tenant');
+            throw new PortalInvitationError(
+              'No client portal role is configured for this organization. Configure a client portal role and try again.',
+              'PORTAL_ROLE_NOT_CONFIGURED'
+            );
           }
         }
         if (targetRoleId) {

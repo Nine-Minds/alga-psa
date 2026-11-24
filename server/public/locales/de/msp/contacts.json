@@ -378,7 +378,7 @@
     },
     "portalAdmin": {
       "label": "Portaladministrator",
-      "helper": "Wenn aktiviert, wird der Benutzer mit der Rolle Kundenadministrator erstellt. Wenn deaktiviert, erhält er die Rolle Kundenbenutzer."
+      "helper": "Einladungen verwenden bei aktivierter Einstellung die Rolle Kundenadministrator und bei deaktivierter Einstellung Kundenbenutzer. Registrierung und Bereitstellung verwenden die jeweils zugewiesene Rolle."
     },
     "roles": {
       "label": "Portalrollen",

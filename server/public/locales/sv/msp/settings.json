@@ -269,6 +269,7 @@
         "sendInvitation": "Det gick inte att skicka inbjudan",
         "sendInvitationManual": "Det gick inte att skicka inbjudan. Du kan skicka den manuellt från användarlistan.",
         "createClientPortalUser": "Det gick inte att skapa kundportalanvändaren",
+        "portalRoleNotConfigured": "Ingen kundportalroll har konfigurerats för den här organisationen. Konfigurera en kundportalroll och försök igen.",
         "clipboardUnavailable": "Urklipps-API:et är inte tillgängligt i den här webbläsaren.",
         "copyPortalLink": "Det gick inte att kopiera portalens inloggningslänk",
         "fillRequiredFields": "Fyll i alla obligatoriska fält",

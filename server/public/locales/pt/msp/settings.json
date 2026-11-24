@@ -269,6 +269,7 @@
         "sendInvitation": "Falha ao enviar convite",
         "sendInvitationManual": "Falha ao enviar convite. Você pode enviá-lo manualmente a partir da lista de usuários.",
         "createClientPortalUser": "Falha ao criar usuário do portal do cliente",
+        "portalRoleNotConfigured": "Não há nenhuma função do portal do cliente configurada para esta organização. Configure uma função do portal do cliente e tente novamente.",
         "clipboardUnavailable": "A API da área de transferência não está disponível neste navegador.",
         "copyPortalLink": "Falha ao copiar o link de login do portal",
         "fillRequiredFields": "Por favor preencha todos os campos obrigatórios",

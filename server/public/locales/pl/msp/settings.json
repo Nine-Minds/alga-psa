@@ -269,6 +269,7 @@
         "sendInvitation": "Nie udało się wysłać zaproszenia",
         "sendInvitationManual": "Nie udało się wysłać zaproszenia. Można je wysłać ręcznie z listy użytkowników.",
         "createClientPortalUser": "Nie udało się utworzyć użytkownika portalu klienta",
+        "portalRoleNotConfigured": "Dla tej organizacji nie skonfigurowano roli portalu klienta. Proszę skonfigurować rolę portalu klienta i spróbować ponownie.",
         "clipboardUnavailable": "Interfejs API schowka nie jest dostępny w tej przeglądarce.",
         "copyPortalLink": "Nie udało się skopiować linku logowania do portalu",
         "fillRequiredFields": "Wypełnij wszystkie wymagane pola",

@@ -380,7 +380,7 @@
     },
     "portalAdmin": {
       "label": "Portaladministratör",
-      "helper": "När inställningen är aktiverad skapas användaren med rollen ”Kundadministratör”. När den är inaktiverad får användaren rollen ”Kundanvändare”."
+      "helper": "Inbjudningar använder Kundadministratör när detta är aktiverat och Kundanvändare när det är inaktiverat. Registrering och etablering använder den tilldelade rollen."
     },
     "roles": {
       "label": "Portalroller",

@@ -380,7 +380,7 @@
     },
     "portalAdmin": {
       "label": "Administrator portalu",
-      "helper": "Po włączeniu użytkownik zostanie utworzony z rolą Administratora klienta. Po wyłączeniu otrzyma rolę Użytkownika klienta."
+      "helper": "Zaproszenia używają roli Administratora klienta, gdy ta opcja jest włączona, i Użytkownika klienta, gdy jest wyłączona. Rejestracja i aprowizacja używają przypisanej roli."
     },
     "roles": {
       "label": "Role portalu",

@@ -220,8 +220,8 @@ export function ContactPortalTab({ contact, currentUserPermissions, onPortalAdmi
       // left alone.
       if (portalUser) {
         const clientAdminRoleIds = new Set(
-          clientPortalRoles
-            .filter(role => (role.role_name || '').toLowerCase() === 'admin')
+          roles
+            .filter(role => role.client && (role.role_name || '').toLowerCase() === 'admin')
             .map(role => role.role_id)
         );
         const holdsClientAdminRole = (Array.isArray(portalUser.roles) ? portalUser.roles : [])
@@ -812,7 +812,7 @@ export function ContactPortalTab({ contact, currentUserPermissions, onPortalAdmi
                     {t('contactPortalTab.portalAdmin.label', { defaultValue: 'Portal Administrator' })}
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    {t('contactPortalTab.portalAdmin.helper', { defaultValue: 'When enabled, the user will be created with Client Admin role. When disabled, they\'ll get Client User role.' })}
+                    {t('contactPortalTab.portalAdmin.helper', { defaultValue: 'Invitations use Client Admin when enabled and Client User when disabled. Registration and provisioning use their assigned role.' })}
                   </p>
                 </div>
                 <Switch
