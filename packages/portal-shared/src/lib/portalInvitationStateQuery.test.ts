@@ -74,11 +74,25 @@ describe('invitationStateHaving', () => {
     // <date>". Expired is both honest and the state that repairs it: a resend
     // re-points the stored address.
     expect(LATEST_INVITATION_STATE_SQL).toContain(
-      `lower((array_agg(pi.email ${'order by pi.created_at desc, pi.invitation_id desc'}))[1]) is distinct from lower(min(c.email)) then 'expired'`
+      `lower(btrim((array_agg(pi.email ${'order by pi.created_at desc, pi.invitation_id desc'}))[1])) `
+      + `is distinct from lower(btrim(min(c.email))) then 'expired'`
     );
     // And the mismatch is decided before anything is called pending.
     expect(LATEST_INVITATION_STATE_SQL.indexOf('is distinct from'))
       .toBeLessThan(LATEST_INVITATION_STATE_SQL.indexOf("else 'pending'"));
+  });
+
+  it('compares the address the way the single-row twin does', () => {
+    // invitationRefusedAtUseTime lowercases and trims both sides, and so does
+    // verifyToken's own join predicate. If the column's SQL compared them
+    // untrimmed, a stray space in one of the two stored addresses would read as
+    // "pending until <date>" on the contact's Portal tab and as "expired" on
+    // the client's contact list — the same split this rule exists to close.
+    expect(invitationRefusedAtUseTime({
+      contactEmail: ' ada@acme.test ',
+      invitationEmail: 'ada@acme.test',
+    })).toBeNull();
+    expect(LATEST_INVITATION_STATE_SQL).toContain('lower(btrim(min(c.email)))');
   });
 });
 
@@ -121,8 +135,8 @@ describe('invitationRefusedAtUseTime', () => {
   });
 
   it('refuses an invitation with no address on either side', () => {
-    // `lower(c.email) = lower(pi.email)` is never true when a side is NULL, so
-    // neither is this.
+    // `lower(btrim(c.email)) = lower(btrim(pi.email))` is never true when a
+    // side is NULL, so neither is this.
     expect(invitationRefusedAtUseTime({ contactEmail: null, invitationEmail: 'ada@acme.test' }))
       .toBe('email_changed');
     expect(invitationRefusedAtUseTime({ contactEmail: 'ada@acme.test', invitationEmail: null }))

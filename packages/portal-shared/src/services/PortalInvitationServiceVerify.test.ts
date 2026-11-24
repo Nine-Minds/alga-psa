@@ -44,7 +44,7 @@ function invitationQueryBuilder() {
     },
     whereRaw(sql: string) {
       if (sql.includes('c.is_inactive')) requireActiveContact = true;
-      if (sql.includes('lower(c.email) = lower(pi.email)')) requireMatchingEmail = true;
+      if (sql.includes('lower(btrim(c.email)) = lower(btrim(pi.email))')) requireMatchingEmail = true;
       return builder;
     },
     select() {
@@ -53,9 +53,12 @@ function invitationQueryBuilder() {
     first() {
       // coalesce(c.is_inactive, false) = false: a NULL row is an active contact.
       if (requireActiveContact && state.contact.is_inactive === true) return Promise.resolve(undefined);
+      // lower(btrim(...)) on both sides: case and surrounding space are the
+      // same mailbox, exactly as invitationRefusedAtUseTime judges it.
       if (
         requireMatchingEmail
-        && String(state.contact.email ?? '').toLowerCase() !== invitation.email.toLowerCase()
+        && String(state.contact.email ?? '').trim().toLowerCase()
+          !== invitation.email.trim().toLowerCase()
       ) {
         return Promise.resolve(undefined);
       }
@@ -167,6 +170,15 @@ describe('PortalInvitationService.verifyToken', () => {
 
   it('is case-insensitive about the address, like the user table is', async () => {
     state.contact.email = 'Casey@Acme.test';
+
+    await expect(PortalInvitationService.verifyToken('token-1')).resolves.toMatchObject({ valid: true });
+  });
+
+  it('does not refuse a link over surrounding whitespace', async () => {
+    // Both sides are trimmed, as invitationRefusedAtUseTime and the contact
+    // list's state SQL trim them: a stray space is the same mailbox, and the
+    // three surfaces must not disagree about whether the link still works.
+    state.contact.email = ' casey@acme.test ';
 
     await expect(PortalInvitationService.verifyToken('token-1')).resolves.toMatchObject({ valid: true });
   });

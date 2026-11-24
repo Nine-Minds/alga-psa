@@ -40,6 +40,10 @@ export const LATEST_INVITATION_EXPIRES_AT_SQL = latestInvitation('pi.expires_at'
  * would promise a link that cannot be opened. Expired is also the state that
  * repairs it — a resend re-points the stored address and mails a usable link.
  *
+ * The address comparison is lowercased and trimmed on both sides, exactly as
+ * `verifyToken` and `invitationRefusedAtUseTime` compare it, so the column, the
+ * batch and the setup page cannot reach three different verdicts for one row.
+ *
  * `min(c.email)` rather than a bare `c.email` so the expression stands on its
  * own in a HAVING clause, whatever the caller grouped by.
  */
@@ -47,7 +51,7 @@ export const LATEST_INVITATION_STATE_SQL = `case
     when count(pi.invitation_id) = 0 then 'none'
     when ${latestInvitation('pi.used_at')} is not null then 'none'
     when ${LATEST_INVITATION_EXPIRES_AT_SQL} <= now() then 'expired'
-    when lower(${latestInvitation('pi.email')}) is distinct from lower(min(c.email)) then 'expired'
+    when lower(btrim(${latestInvitation('pi.email')})) is distinct from lower(btrim(min(c.email))) then 'expired'
     else 'pending'
   end`;
 

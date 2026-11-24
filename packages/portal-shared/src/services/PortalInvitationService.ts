@@ -244,7 +244,11 @@ export class PortalInvitationService {
           // contacts.is_inactive is nullable, and a NULL row is an active
           // contact — comparing it to false would refuse it for ever.
           .whereRaw('coalesce(c.is_inactive, false) = false')
-          .whereRaw('lower(c.email) = lower(pi.email)')
+          // Trimmed on both sides, like invitationRefusedAtUseTime: a stray
+          // space around an address is the same mailbox, and refusing a link
+          // over invisible whitespace would also make the MSP's "pending"
+          // column disagree with the setup page.
+          .whereRaw('lower(btrim(c.email)) = lower(btrim(pi.email))')
           .select(
             'pi.*',
             'c.full_name',
