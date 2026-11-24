@@ -4,7 +4,7 @@ import { cleanSearchIdentifierQuery } from './searchIdentifier';
 // words or a single numeric suffix; multiple numeric groups can be a literal TICKET number.
 const LEADING_TICKET_LABEL = /^ticket(?=$|#|\s+(?:[^\s\d-]|\d+\s*$))/i;
 const SEPARATORS = /[\s-]+/g;
-const COMPLETE_TICKET_NUMBER = /^(?:[a-z]+[-\s]*\d+(?:[-\s]+\d+)+|[a-z]+\d{10,})$/i;
+const COMPLETE_COMPACT_TICKET_NUMBER = /^[a-z]+\d{10,}$/i;
 
 export interface TicketSearchQuery {
   /** The query trimmed of surrounding whitespace; use for title/status/priority matching. */
@@ -18,7 +18,7 @@ export interface TicketSearchQuery {
   literalReference: string;
   /** True when the trimmed input starts with the email label marker, including a leading #. */
   isExplicitLabel: boolean;
-  /** True for a complete number copied from the email's `Ticket #...` reference. */
+  /** True for a complete number introduced by `#` or the email's `Ticket #` label. */
   isCompleteEmailReference: boolean;
 }
 
@@ -40,7 +40,8 @@ export function parseTicketSearchQuery(rawQuery: string): TicketSearchQuery {
   const literalText = /^ticket\s*#/i.test(text) ? emailReferenceText : cleaned;
   const literalReference = compactTicketReference(cleanSearchIdentifierQuery(literalText));
   const isExplicitLabel = /^(?:ticket\s*)?#/i.test(text);
-  const isCompleteEmailReference = /^ticket\s*#/i.test(text) && COMPLETE_TICKET_NUMBER.test(labelText.trim());
+  const compactReference = compactTicketReference(labelText.trim());
+  const isCompleteEmailReference = isExplicitLabel && COMPLETE_COMPACT_TICKET_NUMBER.test(compactReference);
   return { text, reference, literalReference, isExplicitLabel, isCompleteEmailReference };
 }
 

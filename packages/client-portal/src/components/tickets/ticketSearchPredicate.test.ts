@@ -127,6 +127,32 @@ describe('buildTicketSearchPredicate', () => {
     expect(results).toEqual([]);
   });
 
+  it('treats hash-only and Ticket-hash complete references the same', () => {
+    const rows = [{ ...ticketPrefixNumber, ticket_number: 'TICKET-ALGA-2026-0002826' }];
+    for (const query of ['#ALGA-2026-0002826', 'Ticket #ALGA-2026-0002826']) {
+      expect(rows.filter(buildTicketSearchPredicate(query, rows)).map(({ ticket_number }) => ticket_number)).toEqual([]);
+    }
+  });
+
+  it('keeps partial labeled references matching across hyphenated and compact separators', () => {
+    const rows = [algaNumber];
+    for (const query of ['Ticket #ALGA-2026-0', 'Ticket #ALGA20260']) {
+      expect(rows.filter(buildTicketSearchPredicate(query, rows)).map(({ ticket_number }) => ticket_number)).toEqual([
+        'ALGA-2026-0002826',
+      ]);
+    }
+  });
+
+  it('treats hyphenated and compact complete TICKET references the same', () => {
+    const rows = [{ ...ticketPrefixNumber, ticket_number: 'OLD-TICKET-ALGA-2026-0002826' }];
+    for (const query of [
+      'Ticket #TICKET-ALGA-2026-0002826',
+      'Ticket #TICKETALGA20260002826',
+    ]) {
+      expect(rows.filter(buildTicketSearchPredicate(query, rows)).map(({ ticket_number }) => ticket_number)).toEqual([]);
+    }
+  });
+
   it('keeps the TICKET prefix in a hash-introduced identifier', () => {
     expect([algaNumber]
       .filter(buildTicketSearchPredicate('#TICKET ALGA 2026 0002826', [algaNumber]))

@@ -71,6 +71,20 @@ describe('ticketReferenceSearch', () => {
     }
   });
 
+  it('normalizes complete-reference detection across labels and separators', () => {
+    for (const queryText of ['#ALGA-2026-0002826', 'Ticket #ALGA-2026-0002826']) {
+      expect([...resolveTicketNumberMatches(['TICKET-ALGA-2026-0002826'], parseTicketSearchQuery(queryText))]).toEqual([]);
+    }
+    for (const queryText of ['Ticket #TICKET-ALGA-2026-0002826', 'Ticket #TICKETALGA20260002826']) {
+      expect([...resolveTicketNumberMatches(['OLD-TICKET-ALGA-2026-0002826'], parseTicketSearchQuery(queryText))]).toEqual([]);
+    }
+    for (const queryText of ['Ticket #ALGA-2026-0', 'Ticket #ALGA20260']) {
+      expect([...resolveTicketNumberMatches(['ALGA-2026-0002826'], parseTicketSearchQuery(queryText))]).toEqual([
+        'alga20260002826',
+      ]);
+    }
+  });
+
   it('treats a leading hash as introducing an identifier that can begin with TICKET', () => {
     const query = parseTicketSearchQuery('#TICKET ALGA 2026 0002826');
     expect([...resolveTicketNumberMatches(['ALGA-2026-0002826'], query)]).toEqual([]);
