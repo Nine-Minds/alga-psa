@@ -152,4 +152,23 @@ describe('Gmail reply to the contact’s own reply (alga-2026-0003353)', () => {
     expect(result.sanitizedHtml).toBeUndefined();
     expect(result.sanitizedText).toContain('Please confirm which window you want');
   });
+
+  it.each(['', '\n--- Please reply above this line ---\nOld notification'])(
+    'rejects a trim that removes an inline answer, with boundary %j',
+    (boundary) => {
+      const answer = 'Yes please, two monitors for each desk. Please send the revised quote before ordering, '
+        + 'and arrange delivery on Thursday afternoon when our office manager can let the installers in.';
+      const result = parseEmailReply({
+        text: `Answers inline.\nOn Mon, Nov 17, 2026 Dana Tech wrote:\n> Do you want monitors?\n${answer}${boundary}`,
+        html: `<p>Answers inline.</p><blockquote class="gmail_quote"><p>Do you want monitors?</p><p>${answer}</p></blockquote>`,
+      });
+
+      expect(result.sanitizedText).toContain(answer);
+      expect(result.sanitizedHtml).toBeUndefined();
+      expect(result.appliedHeuristics).toContain('html-trim-rejected');
+      expect(result.warnings).toContain(
+        'HTML blockquote trim removed significantly more content than text heuristics; using text result.',
+      );
+    },
+  );
 });

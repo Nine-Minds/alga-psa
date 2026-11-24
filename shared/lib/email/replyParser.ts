@@ -225,12 +225,12 @@ function introducesInlineQuote(lines: string[], startIndex: number, config: Repl
 }
 
 /**
- * Gmail wraps a long `On <date> <Name> <addr> wrote:` attribution over two lines, so the
+ * Gmail wraps a long `On <date> <Name> <addr> wrote:` attribution over two or three lines, so the
  * single-line `providerReplyHeaders` patterns miss it. Authored prose can wear the same clothes
  * ("On Tuesday I emailed jane@example.com about the invoice. / She wrote: / > …"), and cutting
  * there destroys everything the customer wrote below, so only accept the shape providers emit:
- * a date or time in the `On …` part, the address immediately before `wrote:` on the very next
- * line, and the previous message — not a single line — quoted from there to the end of the
+ * a date or time in the `On …` part, the address immediately before `wrote:` within the next
+ * two lines, and the previous message — not a single line — quoted from there to the end of the
  * message or to a signature.
  */
 function isWrappedProviderReplyHeader(lines: string[], startIndex: number, config: ReplyParserConfig): boolean {
@@ -239,12 +239,19 @@ function isWrappedProviderReplyHeader(lines: string[], startIndex: number, confi
     return false;
   }
 
-  const continuation = (lines[startIndex + 1] ?? '').trim();
-  if (!wrappedAttributionTailRegex.test(continuation)) {
-    return false;
+  for (let offset = 1; offset <= 2; offset += 1) {
+    const continuation = (lines[startIndex + offset] ?? '').trim();
+    if (wrappedAttributionTailRegex.test(continuation)) {
+      return isTrailingQuotedHistory(lines, startIndex + offset + 1, config);
+    }
+    // A third line is allowed only after a folded display name, not an empty line,
+    // another attribution, or quoted content.
+    if (!/^[\p{L}\p{N} .,'’"_-]+<?$/u.test(continuation)) {
+      return false;
+    }
   }
 
-  return isTrailingQuotedHistory(lines, startIndex + 2, config);
+  return false;
 }
 
 const htmlCommentTokenRegex = /<!--\s*alga:reply-token:(?<payload>[^-]+)-->?/i;
@@ -406,6 +413,14 @@ export function htmlToVisibleText(html: string): string {
     .split('\n')
     .map((line) => line.replace(/\s+/g, ' ').trim())
     .join('\n');
+}
+
+/** Media can carry a reply even when its HTML has no visible text. */
+export function hasHtmlMediaContent(html: string): boolean {
+  const content = stripPreheaderElements(html)
+    .replace(/<(?:style|script)\b[\s\S]*?<\/(?:style|script)>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '');
+  return /<(?:img|video|audio)\b/i.test(content);
 }
 
 /**
@@ -956,16 +971,15 @@ export function parseEmailReply(input: ReplyParserInput, config: Partial<ReplyPa
     // the text heuristics did, the cut was likely a false positive — prefer the text
     // result so future misfires leak quoted history instead of destroying content.
     //
-    // Compare like with like: the text side may still carry a quote level the HTML trim
-    // already removed, so measure against the text with provider attributions and quoted
-    // lines stripped. Otherwise a short reply above a long quote always trips the ratio.
+    // Provider headers and quote prefixes were already stripped together above. Do not
+    // strip again: removing the quote prefixes erased the evidence that an attribution
+    // introduced an inline question followed by the author's answer.
     if (
       sanitizedHtml
       && (appliedHeuristics.includes('html-blockquote-trim') || appliedHeuristics.includes('html-marker-boundary'))
     ) {
       const htmlVisibleLength = htmlToVisibleText(sanitizedHtml).replace(/\s+/g, ' ').trim().length;
-      const baselineText = stripProviderHeaders(trimmedText, mergedConfig).text;
-      const textLength = baselineText.replace(/\s+/g, ' ').trim().length;
+      const textLength = trimmedText.replace(/\s+/g, ' ').trim().length;
       if (textLength > 0 && htmlVisibleLength < textLength * 0.5) {
         warnings.push(
           'HTML blockquote trim removed significantly more content than text heuristics; using text result.',
@@ -985,7 +999,9 @@ export function parseEmailReply(input: ReplyParserInput, config: Partial<ReplyPa
     // that swallowed the whole body (a reply delivered inside a quote, an answer below an
     // old-layout notification) would otherwise store a blank comment. An empty reply above our
     // own boundary still stays empty, and preserving too much remains the safe failure mode.
-    if (!sanitizedHtml && !trimmedText && !emptyAlgaReply) {
+    const htmlHasContent = htmlToVisibleText(sanitizedHtml ?? '').trim().length > 0
+      || hasHtmlMediaContent(sanitizedHtml ?? '');
+    if (!htmlHasContent && !trimmedText && !emptyAlgaReply) {
       sanitizedHtml = originalHtml.trim() || undefined;
       if (sanitizedHtml) {
         appliedHeuristics.push('html-restore-original');

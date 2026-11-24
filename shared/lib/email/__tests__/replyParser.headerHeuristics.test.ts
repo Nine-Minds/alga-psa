@@ -75,6 +75,22 @@ On Mon, Nov 17, 2026 at 8:42 AM Jane Client <jane.client@example.test> wrote:
     expect(result.sanitizedText).toBe('Thursday afternoon works for us.');
   });
 
+  it('trims a Gmail attribution wrapped over three lines', () => {
+    const result = parseEmailReply({
+      text: `Thursday afternoon works for us.
+
+On Mon, Nov 17, 2026 at 8:42 AM
+Jane Client <
+jane.client@example.test> wrote:
+
+> Tell us what you need from our side before the install day.
+> The laptops are still sealed in their shipping boxes.`,
+    });
+
+    expect(result.sanitizedText).toBe('Thursday afternoon works for us.');
+    expect(result.appliedHeuristics).toContain('provider-header');
+  });
+
   it('keeps authored text that introduces a quote of its own', () => {
     // The wrapped-attribution heuristic looks for the address Gmail wraps on and the previous
     // message below it. An author who writes "On Friday … He wrote:" above one quoted line has
@@ -131,6 +147,21 @@ That timeline works for us, so please book the Wednesday install.`,
 
     expect(result.sanitizedText).toContain('Here is where we landed with the vendor.');
     expect(result.sanitizedText).toContain('That timeline works for us, so please book the Wednesday install.');
+  });
+
+  it('keeps an answer following a three-line provider attribution', () => {
+    const result = parseEmailReply({
+      text: `Answers inline.
+On Mon, Nov 17, 2026 at 8:42 AM
+Jane Client <
+jane.client@example.test> wrote:
+> Do you want monitors?
+> How many?
+Yes please, two of them.`,
+    });
+
+    expect(result.sanitizedText).toContain('Yes please, two of them.');
+    expect(result.sanitizedText).not.toContain('Do you want monitors?');
   });
 
   it('keeps the answer under a single-line attribution the author quoted inline', () => {

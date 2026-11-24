@@ -231,17 +231,19 @@ On Thu, Nov 20, 2025 at 7:58 AM Software <support@nineminds.com> wrote:
       expect(htmlToVisibleText(result.sanitizedHtml ?? '')).not.toContain('New comment added');
     });
 
-    it('keeps the answer of an HTML-only reply below an old-layout notification', () => {
-      const result = parseEmailReply({
-        text: '',
-        html: '<div style="display:none;max-height:0;overflow:hidden;">[ALGA-REPLY-TOKEN bottom-token'
-          + ' ticketId=11111111-2222-3333-4444-555555555555]</div>'
-          + '<div>--- Please reply above this line ---</div><div>New comment added</div>'
-          + '<div>Yes, Thursday works, please book it.</div>',
-      });
+    it.each(['', '<html><body>', '<div><br></div>', '<div>&nbsp;</div>'])(
+      'keeps the answer of an HTML-only bottom reply after empty wrapper %j', (wrapper) => {
+        const result = parseEmailReply({
+          text: '',
+          html: wrapper + '<div style="display:none;max-height:0;overflow:hidden;">[ALGA-REPLY-TOKEN bottom-token'
+            + ' ticketId=11111111-2222-3333-4444-555555555555]</div>'
+            + '<div>--- Please reply above this line ---</div><div>New comment added</div>'
+            + '<div>Yes, Thursday works, please book it.</div>',
+        });
 
-      expect(htmlToVisibleText(result.sanitizedHtml ?? '')).toContain('Yes, Thursday works, please book it.');
-    });
+        expect(htmlToVisibleText(result.sanitizedHtml ?? '')).toContain('Yes, Thursday works, please book it.');
+      },
+    );
 
     it('leaves an empty reply to our own notification empty', () => {
       const result = parseEmailReply({

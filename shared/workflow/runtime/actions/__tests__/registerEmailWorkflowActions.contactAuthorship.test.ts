@@ -537,7 +537,7 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
       return createCommentFromEmailMock.mock.calls[0][0] as any;
     };
 
-    const writtenTicket = async (parsedEmail: any) => {
+    const writtenTicket = async (parsedEmail: any, inboundEmail: any = emailData) => {
       const { registerEmailWorkflowActionsV2 } = await import('../registerEmailWorkflowActions');
       registerEmailWorkflowActionsV2();
       const action = registeredActions.find((entry) => entry.id === 'create_ticket_with_initial_comment');
@@ -545,7 +545,7 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
 
       await action!.handler(
         {
-          emailData,
+          emailData: inboundEmail,
           parsedEmail,
           ticketDefaults: { board_id: 'board-1' },
           targetClientId: 'client-1',
@@ -622,6 +622,25 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
       expect(visibleText(ticket.description)).toBe(AUTHORED);
       expect(comment.content).toBe(ticket.description);
       expectNoLeaks(ticket.description);
+    });
+
+    it.each(['reply', 'new ticket'])('preserves an image-only %s', async (kind) => {
+      const { parseEmailReply } = await import('../../../../lib/email/replyParser');
+      const html = '<img src="https://example.test/screenshot.png">';
+      const inboundEmail = { ...emailData, body: { html } };
+      const parsed = parseEmailReply({ text: '', html });
+      let content: string;
+      if (kind === 'reply') {
+        content = (await writtenComment(parsed, inboundEmail)).content;
+      } else {
+        const { ticket, comment } = await writtenTicket(parsed, inboundEmail);
+        content = ticket.description;
+        expect(comment.content).toBe(content);
+      }
+
+      expect(JSON.parse(content)).toEqual(expect.arrayContaining([
+        expect.objectContaining({ type: 'image', props: expect.objectContaining({ url: 'https://example.test/screenshot.png' }) }),
+      ]));
     });
 
     it('does not restore the raw text into the description of an empty parse', async () => {

@@ -37,6 +37,34 @@ const storedBody = async (body: { text?: string; html?: string }) => {
 };
 
 describe('inbound reply body', () => {
+  it('keeps an image-only reply as an image block', async () => {
+    const body = { html: '<div><img src="https://example.test/screenshot.png"></div>' };
+    const parsed = parseEmailReply({ text: '', html: body.html });
+
+    expect(hasSubstantiveReplyContent(parsed, body)).toBe(true);
+    expect(await storedBody(body)).toContain('https://example.test/screenshot.png');
+    expect(await blocksFromEmailBody(substantiveReplyBody(parsed, body))).toEqual(
+      expect.arrayContaining([expect.objectContaining({ type: 'image' })]),
+    );
+  });
+
+  it('does not revive a raw image when parsing explicitly suppressed the reply', () => {
+    const body = { text: QUOTED_TEXT, html: '<img src="https://example.test/quoted-logo.png">' };
+    const parsed = { sanitizedText: '', sanitizedHtml: undefined };
+
+    expect(hasSubstantiveReplyContent(parsed, body)).toBe(false);
+    expect(substantiveReplyBody(parsed, body)).toEqual({});
+  });
+
+  it.each(['<html><body>', '<div><br></div>'])('stores an HTML-only bottom reply after %j', async (wrapper) => {
+    const answer = 'Yes, Thursday works, please book it.';
+    const body = { html: `${wrapper}<div>${TOKEN}</div><p>--- Please reply above this line ---</p><p>Old notification</p><p>${answer}</p>` };
+    const parsed = parseEmailReply({ text: '', html: body.html });
+
+    expect(hasSubstantiveReplyContent(parsed, body)).toBe(true);
+    expect(await storedBody(body)).toContain(answer);
+  });
+
   it('stores the authored answer and none of the quoted notification', async () => {
     const authored = 'Sounds good, go ahead.';
     for (const body of [

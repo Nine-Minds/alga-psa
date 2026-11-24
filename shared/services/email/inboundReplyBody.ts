@@ -10,7 +10,7 @@
  * Pure string handling only — no database or BlockNote dependency — so action
  * registries can import it without pulling the inbound processor along.
  */
-import { htmlToVisibleText } from '../../lib/email/replyParser';
+import { hasHtmlMediaContent, htmlToVisibleText } from '../../lib/email/replyParser';
 
 /** The text/html pair of an inbound message body. */
 export interface InboundEmailBodyParts {
@@ -59,7 +59,8 @@ export function hasSubstantiveReplyContent(
   // HTML-only mail has no sanitizedText in the reply parser. Use its existing
   // HTML text projection, without reviving quoted HTML when a text part exists.
   if (body?.text?.trim()) return false;
-  return stripAutomatedReplyMarkers(htmlToVisibleText(replyBodyForComment(parsedEmail, body).html ?? '')).length > 0;
+  const html = replyBodyForComment(parsedEmail, body).html ?? '';
+  return hasHtmlMediaContent(html) || stripAutomatedReplyMarkers(htmlToVisibleText(html)).length > 0;
 }
 
 /**
