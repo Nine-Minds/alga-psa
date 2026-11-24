@@ -31,6 +31,8 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
   runWithTenant: runWithTenantMock,
   getTenantSlugForTenant: vi.fn(),
+  lockClientPortalMutations: vi.fn(async () => {}),
+  assertClientPortalContactAvailable: vi.fn(async () => {}),
   // The action reaches tables through tenantDb; the harness below still models
   // the raw knex surface, so scope resolution is a pass-through here.
   tenantDb: (conn: any) => ({

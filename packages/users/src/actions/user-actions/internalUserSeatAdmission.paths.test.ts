@@ -143,6 +143,8 @@ vi.mock('@alga-psa/db', () => {
     withTransaction: (_db: unknown, cb: (trx: any) => Promise<any>) => runTransaction(cb),
     withAdminTransaction: vi.fn(),
     validateSystemContext: vi.fn(),
+    lockClientPortalMutations: vi.fn(async () => {}),
+    assertClientPortalContactAvailable: vi.fn(async () => {}),
     tenantDb: (conn: any, _tenant: string) => ({
       table: (t: string) => conn(t),
       // Only the global email-uniqueness lookup is unscoped: no existing user.
