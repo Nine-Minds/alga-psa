@@ -10,11 +10,6 @@ import type { WizardData } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { persistTenantOnboardingProgress } from '../../server/onboardingProgress';
 import {
-  getExperimentalFeaturesForTenant as getExperimentalFeaturesForTenantServer,
-  getTenantTimezone as getTenantTimezoneServer,
-  initializeTenantSettings as initializeTenantSettingsServer,
-} from './tenantSettings.server';
-import {
   actionError,
   permissionError,
   type ActionMessageError,
@@ -75,6 +70,17 @@ function tenantSettingsActionErrorFrom(error: unknown): TenantSettingsActionErro
 
 const AI_ASSISTANT_ACTIVATION_FLAG = 'ai-assistant-activation';
 
+// Keep the worker-safe implementation out of the client action module graph.
+// These imports are evaluated only when a server action executes.
+const getExperimentalFeaturesForTenant = async (tenant: string, user?: Pick<IUserWithRoles, 'user_id' | 'user_type'>) =>
+  (await import('./tenantSettings.server')).getExperimentalFeaturesForTenant(tenant, user);
+
+const getTenantTimezone = async (tenant: string) =>
+  (await import('./tenantSettings.server')).getTenantTimezone(tenant);
+
+const initializeTenantSettingsForTenant = async (tenant: string) =>
+  (await import('./tenantSettings.server')).initializeTenantSettings(tenant);
+
 const tenantSettingsQuery = (knex: Knex, tenant: string) =>
   tenantDb(knex, tenant).table('tenant_settings');
 
@@ -108,7 +114,7 @@ export const getExperimentalFeatures = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext
 ): Promise<ExperimentalFeatures> => {
-  return getExperimentalFeaturesForTenantServer(tenant, user);
+  return getExperimentalFeaturesForTenant(tenant, user);
 });
 
 export const canEnableAiAssistant = withAuth(async (
@@ -133,7 +139,7 @@ export const updateExperimentalFeatures = withAuth(async (
       return permissionError('Permission denied: Cannot enable AI Assistant for this tenant', 'msp/settings:errors.tenantSettings.permissions.enableAiAssistant');
     }
 
-    const current = await getExperimentalFeaturesForTenantServer(tenant, user);
+    const current = await getExperimentalFeaturesForTenant(tenant, user);
     const merged: ExperimentalFeatures = {
       ...current,
       ...features,
@@ -155,7 +161,7 @@ export const isExperimentalFeatureEnabled = withAuth(async (
   { tenant }: AuthContext,
   featureKey: string
 ): Promise<boolean> => {
-  const features = await getExperimentalFeaturesForTenantServer(tenant, user);
+  const features = await getExperimentalFeaturesForTenant(tenant, user);
   return (features as unknown as Record<string, unknown>)[featureKey] === true;
 });
 
@@ -360,7 +366,7 @@ export const getTenantTimezoneAuth = withAuth(async (
   _user: IUserWithRoles,
   { tenant }: AuthContext
 ): Promise<string | null> => {
-  return getTenantTimezoneServer(tenant);
+  return getTenantTimezone(tenant);
 });
 
 /**
@@ -396,5 +402,5 @@ export const initializeTenantSettings = withAuth(async (
   _user: IUserWithRoles,
   { tenant }: AuthContext
 ): Promise<void> => {
-  return initializeTenantSettingsServer(tenant);
+  return initializeTenantSettingsForTenant(tenant);
 });
