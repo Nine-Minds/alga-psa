@@ -2752,6 +2752,9 @@ export const saveQuickAddContract = withAuth(async (
 
       // System-managed, expired-status and draft-with-invoices refusals are the
       // same ones `updateContract` makes: they come from the shared apply step.
+      // Its post-update reactivation of an expired contract has no counterpart
+      // here because quick add always submits a status, which the expired-status
+      // rule refuses first ("extend the contract end date" instead).
       const headerUpdate = await applyContractHeaderUpdate(trx, tenant, current, {
         contract_name: submission.contract_name,
         contract_description: submission.description ?? null,
