@@ -405,6 +405,7 @@
     "editChecklistItem": "Redigera checklistpunkt",
     "removeChecklistItem": "Ta bort checklistpunkt",
     "tagsTitle": "Taggar",
+    "noTagsAvailable": "Inga projektuppgiftstaggar tillgängliga",
     "checklistTitle": "Checklista",
     "createFromTicket": "Skapa från ärende",
     "deletingTitle": "Radera uppgift",

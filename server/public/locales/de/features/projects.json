@@ -405,6 +405,7 @@
     "editChecklistItem": "Checklistenpunkt bearbeiten",
     "removeChecklistItem": "Checklistenpunkt entfernen",
     "tagsTitle": "Tags",
+    "noTagsAvailable": "Keine Projektaufgaben-Tags verfügbar",
     "checklistTitle": "Checkliste",
     "createFromTicket": "Aus Ticket erstellen",
     "deletingTitle": "Aufgabe löschen",

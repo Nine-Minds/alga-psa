@@ -405,6 +405,7 @@
     "editChecklistItem": "Item bewerken",
     "removeChecklistItem": "Item verwijderen",
     "tagsTitle": "Labels",
+    "noTagsAvailable": "Geen projecttaaklabels beschikbaar",
     "checklistTitle": "Controlelijst",
     "createFromTicket": "Maken vanaf ticket",
     "deletingTitle": "Taak verwijderen",

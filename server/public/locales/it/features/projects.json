@@ -405,6 +405,7 @@
     "editChecklistItem": "Modifica elemento",
     "removeChecklistItem": "Rimuovi elemento",
     "tagsTitle": "Tag",
+    "noTagsAvailable": "Nessun tag per le attività di progetto disponibile",
     "checklistTitle": "Lista di controllo",
     "createFromTicket": "Crea da ticket",
     "deletingTitle": "Elimina attività",

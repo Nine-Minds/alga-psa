@@ -58,13 +58,15 @@ export async function assertTaskWriteAllowedOnProject(
 }
 
 /**
- * The task fields a governed subject may change through the task edit: the work's status and who has it. Everything
+ * The task fields a governed subject may change through the task edit: the work's status, who has it, its checklist.
+ * Tags are listed too, to match the screen, though they are written through the tag actions (which hold their own
+ * record-scope and visibility checks), never through this edit. Everything
  * else on the task (name, description, dates, phase, hours, service) is the MSP's to plan. The edit form submits the
  * whole task, so a field outside this list is refused only when its value differs from what is stored, and a closed
  * field (never sent to the subject) is refused whenever it is named.
  */
 export const GOVERNED_TASK_WRITABLE_FIELDS: readonly string[] = Object.freeze([
-  'project_status_mapping_id', 'assigned_to', 'checklist_items',
+  'project_status_mapping_id', 'assigned_to', 'checklist_items', 'tags',
 ]);
 
 const comparable = (value: unknown): string => {

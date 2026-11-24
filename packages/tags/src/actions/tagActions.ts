@@ -8,6 +8,12 @@ import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import { hasPermissionAsync, throwPermissionErrorAsync } from '../lib/authHelpers';
 import { generateEntityColorAsync } from '../lib/uiHelpers';
 import { resolveTagReadScope } from '../lib/tagReadScope';
+import {
+  assertTagDefinitionManagementAllowed,
+  assertTagTargetWritable,
+  isTagDefinitionManagementRestricted,
+  isTagDefinitionVisible,
+} from '../lib/tagWriteScope';
 import { isTagTextValidationFailure, validateTagText } from '../lib/tagTextValidation';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -366,9 +372,15 @@ export const createTag = withAuth(async (
       if (!await hasPermissionAsync(currentUser, entityResource, 'update', trx)) {
         await throwPermissionErrorAsync(`update ${tag.tagged_type.replace('_', ' ')}`);
       }
+      // A caller a resolver governs (a seat technician) writes only records in its scope.
+      await assertTagTargetWritable(trx, tenant, currentUser, tag.tagged_type, tag.tagged_id);
 
       const existingTags = await TagDefinition.getAllByType(trx, tenant, tag.tagged_type);
       const existingTag = existingTags.find((t: ITagDefinition) => t.tag_text === tagText);
+      // ...and applies only a tag it can see (the list it is offered is narrowed by the same read scope).
+      if (existingTag && !await isTagDefinitionVisible(trx, tenant, currentUser, existingTag.tag_id)) {
+        await throwPermissionErrorAsync('use this tag');
+      }
 
       // Check if this is a new tag (not in existing tags) - only then require tag:create permission
       if (!existingTag && !await hasPermissionAsync(currentUser, 'tag', 'create', trx)) {
@@ -527,6 +539,7 @@ export const updateTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
       if (!await hasPermissionAsync(currentUser, 'tag', 'update', trx)) {
         await throwPermissionErrorAsync('update tags');
       }
+      await assertTagDefinitionManagementAllowed(trx, { tenant, user: currentUser }, 'update');
 
       const previousTagText = String(existingTag.tag_text ?? '').trim();
       const nextTagText = typeof tag.tag_text === 'string' ? tag.tag_text.trim() : previousTagText;
@@ -628,12 +641,23 @@ export const deleteTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
         await throwPermissionErrorAsync(`update ${existingTag.tagged_type.replace('_', ' ')}`);
       }
 
+      // Detaching a tag is a write on the record, so a caller a resolver governs is held to that record's scope. Deleting
+      // the definition is a different act, closed to such a caller before anything is changed.
+      const governedWriter = await assertTagTargetWritable(
+        trx, tenant, currentUser, existingTag.tagged_type, existingTag.tagged_id
+      );
+      if (deleteDefinition) {
+        await assertTagDefinitionManagementAllowed(trx, { tenant, user: currentUser }, 'delete');
+      }
+
       // Check tag:delete permission for tags created by others
       // Permission model:
       // - Users with tag:delete permission can delete any tag
       // - Users without tag:delete permission can only delete tags they created
       // - Legacy tags (no created_by) can be deleted by anyone with entity update permission
-      if (existingTag.created_by && existingTag.created_by !== currentUser.user_id) {
+      // - A caller a resolver governs (a seat technician) detaches any tag on a record it may write, the MSP's included:
+      //   the tag stays defined, and the record scope above is what governs it
+      if (!governedWriter && existingTag.created_by && existingTag.created_by !== currentUser.user_id) {
         if (!await hasPermissionAsync(currentUser, 'tag', 'delete', trx)) {
           await throwPermissionErrorAsync('delete this tag', 'You can only delete tags you created');
         }
@@ -1076,6 +1100,12 @@ export const bulkApplyTagsToEntities = withAuth(async (
     return { appliedByEntity };
   }
 
+  // A caller a resolver governs (a seat technician) writes only records in its scope: one record out of scope fails
+  // the whole batch before any mapping is written.
+  for (const app of normalized) {
+    await assertTagTargetWritable(trx, tenant, currentUser, taggedType, app.entityId);
+  }
+
   // tag:create gate (mints brand-new definitions) resolved once for the batch.
   const userHasTagCreate = await hasPermissionAsync(currentUser, 'tag', 'create', trx)
     && !await isTagCreationRestricted(trx, { tenant, user: currentUser });
@@ -1096,7 +1126,7 @@ export const bulkApplyTagsToEntities = withAuth(async (
     if (!userHasTagCreate) {
       // Can only apply texts whose definition already exists.
       const existingDefinition = await TagDefinition.findByTextAndType(trx, tenant, text, taggedType);
-      if (existingDefinition) {
+      if (existingDefinition && await isTagDefinitionVisible(trx, tenant, currentUser, existingDefinition.tag_id)) {
         definitionByLowerText.set(lower, existingDefinition);
       }
       continue;
@@ -1282,6 +1312,7 @@ export const updateTagColor = withAuth(async (currentUser: IUserWithRoles, { ten
       if (!await hasPermissionAsync(currentUser, 'tag', 'update', trx)) {
         await throwPermissionErrorAsync('update tag colors');
       }
+      await assertTagDefinitionManagementAllowed(trx, { tenant, user: currentUser }, 'update');
 
       // Find the definition and update it
       const definition = await TagDefinition.findByTextAndType(trx, tenant, tag.tag_text, tag.tagged_type);
@@ -1364,6 +1395,7 @@ export const updateTagText = withAuth(async (currentUser: IUserWithRoles, { tena
       if (!await hasPermissionAsync(currentUser, 'tag', 'update', trx)) {
         await throwPermissionErrorAsync('update tag text');
       }
+      await assertTagDefinitionManagementAllowed(trx, { tenant, user: currentUser }, 'update');
 
       // Don't update if text is the same
       if (tag.tag_text === trimmedNewText) {
@@ -1442,6 +1474,7 @@ export const checkTagPermissions = withOptionalAuth(async (currentUser: IUserWit
   canEditText: boolean;
   canDelete: boolean;
   canDeleteAll: boolean;
+  canDeleteDefinition: boolean;
 }> => {
   try {
     if (!currentUser) {
@@ -1451,7 +1484,8 @@ export const checkTagPermissions = withOptionalAuth(async (currentUser: IUserWit
         canEditColors: false,
         canEditText: false,
         canDelete: false,
-        canDeleteAll: false
+        canDeleteAll: false,
+        canDeleteDefinition: false
       };
     }
 
@@ -1472,14 +1506,24 @@ export const checkTagPermissions = withOptionalAuth(async (currentUser: IUserWit
       // Asked only of a caller who would otherwise be offered "create": a restriction (seat technician) takes it away.
       const mayCreate = entityUpdate && tagCreate
         && !await isTagCreationRestricted(trx, { tenant: currentUser.tenant, user: currentUser });
+      // Managing a definition is closed to such a caller by the same baseline, whatever its role holds. Applying and
+      // removing a tag on a record it may write (`canAddExisting`, `canDelete`) is not.
+      const scope = { tenant: currentUser.tenant, user: currentUser };
+      const mayEditDefinitions = entityUpdate && tagUpdate
+        && !await isTagDefinitionManagementRestricted(trx, scope, 'update');
+      const mayDeleteDefinitions = entityUpdate && tagDelete
+        && !await isTagDefinitionManagementRestricted(trx, scope, 'delete');
 
       return {
         canAddExisting: entityUpdate,
         canCreateNew: mayCreate,
-        canEditColors: entityUpdate && tagUpdate,
-        canEditText: entityUpdate && tagUpdate,
+        canEditColors: mayEditDefinitions,
+        canEditText: mayEditDefinitions,
         canDelete: entityUpdate,
-        canDeleteAll: entityUpdate && tagDelete
+        canDeleteAll: mayDeleteDefinitions,
+        // Offering to drop a definition when its last use is removed: needs no more than the record, as before, unless a
+        // resolver's baseline closes definition deletion to the caller.
+        canDeleteDefinition: entityUpdate && !await isTagDefinitionManagementRestricted(trx, scope, 'delete')
       };
     });
   } catch (error) {
@@ -1491,7 +1535,8 @@ export const checkTagPermissions = withOptionalAuth(async (currentUser: IUserWit
       canEditColors: false,
       canEditText: false,
       canDelete: false,
-      canDeleteAll: false
+      canDeleteAll: false,
+      canDeleteDefinition: false
     };
   }
 });
@@ -1518,6 +1563,7 @@ export const deleteAllTagsByText = withAuth(async (currentUser: IUserWithRoles, 
       if (!await hasPermissionAsync(currentUser, 'tag', 'delete', trx)) {
         await throwPermissionErrorAsync('delete all instances of tags');
       }
+      await assertTagDefinitionManagementAllowed(trx, { tenant, user: currentUser }, 'delete');
 
       // Find the definition and delete it (mappings will cascade delete)
       const definition = await TagDefinition.findByTextAndType(trx, tenant, trimmedText, taggedType);

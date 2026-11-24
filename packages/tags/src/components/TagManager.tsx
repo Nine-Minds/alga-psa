@@ -29,7 +29,14 @@ interface TagManagerProps {
     canEditText: boolean;
     canDelete: boolean;
     canDeleteAll: boolean;
+    /** Whether removing a tag's last use may offer to delete its definition too. Absent means it may. */
+    canDeleteDefinition?: boolean;
   };
+  /**
+   * Shown in place of the picker when the caller may only apply existing tags and there are none to choose from or
+   * to remove. Without it the picker is offered as before.
+   */
+  emptyChoicesMessage?: string;
   /** Display the entity's tags with no add, remove, or edit affordance. */
   readOnly?: boolean;
 }
@@ -46,6 +53,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
   useInlineInput = false,
   size = 'md',
   permissions: passedPermissions,
+  emptyChoicesMessage,
   readOnly = false
 }) => {
   const { t } = useTranslation('common');
@@ -257,7 +265,8 @@ export const TagManager: React.FC<TagManagerProps> = ({
         handleError(usage);
         return;
       }
-      if (usage.usageCount === 1) {
+      // A caller who may not delete definitions is never asked to: the tag leaves the record and stays defined.
+      if (usage.usageCount === 1 && permissions.canDeleteDefinition !== false) {
         // Show confirmation dialog for last usage
         setPendingRemoveTagId(tagId);
         setPendingRemoveTagText(usage.tagText);
@@ -265,7 +274,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
         return;
       }
 
-      await removeTagOptimistically(tagId);
+      await (usage.usageCount === 1 ? removeTagOptimistically(tagId, false) : removeTagOptimistically(tagId));
     } catch (error) {
       handleError(error);
     }
@@ -358,6 +367,20 @@ export const TagManager: React.FC<TagManagerProps> = ({
     }
   };
 
+  // Existing-only callers (a seat technician) are shown what they can still pick: the tags of this type they can see
+  // that are not already applied. Applied tags stay visible and removable whatever is left to pick.
+  const existingOnly = !permissions.canCreateNew;
+  const choicesLoaded = tagContext?.tagsLoaded ?? true;
+  const typedChoices = allTags.filter(t => t.tagged_type === entityType);
+  const appliedTexts = new Set(tags.map(tag => tag.tag_text.toLowerCase()));
+  const hasAnyChoice = typedChoices.length > 0 || tags.length > 0;
+  const hasUnappliedChoice = typedChoices.some(tag => !appliedTexts.has(tag.tag_text.toLowerCase()));
+  const showEmptyChoices = existingOnly && choicesLoaded && !hasAnyChoice && Boolean(emptyChoicesMessage);
+  const showPicker = !readOnly
+    && (permissions.canAddExisting || permissions.canCreateNew)
+    && !showEmptyChoices
+    && (!existingOnly || !choicesLoaded || hasUnappliedChoice);
+
   const gapClass = size === 'sm' ? 'gap-0.5' : size === 'lg' ? 'gap-1.5' : 'gap-1';
 
   return (
@@ -375,7 +398,10 @@ export const TagManager: React.FC<TagManagerProps> = ({
             size={size}
           />
         </div>
-        {!readOnly && (permissions.canAddExisting || permissions.canCreateNew) && (
+        {!readOnly && (permissions.canAddExisting || permissions.canCreateNew) && showEmptyChoices && (
+          <span id={`${id}-no-choices`} className="text-sm text-gray-500">{emptyChoicesMessage}</span>
+        )}
+        {showPicker && (
           <div className="flex-shrink-0 overflow-visible">
             {useInlineInput ? (
               <TagInputInline

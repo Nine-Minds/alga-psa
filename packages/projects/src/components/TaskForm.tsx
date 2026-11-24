@@ -2304,6 +2304,10 @@ export default function TaskForm({
                 initialTags={taskTags}
                 onTagsChange={setTaskTags}
                 useInlineInput={true}
+                // The screen says whether tags are writable (a seat technician applies existing tags; a read-only task
+                // only displays them); the tag actions decide the rest, the same way the server does.
+                readOnly={frozen('tags')}
+                emptyChoicesMessage={taskFormT('noTagsAvailable', 'No project-task tags available')}
               />
             </div>
           )) : mode === 'create' && (

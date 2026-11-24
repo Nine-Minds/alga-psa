@@ -413,6 +413,7 @@
     "editChecklistItem": "Edytuj element listy",
     "removeChecklistItem": "Usuń element listy",
     "tagsTitle": "Tagi",
+    "noTagsAvailable": "Brak dostępnych tagów zadań projektu",
     "checklistTitle": "Lista kontrolna",
     "createFromTicket": "Utwórz ze zgłoszenia",
     "deletingTitle": "Usuń zadanie",

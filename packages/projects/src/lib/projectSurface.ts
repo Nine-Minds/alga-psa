@@ -25,12 +25,13 @@ export const OPEN_PROJECT_SURFACE: ProjectSurfaceAccess = Object.freeze({
 const FORM_FIELD_BY_CLOSED_COLUMN: Readonly<Record<string, string>> = Object.freeze({ service_id: 'service_id' });
 
 /**
- * Task fields a viewer who may not manage the project still changes: the work's status, who has it, its checklist.
+ * Task fields a viewer who may not manage the project still changes: the work's status, who has it, its checklist, and
+ * the existing tags applied to it (what the tag actions let them write: they apply and remove, they never define).
  * Everything else on the task form is rendered but frozen. The server refuses the same writes
  * (`GOVERNED_TASK_WRITABLE_FIELDS`), so this is the screen telling the truth, not the control.
  */
 export const MANAGE_CLOSED_WRITABLE_TASK_FIELDS: readonly string[] = Object.freeze([
-  'project_status_mapping_id', 'assigned_to', 'checklist_items',
+  'project_status_mapping_id', 'assigned_to', 'checklist_items', 'tags',
 ]);
 
 export function isProjectSurfaceOpen(access: ProjectSurfaceAccess): boolean {

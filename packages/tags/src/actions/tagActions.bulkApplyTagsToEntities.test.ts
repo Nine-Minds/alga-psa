@@ -14,6 +14,13 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 
 // No restriction governs these callers: the seat authority has its own tests (tagCreationRestriction.test.ts).
+// Record scope and tag visibility are neutral for these callers: tagWriteScope has its own tests.
+vi.mock('../lib/tagWriteScope', () => ({
+  assertTagTargetWritable: vi.fn(async () => false),
+  assertTagDefinitionManagementAllowed: vi.fn(async () => undefined),
+  isTagDefinitionManagementRestricted: vi.fn(async () => false),
+  isTagDefinitionVisible: vi.fn(async () => true),
+}));
 vi.mock('../lib/tagCreationRestriction', () => ({
   isTagCreationRestricted: vi.fn(async () => false),
   TAG_CREATION_RESTRICTED_MESSAGE: 'restricted',
