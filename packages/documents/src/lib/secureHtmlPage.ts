@@ -1,4 +1,5 @@
 import type { Page } from 'puppeteer';
+import type { FetchPublicBytesOptions } from '@alga-psa/core/net/safeFetch';
 import { resolveRemoteAssets, type RenderHtmlToPngOptions } from './renderHtmlToPng';
 
 export interface SecureHtmlPageOptions {
@@ -41,7 +42,10 @@ export async function setSecureHtmlContent(
 }
 
 function budgetedFetcher(options: SecureHtmlPageOptions): NonNullable<RenderHtmlToPngOptions['fetchAsset']> {
-  const fetch = options.fetchAsset ?? (async (url, fetchOptions) => {
+  const fetch = options.fetchAsset ?? (async (
+    url: string,
+    fetchOptions: Pick<FetchPublicBytesOptions, 'maxBytes' | 'timeoutMs'>,
+  ) => {
     const { fetchPublicBytes } = await import('@alga-psa/core/net/safeFetch');
     return fetchPublicBytes(url, fetchOptions);
   });

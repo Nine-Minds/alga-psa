@@ -81,6 +81,10 @@ describe('shared secure Chromium HTML policy', () => {
     });
 
     expect(Date.now() - started).toBeLessThan(500);
+    expect(fetchAsset).toHaveBeenCalledWith('https://public.example/hangs', {
+      maxBytes: 5 * 1024 * 1024,
+      timeoutMs: expect.any(Number),
+    });
     expect(page.html).toContain('aria-label="slow"');
   });
 });
