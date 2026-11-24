@@ -11,6 +11,10 @@ import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ContactPortalTab } from './ContactPortalTab';
+import { formatDateValue } from '@alga-psa/ui/lib/i18n/formatDateValue';
+import { countryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
+
+let appLocale = 'en';
 
 const getUserByContactIdMock = vi.fn();
 const getRolesMock = vi.fn();
@@ -35,7 +39,13 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => {
     }
     return text;
   };
-  return { useTranslation: () => ({ t }) };
+  return {
+    useTranslation: () => ({ t }),
+    useFormatters: () => ({
+      formatDate: (value: string | Date, options?: Intl.DateTimeFormatOptions) =>
+        formatDateValue(value, appLocale, options, countryDateFormat('DE')),
+    }),
+  };
 });
 vi.mock('@alga-psa/ui/components/Button', () => ({
   Button: ({ children, ...props }: any) => <button type="button" {...props}>{children}</button>,
@@ -107,6 +117,7 @@ const permissions = { canInvite: true, canUpdateRoles: true, canRead: true };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  appLocale = 'en';
   getUserByContactIdMock.mockResolvedValue({ user: null });
   getRolesMock.mockResolvedValue([]);
   getPortalInvitationsMock.mockResolvedValue([]);
@@ -117,6 +128,39 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe('ContactPortalTab invitation changes', () => {
+  it.each(['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'sv'])(
+    'formats invitation history in the app language (%s) and country clock',
+    async (locale) => {
+      appLocale = locale;
+      const invitation = {
+        invitation_id: 'invitation-1',
+        email: contact.email,
+        created_at: '2026-01-01T15:00:00.000Z',
+        last_sent_at: '2026-11-24T15:00:00.000Z',
+        expires_at: '2026-12-01T15:00:00.000Z',
+        status: 'pending',
+      };
+      getPortalInvitationsMock.mockResolvedValue([invitation]);
+      const expected = (value: string) => new Intl.DateTimeFormat(locale, {
+        year: 'numeric', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit', hour12: false,
+      }).format(new Date(value));
+
+      render(<ContactPortalTab contact={contact} currentUserPermissions={permissions} />);
+
+      const lastSent = await screen.findByText(/Last sent:/);
+      expect(lastSent).toHaveTextContent(`Last sent: ${expected(invitation.last_sent_at)}`);
+      expect(lastSent.parentElement).toHaveTextContent(`Sent: ${expected(invitation.created_at)}`);
+      expect(screen.getByText(/Expires:/)).toHaveTextContent(`Expires: ${expected(invitation.expires_at)}`);
+
+      const usedAt = '2026-11-25T15:00:00.000Z';
+      getPortalInvitationsMock.mockResolvedValue([{ ...invitation, status: 'used', used_at: usedAt }]);
+      fireEvent.click(screen.getByText('Refresh'));
+      await waitFor(() => expect(screen.queryByText(/Expires:/)).not.toBeInTheDocument());
+      expect(screen.getByText(/Used:/)).toHaveTextContent(`Used: ${expected(usedAt)}`);
+    },
+  );
+
   it('tells its opener after an invitation is sent', async () => {
     const onInvitationChanged = vi.fn();
 

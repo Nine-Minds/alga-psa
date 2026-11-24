@@ -53,7 +53,7 @@ import { useToast } from '@alga-psa/ui';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const PORTAL_INVITE_ERROR_KEYS: Partial<Record<PortalInvitationErrorCode, string>> = {
   PERMISSION_DENIED_INVITE: 'contactPortalTab.toast.errors.permissionDeniedInvite',
@@ -121,6 +121,7 @@ export function ContactPortalTab({
   onInvitationChanged
 }: ContactPortalTabProps) {
   const { t } = useTranslation(['msp/contacts', 'msp/settings']);
+  const { formatDate: formatLocalizedDate } = useFormatters();
 
   const translatePortalInvitationError = (
     result: { error?: string; errorCode?: PortalInvitationErrorCode },
@@ -546,8 +547,7 @@ export function ContactPortalTab({
   };
 
   const formatDate = (dateValue: string | Date) => {
-    const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
-    return date.toLocaleDateString('en-US', {
+    return formatLocalizedDate(dateValue, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
