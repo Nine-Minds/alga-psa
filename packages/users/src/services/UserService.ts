@@ -7,7 +7,7 @@
  */
 
 import { Knex } from 'knex';
-import { addUserRoles, assertSeatTechnicianWrite, assertUserRoleFloor, BaseService, ServiceContext, ListResult, isUserRoleFloorRejected, removeUserRoles, setUserRoles, tenantDb, withSavepoint, withTransaction } from '@alga-psa/db';
+import { addUserRoles, assertSeatTechnicianWrite, assertUserRoleFloor, BaseService, ServiceContext, ListResult, isUserRoleFloorRejected, removeUserRoles, setUserRoles, syncContactClientAdminFlagsForUserLinkChange, tenantDb, withSavepoint, withTransaction } from '@alga-psa/db';
 import type { UserRoleFloorChange, UserRoleFloorViolation } from '@alga-psa/db';
 import {
   IUser, IUserWithRoles, IRole, IRoleWithPermissions, ITeam,
@@ -484,7 +484,7 @@ export class UserService extends BaseService<IUser> {
       // Verify user exists and belongs to tenant
       const existingUser = await this.buildTenantScopedQuery(trx, context)
         .where({ user_id: id })
-        .select('user_id', 'email', 'user_type', 'is_inactive')
+        .select('user_id', 'email', 'user_type', 'is_inactive', 'contact_id')
         .first();
 
       // Non-interactive principals are not managed through user management;
@@ -561,6 +561,21 @@ export class UserService extends BaseService<IUser> {
 
       if (takesNewSeat) {
         await assertInternalUserSeatsWithinLimit(trx, context.tenant, licenseCheck);
+      }
+
+      // PUT /api/v1/users/{id} accepts contact_id and user_type, and neither
+      // writes a role — but both change what the user's existing roles mean for
+      // a contact. Re-derive the flag of the contact the user now points at and
+      // of the one it left, in this transaction, so a 'User'-role account
+      // pointed at a pre-marked contact cannot keep that contact's
+      // company-wide portal scope (alga-2026-0003347).
+      if ('contact_id' in updateData || 'user_type' in updateData) {
+        await syncContactClientAdminFlagsForUserLinkChange(
+          trx,
+          context.tenant,
+          id,
+          existingUser.contact_id ?? null
+        );
       }
 
       // Log user update activity
