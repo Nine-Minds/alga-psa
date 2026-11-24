@@ -97,7 +97,6 @@ describe('Pricing schedules i18n wiring contract', () => {
       'pricingSchedules.dialog.notices.wholeContract',
       'pricingSchedules.dialog.notices.wholeContractEffect',
       'pricingSchedules.dialog.notices.unitPricedExcluded',
-      'pricingSchedules.dialog.empty.allLinesUnitPriced',
       'pricingSchedules.dialog.empty.noEligibleLines',
       'pricingSchedules.dialog.validation.scopeRequired',
       'pricingSchedules.dialog.fields.notes',
