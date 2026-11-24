@@ -1139,6 +1139,8 @@
       "invoiceData": "Geen toegang tot factuurgegevens",
       "billingData": "Geen toegang tot facturatiegegevens",
       "settingsUpdate": "U hebt geen rechten om deze instellingen te wijzigen.",
+      "settingsRead": "U hebt geen rechten om deze instellingen te bekijken.",
+      "mspOnly": "Mededelingen in het klantenportaal kunnen alleen door MSP-gebruikers worden beheerd.",
       "billingSegment": "Geen toegang tot dat facturatiesegment"
     },
     "billing": {

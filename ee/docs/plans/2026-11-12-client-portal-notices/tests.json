@@ -70,7 +70,7 @@
       "F015",
       "F016"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T008",
@@ -83,7 +83,7 @@
       "F016",
       "F036"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T009",

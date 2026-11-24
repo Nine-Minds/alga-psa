@@ -1145,6 +1145,8 @@
       "invoiceData": "Brak uprawnień dostępu do danych faktury",
       "billingData": "Brak uprawnień dostępu do danych rozliczeniowych",
       "settingsUpdate": "Nie masz uprawnień do zmiany tych ustawień.",
+      "settingsRead": "Nie masz uprawnień do wyświetlania tych ustawień.",
+      "mspOnly": "Komunikatami w portalu klienta mogą zarządzać wyłącznie użytkownicy MSP.",
       "billingSegment": "Brak uprawnień dostępu do tego segmentu rozliczeniowego"
     },
     "billing": {

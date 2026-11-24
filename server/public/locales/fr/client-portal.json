@@ -1145,6 +1145,8 @@
       "invoiceData": "Accès non autorisé aux données de facture",
       "billingData": "Accès non autorisé aux données de facturation",
       "settingsUpdate": "Vous n’avez pas l’autorisation de modifier ces paramètres.",
+      "settingsRead": "Vous n’avez pas l’autorisation de consulter ces paramètres.",
+      "mspOnly": "Les avis du portail client ne peuvent être gérés que par les utilisateurs du MSP.",
       "billingSegment": "Accès non autorisé à ce segment de facturation"
     },
     "billing": {

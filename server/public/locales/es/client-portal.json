@@ -1145,6 +1145,8 @@
       "invoiceData": "Sin autorización para acceder a los datos de la factura",
       "billingData": "Sin autorización para acceder a los datos de facturación",
       "settingsUpdate": "No tiene permiso para actualizar esta configuración.",
+      "settingsRead": "No tiene permiso para ver esta configuración.",
+      "mspOnly": "Los avisos del portal del cliente solo pueden ser gestionados por usuarios del MSP.",
       "billingSegment": "Sin autorización para acceder a ese segmento de facturación"
     },
     "billing": {

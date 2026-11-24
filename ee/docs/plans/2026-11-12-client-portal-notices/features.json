@@ -102,7 +102,7 @@
     "id": "F012",
     "description": "Server action: list notices (settings:read, MSP only) with audience summary names and derived status",
     "group": "Actions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ]
@@ -111,7 +111,7 @@
     "id": "F013",
     "description": "Server action: get one notice for editing",
     "group": "Actions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ]
@@ -120,7 +120,7 @@
     "id": "F014",
     "description": "Server action: create notice with targets (settings:update, MSP only)",
     "group": "Actions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ]
@@ -129,7 +129,7 @@
     "id": "F015",
     "description": "Server action: update notice and replace targets; clear dismissals on content or audience change",
     "group": "Actions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ]
@@ -138,7 +138,7 @@
     "id": "F016",
     "description": "Server action: delete notice and its targets and dismissals",
     "group": "Actions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ]
@@ -147,7 +147,7 @@
     "id": "F017",
     "description": "Server action: preview audience, returning names of clients an audience resolves to",
     "group": "Actions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ]
@@ -318,7 +318,7 @@
     "id": "F036",
     "description": "Permission errors use permissionError with a translated key",
     "group": "Security",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ]
