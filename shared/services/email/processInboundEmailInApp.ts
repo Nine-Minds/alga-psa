@@ -11,6 +11,7 @@ import type { InboundEmailExecutionOptions } from '../../workflow/actions/emailW
 import { createHash, randomUUID } from 'node:crypto';
 import { ticketStatusClockPatch } from '../../lib/ticketStatusClock';
 import { extractEmailDomain, normalizeEmailAddress } from '../../lib/email/addressUtils';
+import { analyzeForwardedSender, isForwardedSenderResolutionEnabled } from '../../lib/email/forwardedMessage';
 import {
   detectAutomatedInboundMessage,
   extractRelevantInboundHeaders,
@@ -1485,6 +1486,24 @@ export async function processInboundEmailInApp(
     const matchedSenderIsInternalUser = senderContact?.user_type === 'internal';
     const matchedSenderContactId = senderContact?.contact_id || undefined;
     const senderKind = matchedSenderIsInternalUser ? 'internal' : 'client';
+    if (matchedSenderIsInternalUser && isForwardedSenderResolutionEnabled()) {
+      // Observability only: forwards into an existing thread keep the thread's client.
+      try {
+        const forwarded = await analyzeForwardedSender({
+          headers: emailData.headers,
+          text: emailData.body?.text,
+          html: emailData.body?.html,
+          attachments: emailData.attachments,
+        });
+        if (forwarded.status !== 'none') {
+          console.info('inbound_email_forwarded_sender_not_applied', {
+            tenantId, providerId, emailId: emailData.id, reason: 'thread-path',
+          });
+        }
+      } catch {
+        // log-only; never affects the reply path
+      }
+    }
 
     // Reply audience (S33). A seat technician's reply keeps the audience of the notification it
     // answers; out of scope they are an external party, so it is stored as `requester`. A token that recorded a narrower
@@ -2220,6 +2239,64 @@ export async function processInboundEmailInApp(
     defaultClientId: ruleAssignedClientId ?? providerDefaults?.client_id ?? null,
   });
 
+  // Forwarded-sender attribution. `authorContact` is the forwarder: an authenticated internal user
+  // who stays the author of the ticket's first comment. `destinationContact` is the client-side
+  // contact recovered from the forwarded content; it only chooses the ticket's client/contact.
+  // They must stay separate: the recovered address is unauthenticated text, so it may select a
+  // destination but must never supply an identity or authorship.
+  const authorContact = matchedSenderContact;
+  let destinationContact: NonNullable<typeof matchedSenderContact> | null = null;
+  if (authorContact?.user_type === 'internal' && isForwardedSenderResolutionEnabled()) {
+    const logNotApplied = (reason: string, extra: Record<string, unknown> = {}) =>
+      console.info('inbound_email_forwarded_sender_not_applied', {
+        tenantId, providerId, emailId: emailData.id, reason, ...extra,
+      });
+    try {
+      const forwarded = await analyzeForwardedSender({
+        headers: emailData.headers,
+        text: emailData.body?.text,
+        html: emailData.body?.html,
+        attachments: emailData.attachments,
+      });
+      if (forwarded.status === 'not-applied') {
+        logNotApplied(forwarded.reason);
+      } else if (forwarded.status === 'attributed') {
+        if (ruleAssignedClientId) {
+          logNotApplied('rule-assigned-client', { source: forwarded.source });
+        } else {
+          const candidate = await findContactByEmail(forwarded.sender.email, tenantId, {
+            defaultClientId: providerDefaults?.client_id ?? null,
+          });
+          if (!candidate) {
+            logNotApplied('no-contact-match', { source: forwarded.source });
+          } else if (candidate.user_type === 'internal') {
+            // A forward may hand the app a contact, never an identity.
+            logNotApplied('internal-match', { source: forwarded.source });
+          } else if (!candidate.contact_id || !candidate.client_id) {
+            logNotApplied('no-contact-match', { source: forwarded.source });
+          } else {
+            destinationContact = candidate;
+            console.info('inbound_email_forwarded_sender_attributed', {
+              tenantId,
+              providerId,
+              emailId: emailData.id,
+              source: forwarded.source,
+              original_contact_id: candidate.contact_id,
+              client_id: candidate.client_id,
+              forwarder_user_id: authorContact.user_id ?? null,
+            });
+          }
+        }
+      }
+    } catch (error) {
+      // Attribution is an enhancement: failing to read the forward falls back to today's behaviour.
+      console.warn('processInboundEmailInApp: forwarded sender detection failed (continuing)', {
+        tenantId, providerId, emailId: emailData.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   let domainMatchedClientId: string | null = null;
   let domainAutoCreateContacts = false;
   let domainMatchedContactId: string | null = null;
@@ -2237,6 +2314,10 @@ export async function processInboundEmailInApp(
 
   const matchedSenderClientId = matchedSenderContact?.client_id || undefined;
   const matchedSenderContactId = matchedSenderContact?.contact_id || undefined;
+  // Routing identity: the forwarded contact when attribution applied, else the sender's own match.
+  // Authorship below keeps using matchedSenderContact (the forwarder), never these.
+  const routingClientId = destinationContact?.client_id || matchedSenderClientId;
+  const routingContactId = destinationContact?.contact_id || matchedSenderContactId;
 
   // A rule-assigned client wins over sender-based matching: the sender is a
   // service mailbox, not the client the email is about. The sender contact is
@@ -2272,14 +2353,14 @@ export async function processInboundEmailInApp(
         ? ruleAssignedContactIdFromMatch ?? (senderContactInRuleClient
           ? matchedSenderContactId ?? null
           : null)
-        : matchedSenderContactId ?? null,
+        : routingContactId ?? null,
       matchedContactClientId: ruleAssignedClientId
         ? ruleAssignedContactIdFromMatch
           ? ruleAssignedClientId
           : senderContactInRuleClient
           ? ruleAssignedClientId
           : null
-        : matchedSenderClientId ?? null,
+        : routingClientId ?? null,
       domainMatchedClientId: ruleAssignedClientId
         ? senderContactInRuleClient
           ? null
@@ -2312,10 +2393,10 @@ export async function processInboundEmailInApp(
     source: destinationSource,
     fallbackReason: destinationFallbackReason,
   });
-  let targetClientId = ruleAssignedClientId ?? matchedSenderClientId ?? defaults.client_id;
+  let targetClientId = ruleAssignedClientId ?? routingClientId ?? defaults.client_id;
   let targetContactId = ruleAssignedClientId
     ? ruleAssignedContactId ?? undefined
-    : matchedSenderContactId;
+    : routingContactId;
 
   // Domain fallback: if no exact contact match, use explicitly configured inbound-domain client mapping.
   if (!ruleAssignedClientId && !matchedSenderContact && domainMatchedClientId) {
@@ -2338,7 +2419,9 @@ export async function processInboundEmailInApp(
   const clientMatchSource =
     ruleOutcome.kind === 'assign_client'
       ? ruleOutcome.matchSource
-      : matchedSenderContact?.contact_id
+      : destinationContact
+        ? 'forwarded_sender_match'
+        : matchedSenderContact?.contact_id
         ? 'email_match'
         : domainMatchedClientId
           ? 'domain_match'
@@ -2487,6 +2570,9 @@ export async function processInboundEmailInApp(
           : {}),
       },
       attributes: seededAttributes ?? undefined,
+      // A forwarded ticket belongs to the original sender's contact, but that contact did not send
+      // this email: the internal forwarder did. Keep the recovered address out of the actor record.
+      ...(destinationContact ? { sender_contact_id: null } : {}),
     },
     tenantId,
     ...helperExtraArgs('ticket')

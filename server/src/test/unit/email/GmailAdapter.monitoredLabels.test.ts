@@ -7,16 +7,14 @@ const messageGetMock = vi.fn();
 const messageListMock = vi.fn();
 const labelsListMock = vi.fn();
 
-vi.mock('googleapis', () => ({
-  google: {
-    gmail: vi.fn(() => ({
-      users: {
-        history: { list: historyListMock },
-        messages: { get: messageGetMock, list: messageListMock },
-        labels: { list: labelsListMock },
-      },
-    })),
-  },
+vi.mock('googleapis/build/src/apis/gmail/index.js', () => ({
+  gmail: vi.fn(() => ({
+    users: {
+      history: { list: historyListMock },
+      messages: { get: messageGetMock, list: messageListMock },
+      labels: { list: labelsListMock },
+    },
+  })),
 }));
 
 vi.mock('@alga-psa/db/admin', () => ({

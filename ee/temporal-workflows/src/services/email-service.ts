@@ -13,6 +13,9 @@ export interface EmailServiceInterface {
 export interface EmailParams {
   to: string | string[];
   from?: string;
+  /** Overrides only the display name of the configured default sender. Ignored when `from` is set. */
+  fromName?: string;
+  replyTo?: string | string[];
   subject: string;
   html?: string;
   text?: string;
@@ -203,7 +206,8 @@ export class ResendEmailService implements EmailServiceInterface {
     try {
       // Prepare Resend email data
       const emailData = {
-        from: params.from || `${this.defaultFromName} <${this.defaultFromAddress}>`,
+        from: params.from || `${params.fromName || this.defaultFromName} <${this.defaultFromAddress}>`,
+        replyTo: params.replyTo,
         to: validEmails,
         subject: params.subject,
         html: params.html,

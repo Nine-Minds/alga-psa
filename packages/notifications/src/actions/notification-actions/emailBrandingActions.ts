@@ -18,6 +18,7 @@ import {
   previewEmailBrandingApply,
   resolveEmailPalette,
   suggestEmailPalette,
+  type BrandAttributionStripOptions,
   type EmailBrandingApplyScope,
   type EmailBrandingLogoVariant,
   type EmailBrandingPalette,
@@ -244,7 +245,7 @@ function buildBrandDecorator(
   branding: Record<string, any> | null | undefined,
   enterprise: boolean,
   target: EmailPaletteTokens,
-): ((html: string) => string) | undefined {
+): ((html: string, options?: BrandAttributionStripOptions) => string) | undefined {
   if (!enterprise) return undefined;
 
   // The written row references the logo by content-id, never by URL: the bytes
@@ -263,7 +264,11 @@ function buildBrandDecorator(
   const logo = variant ? { variant, alt: branding?.clientName ?? '' } : undefined;
   const hideAttribution = palette.hideAttribution === true;
 
-  return (html: string) => decorateBrandedHtml(html, { logo, hideAttribution });
+  // The planner decides which footer row the strip may take: the default for a
+  // row it rebuilds from the standard template, `shipped-slogan` for a ticked
+  // customized row it recolors in place.
+  return (html: string, options?: BrandAttributionStripOptions) =>
+    decorateBrandedHtml(html, { logo, hideAttribution, ...options });
 }
 
 /**
