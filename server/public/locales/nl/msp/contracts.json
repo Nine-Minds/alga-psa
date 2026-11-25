@@ -1037,7 +1037,8 @@
         "customRate": "Aangepast tarief",
         "effectiveDate": "Ingangsdatum",
         "endDate": "Einddatum",
-        "notes": "Notities"
+        "notes": "Notities",
+        "appliesTo": "Geldt voor"
       },
       "dialogs": {
         "confirmDeleteSchedule": "Weet u zeker dat u dit prijsschema wilt verwijderen?"
@@ -1059,7 +1060,10 @@
       "values": {
         "defaultRate": "Standaardtarief",
         "ongoing": "Lopend",
-        "useDefaultRate": "Standaardtarief gebruiken"
+        "useDefaultRate": "Standaardtarief gebruiken",
+        "wholeContract": "Hele contract",
+        "wholeContractEffect": "Hele contract — terugvaltarief van {{amount}} per actieve contractregel met een vast tarief ({{count}} regels). Prijsschema’s voor afzonderlijke regels hebben voorrang.",
+        "unnamedLine": "Naamloze regel"
       }
     },
     "dialog": {
@@ -1079,7 +1083,6 @@
         "failedToSavePricingSchedule": "Prijsschema opslaan is mislukt"
       },
       "fields": {
-        "customRate": "Aangepast tarief",
         "customRatePlaceholder": "0.00",
         "duration": "Duur",
         "durationPlaceholder": "bijv. 6",
@@ -1090,7 +1093,13 @@
         "notesPlaceholder": "Voeg notities toe over deze prijswijziging (bijv. 'Jaarlijkse tariefverhoging')",
         "unit": "Eenheid",
         "useDefaultRate": "Standaardtarief gebruiken",
-        "useDuration": "Duur gebruiken"
+        "useDuration": "Duur gebruiken",
+        "appliesTo": "Geldt voor",
+        "appliesToPlaceholder": "Selecteer een contractregel met een vast tarief",
+        "lineFee": "Bedrag per factureerperiode",
+        "lineFeeHelp": "Wat deze regel factureert in elke factureerperiode die het prijsschema dekt, in plaats van het gebruikelijke tarief.",
+        "lineFeeHelpMixed": "Vervangt het bundeltarief van deze regel in elke factureerperiode die het prijsschema dekt. Services met een prijs per eenheid houden hun eigen stukprijs.",
+        "lineFeeHelpWholeContract": "Terugvaltarief voor elke actieve contractregel met een vast tarief in de gedekte factureerperioden. Prijsschema’s voor afzonderlijke regels hebben voorrang."
       },
       "title": {
         "addPricingSchedule": "Prijsschema toevoegen",
@@ -1103,7 +1112,21 @@
         "durationRequired": "Duurwaarde is vereist wanneer duur wordt gebruikt",
         "effectiveDateRequired": "Ingangsdatum is verplicht",
         "endDateAfterEffectiveDate": "Einddatum moet na de ingangsdatum liggen",
-        "endDateRequiredWhenEnabled": "Einddatum is verplicht wanneer \"Heeft einddatum\" is ingeschakeld"
+        "endDateRequiredWhenEnabled": "Einddatum is verplicht wanneer \"Heeft einddatum\" is ingeschakeld",
+        "scopeRequired": "Kies een contractregel met een vast tarief voor dit prijsschema"
+      },
+      "values": {
+        "wholeContract": "Hele contract",
+        "unnamedLine": "Naamloze regel"
+      },
+      "notices": {
+        "wholeContract": "Hele contract: terugvalschema voor actieve contractregels met een vast tarief. Prijsschema’s voor afzonderlijke regels hebben voorrang.",
+        "wholeContractEffect": "Hele contract: terugvaltarief van {{amount}} per actieve contractregel met een vast tarief per factureerperiode ({{count}} regels). Prijsschema’s voor afzonderlijke regels hebben voorrang.",
+        "unitPricedExcluded": "Regels die per eenheid factureren staan er niet bij: een prijsschema wijzigt nooit een prijs per eenheid. Wijzig in plaats daarvan de stukprijs op de regel."
+      },
+      "empty": {
+        "allLinesUnitPriced": "Elke vaste regel van dit contract factureert per eenheid. Een prijsschema wijzigt nooit een prijs per eenheid — wijzig in plaats daarvan de stukprijs op de regel.",
+        "noEligibleLines": "Dit contract heeft geen regel met een vast tarief, dus een prijsschema heeft niets om opnieuw te beprijzen."
       }
     }
   },
@@ -2872,7 +2895,11 @@
       "endAfterEffective": "De einddatum moet na de ingangsdatum liggen",
       "overlaps": "Deze planning overlapt met een bestaande prijsplanning",
       "wouldOverlap": "Deze planning zou overlappen met een bestaande prijsplanning",
-      "notFound": "Prijsplanning niet gevonden"
+      "notFound": "Prijsplanning niet gevonden",
+      "invalidDate": "Ingangsdatum en einddatum moeten kalenderdatums zijn (JJJJ-MM-DD)",
+      "lineNotEligible": "Prijsschema’s gelden voor een regel met een vast tarief van dit contract; kies een van de vaste regels",
+      "lineUnitPriced": "Deze regel factureert per eenheid, dus een prijsschema zou niets aan de facturatie veranderen. Wijzig in plaats daarvan de stukprijs op de regel.",
+      "lineRequired": "Kies een contractregel met een vast tarief voor dit prijsschema"
     },
     "renewals": {
       "permissions": {

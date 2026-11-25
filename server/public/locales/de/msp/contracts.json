@@ -1037,7 +1037,8 @@
         "customRate": "Benutzerdefinierter Tarif",
         "effectiveDate": "Gültigkeitsdatum",
         "endDate": "Enddatum",
-        "notes": "Notizen"
+        "notes": "Notizen",
+        "appliesTo": "Gilt für"
       },
       "dialogs": {
         "confirmDeleteSchedule": "Möchten Sie diesen Preisplan wirklich löschen?"
@@ -1059,7 +1060,10 @@
       "values": {
         "defaultRate": "Standardtarif",
         "ongoing": "Laufend",
-        "useDefaultRate": "Standardtarif verwenden"
+        "useDefaultRate": "Standardtarif verwenden",
+        "wholeContract": "Gesamter Vertrag",
+        "wholeContractEffect": "Gesamter Vertrag – Ersatzgebühr von {{amount}} je aktiver Vertragslinie mit Festpreis ({{count}} Linien). Linienspezifische Preispläne haben Vorrang.",
+        "unnamedLine": "Unbenannte Position"
       }
     },
     "dialog": {
@@ -1079,7 +1083,6 @@
         "failedToSavePricingSchedule": "Preisplan konnte nicht gespeichert werden"
       },
       "fields": {
-        "customRate": "Benutzerdefinierter Tarif",
         "customRatePlaceholder": "0.00",
         "duration": "Dauer",
         "durationPlaceholder": "z. B. 6",
@@ -1090,7 +1093,13 @@
         "notesPlaceholder": "Notizen zu dieser Preisänderung hinzufügen (z. B. 'Jährliche Tarifsteigerung')",
         "unit": "Einheit",
         "useDefaultRate": "Standardtarif verwenden",
-        "useDuration": "Dauer verwenden"
+        "useDuration": "Dauer verwenden",
+        "appliesTo": "Gilt für",
+        "appliesToPlaceholder": "Wählen Sie eine Vertragslinie mit Festpreis",
+        "lineFee": "Gebühr pro Abrechnungszeitraum",
+        "lineFeeHelp": "Was diese Position in jedem vom Preisplan abgedeckten Abrechnungszeitraum berechnet – anstelle ihrer üblichen Gebühr.",
+        "lineFeeHelpMixed": "Ersetzt die Paketgebühr dieser Position in jedem vom Preisplan abgedeckten Abrechnungszeitraum. Pro Einheit bepreiste Services behalten ihren Einzelpreis.",
+        "lineFeeHelpWholeContract": "Ersatzgebühr für jede aktive Vertragslinie mit Festpreis in den abgedeckten Abrechnungszeiträumen. Linienspezifische Preispläne haben Vorrang."
       },
       "title": {
         "addPricingSchedule": "Preisplan hinzufügen",
@@ -1103,7 +1112,21 @@
         "durationRequired": "Dauerwert ist erforderlich, wenn Dauer verwendet wird",
         "effectiveDateRequired": "Gültigkeitsdatum ist erforderlich",
         "endDateAfterEffectiveDate": "Enddatum muss nach dem Gültigkeitsdatum liegen",
-        "endDateRequiredWhenEnabled": "Enddatum ist erforderlich, wenn \"Hat Enddatum\" aktiviert ist"
+        "endDateRequiredWhenEnabled": "Enddatum ist erforderlich, wenn \"Hat Enddatum\" aktiviert ist",
+        "scopeRequired": "Wählen Sie eine Vertragslinie mit Festpreis für diesen Preisplan"
+      },
+      "values": {
+        "wholeContract": "Gesamter Vertrag",
+        "unnamedLine": "Unbenannte Position"
+      },
+      "notices": {
+        "wholeContract": "Gesamter Vertrag: Ersatzpreisplan für aktive Vertragslinien mit Festpreis. Linienspezifische Preispläne haben Vorrang.",
+        "wholeContractEffect": "Gesamter Vertrag: Ersatzgebühr von {{amount}} je aktiver Vertragslinie mit Festpreis pro Abrechnungszeitraum ({{count}} Linien). Linienspezifische Preispläne haben Vorrang.",
+        "unitPricedExcluded": "Positionen, die pro Einheit abrechnen, werden nicht aufgeführt: Ein Preisplan ändert nie einen Preis pro Einheit. Ändern Sie stattdessen den Einzelpreis der Position."
+      },
+      "empty": {
+        "allLinesUnitPriced": "Jede feste Position dieses Vertrags rechnet pro Einheit ab. Ein Preisplan ändert nie einen Preis pro Einheit – ändern Sie stattdessen den Einzelpreis der Position.",
+        "noEligibleLines": "Dieser Vertrag hat keine Position mit Festpreis, daher kann ein Preisplan nichts neu bepreisen."
       }
     }
   },
@@ -2872,7 +2895,11 @@
       "endAfterEffective": "Das Enddatum muss nach dem Gültigkeitsdatum liegen",
       "overlaps": "Dieser Zeitplan überschneidet sich mit einem vorhandenen Preiszeitplan",
       "wouldOverlap": "Dieser Zeitplan würde sich mit einem vorhandenen Preiszeitplan überschneiden",
-      "notFound": "Preiszeitplan nicht gefunden"
+      "notFound": "Preiszeitplan nicht gefunden",
+      "invalidDate": "Gültigkeitsdatum und Enddatum müssen Kalenderdaten sein (JJJJ-MM-TT)",
+      "lineNotEligible": "Preispläne gelten für eine Position mit Festpreis dieses Vertrags; wählen Sie eine seiner festen Positionen",
+      "lineUnitPriced": "Diese Position rechnet pro Einheit ab, daher würde ein Preisplan nichts an ihrer Abrechnung ändern. Ändern Sie stattdessen den Einzelpreis der Position.",
+      "lineRequired": "Wählen Sie eine Vertragslinie mit Festpreis für diesen Preisplan"
     },
     "renewals": {
       "permissions": {

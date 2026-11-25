@@ -151,6 +151,53 @@ describe("resolveFixedLineRate (T15 equivalence matrix)", () => {
     });
   });
 
+  it("whole-contract and line-scoped schedules coexist: each line bills its own", () => {
+    // Both scopes are offered in the UI. On the scoped line the line schedule
+    // wins; every other fixed-fee line bills the whole-contract rate.
+    const schedules = [
+      {
+        schedule_id: "s-whole-contract",
+        contract_line_id: null,
+        effective_date: "2026-10-01",
+        end_date: null,
+        custom_rate: 90000,
+      },
+      {
+        schedule_id: "s-line-1",
+        contract_line_id: "line-1",
+        effective_date: "2026-10-01",
+        end_date: null,
+        custom_rate: 50000,
+      },
+    ];
+
+    const first = resolveFixedLineRate({
+      ...base,
+      line: { ...base.line, contract_line_id: "line-1" },
+      planServices: [service({ default_rate: 5000 })],
+      catalogPrices: [price()],
+      schedules,
+    });
+    expect(first.line).toMatchObject({
+      rateCents: 50000,
+      source: "pricing_schedule",
+      sourceId: "s-line-1",
+    });
+
+    const second = resolveFixedLineRate({
+      ...base,
+      line: { ...base.line, contract_line_id: "line-2" },
+      planServices: [service({ default_rate: 5000 })],
+      catalogPrices: [price()],
+      schedules,
+    });
+    expect(second.line).toMatchObject({
+      rateCents: 90000,
+      source: "pricing_schedule",
+      sourceId: "s-whole-contract",
+    });
+  });
+
   it("schedule end_date boundary matches the engine (end == period start excluded)", () => {
     const inclusiveStart = PERIOD.start; // 2026-11-01
     const dayBeforeStart = "2026-10-31";
