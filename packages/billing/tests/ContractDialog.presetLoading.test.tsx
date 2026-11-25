@@ -14,7 +14,6 @@ const actionMocks = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/billing/actions/billingClientsActions', () => ({
   getClientByIdForBilling: actionMocks.getClientByIdForBilling,
-  createClientContractForBilling: vi.fn(),
 }));
 
 vi.mock('@alga-psa/billing/actions/contractLinePresetActions', () => ({
@@ -22,12 +21,10 @@ vi.mock('@alga-psa/billing/actions/contractLinePresetActions', () => ({
   getContractLinePresetServiceCounts: actionMocks.getContractLinePresetServiceCounts,
   getContractLinePresetServices: actionMocks.getContractLinePresetServices,
   getContractLinePresetFixedConfig: actionMocks.getContractLinePresetFixedConfig,
-  copyPresetToContractLine: vi.fn(),
 }));
 
-vi.mock('@alga-psa/billing/actions/contractActions', () => ({
-  createContract: vi.fn(),
-  updateContract: vi.fn(),
+vi.mock('@alga-psa/billing/actions/contractWizardActions', () => ({
+  saveQuickAddContract: vi.fn(),
 }));
 
 vi.mock('@alga-psa/billing/actions/serviceActions', () => ({

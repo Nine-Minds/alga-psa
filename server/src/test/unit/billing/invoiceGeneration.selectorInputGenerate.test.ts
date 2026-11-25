@@ -182,6 +182,9 @@ const mocks = vi.hoisted(() => {
         tenant: 'tenant-1',
         client_id: 'client-1',
         effective_date: '2025-02-01',
+        period_start_date: '2025-02-01',
+        period_end_date: '2025-03-01',
+        billing_profile_id: 'unit-test-default-billing-profile',
       },
     ],
     clients: [
@@ -685,6 +688,25 @@ describe('selector-input recurring generation', () => {
     expect(result).toMatchObject({
       billing_cycle_id: 'cycle-1',
     });
+  });
+
+  it.each(['foreign-client', 'inactive'])('rejects an explicitly selected %s billing profile', async (kind) => {
+    const profile = {
+      billing_profile_id: 'unavailable-profile', tenant: 'tenant-1',
+      client_id: kind === 'foreign-client' ? 'client-2' : 'client-1', is_active: kind !== 'inactive',
+    };
+    mocks.rowsByTable.client_billing_profiles.push(profile);
+    try {
+      const result = await generateInvoiceForSelectionInput(buildClientCadenceDueSelectionInput({
+        clientId: 'client-1', scheduleKey: 'schedule:tenant-1:line-1:client:arrears',
+        periodKey: 'period:2025-01-01:2025-02-01', windowStart: '2025-02-01', windowEnd: '2025-03-01',
+      }), { billingProfileId: profile.billing_profile_id });
+      expect(result).toMatchObject({ messageKey: 'msp/invoicing:manualInvoices.errors.BILLING_PROFILE_NOT_FOUND' });
+      expect(mocks.persistInvoiceCharges).not.toHaveBeenCalled();
+      expect(mocks.rowsByTable.invoices).toEqual([]);
+    } finally {
+      mocks.rowsByTable.client_billing_profiles.pop();
+    }
   });
 
   it('T021: duplicate prevention blocks re-invoicing the same contract-cadence execution window even when there is no billing_cycle_id', async () => {

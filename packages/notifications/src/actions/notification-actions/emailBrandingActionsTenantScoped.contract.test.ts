@@ -97,7 +97,9 @@ describe('enterprise brand assets', () => {
 
     expect(body).toContain('if (!enterprise) return undefined;');
     expect(body).toContain("{ variant, alt: branding?.clientName ?? '' }");
-    expect(body).toContain('decorateBrandedHtml(html, { logo, hideAttribution })');
+    // The planner passes the strip options; the decorator must forward them, or
+    // a ticked customized row loses the words beside its attribution.
+    expect(body).toContain('decorateBrandedHtml(html, { logo, hideAttribution, ...options })');
     // The row references the logo by content-id; no URL is ever written into it.
     expect(body).not.toContain('url:');
   });

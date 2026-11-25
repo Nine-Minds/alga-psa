@@ -157,7 +157,7 @@ jobs:
       # swapped vitest 3→4 and silently broke test-file serialization. Fail
       # loudly instead.
       - name: Install dependencies
-        run: npm ci
+        run: node scripts/install-api-test-dependencies.mjs
 
       # devServerStartup.integration.test.ts exercises real browser hydration.
       # Install on every shard: suite selection can move it between shards.
@@ -312,7 +312,7 @@ jobs:
         if: env.INTEGRATION_FULL != 'true' && needs.integration-tests.result == 'success'
         run: |
           npm install -g npm@11
-          npm ci
+          node scripts/install-api-test-dependencies.mjs
       - name: Download every integration shard
         if: always() && needs.integration-tests.result != 'skipped'
         uses: actions/download-artifact@v4
@@ -426,7 +426,7 @@ jobs:
         run: npm install -g npm@11
 
       - name: Install dependencies
-        run: npm ci
+        run: node scripts/install-api-test-dependencies.mjs
 
       - name: Build shared libraries
         run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search --parallel=3
@@ -598,7 +598,7 @@ jobs:
         run: npm install -g npm@11
 
       - name: Install dependencies
-        run: npm ci
+        run: node scripts/install-api-test-dependencies.mjs
 
       - name: Verify discovery and selection against the installed Vitest runner
         run: node --test scripts/tests/test-discovery.vitest.test.mjs scripts/tests/integration-selection.vitest.test.mjs scripts/tests/infrastructure-runner.vitest.test.mjs scripts/tests/vitest-progress-reporter.test.mjs

@@ -40,6 +40,11 @@ export function handledRecurringFailureFromActionError(error: RecurringBillingRu
   code?: HandledRecurringFailureCode;
   params?: Record<string, string>;
 } {
+  for (const code of ['BILLING_PROFILE_MISMATCH', 'BILLING_PROFILE_NOT_FOUND'] as const) {
+    if (error.messageKey === `msp/invoicing:manualInvoices.errors.${code}`) {
+      return { code, params: error.messageParams as Record<string, string> | undefined };
+    }
+  }
   if (error.messageKey === TIME_APPROVAL_REQUIRED_MESSAGE_KEY) {
     return { code: 'TIME_APPROVAL_REQUIRED', params: error.messageParams as Record<string, string> | undefined };
   }

@@ -9,6 +9,8 @@ import type { ProjectListFilters } from '@alga-psa/projects/components/Projects'
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 import CoManagedProjectTaskQueueLink from '@/components/co-managed/CoManagedProjectTaskQueueLink';
 import { getSmartSearchAvailability } from '@enterprise/lib/actions/smartSearchActions';
+import { getCurrentProductPrincipal } from '@/lib/productAccess';
+import { CO_MANAGED_SEAT_SURFACE } from '@shared/services/productSurfaceKinds';
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getServerTranslation(undefined, 'metadata');
@@ -28,7 +30,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
     return boundary;
   }
 
-  const [projectsResult, params, smartSearchAvailable] = await Promise.all([
+  const [projectsResult, params, smartSearchAvailable, principal] = await Promise.all([
     getProjects(),
     searchParams,
     // Decided on the server so the Smart search affordance is right on first
@@ -36,6 +38,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
     getSmartSearchAvailability('project')
       .then((result) => result?.available === true)
       .catch(() => false),
+    getCurrentProductPrincipal(),
   ]);
 
   const projectsData: IProject[] = isActionPermissionError(projectsResult) ? [] : projectsResult;
@@ -134,6 +137,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
       initialFilters={initialFilters}
       initialProjectTags={initialProjectTags}
       initialAllUniqueTags={allProjectTags}
+      canCreateProjects={principal.surfaceKind !== CO_MANAGED_SEAT_SURFACE}
       smartSearchAvailable={smartSearchAvailable}
     />
     </>
