@@ -43,9 +43,10 @@ function LayoutShell({
 }) {
   const [userData, setUserData] = useState<IUserWithRoles | null>(null);
   const [permissions, setPermissions] = useState({
-    hasClientSettingsAccess: false,
+    hasClientReadAccess: false,
     hasBillingAccess: false,
     hasUserManagementAccess: false,
+    hasVisibilityGroupAccess: false,
     hasAccountAccess: false,
     hasProjectAccess: false,
     hasDocumentAccess: false,
@@ -82,9 +83,10 @@ function LayoutShell({
           const perms = await checkClientPortalPermissions();
           if (!mounted) return;
           setPermissions({
-            hasClientSettingsAccess: perms.hasClientSettingsAccess,
+            hasClientReadAccess: perms.hasClientReadAccess,
             hasBillingAccess: perms.hasBillingAccess,
             hasUserManagementAccess: perms.hasUserManagementAccess,
+            hasVisibilityGroupAccess: perms.hasVisibilityGroupAccess,
             hasAccountAccess: perms.hasAccountAccess,
             hasProjectAccess: perms.hasProjectAccess,
             hasDocumentAccess: perms.hasDocumentAccess,
@@ -114,8 +116,10 @@ function LayoutShell({
       <ClientPortalSidebar
         productCode={productCode}
         permissions={{
-          hasClientSettingsAccess: permissions.hasClientSettingsAccess,
+          hasClientReadAccess: permissions.hasClientReadAccess,
           hasBillingAccess: permissions.hasBillingAccess,
+          hasUserManagementAccess: permissions.hasUserManagementAccess,
+          hasVisibilityGroupAccess: permissions.hasVisibilityGroupAccess,
           hasProjectAccess: permissions.hasProjectAccess,
           hasDocumentAccess: permissions.hasDocumentAccess,
           isLicenseDistributor: permissions.isLicenseDistributor,
