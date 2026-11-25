@@ -2,7 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import { BaseCalendarAdapter, type CalendarEventChange } from './base/BaseCalendarAdapter';
 import type { CalendarProviderConfig, ExternalCalendarEvent } from '@alga-psa/types';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { google } from 'googleapis';
+import * as google from 'googleapis/build/src/apis/calendar/index.js';
 import { OAuth2Client } from 'google-auth-library';
 import { CalendarProviderService } from '../CalendarProviderService';
 import { getWebhookBaseUrl } from '../../../utils/email/webhookHelpers';

@@ -21,7 +21,13 @@ const hoisted = vi.hoisted(() => {
   const state = { db: null as any, tenant: '', userId: '00000000-0000-4000-8000-0000000000a1' };
   const withAuthMock = (fn: any) => async (...args: any[]) => {
     const { runWithTenant } = await import('@alga-psa/db');
-    return runWithTenant(state.tenant, () => fn({ user_id: state.userId, user_type: 'internal', roles: [] }, { tenant: state.tenant }, ...args));
+    // `tenant` on the principal is what the contract-authoring gate compares
+    // against the action's tenant; a real session always carries it.
+    return runWithTenant(state.tenant, () => fn(
+      { user_id: state.userId, tenant: state.tenant, user_type: 'internal', roles: [] },
+      { tenant: state.tenant },
+      ...args,
+    ));
   };
   return Object.assign(state, { withAuthMock });
 });
