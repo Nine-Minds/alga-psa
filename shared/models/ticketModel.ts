@@ -12,8 +12,11 @@ import { tenantDb } from '@alga-psa/db';
 import { recordSeatTicketCreated, recordTicketAssigneeChange, releaseSeatTicketOnMove } from '@alga-psa/db';
 import { applyCommentResponseState, announcerFor } from '../lib/tickets/responseState';
 import {
-  nativeReplyAudience, nativeThreadAudience, type CommentAudienceReader, type NativeCommentAudience,
+  nativeReplyAudience,
+  nativeThreadAudience,
+  type NativeCommentAudience,
 } from '../lib/commentAudience';
+import { type ContentAudienceReader } from '../lib/contentAudience';
 import { publishCommentEvent } from '@alga-psa/db/commentEventRegistry';
 import { assertHumanWorkAssignee } from '../lib/humanWork/assertHumanWorkAssignee';
 import { v4 as uuidv4 } from 'uuid';
@@ -343,7 +346,7 @@ export interface CreateCommentInput {
   /** Who may read this comment (see `nativeThreadAudience`). */
   collaboration_audience?: NativeCommentAudience;
   /** The author's organization when the caller admits seat principals (see `NativeCommentAuthor`). */
-  audience_author?: CommentAudienceReader | null;
+  audience_author?: ContentAudienceReader | null;
 }
 
 export interface CreateCommentOutput {

@@ -5,9 +5,14 @@ import { tenantDb, withTransaction } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { isInteractiveUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import {
-  CommentAudienceError, admitInternalReaderAudienceSql, isCommentAudience, nativeReplyAudience, nativeThreadAudience,
-  type CommentAudienceReader, type InternalReaderIdentity,
+  CommentAudienceError,
+  admitInternalReaderAudienceSql,
+  isCommentAudience,
+  nativeReplyAudience,
+  nativeThreadAudience,
+  type InternalReaderIdentity,
 } from '@alga-psa/shared/lib/commentAudience';
+import { type ContentAudienceReader } from '@alga-psa/shared/lib/contentAudience';
 import { HumanWorkOwnerRequiredError } from '@alga-psa/shared/lib/humanWork/HumanWorkOwnerRequiredError';
 
 function tenantScopedTable<Row extends object = Record<string, unknown>>(
@@ -148,7 +153,7 @@ const Comment = {
 
   /** Owns a transaction when given a plain connection: attachment claims take row locks with the insert. */
   insert: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, comment: Omit<IComment, 'tenant'>, collaboration?: CommentCollaborationContext,
-    audienceAuthor?: CommentAudienceReader | null): Promise<string> =>
+    audienceAuthor?: ContentAudienceReader | null): Promise<string> =>
     (await Comment.insertRecord(knexOrTrx, tenant, comment, collaboration, audienceAuthor)).comment_id!,
 
   /** Return the stored, normalized row for callers that publish it in the same transaction. */
@@ -157,7 +162,7 @@ const Comment = {
    * (see `NativeCommentAuthor`); omitted, the author is whoever `author_type` has always implied.
    */
   insertRecord: (knexOrTrx: Knex | Knex.Transaction, tenant: string, comment: Omit<IComment, 'tenant'>, collaboration?: CommentCollaborationContext,
-    audienceAuthor?: CommentAudienceReader | null): Promise<IComment> => withTransaction(knexOrTrx, async (trx) => {
+    audienceAuthor?: ContentAudienceReader | null): Promise<IComment> => withTransaction(knexOrTrx, async (trx) => {
     try {
       logger.info('Inserting comment:', comment);
 

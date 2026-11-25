@@ -4,7 +4,8 @@ import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { isCoManagedLifecycleError, assertCoManagedOperationalWrite } from '@alga-psa/licensing/lifecycle';
-import { commentAudienceSql, isCommentAudienceVisible, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
+import { commentAudienceSql, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
+import { isContentAudienceVisible } from '@alga-psa/shared/lib/contentAudience';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { withCoManagedCustomerTicket } from './customerWork';
 import { snapshotCoManagedSessionActor, assertCoManagedSessionUnexpired, isCoManagedUuid, CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
@@ -265,13 +266,13 @@ export async function listPublishedCoManagedAttachmentSources(context: CoManaged
 }
 /** The one access decision for reading a file's bytes, behind both the MSP route
  * and the portal route. Order: transaction + id shape, the shared audience
- * predicate (`isCommentAudienceVisible`, no second predicate), the visible-draft
+ * predicate (`isContentAudienceVisible`, no second predicate), the visible-draft
  * rule (an unpublished draft's files never resolve), the storage-path assertion,
  * then — after transport, in `readPublishedCoManagedAttachment` — size and hash. */
 function audienceReadable(context: CoManagedAttachmentReadContext): boolean {
   // LEVERAGE: friction audience-reader-from-tenant — this context carries a reader tenant + requester flag, so a seat
-  // technician arriving here would read as staff; S18 passes the resolved CommentAudienceReader through instead.
-  return isCommentAudienceVisible(context.audience, { tenant: context.comment.storeTenant },
+  // technician arriving here would read as staff; S18 passes the resolved ContentAudienceReader through instead.
+  return isContentAudienceVisible(context.audience, { tenant: context.comment.storeTenant },
     { kind: context.reader.requester ? 'requester' : 'staff', tenant: context.reader.tenant });
 }
 export async function resolveAttachmentAccess(context: CoManagedAttachmentReadContext, attachmentId: string) {

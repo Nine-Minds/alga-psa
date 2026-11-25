@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { isCommentAudienceVisible, resolveCommentAudienceForRead, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
+import { resolveCommentAudienceForRead, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
+import { isContentAudienceVisible } from '@alga-psa/shared/lib/contentAudience';
 import { portableSnapshotTransaction } from './portableSnapshot';
 import { validatePortableRecordSection, type PortableRecords } from './portableRecordValidation';
 import type { PortableContributor } from './portableContributorRegistry';
@@ -33,7 +34,7 @@ export function portableConversationAudience(thread: { collaboration_audience?: 
   return thread.project_task_id ? projectTaskAudience(thread as { collaboration_audience?: string | null; is_internal?: boolean | null })
     : resolveCommentAudienceForRead(thread);
 }
-export const portableConversationVisible = (audience: CommentAudience, tenant: string) => isCommentAudienceVisible(audience, { tenant }, { kind: 'staff', tenant });
+export const portableConversationVisible = (audience: CommentAudience, tenant: string) => isContentAudienceVisible(audience, { tenant }, { kind: 'staff', tenant });
 
 export function validateCoManagedPortableConversationRecords(input: unknown, workspace?: PortableRecords): asserts input is PortableRecords {
   validatePortableRecordSection(input, { columns: CO_MANAGED_PORTABLE_CONVERSATION_COLUMNS, references: CO_MANAGED_PORTABLE_CONVERSATION_REFERENCES });
@@ -98,7 +99,7 @@ async function retainCoManagedPortableConversation(trx: Knex.Transaction, inputA
       { class: 'deferred_domain', name: 'ticket_comment_attachments_draft', reason: `Draft uploads are not conversation state and are excluded; ${orphaned} orphaned and ${hidden} audience-hidden attachment rows were skipped.` },
     ];
     return { records: JSON.parse(JSON.stringify(records)) as PortableRecords,
-      annotations: { exclusions, audienceRule: 'portableConversationAudience+isCommentAudienceVisible', attachmentStates: STATES } };
+      annotations: { exclusions, audienceRule: 'portableConversationAudience+isContentAudienceVisible', attachmentStates: STATES } };
   });
 }
 

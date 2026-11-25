@@ -2,17 +2,19 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { serves, type CapabilityReason } from '@alga-psa/core/capability';
 import {
-  isCommentAudience, isCommentAudienceVisible, resolveCommentAudienceForRead,
-  type CommentAudience, type CommentAudienceReader,
+  isCommentAudience,
+  resolveCommentAudienceForRead,
+  type CommentAudience,
 } from './commentAudience';
+import { isContentAudienceVisible, type ContentAudienceReader } from './contentAudience';
 
 /**
  * The recipient boundary of ticket notifications.
  *
  * Everything a ticket sends to a person (email, in-app, watcher mail) and everything a person
  * sends back by email passes one question through here: WHO is this address or user on THIS
- * ticket, as an organization? The answer is a `CommentAudienceReader` (see `commentAudience.ts`),
- * so what a recipient may be told is decided by `isCommentAudienceVisible` and nothing else.
+ * ticket, as an organization? The answer is a `ContentAudienceReader` (see `commentAudience.ts`),
+ * so what a recipient may be told is decided by `isContentAudienceVisible` and nothing else.
  *
  * Only a seat technician is ever narrowed. They are an internal user of the MSP's tenant whose
  * organization is one client, so every "is this an internal user?" test upstream would hand them
@@ -40,7 +42,7 @@ import {
  */
 export type TicketNotificationRecipient =
   | { seat: false }
-  | { seat: true; userId: string; reader: Extract<CommentAudienceReader, { kind: 'seat' | 'requester' }> };
+  | { seat: true; userId: string; reader: Extract<ContentAudienceReader, { kind: 'seat' | 'requester' }> };
 
 const NOT_SEAT: TicketNotificationRecipient = { seat: false };
 
@@ -146,7 +148,7 @@ export async function resolveTicketNotificationRecipients(
     const email = normalizeEmail(recipient.email);
     const seat = (recipient.userId ? byUser.get(recipient.userId) : undefined) ?? (email ? byEmail.get(email) : undefined);
     if (!seat) return NOT_SEAT;
-    const reader: Extract<CommentAudienceReader, { kind: 'seat' | 'requester' }> =
+    const reader: Extract<ContentAudienceReader, { kind: 'seat' | 'requester' }> =
       seat.arrangement_id && inScope.has(seat.arrangement_id) && seat.client_id
         ? { kind: 'seat', tenant, clientId: seat.client_id } : { kind: 'requester', tenant };
     return { seat: true, userId: seat.user_id, reader };
@@ -245,7 +247,7 @@ async function readTicketOrganization(
  * May this recipient be told something of `audience` about the ticket they were resolved for?
  *
  * Not a seat technician: always, the caller's existing rules stand. A seat technician: only what
- * `isCommentAudienceVisible` shows their reader (their client's `shared_it` too while in scope,
+ * `isContentAudienceVisible` shows their reader (their client's `shared_it` too while in scope,
  * `requester` only as an external party). A message that does not say what it carries
  * (`audience` missing) is never sent to them.
  *
@@ -258,7 +260,7 @@ export function recipientMayReceive(
   if (!recipient.seat) return true;
   const reader = recipient.reader;
   if (!isCommentAudience(audience)) return false;
-  return isCommentAudienceVisible(
+  return isContentAudienceVisible(
     audience, { tenant: reader.tenant, clientId: reader.kind === 'seat' ? reader.clientId : null }, reader);
 }
 
@@ -383,7 +385,7 @@ export type InboundReplyAudience =
    * joins the thread it answers only while that thread still has this audience; otherwise it
    * starts a new thread, so a later audience change never widens what the technician wrote.
    */
-  | { seat: true; author: CommentAudienceReader; audience: CommentAudience; joinThread: boolean };
+  | { seat: true; author: ContentAudienceReader; audience: CommentAudience; joinThread: boolean };
 
 /**
  * The audience of a seat technician's email reply: the audience of the notification they answered.

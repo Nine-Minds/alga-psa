@@ -26,7 +26,8 @@ import { projectedPeopleForCaller, projectedPeopleForSubject, projectedPersonToU
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { resolveCommentMergeTokens } from '../lib/cannedResponses/commentMerge';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
-import { nativeThreadAudience, resolveCommentWriteAuthor, type CommentAudienceReader, type NativeCommentAudience } from '@alga-psa/shared/lib/commentAudience';
+import { nativeThreadAudience, resolveCommentWriteAuthor, type NativeCommentAudience } from '@alga-psa/shared/lib/commentAudience';
+import { type ContentAudienceReader } from '@alga-psa/shared/lib/contentAudience';
 import { applyCommentResponseState } from '@alga-psa/shared/lib/tickets/responseState';
 
 import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
@@ -3751,7 +3752,7 @@ export interface AddTicketCommentInput {
   /** Who may read this comment. Required for requester-visible staff comments in co-managed workspaces. */
   audienceId?: NativeCommentAudience | null;
   /** The author's organization when the caller admits seat principals (see `NativeCommentAuthor`). */
-  audienceAuthor?: CommentAudienceReader | null;
+  audienceAuthor?: ContentAudienceReader | null;
 }
 
 /**
