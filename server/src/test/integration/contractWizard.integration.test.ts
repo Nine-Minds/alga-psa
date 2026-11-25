@@ -91,6 +91,7 @@ vi.mock('@alga-psa/auth/withAuth', () => ({
         {
           user_id: 'contract-wizard-test-user',
           tenant: tenantId,
+          user_type: 'internal',
           roles: [{ role_name: 'Admin' }],
         } as any,
         { tenant: tenantId },

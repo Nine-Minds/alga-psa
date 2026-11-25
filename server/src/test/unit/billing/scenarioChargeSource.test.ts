@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { resolveContractLineCharges } from "@alga-psa/billing/lib/billing/chargeResolution";
+import { calculateNormalizedContractCharge } from "@alga-psa/billing/lib/billing/domain/calculateContractCharge";
 import { simulationRefusalToDiagnostic } from "@alga-psa/types";
 import { asSimulationRefusal } from "@ee/lib/billing/simulator/simulationRefusal";
-import { ScenarioChargeSource, createScenarioRunState } from "@ee/lib/billing/simulator/scenarioChargeSource";
+import { ScenarioChargeSource, createScenarioRunState, type ScenarioChargeSourceInput } from "@ee/lib/billing/simulator/scenarioChargeSource";
+import { syntheticConfigId } from "@ee/lib/billing/simulator/syntheticActivity";
 
 const service = (service_id: string, configuration: Record<string, unknown>, service_name = service_id) =>
   ({ service_id, service_name, configuration }) as any;
@@ -18,7 +20,7 @@ async function refusalDiagnostic(source: ScenarioChargeSource) {
   return simulationRefusalToDiagnostic(refusal!);
 }
 
-function sourceFor(line: Record<string, unknown>) {
+function sourceFor(line: Record<string, unknown>, overrides: Partial<ScenarioChargeSourceInput> = {}) {
   return new ScenarioChargeSource({
     scenario: { assumptions: {} } as any,
     line: { key: "line-1", contract_line_name: "Managed Support", contract_line_type: "Hourly", ...line } as any,
@@ -32,10 +34,100 @@ function sourceFor(line: Record<string, unknown>) {
     lineCycle: "monthly",
     diagnostics: [],
     run: createScenarioRunState(),
+    ...overrides,
   });
 }
 
 describe("ScenarioChargeSource", () => {
+  describe("fixed fallback calculation", () => {
+    const timing = {
+      duePosition: "arrears" as const,
+      servicePeriodStart: "2026-07-01",
+      servicePeriodEnd: "2026-07-31",
+      servicePeriodStartExclusive: "2026-07-01",
+      servicePeriodEndExclusive: "2026-08-01",
+      coverageRatio: 1,
+    };
+
+    async function calculate(services: any[], scope: string | null = "line-1") {
+      const source = sourceFor({ contract_line_type: "Fixed", custom_rate: 50000, services }, {
+        scenario: {
+          assumptions: {},
+          pricing_schedules: [{ contract_line_key: scope, effective_date: "2026-07-01", end_date: null, custom_rate: 90000 }],
+        } as any,
+        lineFacts: {
+          tenantId: "tenant-1", clientId: "c", clientContractLineId: "line-1",
+          contractLineId: "line-1", contractLineType: "Fixed", currencyCode: "USD",
+        },
+        billingPeriod: { startDate: "2026-07-01", endDate: "2026-08-01" },
+        timings: { line: timing },
+        taxPorts: {
+          getTaxInfoFromService: (row) => ({ taxRegion: row.tax_rate_id ? "US" : null, isTaxable: !!row.tax_rate_id }),
+          getLocationTaxRegionCode: () => null,
+          getClientDefaultTaxRegionCode: () => null,
+          isTaxExemptForProfile: () => false,
+          calculateTax: (_client, amount) => ({ taxRate: 10, taxAmount: amount / 10 }),
+        },
+      });
+      const resolved = await resolveContractLineCharges(source, { families: new Set(["fixed"]) });
+      expect(resolved).toHaveLength(1);
+      const { obligation, taxContext } = resolved[0];
+      return {
+        facts: obligation.facts,
+        result: calculateNormalizedContractCharge(obligation.facts, "simulate", taxContext),
+      };
+    }
+
+    it.each([
+      ["line-1", 90000],
+      ["another-line", 50000],
+      [null, 90000],
+    ])("bills the fallback fee with schedule scope %s", async (scope, amount) => {
+      const { result } = await calculate([service("usage", { configuration_type: "Usage" })], scope);
+      expect(result.charges).toHaveLength(1);
+      expect(result.charges[0]).toMatchObject({ serviceId: "usage", rate: amount, total: amount });
+      expect(result).not.toHaveProperty("blockers", expect.anything());
+    });
+
+    it("uses the first non-product service by ID, including its identity and tax facts", async () => {
+      const services = [
+        service("z-usage", { configuration_type: "Usage" }),
+        { ...service("0-product", { configuration_type: "Fixed" }), item_kind: "product" },
+        { ...service("a-hourly", { configuration_type: "Hourly" }, "Support"), tax_rate_id: "tax-1" },
+      ];
+      const { result } = await calculate(services);
+      expect(result.charges).toHaveLength(1);
+      expect(result.charges[0]).toMatchObject({
+        serviceId: "a-hourly", serviceName: "Support",
+        config_id: syntheticConfigId("line-1", "a-hourly"),
+        total: 90000, tax_amount: 9000, tax_rate: 10,
+      });
+      expect(services.map((row) => row.service_id)).toEqual(["z-usage", "0-product", "a-hourly"]);
+    });
+
+    it("keeps unit-priced Fixed members from falling back to the bundle fee", async () => {
+      const { facts, result } = await calculate([
+        service("usage", { configuration_type: "Usage" }),
+        { ...service("seats", { configuration_type: "Fixed", pricing_basis: "unit", base_rate: 2000 }), quantity: 3 },
+      ]);
+      expect(facts).toMatchObject({ fallbackService: null });
+      expect(result.charges).toHaveLength(1);
+      expect(result.charges[0]).toMatchObject({ serviceId: "seats", total: 6000 });
+    });
+
+    it.each([
+      { name: "empty lines", services: [] },
+      { name: "product-only lines", services: [{ ...service("product", { configuration_type: "Usage" }), item_kind: "product" }] },
+    ])(
+      "does not invent a non-product fallback for $name",
+      async ({ services }) => {
+        const { facts, result } = await calculate(services);
+        expect(facts).toMatchObject({ fallbackService: null });
+        expect(result.charges).toEqual([]);
+      },
+    );
+  });
+
   it("resolves timing per stream: a stream with no timing is not due", async () => {
     const source = sourceFor({ services: [] });
     await expect(source.resolveTiming({ stream: "line" } as any)).resolves.toMatchObject({ status: "due" });

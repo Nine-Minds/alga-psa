@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./dist/tsconfig.tooling-tests.tsbuildinfo",
+    "types": ["node"]
+  },
+  "include": ["tests/previewPagination.bundle.test.ts"]
+}
