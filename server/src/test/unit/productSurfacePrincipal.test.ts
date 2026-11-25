@@ -139,9 +139,12 @@ describe('product surface registry resolves per principal (S12 F029)', () => {
       ]);
     });
 
-    it('keeps nothing of the settings menu, the footer links or the portal navigation', () => {
+    it('keeps nothing of the settings menu or the portal navigation, and only Profile of the footer links', () => {
       expect(filterMenuSectionsByProduct(seat(), settingsNavigationSections)).toEqual([]);
-      expect(filterMenuSectionsByProduct(seat(), [{ items: bottomMenuItems }])).toEqual([]);
+      const footerHrefs = filterMenuSectionsByProduct(seat(), [{ items: bottomMenuItems }])
+        .flatMap((section) => section.items)
+        .flatMap((item) => item.subItems?.map((subItem) => subItem.href) ?? [item.href]);
+      expect(footerHrefs).toEqual(['/msp/profile']);
       expect(filterPortalNavigationByProduct(seat(), [{ href: '/client-portal/tickets' }])).toEqual([]);
     });
 

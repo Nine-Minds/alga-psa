@@ -25,7 +25,8 @@ import UserAvatarUpload from '@alga-psa/users/components/profile/UserAvatarUploa
 import SessionManagement from '@alga-psa/auth/components/settings/security/SessionManagement';
 import ApiKeysSetup from './ApiKeysSetup';
 import KeyboardShortcutsPanel from '@/components/keyboard-shortcuts/KeyboardShortcutsPanel';
-import { isCalendarEnterpriseEdition, resolveUserProfileTab } from '@alga-psa/integrations/lib/calendarAvailability';
+import { isCalendarEnterpriseEdition } from '@alga-psa/integrations/lib/calendarAvailability';
+import { resolveProfileTabs } from './profileTabEligibility';
 import { useProduct } from '@/context/ProductContext';
 import { toast } from 'react-hot-toast';
 import { translateFieldValidation, validateContactName, validateEmailAddress, validateEmailAddressField, validatePhoneNumberField } from '@alga-psa/validation';
@@ -87,7 +88,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const { t: tValidation } = useTranslation('common');
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
-  const { isAlgaDesk } = useProduct();
+  const { isAlgaDesk, surfaceKind } = useProduct();
   const isCalendarTabAvailable = isCalendarEnterpriseEdition() && !isAlgaDesk;
   
   const [user, setUser] = useState<IUserWithRoles | null>(null);
@@ -106,19 +107,19 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const [inheritedSource, setInheritedSource] = useState<'client' | 'tenant' | 'system'>('system');
   const [isLocaleLoading, setIsLocaleLoading] = useState(false);
   
-  // Determine initial tab from URL or default to "Profile"
-  const initialTab = useMemo(() => {
-    return resolveUserProfileTab(tabParam, isCalendarTabAvailable);
-  }, [isCalendarTabAvailable, tabParam]);
+  // One eligibility decision per principal drives both the rendered tabs and the URL selection.
+  const { eligibleTabs, activeTab: requestedActiveTab } = useMemo(
+    () => resolveProfileTabs({ surfaceKind, isCalendarTabAvailable, requestedTab: tabParam }),
+    [surfaceKind, isCalendarTabAvailable, tabParam],
+  );
 
-  const [activeTab, setActiveTab] = useState<string>(initialTab);
+  const [activeTab, setActiveTab] = useState<string>(requestedActiveTab);
 
   // Update active tab when URL parameter changes
   useEffect(() => {
-    const targetTab = resolveUserProfileTab(tabParam, isCalendarTabAvailable);
-    setActiveTab(prev => prev !== targetTab ? targetTab : prev);
-  }, [isCalendarTabAvailable, tabParam]);
-  
+    setActiveTab(prev => prev !== requestedActiveTab ? requestedActiveTab : prev);
+  }, [requestedActiveTab]);
+
   // Handle tab change and update URL
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -326,7 +327,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
     );
   }
 
-  const tabContent: TabContent[] = [
+  const allTabs: TabContent[] = [
     {
       id: 'profile',
       label: t('profile.tabs.profile', { defaultValue: 'Profile' }),
@@ -541,6 +542,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
       content: <CalendarProfileSettings />,
     }] : []),
   ];
+  const tabContent = allTabs.filter((tab) => eligibleTabs.includes(tab.id));
 
   return (
     <div className="space-y-6">
