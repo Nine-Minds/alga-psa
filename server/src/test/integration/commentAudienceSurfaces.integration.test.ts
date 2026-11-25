@@ -5,9 +5,11 @@ import type { Knex } from 'knex';
 import { runWithTenant, tenantDb } from '@alga-psa/db';
 import { randomUUID } from 'node:crypto';
 import {
-  admitCommentAudienceReader, isCommentAudienceVisible, resolveCommentAudienceForRead, resolveCommentAudienceReader,
-  type CommentAudienceReader,
+  admitCommentAudienceReader,
+  resolveCommentAudienceForRead,
+  resolveCommentAudienceReader,
 } from '@alga-psa/shared/lib/commentAudience';
+import { isContentAudienceVisible, type ContentAudienceReader } from '@alga-psa/shared/lib/contentAudience';
 import { registerCapabilityParticipation, serves } from '@alga-psa/core/capability';
 import { clearCapabilityCache, resetCapabilityRegistry } from '@alga-psa/core/capability/testing';
 import { coManagedParticipants } from '@alga-psa/co-managed/capability';
@@ -64,7 +66,7 @@ describe('comment audience in attachments, activity and search (integration)', (
   const sorted = (ids: Iterable<string>) => [...ids].sort();
   const onlyMine = (ids: Array<string | null | undefined>) => sorted(ids.filter((id): id is string => !!id && mine().includes(id)));
 
-  async function comment(fields: Record<string, unknown>, author?: CommentAudienceReader | null) {
+  async function comment(fields: Record<string, unknown>, author?: ContentAudienceReader | null) {
     return Comment.insert(knex, tenant, {
       ticket_id: ticketId, user_id: mspUser, author_type: 'internal', is_resolution: false, ...fields,
     } as any, undefined, author);
@@ -625,7 +627,7 @@ describe('comment audience in attachments, activity and search (integration)', (
       .select('c.comment_id', 'th.collaboration_audience', 'th.is_internal', 'root.is_internal as root_is_internal', 'c.is_internal as comment_is_internal');
     for (const userId of [mspUser, seatUser]) {
       const reader = await resolveCommentAudienceReader(knex, tenant, { userId, userType: 'internal' });
-      const expected = rows.filter(row => isCommentAudienceVisible(resolveCommentAudienceForRead(row), { tenant, clientId }, reader)).map(row => row.comment_id);
+      const expected = rows.filter(row => isContentAudienceVisible(resolveCommentAudienceForRead(row), { tenant, clientId }, reader)).map(row => row.comment_id);
       const actual = (await Comment.getAllbyTicketId(knex, tenant, ticketId, userId)).map(c => c.comment_id as string);
       expect(sorted(actual)).toEqual(sorted(expected));
     }

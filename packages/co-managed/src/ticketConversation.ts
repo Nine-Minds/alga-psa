@@ -2,7 +2,8 @@ import type { Knex } from 'knex';
 import { isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
 import { coManagedConversationBodySources as historySources, coManagedConversationAuthorSources as authorSources } from './conversationPolicy';
 import { tenantDb } from '@alga-psa/db';
-import { commentAudienceSql, commentAudienceVisibleSql, type CommentAudience, type CommentAudienceReader } from '@alga-psa/shared/lib/commentAudience';
+import { commentAudienceSql, commentAudienceVisibleSql, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
+import { type ContentAudienceReader } from '@alga-psa/shared/lib/contentAudience';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { withCoManagedCustomerTicket } from './customerWork';
 import { snapshotCoManagedSessionActor, isCoManagedUuid, assertCoManagedSessionUnexpired, CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
@@ -77,7 +78,7 @@ async function readConversation(context: CoManagedSharedWorkContext, cursor?: Co
   const audience = commentAudienceSql(trx, 't', 'root', 'c');
   // The reader's organization is their tenant here: the owner reads everything, the other side of
   // the relationship reads requester and shared_it.
-  const reader: CommentAudienceReader = { kind: 'staff', tenant: actor.tenant };
+  const reader: ContentAudienceReader = { kind: 'staff', tenant: actor.tenant };
   comments.whereRaw('?', [commentAudienceVisibleSql(trx, reader, { thread: 't', root: 'root', comment: 'c', ownerTenant: 'c.tenant' })]);
   customer.tenantJoin(comments, 'comments as parent', 'c.parent_comment_id', 'parent.comment_id', { type: 'left',
     on: join => join.andOn('parent.thread_id', '=', 't.thread_id').andOn('parent.ticket_id', '=', 'c.ticket_id') });

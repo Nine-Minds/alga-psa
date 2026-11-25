@@ -9,16 +9,14 @@ import {
   assertReplyAudience,
   commentAudienceSql,
   commentAudienceVisibleSql,
-  isCommentAudienceVisible,
   isCommentAudienceWidening,
   nativeReplyAudience,
   nativeThreadAudience,
   resolveCommentAudience,
   resolveCommentAudienceForRead,
   type CommentAudience,
-  type CommentAudienceOwner,
-  type CommentAudienceReader,
 } from '@alga-psa/shared/lib/commentAudience';
+import { isContentAudienceVisible, type ContentAudienceOwner, type ContentAudienceReader } from '@alga-psa/shared/lib/contentAudience';
 import {
   registerWriteAdmissionResolver,
   resetWriteAdmissionCache,
@@ -33,8 +31,8 @@ describe('A1 comment audience truth table', () => {
   // T022 (F035-F038): audience x reader organization x requester.
   const CLIENT = '33333333-3333-4333-8333-333333333333';
   const OTHER_CLIENT = '44444444-4444-4444-8444-444444444444';
-  const owner: CommentAudienceOwner = { tenant: OWNER, clientId: CLIENT };
-  const READERS: Record<string, CommentAudienceReader> = {
+  const owner: ContentAudienceOwner = { tenant: OWNER, clientId: CLIENT };
+  const READERS: Record<string, ContentAudienceReader> = {
     'MSP staff': { kind: 'staff', tenant: OWNER },
     'staff of another tenant': { kind: 'staff', tenant: OTHER },
     "the client's seat technician": { kind: 'seat', tenant: OWNER, clientId: CLIENT },
@@ -54,7 +52,7 @@ describe('A1 comment audience truth table', () => {
   it('visibility: audience x reader organization', () => {
     for (const [name, reader] of Object.entries(READERS)) {
       for (const audience of AUDIENCES) {
-        expect(isCommentAudienceVisible(audience, owner, reader), `${audience} for ${name}`).toBe(VISIBLE[name].includes(audience));
+        expect(isContentAudienceVisible(audience, owner, reader), `${audience} for ${name}`).toBe(VISIBLE[name].includes(audience));
       }
     }
   });
@@ -70,7 +68,7 @@ describe('A1 comment audience truth table', () => {
       for (const actor of [OWNER, OTHER]) {
         for (const requester of [false, true]) {
           for (const clientId of [CLIENT, null, undefined]) {
-            expect(isCommentAudienceVisible(audience, { tenant: OWNER, clientId }, { kind: requester ? 'requester' : 'staff', tenant: actor }),
+            expect(isContentAudienceVisible(audience, { tenant: OWNER, clientId }, { kind: requester ? 'requester' : 'staff', tenant: actor }),
               `${audience} actor=${actor === OWNER ? 'owner' : 'other'} requester=${requester}`).toBe(before(audience, OWNER, actor, requester));
           }
         }
@@ -89,23 +87,23 @@ describe('A1 comment audience truth table', () => {
     for (const row of legacy) {
       const audience = resolveCommentAudienceForRead(row);
       expect(audience, JSON.stringify(row)).toBe('organization_private');
-      expect(isCommentAudienceVisible(audience, owner, seat), JSON.stringify(row)).toBe(false);
-      expect(isCommentAudienceVisible(audience, owner, READERS['MSP staff']), JSON.stringify(row)).toBe(true);
+      expect(isContentAudienceVisible(audience, owner, seat), JSON.stringify(row)).toBe(false);
+      expect(isContentAudienceVisible(audience, owner, READERS['MSP staff']), JSON.stringify(row)).toBe(true);
     }
   });
 
   it('fails closed when the owner, the reader or the audience is missing', () => {
     const staff = READERS['MSP staff'];
-    expect(isCommentAudienceVisible('requester', { tenant: '' }, staff)).toBe(false);
-    expect(isCommentAudienceVisible('requester', owner, { kind: 'staff', tenant: '' })).toBe(false);
-    expect(isCommentAudienceVisible('requester', owner, null)).toBe(false);
-    expect(isCommentAudienceVisible('requester', owner, undefined)).toBe(false);
-    expect(isCommentAudienceVisible('requester', owner, { kind: 'bogus', tenant: OWNER } as any)).toBe(false);
-    expect(isCommentAudienceVisible('bogus' as CommentAudience, owner, staff)).toBe(false);
+    expect(isContentAudienceVisible('requester', { tenant: '' }, staff)).toBe(false);
+    expect(isContentAudienceVisible('requester', owner, { kind: 'staff', tenant: '' })).toBe(false);
+    expect(isContentAudienceVisible('requester', owner, null)).toBe(false);
+    expect(isContentAudienceVisible('requester', owner, undefined)).toBe(false);
+    expect(isContentAudienceVisible('requester', owner, { kind: 'bogus', tenant: OWNER } as any)).toBe(false);
+    expect(isContentAudienceVisible('bogus' as CommentAudience, owner, staff)).toBe(false);
     // A seat technician needs both sides of the client comparison.
-    expect(isCommentAudienceVisible('requester', { tenant: OWNER }, READERS["the client's seat technician"])).toBe(false);
-    expect(isCommentAudienceVisible('requester', { tenant: OWNER, clientId: null }, { kind: 'seat', tenant: OWNER, clientId: '' })).toBe(false);
-    expect(isCommentAudienceVisible('requester', { tenant: OWNER, clientId: null }, { kind: 'seat', tenant: OWNER, clientId: null } as any)).toBe(false);
+    expect(isContentAudienceVisible('requester', { tenant: OWNER }, READERS["the client's seat technician"])).toBe(false);
+    expect(isContentAudienceVisible('requester', { tenant: OWNER, clientId: null }, { kind: 'seat', tenant: OWNER, clientId: '' })).toBe(false);
+    expect(isContentAudienceVisible('requester', { tenant: OWNER, clientId: null }, { kind: 'seat', tenant: OWNER, clientId: null } as any)).toBe(false);
   });
 
   it('the SQL visibility form wraps the one audience expression and fails closed like the TypeScript form', () => {
@@ -231,9 +229,9 @@ describe('comment write audience truth table (S17)', () => {
   // F039/F040: author organization x audience x seat arrangement. `null` audience is the legacy form.
   const CLIENT = '33333333-3333-4333-8333-333333333333';
   const OTHER_CLIENT = '44444444-4444-4444-8444-444444444444';
-  const staff: CommentAudienceReader = { kind: 'staff', tenant: OWNER };
-  const seat: CommentAudienceReader = { kind: 'seat', tenant: OWNER, clientId: CLIENT };
-  const requester: CommentAudienceReader = { kind: 'requester', tenant: OWNER };
+  const staff: ContentAudienceReader = { kind: 'staff', tenant: OWNER };
+  const seat: ContentAudienceReader = { kind: 'seat', tenant: OWNER, clientId: CLIENT };
+  const requester: ContentAudienceReader = { kind: 'requester', tenant: OWNER };
   const arranged = { tenant: OWNER, clientId: CLIENT, seatArrangement: true };
   const plain = { tenant: OWNER, clientId: CLIENT, seatArrangement: false };
   const WRITES: Array<{ name: string; audience: CommentAudience | null; isInternal: boolean }> = [
@@ -243,7 +241,7 @@ describe('comment write audience truth table (S17)', () => {
     { name: 'organization_private', audience: 'organization_private', isInternal: true },
     { name: 'legacy internal note', audience: null, isInternal: true },
   ];
-  const allowed = (author: CommentAudienceReader | null, owner: typeof arranged) => WRITES.filter(write => {
+  const allowed = (author: ContentAudienceReader | null, owner: typeof arranged) => WRITES.filter(write => {
     try { assertCommentWriteAudience(author, owner, write); return true; } catch (error) {
       expect(error).toBeInstanceOf(CommentAudienceError);
       return false;
@@ -274,7 +272,7 @@ describe('comment write audience truth table (S17)', () => {
       for (const write of WRITES) {
         let stored: CommentAudience | null = null;
         try { stored = assertCommentWriteAudience(author, arranged, write); } catch { /* refused */ }
-        if (stored) expect(isCommentAudienceVisible(stored, arranged, author)).toBe(true);
+        if (stored) expect(isContentAudienceVisible(stored, arranged, author)).toBe(true);
       }
     }
   });

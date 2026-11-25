@@ -6,9 +6,11 @@ import type { IDocument, IUser, IUserWithRoles } from '@alga-psa/types';
 import { authorizeAndRedactDocuments } from '@alga-psa/shared/lib/documentAuthorization';
 import type { Knex } from 'knex';
 import {
-  audiencesVisibleTo, commentAudienceSql, isCommentAudience, isCommentAudienceVisible, admitCommentAudienceReader,
-  type CommentAudienceReader,
+  commentAudienceSql,
+  isCommentAudience,
+  admitCommentAudienceReader,
 } from '@alga-psa/shared/lib/commentAudience';
+import { contentAudiencesVisibleTo, isContentAudienceVisible, type ContentAudienceReader } from '@alga-psa/shared/lib/contentAudience';
 
 import type { AclMetadata, SearchObjectType } from '@alga-psa/types';
 import { EXTERNAL_AUDIENCES } from '@alga-psa/authorization/kernel';
@@ -80,7 +82,7 @@ export interface SearchAclPrincipal {
    * shared predicate admits on its own client's tickets; `null` is a seat user with no live
    * assignment and sees no comment. Unset means owning-tenant staff, as before the seat shape.
    */
-  audienceReader?: CommentAudienceReader | null;
+  audienceReader?: ContentAudienceReader | null;
 }
 
 export interface SqlFragment {
@@ -180,7 +182,7 @@ function clientScopeSql(access: ClientAccess): SqlFragment {
 }
 
 /** The internal principal's organization when it is not owning-tenant staff; undefined when no audience restriction applies. */
-function restrictedAudienceReader(user: SearchAclPrincipal): CommentAudienceReader | null | undefined {
+function restrictedAudienceReader(user: SearchAclPrincipal): ContentAudienceReader | null | undefined {
   if (!user.isInternal || user.audienceReader === undefined || user.audienceReader?.kind === 'staff') return undefined;
   return user.audienceReader;
 }
@@ -197,7 +199,7 @@ function commentAudienceIndexSql(user: SearchAclPrincipal): SqlFragment {
   if (reader?.kind !== 'seat') return { sql: `(object_type <> 'ticket_comment')`, bindings: [] };
   return {
     sql: `(object_type <> 'ticket_comment' OR (metadata->>'audience' = ANY(?::text[]) AND client_scope_id = ?::uuid))`,
-    bindings: [audiencesVisibleTo('seat'), reader.clientId],
+    bindings: [contentAudiencesVisibleTo('seat'), reader.clientId],
   };
 }
 
@@ -386,7 +388,7 @@ function tenantScopedRoot<Row extends object>(
 }
 
 /** The live audience check: the shared predicate for `reader`, over the comment as stored now. */
-async function commentVisibleToReader(knex: Knex, user: SearchAclPrincipal, commentId: string, reader: CommentAudienceReader | null): Promise<boolean> {
+async function commentVisibleToReader(knex: Knex, user: SearchAclPrincipal, commentId: string, reader: ContentAudienceReader | null): Promise<boolean> {
   if (!reader || !user.tenant) return false;
   const query = tenantScopedRoot<{ audience: string | null; client_id: string | null }>(knex, user, 'comments as c');
   const scoped = tenantDb(knex, user.tenant);
@@ -398,7 +400,7 @@ async function commentVisibleToReader(knex: Knex, user: SearchAclPrincipal, comm
     .where('c.comment_id', commentId)
     .first();
   return isCommentAudience(found?.audience)
-    && isCommentAudienceVisible(found.audience, { tenant: user.tenant, clientId: found.client_id }, reader);
+    && isContentAudienceVisible(found.audience, { tenant: user.tenant, clientId: found.client_id }, reader);
 }
 
 /**

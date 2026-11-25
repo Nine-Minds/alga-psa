@@ -5,8 +5,12 @@ import { retainBuiltinResolverSubject } from '@alga-psa/authorization/subject';
 import { CO_MANAGED_SEAT_RESOLVER_ID } from '@alga-psa/co-managed/seatAuthority';
 import { randomUUID } from 'node:crypto';
 import {
-  changeThreadAudience, commentAudienceSql, resolveCommentAudienceReader, resolveCommentWriteAuthor, type CommentAudienceReader,
+  changeThreadAudience,
+  commentAudienceSql,
+  resolveCommentAudienceReader,
+  resolveCommentWriteAuthor,
 } from '@alga-psa/shared/lib/commentAudience';
+import { type ContentAudienceReader } from '@alga-psa/shared/lib/contentAudience';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import Comment from '../../../../packages/tickets/src/models/comment';
@@ -26,15 +30,15 @@ describe('comment audiences on native writes (integration)', () => {
   let ticketB: string;
   let mspUser: string;
   let seatUser: string;
-  let staff: CommentAudienceReader;
-  let seat: CommentAudienceReader;
+  let staff: ContentAudienceReader;
+  let seat: ContentAudienceReader;
   let arrangementId: string;
   const created: string[] = [];
   const INVALID = { code: 'COMMENT_AUDIENCE_INVALID' };
 
   const t = (table: string) => tenantDb(knex, tenant).table(table);
 
-  type Write = { ticket: string; user?: string; author?: CommentAudienceReader | null } & Record<string, unknown>;
+  type Write = { ticket: string; user?: string; author?: ContentAudienceReader | null } & Record<string, unknown>;
 
   /** `Comment.insert`: the model behind the createComment server action. */
   async function viaModel({ ticket, user = mspUser, author, ...fields }: Write) {
@@ -76,7 +80,7 @@ describe('comment audiences on native writes (integration)', () => {
     return row?.audience;
   }
 
-  const change = (threadId: string, audience: string, author: CommentAudienceReader | null, confirmDisclosure?: boolean) =>
+  const change = (threadId: string, audience: string, author: ContentAudienceReader | null, confirmDisclosure?: boolean) =>
     knex.transaction(trx => changeThreadAudience(trx, tenant, { threadId, audience, author, confirmDisclosure }));
 
   beforeAll(async () => {
@@ -259,7 +263,7 @@ describe('comment audiences on native writes (integration)', () => {
     it('a seat technician, a requester and nobody cannot change audience, in either direction', async () => {
       const shared = await viaModel({ ticket: ticketA, is_internal: true, collaboration_audience: 'shared_it' });
       const { thread_id: threadId } = await threadOf(shared);
-      for (const author of [seat, { kind: 'requester', tenant } as CommentAudienceReader, null, { kind: 'staff', tenant: randomUUID() } as CommentAudienceReader]) {
+      for (const author of [seat, { kind: 'requester', tenant } as ContentAudienceReader, null, { kind: 'staff', tenant: randomUUID() } as ContentAudienceReader]) {
         await expect(change(threadId, 'requester', author, true)).rejects.toMatchObject(INVALID);
         await expect(change(threadId, 'organization_private', author, true)).rejects.toMatchObject(INVALID);
       }

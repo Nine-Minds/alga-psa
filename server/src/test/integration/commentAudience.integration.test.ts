@@ -5,9 +5,12 @@ import { retainBuiltinResolverSubject } from '@alga-psa/authorization/subject';
 import { CO_MANAGED_SEAT_RESOLVER_ID } from '@alga-psa/co-managed/seatAuthority';
 import { randomUUID } from 'node:crypto';
 import {
-  commentAudienceSql, commentAudienceVisibleSql, isCommentAudienceVisible, resolveCommentAudienceForRead,
-  resolveCommentAudienceReader, type CommentAudienceReader,
+  commentAudienceSql,
+  commentAudienceVisibleSql,
+  resolveCommentAudienceForRead,
+  resolveCommentAudienceReader,
 } from '@alga-psa/shared/lib/commentAudience';
+import { isContentAudienceVisible, type ContentAudienceReader } from '@alga-psa/shared/lib/contentAudience';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import Comment from '../../../../packages/tickets/src/models/comment';
 
@@ -213,7 +216,7 @@ describe('conversation audiences (integration)', () => {
     await t('comments').where({ comment_id: damagedShared }).update({ is_internal: false });
     const ids = [publicLegacy, internalLegacy, shared, sharedReply, privateNote, requesterNamed, damagedPublic, damagedShared];
 
-    const readers: Record<string, CommentAudienceReader | null> = {
+    const readers: Record<string, ContentAudienceReader | null> = {
       'MSP staff': { kind: 'staff', tenant },
       'staff of another tenant': { kind: 'staff', tenant: randomUUID() },
       "the client's seat technician": { kind: 'seat', tenant, clientId },
@@ -241,7 +244,7 @@ describe('conversation audiences (integration)', () => {
         const audience = resolveCommentAudienceForRead(row);
         expect(row.audience, `${name} audience of ${row.comment_id}`).toBe(audience);
         expect(row.visible, `${name} sees ${row.comment_id} (${audience})`)
-          .toBe(isCommentAudienceVisible(audience, { tenant: row.owner_tenant, clientId: row.owner_client }, reader));
+          .toBe(isContentAudienceVisible(audience, { tenant: row.owner_tenant, clientId: row.owner_client }, reader));
       }
       seen[name] = rows.filter(row => row.visible).map(row => row.comment_id).sort();
     }

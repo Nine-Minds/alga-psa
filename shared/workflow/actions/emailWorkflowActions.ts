@@ -13,7 +13,8 @@ import { inboundEmailReplyReceivedEventPayloadSchema } from '@alga-psa/event-sch
 import { buildInboundEmailReplyReceivedPayload } from '../streams/domainEventBuilders/inboundEmailReplyEventBuilders';
 import { normalizeRfc822MessageId } from '../../services/email/inboundEmailIdentity';
 import { normalizeEmailAddress } from '../../lib/email/addressUtils';
-import { audienceIsInternal, type CommentAudience, type CommentAudienceReader } from '../../lib/commentAudience';
+import { audienceIsInternal, type CommentAudience } from '../../lib/commentAudience';
+import { type ContentAudienceReader } from '../../lib/contentAudience';
 import { contactEmailMatch } from '../../lib/email/contactEmailMatch';
 import { ContactModel } from '../../models/contactModel';
 import { createClientWithDefaults } from '../../models/clientCreation';
@@ -1607,7 +1608,7 @@ export async function createCommentFromEmail(
      * (`resolveInboundReplyAudience`). The comment writer still decides whether they may write it.
      * Absent for every other sender, whose reply follows the native rules.
      */
-    audience?: { author: CommentAudienceReader; audience: CommentAudience };
+    audience?: { author: ContentAudienceReader; audience: CommentAudience };
     // Keep this comment in-app only (no tech email). Still honored for callers that suppress
     // without opening a ticket; the opener call sites use `opensTicket`, which implies it.
     suppressTechEmailNotification?: boolean;

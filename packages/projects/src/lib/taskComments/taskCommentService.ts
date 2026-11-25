@@ -25,7 +25,6 @@ import { projectTaskAudience } from '@alga-psa/co-managed/projectTaskAudience';
 import {
   CommentAudienceError,
   audienceIsInternal,
-  isCommentAudienceVisible,
   nativeReplyAudience,
   nativeThreadAudience,
   resolveCommentAudienceForRead,
@@ -33,6 +32,7 @@ import {
   resolveTaskCommentWriteOwner,
   type CommentAudience,
 } from '@alga-psa/shared/lib/commentAudience';
+import { isContentAudienceVisible } from '@alga-psa/shared/lib/contentAudience';
 
 export type TaskCommentActor = { user_id: string; user_type: 'internal' | 'client' | 'service' };
 
@@ -354,7 +354,7 @@ export async function listTaskCommentsWithDb(
       .select('thread_id', 'collaboration_audience', 'is_internal') as any[];
     for (const thread of threads) {
       const audience = resolveCommentAudienceForRead(thread);
-      if (isCommentAudienceVisible(audience, owner, reader)) audienceOf.set(thread.thread_id, audience);
+      if (isContentAudienceVisible(audience, owner, reader)) audienceOf.set(thread.thread_id, audience);
     }
     for (let i = comments.length - 1; i >= 0; i--) {
       if (!audienceOf.has(comments[i].thread_id)) comments.splice(i, 1);

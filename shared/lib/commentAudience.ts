@@ -1,6 +1,11 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { isCoManagedWorkspace } from '@alga-psa/db/writeAdmission';
+import {
+  contentAudienceVisibleSql, isContentAudience, isContentAudienceVisible,
+  contentAudiencesVisibleTo,
+  type ContentAudience, type ContentAudienceOwner, type ContentAudienceReader,
+} from './contentAudience';
 
 /**
  * Conversation audiences for shared (co-managed) work.
@@ -12,18 +17,18 @@ import { isCoManagedWorkspace } from '@alga-psa/db/writeAdmission';
  * Two rules are load-bearing:
  *   1. Audience is an ADDITIONAL restriction applied after resource/principal
  *      authorization. It never grants anything.
- *   2. Every reader (portal, search ACL/indexer, private reads) reuses
- *      `isCommentAudienceVisible` / `commentAudienceVisibleSql` over the audience resolved by
- *      `resolveCommentAudienceForRead` / `commentAudienceSql`. There is no second predicate.
- *   3. Visibility is keyed on the reader's ORGANIZATION (`CommentAudienceReader`), not their
+ *   2. Every reader (portal, search ACL/indexer, private reads) reuses the content-audience
+ *      predicate (`isContentAudienceVisible` / `contentAudienceVisibleSql`, `contentAudience.ts`)
+ *      over the audience resolved by `resolveCommentAudienceForRead` / `commentAudienceSql`.
+ *      There is no second predicate.
+ *   3. Visibility is keyed on the reader's ORGANIZATION (`ContentAudienceReader`), not their
  *      tenant: a seat technician is an internal user of the owning tenant and still not its staff.
  *   4. Writes go through the same organizations. Every native writer asks `nativeThreadAudience`
  *      (new thread) or `nativeReplyAudience` (reply); both decide through
- *      `assertCommentWriteAudience`, the write twin of `isCommentAudienceVisible`. A thread's
+ *      `assertCommentWriteAudience`, the write twin of `isContentAudienceVisible`. A thread's
  *      audience changes only through `changeThreadAudience`.
  */
-export const COMMENT_AUDIENCES = ['requester', 'shared_it', 'organization_private'] as const;
-export type CommentAudience = (typeof COMMENT_AUDIENCES)[number];
+export type CommentAudience = ContentAudience;
 
 export class CommentAudienceError extends Error {
   readonly code = 'COMMENT_AUDIENCE_INVALID' as const;
@@ -59,7 +64,7 @@ export class CommentAudienceConfirmationRequiredError extends Error {
 export type NativeCommentAudience = CommentAudience;
 
 export function isCommentAudience(value: unknown): value is CommentAudience {
-  return typeof value === 'string' && (COMMENT_AUDIENCES as readonly string[]).includes(value);
+  return isContentAudience(value);
 }
 
 /** The `is_internal` value a stored audience implies. Only `requester` is public. */
@@ -103,57 +108,6 @@ export function resolveCommentAudienceForRead(row: AudienceRow): CommentAudience
 }
 
 /**
- * WHO is reading, as an organization rather than a tenant.
- *
- * An organization is usually a whole tenant (`staff`): the MSP on its own tickets, or either side
- * of a co-managed workspace relationship. The seat shape puts a second organization INSIDE the
- * sponsor's tenant: a `seat` technician is an internal user of that tenant whose organization is
- * the one client named by their live seat assignment (`resolveCommentAudienceReader`).
- * `requester` is the ticket's own contact side (the client portal).
- */
-export type CommentAudienceReader =
-  | { kind: 'staff'; tenant: string }
-  | { kind: 'seat'; tenant: string; clientId: string }
-  | { kind: 'requester'; tenant: string };
-
-/** The organization that owns the comment: the tenant that stores it and the ticket's client. */
-export interface CommentAudienceOwner {
-  tenant: string;
-  /** `tickets.client_id`. A seat technician sees nothing without it. */
-  clientId?: string | null;
-}
-
-/**
- * Audience is an additional restriction after resource and principal authorization.
- *
- *   requester             everyone admitted to the ticket
- *   shared_it             staff of either tenant, and seat technicians of the ticket's client
- *   organization_private  staff of the owning tenant only
- *
- * A seat technician reads only their own client's tickets in their own tenant; a requester only
- * ever sees `requester`. Anything missing fails closed. With no seat reader this is exactly the
- * old tenant comparison. `commentAudienceVisibleSql` is the SQL twin.
- */
-export function isCommentAudienceVisible(
-  audience: CommentAudience,
-  owner: CommentAudienceOwner,
-  reader: CommentAudienceReader | null | undefined,
-): boolean {
-  if (!owner?.tenant || !reader?.tenant || !isCommentAudience(audience)) return false;
-  switch (reader.kind) {
-    case 'requester':
-      return audience === 'requester';
-    case 'seat':
-      return !!reader.clientId && reader.tenant === owner.tenant && reader.clientId === owner.clientId
-        && audience !== 'organization_private';
-    case 'staff':
-      return audience !== 'organization_private' || owner.tenant === reader.tenant;
-    default:
-      return false;
-  }
-}
-
-/**
  * The reader organization of one user of `tenant`.
  *
  * A client user is the requester. An internal user is MSP staff unless a seat assignment names
@@ -170,7 +124,7 @@ export async function resolveCommentAudienceReader(
   trx: Knex | Knex.Transaction,
   tenant: string,
   user: { userId: string; userType: string },
-): Promise<CommentAudienceReader | null> {
+): Promise<ContentAudienceReader | null> {
   if (!tenant || !user?.userId) return null;
   if (user.userType === 'client') return { kind: 'requester', tenant };
   if (user.userType !== 'internal') return null;
@@ -213,7 +167,7 @@ export async function admitCommentAudienceReader(
   trx: Knex | Knex.Transaction,
   tenant: string,
   user: { userId: string; userType: string; seatReader?: boolean | null },
-): Promise<CommentAudienceReader | null> {
+): Promise<ContentAudienceReader | null> {
   if (tenant && user?.userId && user.userType === 'internal' && user.seatReader === false) {
     return { kind: 'staff', tenant };
   }
@@ -233,19 +187,19 @@ export async function resolveCommentWriteAuthor(
   trx: Knex | Knex.Transaction,
   tenant: string,
   user: { user_id: string; user_type?: string | null; seat_reader?: boolean | null },
-): Promise<CommentAudienceReader | null | undefined> {
+): Promise<ContentAudienceReader | null | undefined> {
   if (user.user_type !== 'internal') return undefined;
   return admitCommentAudienceReader(trx, tenant, { userId: user.user_id, userType: 'internal', seatReader: user.seat_reader });
 }
 
 /** The owning organization as a WRITE sees it: the read owner plus whether its client has a live seat arrangement. */
-export interface CommentWriteOwner extends CommentAudienceOwner {
+export interface CommentWriteOwner extends ContentAudienceOwner {
   /** The ticket's client has an active seat arrangement. Only then does `shared_it` exist. */
   seatArrangement?: boolean;
 }
 
 /**
- * Write twin of `isCommentAudienceVisible`: may `author` store a native comment with this
+ * Write twin of `isContentAudienceVisible`: may `author` store a native comment with this
  * audience on a ticket of `owner`? Throws `CommentAudienceError`; never substitutes an audience.
  *
  *   - Nobody writes what they could not read back (the read predicate, applied to the author).
@@ -257,14 +211,14 @@ export interface CommentWriteOwner extends CommentAudienceOwner {
  * `audience` null is the legacy form: `requester` when public, `organization_private` when internal.
  */
 export function assertCommentWriteAudience(
-  author: CommentAudienceReader | null | undefined,
+  author: ContentAudienceReader | null | undefined,
   owner: CommentWriteOwner,
   write: { audience?: CommentAudience | null; isInternal: boolean },
 ): CommentAudience {
   const named = write.audience ?? null;
   if (named != null && (!isCommentAudience(named) || write.isInternal !== audienceIsInternal(named))) throw new CommentAudienceError();
   const audience: CommentAudience = named ?? (write.isInternal ? 'organization_private' : 'requester');
-  if (!author || author.tenant !== owner?.tenant || !isCommentAudienceVisible(audience, owner, author)) throw new CommentAudienceError();
+  if (!author || author.tenant !== owner?.tenant || !isContentAudienceVisible(audience, owner, author)) throw new CommentAudienceError();
   if (audience === 'shared_it' && owner.seatArrangement !== true) throw new CommentAudienceError();
   return audience;
 }
@@ -326,7 +280,7 @@ export interface NativeCommentAuthor {
    * writes nothing. Omitted, the author is the organization `authorType` has always implied
    * (owning-tenant staff for `internal`), which costs no SQL.
    */
-  author?: CommentAudienceReader | null;
+  author?: ContentAudienceReader | null;
   /** The ticket written to. Required for a seat author and for `shared_it` on a ticket. */
   ticketId?: string | null;
   /** The project task written to, instead of a ticket. Required for a seat author and for `shared_it` on a task. */
@@ -428,7 +382,7 @@ export async function nativeReplyAudience(
     const author = reply.author;
     if (!author || author.tenant !== tenant) throw new CommentAudienceError();
     const owner = author.kind === 'seat' ? await writeOwnerOf(trx, tenant, reply) : { tenant };
-    if (!isCommentAudienceVisible(resolveCommentAudienceForRead(thread), owner, author)) throw new CommentAudienceError();
+    if (!isContentAudienceVisible(resolveCommentAudienceForRead(thread), owner, author)) throw new CommentAudienceError();
   }
   if (thread.collaboration_audience == null) return null;
   await lockLabelledThreadAudience(trx as Knex.Transaction, tenant, thread);
@@ -452,7 +406,7 @@ export async function nativeReplyAudience(
 export async function changeThreadAudience(
   trx: Knex.Transaction,
   tenant: string,
-  input: { threadId: string; audience: string; author: CommentAudienceReader | null | undefined; confirmDisclosure?: boolean },
+  input: { threadId: string; audience: string; author: ContentAudienceReader | null | undefined; confirmDisclosure?: boolean },
 ): Promise<{ previous: CommentAudience; audience: CommentAudience; changed: boolean }> {
   if (!trx.isTransaction) throw new Error('Comment audience checks require the owning transaction');
   const { author, audience } = input;
@@ -484,7 +438,7 @@ export async function assertNativeEditKeepsAudience(
   trx: Knex | Knex.Transaction,
   tenant: string,
   thread: { collaboration_audience?: unknown } | null | undefined,
-  next: { isInternal: boolean; author?: CommentAudienceReader | null },
+  next: { isInternal: boolean; author?: ContentAudienceReader | null },
 ): Promise<void> {
   // A seat technician can hold neither side of a legacy flip: internal would be a legacy internal note.
   if (next.author !== undefined && next.author?.kind !== 'staff') throw new CommentAudienceError();
@@ -528,37 +482,19 @@ export interface CommentAudienceSqlSource {
 }
 
 /**
- * SQL twin of `isCommentAudienceVisible`: a boolean expression over `commentAudienceSql` and the
- * owning organization's columns for one reader. The reader is a value known before the query;
- * the audience and the owner come from the row. Fails closed (`FALSE`) exactly where the
- * TypeScript form does. Identifiers are bound (`??`), values are bound (`?`).
+ * The comment caller of `contentAudienceVisibleSql`: derives the audience from thread, root and
+ * comment (`commentAudienceSql`) and delegates. Comments add the derivation and nothing else.
  */
 export function commentAudienceVisibleSql(
   db: Knex | Knex.Transaction,
-  reader: CommentAudienceReader | null | undefined,
+  reader: ContentAudienceReader | null | undefined,
   source: CommentAudienceSqlSource,
 ): Knex.Raw {
-  const audience = commentAudienceSql(db, source.thread, source.root, source.comment ?? source.root);
-  if (!reader?.tenant) return db.raw('FALSE');
-  switch (reader.kind) {
-    case 'requester':
-      return db.raw(`((?) = 'requester')`, [audience]);
-    case 'seat':
-      if (!reader.clientId || !source.ownerClient) return db.raw('FALSE');
-      return db.raw(`((?) <> 'organization_private' AND ?? = ? AND ?? IS NOT DISTINCT FROM ?)`,
-        [audience, source.ownerTenant, reader.tenant, source.ownerClient, reader.clientId]);
-    case 'staff':
-      return db.raw(`((?) <> 'organization_private' OR ?? = ?)`, [audience, source.ownerTenant, reader.tenant]);
-    default:
-      return db.raw('FALSE');
-  }
-}
-
-/** The audiences a reader of this kind reads on a ticket of their own organization, by the one predicate. */
-export function audiencesVisibleTo(kind: CommentAudienceReader['kind']): CommentAudience[] {
-  const tenant = 'owner', clientId = 'client';
-  const reader: CommentAudienceReader = kind === 'seat' ? { kind, tenant, clientId } : { kind, tenant };
-  return COMMENT_AUDIENCES.filter(audience => isCommentAudienceVisible(audience, { tenant, clientId }, reader));
+  return contentAudienceVisibleSql(db, reader, {
+    audience: commentAudienceSql(db, source.thread, source.root, source.comment ?? source.root),
+    ownerTenant: source.ownerTenant,
+    ownerClient: source.ownerClient,
+  });
 }
 
 /**
@@ -580,7 +516,7 @@ export const COMMENT_UPLOAD_URL_PATTERN = {
  *
  *   staff           no seat assignment binds the user: every audience stored in their tenant
  *   commentVisible  staff, or a live seat technician of the comment's ticket's client reading an
- *                   audience `audiencesVisibleTo('seat')` admits
+ *                   audience `contentAudiencesVisibleTo('seat')` admits
  *
  *   documentVisible staff, or every comment that owns the document is `commentVisible`. A comment
  *                   owns a document through an attachment row, or, for comments saved before
@@ -609,7 +545,7 @@ function internalReaderAudienceSql(db: Knex | Knex.Transaction, tenant: string, 
       WHERE NOT EXISTS (SELECT 1 FROM co_managed_unavailable_trial_assignments blocked WHERE blocked.tenant = aud_sa.tenant
         AND blocked.assignment_id = aud_sa.assignment_id)
         AND aud_c.tenant = ? AND aud_c.comment_id = (?) AND (?) = ANY(?::text[])))`,
-    [staff, userId, tenant, id, commentAudienceSql(db, 'aud_ct', 'aud_rc', 'aud_c'), audiencesVisibleTo('seat')]);
+    [staff, userId, tenant, id, commentAudienceSql(db, 'aud_ct', 'aud_rc', 'aud_c'), contentAudiencesVisibleTo('seat')]);
   };
   /** `documentId` is a uuid column (bound as an identifier) or a uuid-typed expression. */
   const documentVisible = (documentId: string | Knex.Raw): Knex.Raw => {
