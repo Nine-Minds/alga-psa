@@ -81,7 +81,8 @@ describe('independent upgrade composed real-path integration (CE+EE overlay)', (
   }
   const stripe = () => shapeStripe(createIndependentPsaStripeClient(SECRET));
   const dispatch = async (event: Stripe.Event) => {
-    const handlers = createCoManagedPaymentHandlers({ priceId: () => undefined, sync: async () => {}, finalizeCheckout: async () => {},
+    const handlers = createCoManagedPaymentHandlers({ recognizedPrices: () => undefined, refreshRecognition: async () => false,
+      sync: async () => {}, finalizeCheckout: async () => {},
       upgradePayment: (current, tenantId, database) => handleCoManagedUpgradePaymentEvent(database, stripe(), tenantId, current) });
     return dispatchPaymentEvent(handlers, { event, tenantId: tenant, knex: db });
   };

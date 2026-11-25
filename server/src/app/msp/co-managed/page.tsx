@@ -1,18 +1,23 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getSession } from '@alga-psa/auth';
+import { getCurrentUser, getSession, hasPermission } from '@alga-psa/auth';
 import { requireCapabilityForPage } from '@alga-psa/core/capability/server';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
 import CoManagedOverview from '@/components/co-managed/CoManagedOverview';
 import CoManagedCustomerHome from '@/components/co-managed/CoManagedCustomerHome';
+import { resolveCoManagedRootAccess } from '@/lib/co-managed/commercialAccess';
+import CoManagedPurchaseOverview from '@enterprise/components/co-managed/CoManagedPurchaseOverview';
+import CoManagedSeatTrialSection from '@/components/co-managed/CoManagedSeatTrialSection';
+import CoManagedPurchasePool from '@enterprise/components/co-managed/CoManagedPurchasePool';
 
 export async function generateMetadata(): Promise<Metadata> {
   // Same gate as the page: when it would 404, the tab must not read "Co-Managed IT".
   const tenant = (await getSession())?.user?.tenant;
   if (!tenant) return {};
   try {
-    await requireCapabilityForPage('co-managed', tenant, 'serves');
+    const access = await resolveCoManagedRootAccess(tenant);
+    if (!access.commercial && !access.trial) await requireCapabilityForPage('co-managed', tenant, 'serves');
   } catch {
     return {};
   }
@@ -35,7 +40,18 @@ export default async function CoManagedPage({ searchParams }: { searchParams?: P
     await requireCapabilityForPage('co-managed', tenant, 'serves');
     return <CoManagedCustomerHome />;
   }
-  await requireCapabilityForPage('co-managed', tenant, 'serves');
+  const access = await resolveCoManagedRootAccess(tenant);
+  // Commercial eligibility alone gets the pool and nothing else: no client query is even read, so a
+  // `clientId` confers no authority, and none of the operational readers mount.
+  if (access.commercial && !access.operational) return <CoManagedPurchaseOverview />;
+  if (access.trial && !access.operational) return <CoManagedSeatTrialSection />;
+  if (!access.served) notFound();
   const clientId = (await searchParams)?.clientId;
-  return <CoManagedOverview initialClientId={typeof clientId === 'string' && UUID.test(clientId) ? clientId : undefined} />;
+  // The pool's "free to allocate" line links to Clients only for an actor who may open them.
+  const currentUser = access.commercial ? await getCurrentUser() : null;
+  const canOpenClients = Boolean(currentUser && await hasPermission(currentUser, 'client', 'read'));
+  // When both paths apply, the existing overview carries the pool in place of its capacity line.
+  return <CoManagedOverview
+    initialClientId={typeof clientId === 'string' && UUID.test(clientId) ? clientId : undefined}
+    purchasePool={access.commercial ? <CoManagedPurchasePool clientsHref={canOpenClients ? '/msp/clients' : undefined} /> : access.trial ? <CoManagedSeatTrialSection /> : undefined} />;
 }

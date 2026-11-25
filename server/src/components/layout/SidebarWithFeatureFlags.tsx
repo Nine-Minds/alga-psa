@@ -4,6 +4,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useCapability, useFeatureFlag, useServedCapabilities } from '@alga-psa/ui/hooks';
 import { resolveUiSlots } from '@alga-psa/ui/capability/uiSlotRegistry';
 import '@/config/coManagedMenu';
+import { useCoManagedPurchaseNavigation } from '@enterprise/components/co-managed/useCoManagedPurchaseNavigation';
+import { CO_MANAGED_ACCESS_CHANGED } from '@/components/co-managed/accessRefresh';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import Sidebar from './Sidebar';
 import {
@@ -23,9 +25,11 @@ import { useTier } from '@/context/TierContext';
 import { TIER_FEATURES } from '@alga-psa/types';
 import { useProduct } from '@/context/ProductContext';
 import { filterMenuSectionsByProduct } from '@/lib/productSurfaceRegistry';
+import { CO_MANAGED_SEAT_SURFACE } from '@shared/services/productSurfaceKinds';
 import { getLicenseStatus } from '@/lib/actions/licenseManagementActions';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
+const CO_MANAGED_ROOT_HREF = '/msp/co-managed';
 const CO_MANAGED_ADMINISTRATION_HREF = '/msp/co-management/administration';
 /** Menu rows that exist only while the co-managed capability is served. */
 export const CO_MANAGED_GATED_HREFS: ReadonlySet<string> = new Set([CO_MANAGED_ADMINISTRATION_HREF, '/msp/tickets/customer']);
@@ -149,6 +153,27 @@ export function filterNavigationSectionsByPermission(
     .filter((section) => section.items.length > 0);
 }
 
+/**
+ * Merges the commercial first-purchase contribution into the sections. Commercial eligibility is its own
+ * fact: it shows the overview root without `co_management:read`, and only the root (the archive row keeps its
+ * own gate). When the served group already carries the root the two paths collapse to one link; otherwise the
+ * contribution supplies it. Exactly one Co-managed IT link survives either way.
+ */
+export function mergeCoManagedPurchaseSection(
+  sections: readonly NavigationSection[],
+  purchase: NavigationSection | null,
+): NavigationSection[] {
+  if (!purchase) return [...sections];
+  const hasRoot = sections.some((section) => section.items.some((item) => item.href === CO_MANAGED_ROOT_HREF));
+  if (!hasRoot) return [...sections, purchase];
+  return sections.map((section) => ({
+    ...section,
+    items: section.items.map((item) => item.href === CO_MANAGED_ROOT_HREF && item.requiredPermission
+      ? { ...item, requiredPermission: undefined }
+      : item),
+  }));
+}
+
 type SidebarWithFeatureFlagsProps = React.ComponentProps<typeof Sidebar>;
 
 export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsProps) {
@@ -159,6 +184,8 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   // Server-bootstrapped capability verdict (serves); never the raw rollout flag.
   const { enabled: coManagedServed } = useCapability('co-managed');
   const servedCapabilities = useServedCapabilities();
+  // Server-authoritative commercial eligibility (EE only; the community stub is always null).
+  const purchaseNavigation = useCoManagedPurchaseNavigation();
   const marketingFlag = useFeatureFlag('marketing-module', { defaultValue: false });
   const marketingEnabled =
     typeof marketingFlag === 'boolean' ? marketingFlag : marketingFlag?.enabled ?? false;
@@ -207,8 +234,11 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     };
 
     loadPermissions();
+    // A verified purchase can change the permissions the server derives; re-read them, never infer them.
+    window.addEventListener(CO_MANAGED_ACCESS_CHANGED, loadPermissions);
     return () => {
       isMounted = false;
+      window.removeEventListener(CO_MANAGED_ACCESS_CHANGED, loadPermissions);
     };
   }, []);
 
@@ -219,9 +249,11 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     // Capability-gated contributions join before the edition → tier →
     // permission → product chain, which then filters them like any menu item.
     const contributedSections = resolveUiSlots<NavigationSection>('msp.navigation.group', servedCapabilities).flatMap((slot) => (slot.props ? [slot.props] : []));
-    const baseSections = useNavigationSections
+    // The contribution joins the same chain; the served group's root is relieved of its permission only
+    // when the server's commercial decision is open, and the archive row never is.
+    const baseSections = mergeCoManagedPurchaseSection(useNavigationSections
       ? [...originalSections, ...contributedSections]
-      : [{ title: '', items: legacyMenuItems } satisfies NavigationSection, ...contributedSections];
+      : [{ title: '', items: legacyMenuItems } satisfies NavigationSection, ...contributedSections], purchaseNavigation);
 
     const filteredSections = baseSections.map((section) => ({
       ...section,
@@ -247,14 +279,27 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
 
     const editionSections = filterNavigationSectionsByEdition(filteredSections, edition);
 
-    return filterMenuSectionsByProduct(
+    const productSections = filterMenuSectionsByProduct(
       { productCode, surfaceKind },
       filterNavigationSectionsByPermission(
         filterNavigationSectionsByFeatureAccess(editionSections, hasFeature),
         userPermissions,
       ),
     );
-  }, [canWorkflowAdmin, userPermissions, useNavigationSections, hasFeature, productCode, surfaceKind, edition, marketingEnabled, credentialsVaultEnabled, coManagedServed, servedCapabilities]);
+
+    if (surfaceKind !== CO_MANAGED_SEAT_SURFACE) return productSections;
+
+    // Seat technicians use one level of navigation. Keep the section's familiar
+    // label for its main destination and promote any other permitted links.
+    return productSections.map((section) => ({
+      ...section,
+      items: section.items.flatMap((item) => item.subItems
+        ? item.subItems.map((subItem, index) => index === 0
+          ? { ...subItem, name: item.name, translationKey: item.translationKey, icon: item.icon }
+          : subItem)
+        : [item]),
+    }));
+  }, [canWorkflowAdmin, userPermissions, useNavigationSections, hasFeature, productCode, surfaceKind, edition, marketingEnabled, credentialsVaultEnabled, coManagedServed, servedCapabilities, purchaseNavigation]);
 
   const settingsSections = useMemo<NavigationSection[]>(() => {
     const editionSections = filterNavigationSectionsByEdition(settingsNavigationSections, edition);

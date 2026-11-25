@@ -207,6 +207,9 @@ function renderDashboard(count: number, workspaceReadOnly = false) {
     <TicketsRouteProvider>
     <TicketingDashboard
       initialTickets={tickets}
+      loadedAt={Date.now()}
+      loadedFilters={{}}
+      onRefreshListForChanges={async () => true}
       initialBoards={[]}
       initialStatuses={[]}
       initialPriorities={[]}

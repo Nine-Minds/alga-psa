@@ -5,7 +5,7 @@ import { Linking, Switch } from "react-native";
 import type { TicketRichTextEditorRef } from "../features/ticketRichText/TicketRichTextEditor";
 
 const capabilities = vi.hoisted(() => ({ dontNotifyCustomerDefault: false }));
-vi.mock("../capabilities/CapabilitiesContext", () => ({
+vi.mock("../capabilities/CapabilitiesContext", () => ({ useOperationalOnly: () => false,
   useCapabilities: () => ({ features: { clientsCreate: false, clientsUpdate: false, contactsCreate: false, contactsUpdate: false }, defaultCountry: null, loaded: true, refresh: () => Promise.resolve() }),
   useDontNotifyCustomerDefault: () => capabilities.dontNotifyCustomerDefault,
 }));

@@ -1,3 +1,5 @@
+import { classifyForwardedHeaderField, parseForwardedHeaderBlock } from './forwardedMessage';
+
 export type ReplyParseConfidence = 'high' | 'medium' | 'low';
 export type ReplyParsingStrategy =
   | 'custom-boundary'
@@ -106,54 +108,6 @@ interface TrimResult {
   text: string;
   matched?: string;
   heuristic?: string;
-}
-
-type QuotedHeaderField = 'from' | 'sent' | 'to' | 'cc' | 'subject';
-
-/**
- * Classify fields that commonly appear in a plain-text quoted-message envelope.
- * A single matching line is not enough evidence: structured email/form bodies
- * frequently contain legitimate fields such as `Subject:` or `From:`.
- */
-function classifyQuotedHeaderField(line: string): QuotedHeaderField | null {
-  if (/^(?:from|de)\s*:/i.test(line)) return 'from';
-  if (/^(?:sent|date|envoyé)\s*:/i.test(line)) return 'sent';
-  if (/^(?:to|répondre à)\s*:/i.test(line)) return 'to';
-  if (/^cc\s*:/i.test(line)) return 'cc';
-  if (/^subject\s*:/i.test(line)) return 'subject';
-  return null;
-}
-
-/**
- * Recognize the coherent envelope emitted by plain-text Outlook-style replies.
- * Requiring From + Sent/Date + To + Subject avoids truncating authored content
- * merely because one form field happens to look like an email header.
- */
-function isCoherentQuotedHeaderBlock(lines: string[], startIndex: number): boolean {
-  if (classifyQuotedHeaderField(lines[startIndex].trim()) !== 'from') {
-    return false;
-  }
-
-  const fields = new Set<QuotedHeaderField>();
-  const endIndex = Math.min(lines.length, startIndex + 10);
-
-  for (let i = startIndex; i < endIndex; i += 1) {
-    const rawLine = lines[i];
-    const line = rawLine.trim();
-    if (!line) break;
-
-    const field = classifyQuotedHeaderField(line);
-    if (field) {
-      fields.add(field);
-      continue;
-    }
-
-    // Permit folded header values, but stop as soon as normal body text begins.
-    if (/^\s/.test(rawLine)) continue;
-    break;
-  }
-
-  return fields.has('from') && fields.has('sent') && fields.has('to') && fields.has('subject');
 }
 
 const htmlCommentTokenRegex = /<!--\s*alga:reply-token:(?<payload>[^-]+)-->?/i;
@@ -274,9 +228,39 @@ const KNOWN_QUOTE_MARKER_TOKENS = ['gmail_quote', 'yahoo_quoted', 'protonmail_qu
 /** How much visible text before a blockquote to inspect for a provider reply header. */
 const REPLY_HEADER_LOOKBEHIND_CHARS = 300;
 
+/** Attribute marking the hidden inbox-preview excerpt Alga puts at the top of notification HTML. */
+export const HTML_PREHEADER_ATTRIBUTE = 'data-alga-preheader';
+
+/**
+ * Remove every element carrying the preheader marker, content included. The excerpt
+ * repeats text from the notification body, so it must never reach a parsed reply or
+ * the visible-text view of one. Handles nested divs inside the marked element.
+ */
+export function stripPreheaderElements(html: string): string {
+  const marker = new RegExp(`<([a-z][a-z0-9]*)\\b[^>]*\\b${HTML_PREHEADER_ATTRIBUTE}\\b[^>]*>`, 'i');
+  let result = html;
+  for (let match = marker.exec(result); match; match = marker.exec(result)) {
+    const tag = match[1];
+    const start = match.index;
+    const tagRegex = new RegExp(`<(/?)${tag}\\b[^>]*>`, 'gi');
+    tagRegex.lastIndex = start;
+    let depth = 0;
+    let end = result.length;
+    for (let t = tagRegex.exec(result); t; t = tagRegex.exec(result)) {
+      depth += t[1] ? -1 : 1;
+      if (depth === 0) {
+        end = t.index + t[0].length;
+        break;
+      }
+    }
+    result = result.slice(0, start) + result.slice(end);
+  }
+  return result;
+}
+
 /** Convert an HTML fragment to visible text, preserving block-level line breaks. */
 export function htmlToVisibleText(html: string): string {
-  const withBreaks = html
+  const withBreaks = stripPreheaderElements(html)
     .replace(/<(?:style|script)\b[\s\S]*?<\/(?:style|script)>/gi, ' ')
     .replace(/<!--[\s\S]*?-->/g, ' ')
     .replace(/<(?:br|\/p|\/div|\/li|\/tr|\/h[1-6]|\/blockquote|\/table)\b[^>]*>/gi, '\n')
@@ -487,8 +471,8 @@ function stripProviderHeaders(text: string, config: ReplyParserConfig): TrimResu
     }
 
     if (config.providerReplyHeaders.some((regex) => regex.test(line))) {
-      const headerField = classifyQuotedHeaderField(line);
-      if (headerField && !isCoherentQuotedHeaderBlock(lines, i)) {
+      const headerField = classifyForwardedHeaderField(line);
+      if (headerField && !parseForwardedHeaderBlock(lines, i)) {
         kept.push(rawLine);
         continue;
       }
@@ -667,7 +651,7 @@ export function parseEmailReply(input: ReplyParserInput, config: Partial<ReplyPa
   const appliedHeuristics: string[] = [];
 
   const originalText = input.text || '';
-  const originalHtml = input.html;
+  const originalHtml = input.html ? stripPreheaderElements(input.html) : input.html;
 
   const htmlTokens = originalHtml ? extractTokensFromHtml(originalHtml) : null;
   const textTokens = extractTokensFromText(originalText, mergedConfig);

@@ -18,7 +18,12 @@ const TENANT = '11111111-1111-1111-1111-111111111111';
 const CLIENT_ID = '22222222-2222-2222-2222-222222222222';
 
 const createTenantKnexMock = vi.hoisted(() => vi.fn());
-const hasPermissionMock = vi.hoisted(() => vi.fn(async () => true));
+const hasPermissionMock = vi.hoisted(() => vi.fn(async (..._args: any[]) => true));
+const authorizedDocumentMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@alga-psa/shared/lib/documentAccess', () => ({
+  getAuthorizedDocumentById: authorizedDocumentMock,
+}));
 const assignmentRows = vi.hoisted(() => ({ rows: [] as Array<Record<string, unknown>>, timezone: null as string | null }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -44,6 +49,7 @@ vi.mock('@alga-psa/db', () => ({
 const documentReadScopeMock = vi.hoisted(() => vi.fn(async (): Promise<unknown> => null));
 vi.mock('@alga-psa/shared/lib/documentAuthorization', () => ({
   resolveDocumentReadScope: documentReadScopeMock,
+  isDocumentFieldRedacted: (document: object, field: string) => !Object.prototype.hasOwnProperty.call(document, field),
 }));
 
 vi.mock('../lib/documentsHelpers', () => ({
@@ -113,6 +119,7 @@ describe('getClientPulse', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     hasPermissionMock.mockResolvedValue(true);
+    authorizedDocumentMock.mockResolvedValue({ document_id: 'note-document', content: '' });
     assignmentRows.rows = [];
     assignmentRows.timezone = null;
   });
@@ -190,6 +197,42 @@ describe('getClientPulse', () => {
     const result = await getClientPulse(CLIENT_ID) as any;
 
     expect(result.actionError).toBe('Client not found');
+  });
+
+  describe('shared note preview authorization', () => {
+    const preview = async () => {
+      const { knex } = recordingKnex((sql) => {
+        if (sql.includes('from "clients" as "c"')) {
+          return [{ ...clientRow, notes_document_id: 'note-document', notes: 'legacy copy of protected text' }];
+        }
+        if (sql.includes('from "document_block_content"')) {
+          return [{ block_data: [{ type: 'paragraph', content: [{ type: 'text', text: 'protected note' }] }],
+            updated_at: '2026-11-20T00:00:00.000Z' }];
+        }
+        return [];
+      });
+      createTenantKnexMock.mockResolvedValue({ knex });
+      return (await getClientPulse(CLIENT_ID) as any).notes;
+    };
+
+    it('shows an authorized readable document preview', async () => {
+      expect(await preview()).toEqual({ hasNotes: true, previewLines: ['protected note'],
+        lastEditedAt: '2026-11-20T00:00:00.000Z' });
+    });
+
+    it.each([
+      ['redacted content', { document_id: 'note-document' }],
+      ['denied document', null],
+    ])('hides %s without falling back to a legacy copy', async (_name, document) => {
+      authorizedDocumentMock.mockResolvedValue(document);
+      expect(await preview()).toEqual({ hasNotes: false, previewLines: [], lastEditedAt: null });
+    });
+
+    it('hides linked note content when document-read permission is missing', async () => {
+      hasPermissionMock.mockImplementation(async (_user, resource, action) =>
+        !(resource === 'document' && action === 'read'));
+      expect(await preview()).toEqual({ hasNotes: false, previewLines: [], lastEditedAt: null });
+    });
   });
 
   it('counts only distinct assignments that resolve to Active using tenant-local today', async () => {

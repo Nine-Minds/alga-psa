@@ -16,6 +16,7 @@ import {
   updateProjectTaskSchema,
   createProjectPhaseSchema,
   createProjectTaskSchema,
+  createProjectMaterialSchema,
   createTaskChecklistItemSchema,
   updateTaskChecklistItemSchema,
 } from '../schemas/project';
@@ -35,6 +36,7 @@ import {
 } from '../../auth/rbac';
 import { isAuthorizedProjectionFieldReadable, projectApiResourceRead, projectApiResourceReads, reprojectUnderDecision, reprojectUnderDecisions, type AuthorizedProjection } from './authorizationKernel';
 import {
+  PROJECT_MATERIAL_SOURCE,
   PROJECT_PHASE_RECORD_SOURCE,
   PROJECT_RECORD_SOURCE,
   PROJECT_STATUS_MAPPING_SOURCE,
@@ -43,6 +45,7 @@ import {
   PROJECT_TICKET_RESPONSE_SOURCE,
   TICKET_PROJECT_LINK_SOURCE,
 } from '@alga-psa/authorization/recordProjectionDescriptors';
+import { assertResourceOperationOpen } from '@alga-psa/authorization/recordCreateAuthorization';
 import { buildProjectedPage } from '@alga-psa/authorization/pagination';
 import { tenantDb } from '@alga-psa/db';
 import { ApiRequest, AuthenticatedApiRequest, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, buildAuthenticatedApiContext, createPaginatedResponse, createSuccessResponse, handleApiError } from '../middleware/apiMiddleware';
@@ -2262,6 +2265,105 @@ export class ApiProjectController extends ApiBaseController {
         return await runWithTenant(tenantId, async () => {
           await this.assertTaskProjectAllowed(apiRequest, taskId, knex);
           await this.projectService.deleteChecklistItem(taskId, checklistItemId, apiRequest.context!);
+          return new NextResponse(null, { status: 204 });
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /** The project and (for the delete route) material ids in /projects/{id}/materials[/{materialId}]. */
+  private materialPathIds(req: NextRequest): { projectId: string; materialId: string | null } {
+    const pathParts = new URL(req.url).pathname.split('/');
+    const projectsIndex = pathParts.findIndex(part => part === 'projects');
+    const projectId = pathParts[projectsIndex + 1];
+    const materialId = pathParts[projectsIndex + 3] ?? null;
+    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!projectId || !uuid.test(projectId)) throw new ValidationError('Invalid project ID format');
+    if (materialId !== null && !uuid.test(materialId)) throw new ValidationError('Invalid material ID format');
+    return { projectId, materialId };
+  }
+
+  /**
+   * List project materials (project:read). Mirrors listProjectMaterials: a seat technician is closed out of
+   * project_materials, and the project must pass record-level read authorization (404 otherwise).
+   */
+  getMaterials() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
+
+          const { projectId } = this.materialPathIds(req);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          const projectGate = await this.assertProjectReadAllowed(apiRequest, projectId, knex);
+          try {
+            await assertResourceOperationOpen(
+              knex,
+              { tenant: apiRequest.context!.tenant, user: apiRequest.context!.user, resourceType: 'project', operation: 'project_materials' },
+              'projects',
+            );
+          } catch (error) {
+            throw new ForbiddenError(error instanceof Error ? error.message : 'Permission denied');
+          }
+
+          const materials = await this.projectService.getProjectMaterials(projectId, apiRequest.context!);
+          return createSuccessResponse(
+            reprojectUnderDecision(projectGate, materials, PROJECT_MATERIAL_SOURCE),
+            200,
+            undefined,
+            apiRequest,
+          );
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /** Add a project material (project:update). Body is validated after the permission and project gates. */
+  addMaterial() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const { projectId } = this.materialPathIds(req);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          const projectGate = await this.assertProjectReadAllowed(apiRequest, projectId, knex);
+          const data = await this.validateData(apiRequest, createProjectMaterialSchema);
+
+          const material = await this.projectService.addProjectMaterial(projectId, data, apiRequest.context!);
+          const projection = reprojectUnderDecision(projectGate, material, PROJECT_MATERIAL_SOURCE);
+          if (!projection) throw new NotFoundError('Project not found');
+          return createSuccessResponse(projection, 201, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /** Delete a project material and restore its stock (project:update). 404 unless it belongs to {id}. */
+  deleteMaterial() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const { projectId, materialId } = this.materialPathIds(req);
+          if (!materialId) throw new ValidationError('Invalid material ID format');
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertProjectReadAllowed(apiRequest, projectId, knex);
+
+          await this.projectService.deleteProjectMaterial(projectId, materialId, apiRequest.context!);
           return new NextResponse(null, { status: 204 });
         });
       } catch (error) {

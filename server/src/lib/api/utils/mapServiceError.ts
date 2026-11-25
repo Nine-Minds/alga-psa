@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
  */
 const KNOWN_ERRORS: Record<string, { status: number; code?: string }> = {
   AgentBindingConflictError: { status: 409 },
+  CoManagedAdmissionError: { status: 403 },
   TierAccessError: { status: 403, code: 'TIER_ACCESS_DENIED' },
 };
 

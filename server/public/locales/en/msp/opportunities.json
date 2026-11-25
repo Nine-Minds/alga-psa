@@ -471,7 +471,8 @@
       "whitespaceSuggestionCreated": "Suggestion ready for review",
       "whitespaceSuggestionDismissed": "This suggestion was previously dismissed",
       "whitespaceSuggestionKnown": "This suggestion is already known",
-      "won": "Won"
+      "won": "Won",
+      "evidenceSaved": "Evidence saved"
     },
     "type": {
       "expansion": "Expansion",
@@ -569,14 +570,25 @@
     },
     "declare": {
       "title": "Move to {{stage}}",
-      "sourceLabel": "Supporting source",
-      "noSource": "No source",
-      "sourceHelp": "Optional. Cite an interaction or document from this deal. Attach a document to the deal first if it isn't listed.",
+      "sourceHelp": "Optional. Cite interactions or documents from this deal. Attach a document to the deal first if it isn't listed.",
       "submit": "Declare",
       "source": "Source",
       "sourceRemoved": "Source removed",
       "interactionFallback": "Interaction",
-      "documentFallback": "Document"
+      "documentFallback": "Document",
+      "editTitle": "Evidence for {{stage}}",
+      "noteLabel": "Note",
+      "notePlaceholder": "What shows the deal is at this stage?",
+      "sourcesLabel": "Supporting sources",
+      "groupInteractions": "Interactions",
+      "groupDocuments": "Documents",
+      "removeSource": "Remove source",
+      "sourcesLoading": "Loading sources…",
+      "addSource": "Add a source",
+      "noSourcesAvailable": "No other interactions or documents on this deal",
+      "save": "Save",
+      "editEvidence": "Edit evidence",
+      "addEvidence": "Add evidence"
     }
   }
 }

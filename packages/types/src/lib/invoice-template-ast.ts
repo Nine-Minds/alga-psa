@@ -129,6 +129,12 @@ export interface TemplateFieldNode extends TemplateNodeBase {
   emptyValue?: string;
   placeholder?: string;
   format?: TemplateValueFormat;
+  /**
+   * Author-chosen wording for specific values, keyed by `String(value)` (e.g.
+   * `'true'`, `'false'`, `'monthly'`). A label resolving to `''` prints nothing.
+   * Values without an entry fall back to `format` / the default rendering.
+   */
+  valueLabels?: Record<string, TemplateI18nText>;
   displayFormat?: TemplateFieldDisplayFormat;
   borderStyle?: TemplateFieldBorderStyle;
   children?: never;
@@ -173,6 +179,12 @@ export interface TemplateTableColumnLine {
   id: string;
   value: TemplateValueExpression;
   format?: TemplateValueFormat;
+  /**
+   * Author-chosen wording for specific values, keyed by `String(value)` (e.g.
+   * `'true'`, `'false'`, `'monthly'`). A label resolving to `''` prints nothing.
+   * Values without an entry fall back to `format` / the default rendering.
+   */
+  valueLabels?: Record<string, TemplateI18nText>;
   style?: TemplateNodeStyleRef;
   /**
    * An annotation line (e.g. an "Optional (included)" marker). It renders
@@ -188,6 +200,12 @@ export interface TemplateTableColumn {
   header?: TemplateI18nText;
   value: TemplateValueExpression;
   format?: TemplateValueFormat;
+  /**
+   * Author-chosen wording for specific values, keyed by `String(value)` (e.g.
+   * `'true'`, `'false'`, `'monthly'`). A label resolving to `''` prints nothing.
+   * Values without an entry fall back to `format` / the default rendering.
+   */
+  valueLabels?: Record<string, TemplateI18nText>;
   style?: TemplateNodeStyleRef;
   /**
    * Optional ordered stacked lines for a cell. When present, each line that
@@ -224,6 +242,12 @@ export interface TemplateRepeatRegionBinding {
 export interface TemplateChildRowCell {
   value: TemplateValueExpression;
   format?: TemplateValueFormat;
+  /**
+   * Author-chosen wording for specific values, keyed by `String(value)` (e.g.
+   * `'true'`, `'false'`, `'monthly'`). A label resolving to `''` prints nothing.
+   * Values without an entry fall back to `format` / the default rendering.
+   */
+  valueLabels?: Record<string, TemplateI18nText>;
   /** Stacked lines, same semantics as `TemplateTableColumn.lines`. */
   lines?: TemplateTableColumnLine[];
   /**
@@ -276,6 +300,12 @@ export interface TemplateTotalsRow {
   labelStyle?: TemplateNodeStyleRef;
   value: TemplateValueExpression;
   format?: TemplateValueFormat;
+  /**
+   * Author-chosen wording for specific values, keyed by `String(value)` (e.g.
+   * `'true'`, `'false'`, `'monthly'`). A label resolving to `''` prints nothing.
+   * Values without an entry fall back to `format` / the default rendering.
+   */
+  valueLabels?: Record<string, TemplateI18nText>;
   emphasize?: boolean;
   /**
    * Omit the row entirely when its value resolves to zero or nothing, so an

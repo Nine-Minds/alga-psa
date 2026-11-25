@@ -7,15 +7,11 @@ import { addLongInvoiceSources } from '../../server/test-utils/invoiceTicketProd
 import { readInvoiceDocument, readInvoiceDownload } from '../fixtures/invoice-document';
 
 test('an administrator authors a billed-time date sort and reopens its persisted invoice layout', async ({ page, credentials, database }, testInfo) => {
-  // The longest journey in the suite: it authors a layout, generates and reads
-  // back an invoice document, then reopens the persisted layout. It takes about
-  // 116s of real work, so the 120s default left it a few seconds of headroom and
-  // it tipped over on a loaded runner -- a first-attempt timeout that a retry
-  // then passed. Nothing here is failing an assertion; it was simply the one
-  // heavy spec that never got the explicit budget its peers all carry
-  // (invoice-generation, qbo-export, xero-export, time-approval-invoice and the
-  // rest use 300s). Retry-only passes are reported as flaky and do not satisfy
-  // the gate, so give it the same budget rather than lean on the retry.
+  // A long journey: it authors a layout, reopens it, then generates and reads
+  // back several invoice documents. Each PDF download costs ~4.5s, so locale and
+  // historical-snapshot coverage lives in invoiceTicketProduction.integration.test.ts
+  // and this spec downloads one PDF per scenario. It keeps the 300s budget its
+  // heavy peers carry, since retry-only passes do not satisfy the gate.
   test.setTimeout(300000);
   const { tenant } = await createTimeBillingFixture(database, credentials.email);
   const name = `Billed time sort ${randomUUID()}`;
@@ -124,7 +120,6 @@ test('an administrator authors a billed-time date sort and reopens its persisted
     }
   });
   await page.goto(`/msp/billing?tab=invoice-templates&templateId=${saved.template_id}`);
-  await page.reload();
   await expect(page.locator('#templateName')).toHaveValue(name);
   await openTransforms();
   await expect(page.locator('#invoice-designer-transforms-output-binding')).toHaveValue(outputBinding);
@@ -200,72 +195,48 @@ test('an administrator authors a billed-time date sort and reopens its persisted
     expect(await readSnapshots()).toEqual(snapshots);
     const client = await database('clients').where({ tenant: tenant.tenantId, client_id: ids.clientId }).first();
     try {
-      // Historical fixtures deliberately alter only this generated invoice's
-      // snapshots. They test rendering old data, not how new invoices are captured.
-      for (const history of ['current', 'v1', 'fallbacks', 'partial', 'none'] as const) {
-        for (const [index, snapshot] of snapshots.entries()) {
-          let workItemSnapshot = history === 'none' || (history === 'partial' && index === 0)
-            ? null : history === 'v1' ? { ...snapshot.work_item_snapshot, version: 1 } : snapshot.work_item_snapshot;
-          if (history === 'fallbacks') {
-            // Disclosed legacy shapes, not a claim that today's authoring UI
-            // produces orphan work. A pre-split blended overtime snapshot
-            // ('mixed') keeps its rate; everything else degrades to v1.
-            if (index === 0) workItemSnapshot = { ...workItemSnapshot, workItemType: 'ad_hoc',
-              workItemId: null, ticketNumber: null, title: null, description: 'Frozen historical public work' };
-            if (index === 1) workItemSnapshot = { ...workItemSnapshot, workItemType: 'project_task',
-              workItemId: snapshot.invoice_time_entry_id, ticketNumber: null, title: null, description: null };
-            if (index === 2) workItemSnapshot = { ...workItemSnapshot, ticketNumber: null, title: null, description: null };
-            if (workItemSnapshot.rateKind !== 'mixed') workItemSnapshot = { ...workItemSnapshot, version: 1 };
-          }
-          await database('invoice_time_entries')
-            .where({ tenant: tenant.tenantId, invoice_time_entry_id: snapshot.invoice_time_entry_id })
-            .update({ work_item_snapshot: workItemSnapshot });
-        }
-        const expectedSnapshots = await readSnapshots();
-        const locales = history === 'current' ? ['fr', 'zz-unavailable'] : ['en', 'fr', 'zz-unavailable'];
-        for (const locale of locales) {
-          await test.step(`${history} snapshots / ${locale} PDF`, async () => {
-            await database('clients').where({ tenant: tenant.tenantId, client_id: ids.clientId })
-              .update({ properties: { ...client.properties, defaultLocale: locale } });
-            await page.reload();
-            const pdfText = await readInvoiceDownload(page, testInfo, invoice.invoice_number,
-              `${invoice.invoice_number}-${history}-${locale}`);
-            const localized = pdfText.replace(/\s/g, '');
-            const french = locale === 'fr';
-            if (history === 'v1' || history === 'fallbacks') expect(localized).toContain(french ? 'Tarifindisponible' : 'Rateunavailable');
-            // The overtime entry renders as its own $225 segment line.
-            expect(localized).toContain(french ? '225,00' : '$225.00');
-            expect(localized).toContain(new Intl.NumberFormat(french ? 'fr-FR' : 'en-US', {
-              minimumFractionDigits: 2, maximumFractionDigits: 2,
-            }).format(Number(invoice.total_amount) / 100).replace(/\s/g, ''));
-            if (history === 'none') {
-              expect(localized).not.toContain('Publicticket');
-            } else if (history === 'fallbacks') {
-              expect(localized).toContain(french ? 'Autretempsfacturé' : 'Otherbilledtime');
-              expect(localized).toContain(french ? 'Tâchedeprojet' : 'Projecttask');
-            } else {
-              expect(localized).toContain('Publicticket0');
-              expect(localized).toContain('Publicticket1');
-            }
-            if (history === 'partial' || history === 'none') {
-              const note = history === 'partial'
-                ? french ? 'Seules les écritures de temps facturé disponibles figurent dans ce détail.'
-                  : 'Only available billed-time entries are included in this detail.'
-                : french ? 'Le détail des écritures de temps facturé est indisponible pour cette facture.'
-                  : 'Billed-time entry detail is unavailable for this invoice.';
-              expect(localized).toContain(note.replace(/\s/g, ''));
-            }
-            // Each of the five available snapshots appears in both the flat and
-            // nested table. Missing historical detail must not be reconstructed
-            // from live work.
-            expect(pdfText.match(countryOrderedDate) ?? [])
-              .toHaveLength(history === 'none' ? 0 : history === 'partial' ? 8 : 10);
-            expect(localized).not.toContain('PRIVATE');
-            expect(await readSnapshots()).toEqual(expectedSnapshots);
-            expect(await readCharges()).toEqual(charges);
-          });
-        }
+      // One historical case proves the UI-authored layout renders legacy
+      // snapshots in a non-default locale. The full history × locale matrix
+      // (v1, fallbacks, partial, none × en/fr/zz-unavailable) runs server-side in
+      // invoiceTicketProduction.integration.test.ts. These fixtures alter only
+      // this invoice's snapshots; they test rendering old data, not capture.
+      for (const [index, snapshot] of snapshots.entries()) {
+        // Disclosed legacy shapes, not a claim that today's authoring UI
+        // produces orphan work. Every entry degrades to v1 (rate unknown).
+        let workItemSnapshot = snapshot.work_item_snapshot;
+        if (index === 0) workItemSnapshot = { ...workItemSnapshot, workItemType: 'ad_hoc',
+          workItemId: null, ticketNumber: null, title: null, description: 'Frozen historical public work' };
+        if (index === 1) workItemSnapshot = { ...workItemSnapshot, workItemType: 'project_task',
+          workItemId: snapshot.invoice_time_entry_id, ticketNumber: null, title: null, description: null };
+        if (index === 2) workItemSnapshot = { ...workItemSnapshot, ticketNumber: null, title: null, description: null };
+        if (workItemSnapshot.rateKind !== 'mixed') workItemSnapshot = { ...workItemSnapshot, version: 1 };
+        await database('invoice_time_entries')
+          .where({ tenant: tenant.tenantId, invoice_time_entry_id: snapshot.invoice_time_entry_id })
+          .update({ work_item_snapshot: workItemSnapshot });
       }
+      const expectedSnapshots = await readSnapshots();
+      await test.step('fallbacks snapshots / fr PDF', async () => {
+        await database('clients').where({ tenant: tenant.tenantId, client_id: ids.clientId })
+          .update({ properties: { ...client.properties, defaultLocale: 'fr' } });
+        // Draft PDFs re-render from the database on every download, so the
+        // locale and snapshot changes above need no page reload.
+        const pdfText = await readInvoiceDownload(page, testInfo, invoice.invoice_number,
+          `${invoice.invoice_number}-fallbacks-fr`);
+        const localized = pdfText.replace(/\s/g, '');
+        expect(localized).toContain('Tarifindisponible');
+        // The overtime entry renders as its own $225 segment line.
+        expect(localized).toContain('225,00');
+        expect(localized).toContain(new Intl.NumberFormat('fr-FR', {
+          minimumFractionDigits: 2, maximumFractionDigits: 2,
+        }).format(Number(invoice.total_amount) / 100).replace(/\s/g, ''));
+        expect(localized).toContain('Autretempsfacturé');
+        expect(localized).toContain('Tâchedeprojet');
+        // Each of the five snapshots appears in both the flat and nested table.
+        expect(pdfText.match(countryOrderedDate) ?? []).toHaveLength(10);
+        expect(localized).not.toContain('PRIVATE');
+        expect(await readSnapshots()).toEqual(expectedSnapshots);
+        expect(await readCharges()).toEqual(charges);
+      });
     } finally {
       await database('clients').where({ tenant: tenant.tenantId, client_id: ids.clientId })
         .update({ properties: client.properties });
@@ -293,34 +264,30 @@ test('an administrator authors a billed-time date sort and reopens its persisted
       expect(Number(longInvoice.tax)).toBe(167_250);
       expect(Number(longInvoice.total_amount)).toBe(1_299_750);
       expect(Number(longInvoice.tax)).toBe(longCharges.reduce((sum, charge) => sum + Number(charge.tax_amount), 0));
+      // English only here; the server-side matrix covers fr and the fallback locale.
       await page.goto(`/msp/billing?tab=invoicing&subtab=drafts&invoiceId=${longInvoice.invoice_id}`);
-      for (const locale of ['en', 'fr', 'zz-unavailable']) {
-        await database('clients').where({ tenant: tenant.tenantId, client_id: longIds.clientId })
-          .update({ properties: { defaultLocale: locale } });
-        await page.reload();
-        const document = await readInvoiceDocument(page, testInfo, longInvoice.invoice_number, `${longInvoice.invoice_number}-long-${locale}`);
-        expect(document.pages.length).toBeGreaterThan(1);
-        await testInfo.attach(`long-invoice-pagination-${locale}`, {
-          body: JSON.stringify({ pages: document.pages.length, invoiceId: longInvoice.invoice_id,
-            sourceEntries: longLinks.length, expectedDetailRows: 150, subtotal: longInvoice.subtotal,
-            tax: longInvoice.tax, total: longInvoice.total_amount }), contentType: 'application/json',
-        });
-        expect(document.text.match(countryOrderedDate) ?? []).toHaveLength(150);
-        for (const pageText of document.pages.filter(text => text.match(countryOrderedDate))) {
-          expect(pageText).toContain('Date');
-          expect(pageText).toContain('Ticket');
-        }
-        const compact = document.text.replace(/\s/g, '');
-        expect(compact).toContain(locale === 'fr' ? '225,00' : '$225.00');
-        expect(compact).toContain(new Intl.NumberFormat(locale === 'fr' ? 'fr-FR' : 'en-US', {
-          minimumFractionDigits: 2, maximumFractionDigits: 2,
-        }).format(Number(longInvoice.total_amount) / 100).replace(/\s/g, ''));
-        expect(compact).not.toContain('PRIVATE');
-        expect(await database('invoice_time_entries').where({ tenant: tenant.tenantId, invoice_id: longInvoice.invoice_id }).orderBy('invoice_time_entry_id')).toEqual(longLinks);
-        expect(await database('invoice_charges').where({ tenant: tenant.tenantId, invoice_id: longInvoice.invoice_id }).orderBy('item_id')).toEqual(longCharges);
+      const document = await readInvoiceDocument(page, testInfo, longInvoice.invoice_number, `${longInvoice.invoice_number}-long-en`);
+      expect(document.pages.length).toBeGreaterThan(1);
+      await testInfo.attach('long-invoice-pagination-en', {
+        body: JSON.stringify({ pages: document.pages.length, invoiceId: longInvoice.invoice_id,
+          sourceEntries: longLinks.length, expectedDetailRows: 150, subtotal: longInvoice.subtotal,
+          tax: longInvoice.tax, total: longInvoice.total_amount }), contentType: 'application/json',
+      });
+      expect(document.text.match(countryOrderedDate) ?? []).toHaveLength(150);
+      for (const pageText of document.pages.filter(text => text.match(countryOrderedDate))) {
+        expect(pageText).toContain('Date');
+        expect(pageText).toContain('Ticket');
       }
+      const compact = document.text.replace(/\s/g, '');
+      expect(compact).toContain('$225.00');
+      expect(compact).toContain(new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 2, maximumFractionDigits: 2,
+      }).format(Number(longInvoice.total_amount) / 100).replace(/\s/g, ''));
+      expect(compact).not.toContain('PRIVATE');
+      expect(await database('invoice_time_entries').where({ tenant: tenant.tenantId, invoice_id: longInvoice.invoice_id }).orderBy('invoice_time_entry_id')).toEqual(longLinks);
+      expect(await database('invoice_charges').where({ tenant: tenant.tenantId, invoice_id: longInvoice.invoice_id }).orderBy('item_id')).toEqual(longCharges);
     });
-    await test.step('separate same-name project tasks and localize unnamed task fallback', async () => {
+    await test.step('separate same-name project tasks and label unnamed task fallback', async () => {
       const taskIds = await createBrowserInvoiceTicketSourceFixture(database, { tenant: tenant.tenantId, userId: tenant.admin.userId });
       const tasks = await addBrowserInvoiceTaskSources(database, taskIds);
       await database('clients').where({ tenant: tenant.tenantId, client_id: taskIds.clientId })
@@ -348,23 +315,19 @@ test('an administrator authors a billed-time date sort and reopens its persisted
         // not claim editing invoiced work is a supported application workflow.
         await database('project_tasks').where({ tenant: tenant.tenantId }).whereIn('task_id', tasks.taskIds)
           .update({ task_name: 'EDITED AFTER BILLING', description: 'PRIVATE_EDITED_TASK' });
-        for (const locale of ['en', 'fr', 'zz-unavailable']) {
-          await database('clients').where({ tenant: tenant.tenantId, client_id: taskIds.clientId })
-            .update({ properties: { defaultLocale: locale } });
-          await page.reload();
-          const text = await readInvoiceDownload(page, testInfo, taskInvoice.invoice_number, `${taskInvoice.invoice_number}-tasks-${locale}`);
-          const compact = text.replace(/\s/g, '');
-          // Three named entries appear in flat Description, nested Ticket and
-          // nested Description, plus two separate group headings: 3*3 + 2.
-          expect(compact.match(/Samepublictaskname/g) ?? []).toHaveLength(11);
-          expect(compact).toContain(locale === 'fr' ? 'Tâchedeprojet' : 'Projecttask');
-          expect(compact).toContain(locale === 'fr' ? '180,00' : '$180.00');
-          expect(compact).toContain(locale === 'fr' ? '1600,50' : '1,600.50');
-          expect(text.match(countryOrderedDate) ?? []).toHaveLength(18);
-          expect(compact).not.toMatch(/PRIVATE|EDITED/);
-          expect(await readTaskLinks()).toEqual(links);
-          expect(await readTaskCharges()).toEqual(chargesBefore);
-        }
+        // English only here; the server-side matrix covers fr and the fallback locale.
+        const text = await readInvoiceDownload(page, testInfo, taskInvoice.invoice_number, `${taskInvoice.invoice_number}-tasks-en`);
+        const compact = text.replace(/\s/g, '');
+        // Three named entries appear in flat Description, nested Ticket and
+        // nested Description, plus two separate group headings: 3*3 + 2.
+        expect(compact.match(/Samepublictaskname/g) ?? []).toHaveLength(11);
+        expect(compact).toContain('Projecttask');
+        expect(compact).toContain('$180.00');
+        expect(compact).toContain('1,600.50');
+        expect(text.match(countryOrderedDate) ?? []).toHaveLength(18);
+        expect(compact).not.toMatch(/PRIVATE|EDITED/);
+        expect(await readTaskLinks()).toEqual(links);
+        expect(await readTaskCharges()).toEqual(chargesBefore);
       } finally {
         for (const task of sourceTasks) {
           await database('project_tasks').where({ tenant: tenant.tenantId, task_id: task.task_id })

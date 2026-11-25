@@ -11,6 +11,7 @@ import {
   getDocumentByTicketId,
   getDocumentCountsForEntities,
   getDocumentsByContractId,
+  getDocument,
   getDocumentsByEntity,
   getImageUrl,
   removeDocumentAssociations,
@@ -65,6 +66,7 @@ export function MspDocumentsCrossFeatureProvider({ children }: { children: React
       downloadDocument: async (documentUrl: string, fileName?: string, useFileSystemAPI?: boolean) =>
         downloadDocument(documentUrl, fileName || 'document', useFileSystemAPI),
       getDocumentDownloadUrl: async (documentId: string) => getDocumentDownloadUrl(documentId),
+      getDocument,
       getDocumentsByEntity,
       getDocumentCountsForEntities,
       getDocumentsByContractId,

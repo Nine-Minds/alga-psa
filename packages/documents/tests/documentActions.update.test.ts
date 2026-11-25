@@ -92,16 +92,19 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 
 vi.mock('@shared/lib/documentAuthorization', () => ({
+  isDocumentFieldRedacted: (document: object, field: string) => !Object.prototype.hasOwnProperty.call(document, field),
   authorizeAndRedactDocumentsForAction: async (_trx: unknown, _tenant: string, _user: unknown, docs: Row[]) =>
     docs.filter((doc) => state.readable.has(doc.document_id)),
 }));
-vi.mock('../src/lib/meetingDocumentAdmission', () => ({
+vi.mock('@shared/lib/meetingDocumentAdmission', () => ({
   admitMeetingDocumentsForBrowser: async (_t: unknown, _te: string, _u: unknown, documents: Row[]) => ({
     documents,
   }),
 }));
-vi.mock('../src/lib/documentPermissions', () => ({
+vi.mock('@shared/lib/documentProductReadScope', () => ({
   applyDocumentProductReadScope: (query: unknown) => query,
+}));
+vi.mock('../src/lib/documentPermissions', () => ({
   canReadDocument: vi.fn(),
   canReadTicketDocuments: vi.fn(),
   canUploadDocument: vi.fn(),
@@ -196,6 +199,7 @@ const { updateDocument, replaceDocumentFile, deleteDocument, getAuthorizedDocume
 const baseDoc = (overrides: Row = {}): Row => ({
   document_id: 'doc-1',
   document_name: 'Original',
+  content: null,
   tenant: TENANT,
   file_id: 'file-1',
   preview_file_id: 'preview-1',

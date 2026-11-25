@@ -64,6 +64,7 @@ services:
       NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
       TRUST_FORWARDED_HOST: ${TRUST_FORWARDED_HOST:-false}
       IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
+      EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST: ${EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST:-}
     volumes:
       # Persist user-uploaded documents and generated files
       - files_data:/data/files
@@ -341,6 +342,7 @@ services:
       IMAP_EVENT_CHANNEL_BY_TENANT: ${IMAP_EVENT_CHANNEL_BY_TENANT:-false}
       IMAP_OAUTH_AUTH_MECHANISM: ${IMAP_OAUTH_AUTH_MECHANISM:-XOAUTH2}
       IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
+      EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST: ${EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST:-}
       STORAGE_LOCAL_BASE_PATH: /data/files
     volumes:
       # email-service writes inbound attachments and the original .eml here

@@ -21,7 +21,8 @@ const state = vi.hoisted(() => ({
   audit: [] as any[],
   connected: false,
   exportInProgress: false,
-  blocker: null as string | null,
+  /** Structured refusal from the shared blocker: stable code + human sentence. */
+  blocker: null as { code: string; message: string; messageKey?: string } | null,
   voidOutcome: { ok: true } as { ok: true } | { ok: false; error: string },
 }));
 
@@ -161,7 +162,7 @@ describe('FinancialService.bulkInvoiceOperation', () => {
     state.exportInProgress = false;
     state.blocker = null;
     state.voidOutcome = { ok: true };
-    grant('invoice:update', 'invoice:finalize', 'invoice:send', 'accounting_integrations:remote_mutate');
+    grant('invoice:update', 'invoice:finalize', 'invoice:void', 'invoice:send', 'accounting_integrations:remote_mutate');
 
     mocks.hasPermission.mockImplementation(async (_user: any, resource: string, action: string) =>
       state.granted.has(`${resource}:${action}`)
@@ -260,8 +261,8 @@ describe('FinancialService.bulkInvoiceOperation', () => {
       expect(lookups).not.toHaveBeenCalled();
     });
 
-    it('refuses cancel without the void authority (no invoice:update); invoice is not cancelled', async () => {
-      grant('invoice:finalize');
+    it('refuses cancel without invoice:void even when invoice:update is granted', async () => {
+      grant('invoice:update', 'invoice:finalize');
 
       await expect(bulk('cancel', [SENT])).rejects.toMatchObject({ statusCode: 403 });
 
@@ -270,7 +271,7 @@ describe('FinancialService.bulkInvoiceOperation', () => {
     });
 
     it('refuses cancel on a connected tenant without remote-mutate, per id, and cancels nothing', async () => {
-      grant('invoice:update');
+      grant('invoice:update', 'invoice:void');
       state.connected = true;
 
       const { data } = await bulk('cancel', [SENT, FINAL]);
@@ -350,12 +351,20 @@ describe('FinancialService.bulkInvoiceOperation', () => {
       expect(state.rawInvoiceUpdates).toEqual([]);
     });
 
+    // The sentence names WHERE the payments came from, so the caller knows
+    // whether to reverse them here or fix them in the accounting system
+    // (alga-2026-0003364: 'Unwind payments before voiding.' was unactionable).
     it('refuses a paid invoice with the canonical reason and leaves it paid', async () => {
-      state.blocker = 'Unwind payments before voiding.';
+      state.blocker = {
+        code: 'payments_recorded',
+        message: 'This invoice has payments from your accounting system (QuickBooks payment 3547). Delete or edit them there and the next sync will reverse them here, or reverse them in AlgaPSA only.',
+        messageKey: 'msp/invoicing:errors.void.paymentsRecordedIntegration',
+      };
 
       const { data } = await bulk('cancel', [PAID]);
 
-      expect(data.results[0]).toMatchObject({ id: PAID, success: false, error: 'Unwind payments before voiding.' });
+      expect(data.results[0]).toMatchObject({ id: PAID, success: false });
+      expect(data.results[0].error).toContain('QuickBooks payment 3547');
       expect(state.invoices[PAID].status).toBe('paid');
       expect(mocks.voidCore).not.toHaveBeenCalled();
     });

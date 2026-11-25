@@ -293,6 +293,7 @@ function labelFor(providerType: string, spec: ProviderSecretField): string {
 export function redactProviderConfigs(configs: EmailProviderConfig[] | undefined): EmailProviderConfig[] {
   return (configs ?? []).map(config => {
     const nextConfig: Record<string, any> = { ...(isRecord(config.config) ? config.config : {}) };
+    delete nextConfig.__secretFingerprint;
     const specs = PROVIDER_SECRET_FIELDS[config.providerType] ?? [];
 
     for (const spec of specs) {

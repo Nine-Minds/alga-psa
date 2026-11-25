@@ -28,6 +28,13 @@ export class ApiAssetAuditController {
     this.auditService = new AssetAuditService();
   }
 
+  getPermissionRequirements(): Array<{ resource: string; action: string }> {
+    return [
+      { resource: 'asset', action: 'read' },
+      { resource: 'asset', action: 'update' },
+    ];
+  }
+
   private async requireAllowedContext(req: NextRequest): Promise<ApiContext> {
     const context = requireRequestContext(req);
     const pathname = new URL(req.url).pathname;

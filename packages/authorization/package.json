@@ -34,21 +34,49 @@
       "import": "./dist/bundles/catalog.js",
       "types": "./src/bundles/catalog.ts"
     },
-    "./bundles/simulationTickets": {
-      "import": "./dist/bundles/simulationTickets.js",
-      "types": "./src/bundles/simulationTickets.ts"
-    },
     "./bundles/service": {
       "import": "./dist/bundles/service.js",
       "types": "./src/bundles/service.ts"
     },
-    "./bundles/narrowingProvider": {
-      "import": "./dist/bundles/narrowingProvider.js",
-      "types": "./src/bundles/narrowingProvider.ts"
-    },
     "./bundles/starterBundles": {
       "import": "./dist/bundles/starterBundles.js",
       "types": "./src/bundles/starterBundles.ts"
+    },
+    "./adapters/rbac": {
+      "import": "./dist/adapters/rbac.js",
+      "types": "./src/adapters/rbac.ts"
+    },
+    "./pagination": {
+      "import": "./dist/pagination/index.js",
+      "types": "./src/pagination/index.ts"
+    },
+    "./pagination/authorizationAwarePagination": {
+      "import": "./dist/pagination/authorizationAwarePagination.js",
+      "types": "./src/pagination/authorizationAwarePagination.ts"
+    },
+    "./projectReadAuthorization": {
+      "import": "./dist/projectReadAuthorization.js",
+      "types": "./src/projectReadAuthorization.ts"
+    },
+    "./assetReadAuthorization": {
+      "import": "./dist/assetReadAuthorization.js",
+      "types": "./src/assetReadAuthorization.ts"
+    },
+    "./ticketRecordAuthorization": {
+      "import": "./dist/ticketRecordAuthorization.js",
+      "types": "./src/ticketRecordAuthorization.ts"
+    },
+    "./rbac": {
+      "import": "./dist/rbac.js",
+      "types": "./src/rbac.ts"
+    },
+    "./bundles/simulationTickets": {
+      "import": "./dist/bundles/simulationTickets.js",
+      "types": "./src/bundles/simulationTickets.ts"
+    },
+    "./bundles/narrowingProvider": {
+      "import": "./dist/bundles/narrowingProvider.js",
+      "types": "./src/bundles/narrowingProvider.ts"
     },
     "./bundles/closedBundlePreview": {
       "import": "./dist/bundles/closedBundlePreview.js",
@@ -70,25 +98,13 @@
       "import": "./dist/subject/*.js",
       "types": "./src/subject/*.ts"
     },
-    "./adapters/rbac": {
-      "import": "./dist/adapters/rbac.js",
-      "types": "./src/adapters/rbac.ts"
-    },
-    "./pagination": {
-      "import": "./dist/pagination/index.js",
-      "types": "./src/pagination/index.ts"
-    },
-    "./pagination/authorizationAwarePagination": {
-      "import": "./dist/pagination/authorizationAwarePagination.js",
-      "types": "./src/pagination/authorizationAwarePagination.ts"
-    },
-    "./assetReadAuthorization": {
-      "import": "./dist/assetReadAuthorization.js",
-      "types": "./src/assetReadAuthorization.ts"
-    },
     "./clientReadScope": {
       "import": "./dist/clientReadScope.js",
       "types": "./src/clientReadScope.ts"
+    },
+    "./knowledgeBasePermissions": {
+      "import": "./dist/knowledgeBasePermissions.js",
+      "types": "./src/knowledgeBasePermissions.ts"
     },
     "./knowledgeBaseReadAuthorization": {
       "import": "./dist/knowledgeBaseReadAuthorization.js",
@@ -105,10 +121,6 @@
     "./ticketReadAuthorization": {
       "import": "./dist/ticketReadAuthorization.js",
       "types": "./src/ticketReadAuthorization.ts"
-    },
-    "./ticketRecordAuthorization": {
-      "import": "./dist/ticketRecordAuthorization.js",
-      "types": "./src/ticketRecordAuthorization.ts"
     },
     "./clientScopeAuthorization": {
       "import": "./dist/clientScopeAuthorization.js",
@@ -129,10 +141,6 @@
     "./recordProjectionDescriptors": {
       "import": "./dist/recordProjectionDescriptors.js",
       "types": "./src/recordProjectionDescriptors.ts"
-    },
-    "./rbac": {
-      "import": "./dist/rbac.js",
-      "types": "./src/rbac.ts"
     },
     "./recordCreateAuthorization": {
       "import": "./dist/recordCreateAuthorization.js",

@@ -20,9 +20,7 @@ import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import type { IPriority } from '@alga-psa/types';
-import type { IClient } from '@alga-psa/types';
 import type { IUser } from '@shared/interfaces/user.interfaces';
-import { getIntegrationClients } from '../../../actions/clientLookupActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
@@ -65,7 +63,6 @@ export function InboundTicketDefaultsForm({
     statuses: [],
     priorities: [],
     categories: [],
-    clients: [],
     users: [],
     locations: []
   });
@@ -75,7 +72,6 @@ export function InboundTicketDefaultsForm({
   const [loadingStatuses, setLoadingStatuses] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [clients, setClients] = useState<IClient[]>([]);
   const [priorities, setPriorities] = useState<IPriority[]>([]);
   const [usersWithRoles, setUsersWithRoles] = useState<IUser[]>([]);
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
@@ -202,12 +198,10 @@ export function InboundTicketDefaultsForm({
       });
 
       // Hydrate dedicated pickers with richer datasets
-      const [allClients, allPriorities, allUsers] = await Promise.all([
-        getIntegrationClients(true),
+      const [allPriorities, allUsers] = await Promise.all([
         getAllPriorities('ticket'),
         getAllUsersBasic(true, 'internal')
       ]);
-      setClients(allClients || []);
       setPriorities((allPriorities as IPriority[]) || []);
       setUsersWithRoles(allUsers || []);
     } catch (err: any) {
@@ -491,7 +485,6 @@ export function InboundTicketDefaultsForm({
             })}</Label>
             <ClientPicker
               id="client_id"
-              clients={clients}
               selectedClientId={formData.client_id || null}
               onSelect={(clientId) => handleDefaultChange('client_id', clientId || '')}
               filterState={clientFilterState}

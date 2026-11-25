@@ -868,7 +868,7 @@
           "assignment": "Attribution et SLA",
           "assignmentHelp": "Routage par défaut, SLA et responsable du tableau",
           "notifications": "Notifications",
-          "notificationsHelp": "Avertir les techniciens des nouveaux tickets et des changements de statut, et définir les observateurs par défaut",
+          "notificationsHelp": "Avertir les techniciens des nouveaux tickets, des changements de statut et des réponses client sur les tickets non assignés, et définir les observateurs par défaut",
           "notificationsRulesLabel": "Règles de notification",
           "notificationsRulesHelp": "Les destinataires reçoivent une notification par événement. Ils ne sont pas ajoutés comme observateurs.",
           "notificationsAddRule": "Ajouter une règle",
@@ -876,6 +876,7 @@
           "notificationsRuleEnabled": "Activée",
           "notificationsRemoveRule": "Supprimer la règle",
           "notificationsOnCreate": "Lorsqu'un ticket est créé sur ce tableau",
+          "notificationsOnClientReplyUnassigned": "Lorsqu'un client répond sur un ticket non assigné",
           "notificationsOnStatus": "Lorsqu'un ticket passe au statut",
           "notificationsNoStatuses": "Les statuts peuvent être sélectionnés une fois le tableau enregistré.",
           "notificationsRecipients": "Notifier",
@@ -888,7 +889,7 @@
           "notificationsDefaultWatchers": "Observateurs par défaut",
           "notificationsDefaultWatchersPlaceholder": "Sélectionner des utilisateurs...",
           "notificationsDefaultWatchersHelp": "Ajoutés à la liste de suivi de chaque nouveau ticket de ce tableau et notifiés de chaque mise à jour ultérieure.",
-          "notificationsTriggerRequired": "Chaque règle de notification nécessite au moins un déclencheur : la création d'un ticket ou un statut.",
+          "notificationsTriggerRequired": "Chaque règle de notification nécessite au moins un déclencheur : la création d'un ticket, la réponse d'un client sur un ticket non assigné ou un statut.",
           "notificationsRecipientRequired": "Chaque règle de notification doit avoir au moins un utilisateur, une équipe ou une adresse e-mail à notifier.",
           "notificationsFetchFailed": "Échec du chargement des paramètres de notification",
           "notificationsStatusRemapFailed": "Le tableau a été créé, mais le statut d'une règle de notification n'a pas pu être associé au nouveau tableau. Ajoutez à nouveau les règles de notification.",
@@ -2207,6 +2208,8 @@
       },
       "title": "Référence des variables des modèles d’e-mail",
       "panelTitle": "Variables du modèle",
+      "mspOnly": "MSP uniquement",
+      "clientSafeHelp": "Envoyé aux clients. Les variables réservées au MSP ne sont pas disponibles.",
       "inferredContract": "Actuellement non envoyé. Ce contrat est déduit du modèle.",
       "empty": "Aucune variable correspondante.",
       "example": "Exemple :",
@@ -2715,7 +2718,8 @@
         "general": {
           "title": "Général",
           "defaultClient": "Client par défaut pour les enregistrements orphelins",
-          "defaultClientHelp": "Les contacts et actifs dont l’organisation ne peut pas être identifiée sont rattachés à ce client."
+          "defaultClientHelp": "Les contacts et actifs dont l’organisation ne peut pas être identifiée sont rattachés à ce client.",
+          "clearDefaultClient": "Effacer"
         },
         "saved": "Configuration enregistrée. Exécutez la vérification préalable pour la valider par rapport aux enregistrements préparés.",
         "saving": "Enregistrement…",
@@ -4242,7 +4246,7 @@
   },
   "loginPolicy": {
     "title": "Politique de connexion",
-    "description": "Définissez comment le personnel et les utilisateurs du portail client peuvent se connecter avec un mot de passe. Ces règles sont appliquées côté serveur.",
+    "description": "Définissez comment le personnel et les utilisateurs du portail client peuvent se connecter, avec un mot de passe ou l’authentification unique. Ces règles sont appliquées côté serveur.",
     "requireSso": {
       "title": "Exiger l’authentification unique pour le personnel du MSP",
       "body": "Les utilisateurs internes doivent se connecter avec Google, Microsoft ou votre fournisseur Keycloak. La connexion par mot de passe et la réinitialisation du mot de passe sont bloquées, sauf pour les administrateurs d’urgence ci-dessous.",
@@ -4274,10 +4278,21 @@
         "not_found": "L'utilisateur n'existe plus."
       }
     },
+    "clientPortalSso": {
+      "title": "Options de connexion du portail client",
+      "body": "Choisissez les fournisseurs d’authentification unique affichés sur la page de connexion du portail client. Seuls les fournisseurs avec lesquels votre organisation peut se connecter sont listés. La connexion par mot de passe n’est pas modifiée.",
+      "providers": {
+        "google": "Google",
+        "azure-ad": "Microsoft",
+        "keycloak": "Keycloak"
+      },
+      "noneAvailable": "Aucun fournisseur d’authentification unique n’est configuré pour votre organisation. Configurez-en un dans les paramètres d’authentification unique pour le proposer sur le portail client."
+    },
     "guard": {
       "sso_provider_required": "Configurez au moins un fournisseur d’authentification unique avant de l’exiger.",
       "break_glass_required": "Sélectionnez au moins un administrateur d’urgence avant d’exiger l’authentification unique.",
-      "break_glass_invalid_user": "Les utilisateurs d’urgence doivent être des administrateurs actifs avec l’authentification à deux facteurs activée."
+      "break_glass_invalid_user": "Les utilisateurs d’urgence doivent être des administrateurs actifs avec l’authentification à deux facteurs activée.",
+      "client_portal_sso_provider_invalid": "Choisissez uniquement des fournisseurs d’authentification unique pris en charge."
     },
     "errors": {
       "load": "Impossible de charger la politique de connexion.",
@@ -4611,7 +4626,6 @@
       "title": "Numérotation des actifs",
       "description": "Une séquence unique pour le locataire est formatée avec le préfixe de chaque client. L’aperçu et l’impression n’attribuent aucun numéro. Les numéros attribués puis abandonnés laissent des trous et ne sont jamais réutilisés.",
       "clientPrefixes": "Préfixes des clients",
-      "noPrefix": "Aucun préfixe",
       "prefixSaved": "Préfixe du client enregistré",
       "uniquenessEnabled": "L’unicité des étiquettes d’actifs est activée",
       "legacyAudit": "Audit des étiquettes existantes",
@@ -4625,7 +4639,25 @@
       "continuationReview": "L’examen des données existantes a analysé {{scanned}} étiquettes enregistrées ; {{numeric}} ont un suffixe numérique. Le suffixe le plus élevé est {{maximum}} ; examinez une valeur de départ de {{next}}. Il s’agit d’une simple recommandation. Saisissez et enregistrez ci-dessus la valeur de continuation approuvée ; cet examen ne consomme aucune valeur de la séquence.",
       "continuationExamples": "Exemples : {{examples}}",
       "blankTag": "(étiquette vide)",
-      "normalizedTag": "Normalisée : {{tag}}"
+      "normalizedTag": "Normalisée : {{tag}}",
+      "loadFailed": "Impossible de charger les paramètres de numérotation des actifs",
+      "readOnly": "Vous pouvez consulter la numérotation des actifs. Pour la modifier, vous devez avoir l'autorisation de mettre à jour les paramètres système.",
+      "columns": {
+        "client": "Client",
+        "prefix": "Préfixe"
+      },
+      "addPrefix": "Ajouter un préfixe",
+      "addPrefixTitle": "Ajouter un préfixe client",
+      "editPrefixTitle": "Modifier le préfixe client",
+      "prefixHelp": "Jusqu’à 10 lettres, chiffres ou tirets.",
+      "edit": "Modifier",
+      "remove": "Supprimer",
+      "removeTitle": "Supprimer le préfixe ?",
+      "removeMessage": "Supprimer le préfixe de {{client}} ? Les nouveaux numéros d’actif de ce client n’auront pas de préfixe. Les étiquettes existantes ne sont pas modifiées.",
+      "prefixRemoved": "Préfixe client supprimé",
+      "noPrefixes": "Aucun préfixe client pour l’instant.",
+      "openMenu": "Ouvrir le menu",
+      "inactive": "Inactif"
     }
   }
 }

@@ -4,8 +4,11 @@ edition: enterprise
 # Appliance deployment profile -> capabilities (portal-domain provisioner = direct,
 # trustForwardedHost = true). Custom portal domains use a bring-your-own reverse proxy.
 deploymentProfile: appliance
+imap:
+  privateTargetAllowlist: ""
 host: alga.local
 appUrl: https://alga.local
+publicWebhookBaseUrl: "$(NEXT_PUBLIC_BASE_URL)"
 domainSuffix: alga.local
 
 bootstrap:

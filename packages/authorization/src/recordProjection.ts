@@ -18,11 +18,28 @@ export function isResourceHidden(redactions: readonly string[], resources: reado
 }
 
 export function isReadFieldHidden(redactions: readonly string[], names: readonly string[]): boolean {
+  const overlaps = (pattern: string, source: string): boolean => {
+    const segments = pattern.split('.');
+    const sourceSegments = source.split('.');
+    // A wildcard spans zero or more whole path segments, including omitted
+    // collection indexes such as tasks.*.due_date -> tasks.0.due_date.
+    let next = Array<boolean>(sourceSegments.length + 1).fill(true);
+    for (let i = segments.length - 1; i >= 0; i--) {
+      const current = Array<boolean>(sourceSegments.length + 1).fill(false);
+      for (let j = sourceSegments.length - 1; j >= 0; j--) {
+        current[j] = segments[i] === '*'
+          ? next[j] || current[j + 1]
+          : segments[i] === sourceSegments[j] && (j + 1 === sourceSegments.length || next[j + 1]);
+      }
+      next = current;
+    }
+    return next[0];
+  };
   return redactions.some(redaction => {
     if (typeof redaction !== 'string') throw new InvalidRedactionError();
     if (redaction === '*' || redaction === 'fields') return true;
     const path = redaction.startsWith('fields.') ? redaction.slice(7) : redaction;
-    return names.some(name => path === name || path.startsWith(`${name}.`) || name.startsWith(`${path}.`));
+    return names.some(name => overlaps(path, name));
   });
 }
 

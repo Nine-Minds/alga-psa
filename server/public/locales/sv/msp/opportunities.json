@@ -471,7 +471,8 @@
       "whitespaceSuggestionCreated": "Förslaget är klart för granskning",
       "whitespaceSuggestionDismissed": "Det här förslaget har avfärdats tidigare",
       "whitespaceSuggestionKnown": "Det här förslaget är redan känt",
-      "won": "Vunnen"
+      "won": "Vunnen",
+      "evidenceSaved": "Underlag sparat"
     },
     "type": {
       "expansion": "Utökning",
@@ -569,14 +570,25 @@
     },
     "declare": {
       "title": "Flytta till {{stage}}",
-      "sourceLabel": "Underlag",
-      "noSource": "Inget underlag",
-      "sourceHelp": "Valfritt. Hänvisa till en interaktion eller ett dokument i den här affären. Bifoga dokumentet till affären först om det inte visas.",
+      "sourceHelp": "Valfritt. Hänvisa till interaktioner eller dokument från den här affären. Bifoga först dokumentet till affären om det inte finns i listan.",
       "submit": "Ange",
       "source": "Källa",
       "sourceRemoved": "Källa borttagen",
       "interactionFallback": "Interaktion",
-      "documentFallback": "Dokument"
+      "documentFallback": "Dokument",
+      "editTitle": "Underlag för {{stage}}",
+      "noteLabel": "Anteckning",
+      "notePlaceholder": "Vad visar att affären är i det här steget?",
+      "sourcesLabel": "Stödjande källor",
+      "groupInteractions": "Interaktioner",
+      "groupDocuments": "Dokument",
+      "removeSource": "Ta bort källa",
+      "sourcesLoading": "Läser in källor…",
+      "addSource": "Lägg till en källa",
+      "noSourcesAvailable": "Inga fler interaktioner eller dokument på den här affären",
+      "save": "Spara",
+      "editEvidence": "Redigera underlag",
+      "addEvidence": "Lägg till underlag"
     }
   }
 }

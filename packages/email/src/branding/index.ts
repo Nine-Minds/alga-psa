@@ -16,8 +16,10 @@ export {
 } from './applyEmailPalette';
 export {
   classifyTenantTemplate,
+  copiedFromSystemRowFor,
   type ClassifiableTemplate,
   type ClassifyTenantTemplateInput,
+  type CopiedFromTemplates,
 } from './classifyTenantTemplate';
 export { addGradientFallback, stripGradientFallback } from './gradientFallback';
 export { suggestEmailPalette, type SuggestEmailPaletteInput } from './suggestEmailPalette';
@@ -34,6 +36,7 @@ export {
   stripBrandAttribution,
   BRAND_LOGO_CIDS,
   BRAND_LOGO_MARKER,
+  type BrandAttributionStripOptions,
   type BrandDecorationOptions,
   type BrandLogo,
   type BrandLogoPreviewUrls,

@@ -1,3 +1,4 @@
+import { serverOnlyAlias } from '../../scripts/lib/vitest-server-runtime.mjs';
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 import tsconfigPaths from 'vite-tsconfig-paths';
@@ -27,6 +28,7 @@ export default defineConfig({
   },
   resolve: {
     alias: [
+      serverOnlyAlias,
       // CE stubs for @enterprise/* (the edition-swapped seam); tests that need the EE component mock it explicitly.
       { find: /^@enterprise\/(.*)$/, replacement: path.resolve(__dirname, '../ee/src/$1') },
       { find: /^next\/server$/, replacement: path.resolve(__dirname, '../../node_modules/next/server.js') },

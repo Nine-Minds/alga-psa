@@ -5,9 +5,11 @@ import { withTransaction, createTenantKnex, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { isEnterprise } from '@alga-psa/core/features';
-import { updateTenantSettings } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
+import { mergeTenantSettingsJson } from '@alga-psa/tenancy/server/tenantSettingsStore';
+import { isLicensedUserType } from '@alga-psa/types';
 import {
   classifyTenantTemplate,
+  copiedFromSystemRowFor,
   decorateBrandedHtml,
   isDarkEmailHeader,
   pickBrandLogoVariant,
@@ -16,6 +18,7 @@ import {
   previewEmailBrandingApply,
   resolveEmailPalette,
   suggestEmailPalette,
+  type BrandAttributionStripOptions,
   type EmailBrandingApplyScope,
   type EmailBrandingLogoVariant,
   type EmailBrandingPalette,
@@ -35,6 +38,7 @@ import {
   type EmailBrandingTemplateStatus,
   type TenantSettingsBlob,
 } from '../../lib/emailBranding';
+import { TICKET_EMAIL_TEMPLATES_COPIED_FROM } from '../../lib/templateVariables/ticketEmailAudience';
 
 function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant: string) {
   return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder<any, any>;
@@ -49,7 +53,7 @@ async function readTenantSettings(trx: Knex.Transaction, tenant: string): Promis
 }
 
 async function requireSettingsUpdate(user: any, trx: Knex.Transaction): Promise<void> {
-  if (!(await hasPermission(user, 'settings', 'update', trx))) {
+  if (!isLicensedUserType(user.user_type) || !(await hasPermission(user, 'settings', 'update', trx))) {
     throw new Error('Permission denied: Cannot update settings');
   }
 }
@@ -79,7 +83,7 @@ export const saveEmailBrandingAction = withAuth(async (
     ...(existing?.appliedPalette ? { appliedPalette: existing.appliedPalette } : {}),
   };
 
-  await updateTenantSettings({ emailBranding: palette });
+  await mergeTenantSettingsJson(tenant, { emailBranding: palette });
   revalidatePath(SETTINGS_PATH);
 
   return palette;
@@ -121,7 +125,13 @@ async function loadTemplateRowsForName(
   const systemTemplates = await tenantScopedTable(trx, "system_email_templates", tenant).where({ name });
   const tenantTemplates = await tenantScopedTable(trx, "tenant_email_templates", tenant).where({ name });
 
-  return { systemTemplates, tenantTemplates };
+  // The stock rows of the template it was split from: a copied row is classified against them.
+  const copiedFromName = TICKET_EMAIL_TEMPLATES_COPIED_FROM[name];
+  const copiedFromTemplates = copiedFromName
+    ? await tenantScopedTable(trx, "system_email_templates", tenant).where({ name: copiedFromName })
+    : [];
+
+  return { systemTemplates: [...systemTemplates, ...copiedFromTemplates], tenantTemplates };
 }
 
 const rowKey = (name: string, language: string) => `${name}::${language}`;
@@ -162,6 +172,9 @@ export const getEmailBrandingStatusAction = withAuth(async (
         tenantRow,
         systemRow,
         appliedPalette: palette?.appliedPalette ?? null,
+        copiedFromSystemRow: copiedFromSystemRowFor(
+          systemTemplates, TICKET_EMAIL_TEMPLATES_COPIED_FROM, systemRow.name, systemRow.language_code,
+        ),
       });
 
       return {
@@ -216,7 +229,7 @@ async function persistAppliedPalette(
   palette: EmailBrandingPalette,
   applied: { appliedAt: string; appliedPalette: EmailPaletteTokens } | null,
 ): Promise<void> {
-  await updateTenantSettings({
+  await mergeTenantSettingsJson(tenant, {
     emailBranding: applied ? { ...palette, ...applied } : { ...palette, appliedAt: undefined, appliedPalette: undefined },
   });
 }
@@ -232,7 +245,7 @@ function buildBrandDecorator(
   branding: Record<string, any> | null | undefined,
   enterprise: boolean,
   target: EmailPaletteTokens,
-): ((html: string) => string) | undefined {
+): ((html: string, options?: BrandAttributionStripOptions) => string) | undefined {
   if (!enterprise) return undefined;
 
   // The written row references the logo by content-id, never by URL: the bytes
@@ -251,7 +264,11 @@ function buildBrandDecorator(
   const logo = variant ? { variant, alt: branding?.clientName ?? '' } : undefined;
   const hideAttribution = palette.hideAttribution === true;
 
-  return (html: string) => decorateBrandedHtml(html, { logo, hideAttribution });
+  // The planner decides which footer row the strip may take: the default for a
+  // row it rebuilds from the standard template, `shipped-slogan` for a ticked
+  // customized row it recolors in place.
+  return (html: string, options?: BrandAttributionStripOptions) =>
+    decorateBrandedHtml(html, { logo, hideAttribution, ...options });
 }
 
 /**
@@ -289,6 +306,7 @@ export const previewEmailBrandingApplyAction = withAuth(async (
     language,
     overwrite,
     decorate: buildBrandDecorator(context.palette, context.settings.branding, isEnterprise, target),
+    copiedFrom: TICKET_EMAIL_TEMPLATES_COPIED_FROM,
   });
 
   if (!preview) throw new Error(`No ${language} email template named ${name}`);
@@ -328,6 +346,7 @@ export const applyEmailBrandingAction = withAuth(async (
     appliedPalette: context.palette.appliedPalette ?? null,
     scope,
     decorate: buildBrandDecorator(context.palette, context.settings.branding, isEnterprise, target),
+    copiedFrom: TICKET_EMAIL_TEMPLATES_COPIED_FROM,
   });
 
   const written: EmailBrandingApplyResult['written'] = [];
@@ -415,6 +434,7 @@ export const removeEmailBrandingAction = withAuth(async (
     systemRows: context.systemTemplates,
     tenantRows: context.tenantTemplates,
     appliedPalette: context.palette?.appliedPalette ?? null,
+    copiedFrom: TICKET_EMAIL_TEMPLATES_COPIED_FROM,
   });
 
   for (const batch of chunked(deletable, INSERT_BATCH_SIZE)) {

@@ -1,5 +1,6 @@
 import { applyEmailPalette } from './applyEmailPalette';
-import { classifyTenantTemplate } from './classifyTenantTemplate';
+import type { BrandAttributionStripOptions } from './brandAssets';
+import { classifyTenantTemplate, copiedFromSystemRowFor, type CopiedFromTemplates } from './classifyTenantTemplate';
 import { STOCK_EMAIL_PALETTE } from './stockPalette';
 import type { EmailPaletteTokens, TenantTemplateState } from './types';
 
@@ -76,8 +77,14 @@ export interface EmailBrandingApplyPlanInput {
   /** The token map the last apply wrote, if any. */
   appliedPalette?: EmailPaletteTokens | null;
   scope: EmailBrandingApplyScope;
-  /** Enterprise logo/attribution pass, run after the color rewrite. */
-  decorate?: (html: string) => string;
+  /**
+   * Enterprise logo/attribution pass, run after the color rewrite. Called with
+   * the strip options the row calls for: a rebuild gets the default, a row
+   * recolored in place gets `footerRow: 'shipped-slogan'`.
+   */
+  decorate?: (html: string, options?: BrandAttributionStripOptions) => string;
+  /** Client template name -> the template its tenant rows were copied from at a split. */
+  copiedFrom?: CopiedFromTemplates | null;
 }
 
 const rowKey = (name: string, language: string) => `${name}::${language}`;
@@ -92,14 +99,19 @@ const rowKey = (name: string, language: string) => `${name}::${language}`;
  *   picks up an attribution or logo change instead of only swapping colors.
  * - `customized` rows are only touched when their name was ticked, and then
  *   only their remaining stock or previously applied tokens change, so the
- *   tenant's own edits survive.
+ *   tenant's own edits survive — the footer included: the brand pass runs over
+ *   such a row in `shipped-slogan` mode, so hiding the attribution cannot carry
+ *   off words the tenant wrote beside it.
  * - `no-stock-colors` rows are never written; there is nothing to replace.
  * - a name in `scope.overwrite` overrules the two rules above: the row is
  *   rebuilt from the standard template, subject and plain text included, which
  *   is the only way to repaint colors a tenant chose themselves.
+ * - a `branded` row that is an untouched copy of the template this one was
+ *   split from (`copiedFrom`) is rebuilt the same way: it moves to this
+ *   template's own layout, subject and plain text, in the tenant's colors.
  */
 export function planEmailBrandingApply(input: EmailBrandingApplyPlanInput): EmailBrandingApplyPlan {
-  const { systemRows, tenantRows, target, appliedPalette, scope, decorate } = input;
+  const { systemRows, tenantRows, target, appliedPalette, scope, decorate, copiedFrom } = input;
 
   const names = new Set(scope.names);
   const languages = new Set(scope.languages);
@@ -108,13 +120,19 @@ export function planEmailBrandingApply(input: EmailBrandingApplyPlanInput): Emai
   const tenantByKey = new Map(tenantRows.map((row) => [rowKey(row.name, row.language_code), row]));
 
   const plan: EmailBrandingApplyPlan = { inserts: [], updates: [], skipped: [] };
-  const decorateHtml = (html: string) => (decorate ? decorate(html) : html);
+  const decorateHtml = (html: string, options?: BrandAttributionStripOptions) =>
+    (decorate ? decorate(html, options) : html);
 
   for (const systemRow of systemRows) {
     if (!names.has(systemRow.name) || !languages.has(systemRow.language_code)) continue;
 
     const tenantRow = tenantByKey.get(rowKey(systemRow.name, systemRow.language_code));
-    const { state } = classifyTenantTemplate({ tenantRow, systemRow, appliedPalette: appliedPalette ?? null });
+    const { state, copyOfSplitSource } = classifyTenantTemplate({
+      tenantRow,
+      systemRow,
+      appliedPalette: appliedPalette ?? null,
+      copiedFromSystemRow: copiedFromSystemRowFor(systemRows, copiedFrom, systemRow.name, systemRow.language_code),
+    });
     const language = systemRow.language_code;
     const forced = overwritten.has(systemRow.name);
 
@@ -147,8 +165,14 @@ export function planEmailBrandingApply(input: EmailBrandingApplyPlanInput): Emai
     const rebuild = state === 'branded' || forced;
     const html = rebuild
       ? decorateHtml(applyEmailPalette(systemRow.html_content, STOCK_EMAIL_PALETTE, target))
-      : decorateHtml(applyEmailPalette(tenantRow!.html_content, sourceMaps, target));
-    const restored = forced
+      // Recoloring a ticked `customized` row in place: this is the tenant's own
+      // HTML, so hiding the attribution may only take a footer we shipped. A
+      // footer they reworded around it keeps the words they wrote there.
+      : decorateHtml(
+        applyEmailPalette(tenantRow!.html_content, sourceMaps, target),
+        { footerRow: 'shipped-slogan' },
+      );
+    const restored = forced || copyOfSplitSource
       ? { subject: systemRow.subject, text: systemRow.text_content }
       : null;
 
@@ -174,6 +198,7 @@ export function planEmailBrandingRemoval(input: {
   systemRows: BrandableSystemRow[];
   tenantRows: BrandableTenantRow[];
   appliedPalette?: EmailPaletteTokens | null;
+  copiedFrom?: CopiedFromTemplates | null;
 }): { deletable: BrandableTenantRow[]; kept: BrandableTenantRow[] } {
   const systemByKey = new Map(input.systemRows.map((row) => [rowKey(row.name, row.language_code), row]));
   const deletable: BrandableTenantRow[] = [];
@@ -190,6 +215,9 @@ export function planEmailBrandingRemoval(input: {
       tenantRow,
       systemRow,
       appliedPalette: input.appliedPalette ?? null,
+      copiedFromSystemRow: copiedFromSystemRowFor(
+        input.systemRows, input.copiedFrom, tenantRow.name, tenantRow.language_code,
+      ),
     });
 
     if (state === 'branded') deletable.push(tenantRow);

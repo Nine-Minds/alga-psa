@@ -868,7 +868,7 @@
           "assignment": "Atribuição e SLA",
           "assignmentHelp": "Roteamento padrão, SLA e responsável pelo quadro",
           "notifications": "Notificações",
-          "notificationsHelp": "Avise os técnicos sobre novos tickets e mudanças de status e defina observadores padrão",
+          "notificationsHelp": "Avise os técnicos sobre novos tickets, mudanças de status e respostas do cliente em tickets sem responsável e defina observadores padrão",
           "notificationsRulesLabel": "Regras de notificação",
           "notificationsRulesHelp": "Os destinatários recebem uma notificação por evento. Eles não são adicionados como observadores.",
           "notificationsAddRule": "Adicionar regra",
@@ -876,6 +876,7 @@
           "notificationsRuleEnabled": "Ativada",
           "notificationsRemoveRule": "Remover regra",
           "notificationsOnCreate": "Quando um ticket é criado neste quadro",
+          "notificationsOnClientReplyUnassigned": "Quando um cliente responde em um ticket sem responsável",
           "notificationsOnStatus": "Quando um ticket entra no status",
           "notificationsNoStatuses": "Os status podem ser selecionados depois que o quadro for salvo.",
           "notificationsRecipients": "Notificar",
@@ -888,7 +889,7 @@
           "notificationsDefaultWatchers": "Observadores padrão",
           "notificationsDefaultWatchersPlaceholder": "Selecione usuários...",
           "notificationsDefaultWatchersHelp": "Adicionados à lista de observadores de cada novo ticket neste quadro e notificados de todas as atualizações posteriores.",
-          "notificationsTriggerRequired": "Cada regra de notificação precisa de pelo menos um gatilho: a criação de um ticket ou um status.",
+          "notificationsTriggerRequired": "Cada regra de notificação precisa de pelo menos um gatilho: a criação de um ticket, a resposta de um cliente em um ticket sem responsável ou um status.",
           "notificationsRecipientRequired": "Cada regra de notificação precisa de pelo menos um usuário, equipe ou endereço de e-mail para notificar.",
           "notificationsFetchFailed": "Falha ao carregar as configurações de notificação",
           "notificationsStatusRemapFailed": "O quadro foi criado, mas o status de uma regra de notificação não pôde ser associado ao novo quadro. Adicione as regras de notificação novamente.",
@@ -2207,6 +2208,8 @@
       },
       "title": "Referência de variáveis de modelos de email",
       "panelTitle": "Variáveis do modelo",
+      "mspOnly": "Somente MSP",
+      "clientSafeHelp": "Enviado aos clientes. Variáveis somente para MSP não estão disponíveis.",
       "inferredContract": "Não é enviado atualmente. Este contrato é inferido a partir do modelo.",
       "empty": "Nenhuma variável correspondente.",
       "example": "Exemplo:",
@@ -2715,7 +2718,8 @@
         "general": {
           "title": "Geral",
           "defaultClient": "Cliente padrão para registros órfãos",
-          "defaultClientHelp": "Contatos e ativos cuja organização não pode ser identificada são vinculados a este cliente."
+          "defaultClientHelp": "Contatos e ativos cuja organização não pode ser identificada são vinculados a este cliente.",
+          "clearDefaultClient": "Limpar"
         },
         "saved": "Configuração salva. Execute a verificação prévia para validá-la em relação aos registros preparados.",
         "saving": "Salvando…",
@@ -4242,7 +4246,7 @@
   },
   "loginPolicy": {
     "title": "Política de início de sessão",
-    "description": "Controle como a equipa e os utilizadores do portal do cliente podem iniciar sessão com palavra-passe. Estas regras são aplicadas no servidor.",
+    "description": "Controle como a equipa e os utilizadores do portal do cliente podem iniciar sessão, com palavra-passe ou início de sessão único. Estas regras são aplicadas no servidor.",
     "requireSso": {
       "title": "Exigir início de sessão único para a equipa do MSP",
       "body": "Os utilizadores internos têm de iniciar sessão com Google, Microsoft ou o seu fornecedor Keycloak. O início de sessão com palavra-passe e a redefinição de palavra-passe ficam bloqueados, exceto para os administradores de emergência abaixo.",
@@ -4274,10 +4278,21 @@
         "not_found": "O usuário não existe mais."
       }
     },
+    "clientPortalSso": {
+      "title": "Opções de início de sessão do portal do cliente",
+      "body": "Escolha que fornecedores de início de sessão único aparecem na página de início de sessão do portal do cliente. Só são listados os fornecedores com que a sua organização pode iniciar sessão. O início de sessão com palavra-passe não é afetado.",
+      "providers": {
+        "google": "Google",
+        "azure-ad": "Microsoft",
+        "keycloak": "Keycloak"
+      },
+      "noneAvailable": "Não há fornecedores de início de sessão único configurados para a sua organização. Configure um nas definições de início de sessão único para o oferecer no portal do cliente."
+    },
     "guard": {
       "sso_provider_required": "Configure pelo menos um fornecedor de início de sessão único antes de o exigir.",
       "break_glass_required": "Selecione pelo menos um administrador de emergência antes de exigir o início de sessão único.",
-      "break_glass_invalid_user": "Os utilizadores de emergência têm de ser administradores ativos com a autenticação de dois fatores ativada."
+      "break_glass_invalid_user": "Os utilizadores de emergência têm de ser administradores ativos com a autenticação de dois fatores ativada.",
+      "client_portal_sso_provider_invalid": "Escolha apenas fornecedores de início de sessão único suportados."
     },
     "errors": {
       "load": "Não foi possível carregar a política de início de sessão.",
@@ -4611,7 +4626,6 @@
       "title": "Numeração de ativos",
       "description": "Uma sequência única para todo o locatário é formatada com o prefixo de cada cliente. A prévia e a impressão não atribuem números. Números emitidos e abandonados deixam lacunas e nunca são reutilizados.",
       "clientPrefixes": "Prefixos dos clientes",
-      "noPrefix": "Sem prefixo",
       "prefixSaved": "Prefixo do cliente salvo",
       "uniquenessEnabled": "A exclusividade das etiquetas de ativos está ativa",
       "legacyAudit": "Auditoria de etiquetas existentes",
@@ -4625,7 +4639,25 @@
       "continuationReview": "A revisão dos dados existentes examinou {{scanned}} etiquetas salvas; {{numeric}} têm sufixos numéricos. O maior sufixo é {{maximum}}; revise um valor inicial de {{next}}. Isto é apenas uma recomendação. Insira e salve acima o valor de continuação aprovado; esta revisão não consome nenhum valor da sequência.",
       "continuationExamples": "Exemplos: {{examples}}",
       "blankTag": "(etiqueta vazia)",
-      "normalizedTag": "Normalizada: {{tag}}"
+      "normalizedTag": "Normalizada: {{tag}}",
+      "loadFailed": "Não foi possível carregar as configurações de numeração de ativos",
+      "readOnly": "Você pode visualizar a numeração de ativos. Para alterá-la, é necessária permissão para atualizar as configurações do sistema.",
+      "columns": {
+        "client": "Cliente",
+        "prefix": "Prefixo"
+      },
+      "addPrefix": "Adicionar prefixo",
+      "addPrefixTitle": "Adicionar prefixo do cliente",
+      "editPrefixTitle": "Editar prefixo do cliente",
+      "prefixHelp": "Até 10 letras, dígitos ou hífens.",
+      "edit": "Editar",
+      "remove": "Remover",
+      "removeTitle": "Remover prefixo?",
+      "removeMessage": "Remover o prefixo de {{client}}? Os novos números de ativo deste cliente não terão prefixo. As etiquetas existentes não são alteradas.",
+      "prefixRemoved": "Prefixo do cliente removido",
+      "noPrefixes": "Nenhum prefixo de cliente ainda.",
+      "openMenu": "Abrir menu",
+      "inactive": "Inativo"
     }
   }
 }

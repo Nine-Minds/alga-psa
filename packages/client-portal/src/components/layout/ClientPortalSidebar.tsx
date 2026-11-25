@@ -30,13 +30,35 @@ import {
   getPreferenceWithFallback,
   savePreference,
 } from '@alga-psa/ui/lib/cookies';
+import { resolveClientPortalSettingsSurfaces } from '../../lib/clientPortalSettingsSurfaces';
 import { ClientPortalExtensionsNav } from './ClientPortalExtensionsNav';
 
 const SIDEBAR_COOKIE_KEY = 'client_portal_sidebar_collapsed';
+/** Below this the 16rem panel would eat a phone screen, so the rail wins. */
+const NARROW_VIEWPORT_QUERY = '(max-width: 767px)';
+
+/** True while the viewport is phone-sized. Starts false so SSR paints the stored preference. */
+function useNarrowViewport(): boolean {
+  const [narrow, setNarrow] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const query = window.matchMedia(NARROW_VIEWPORT_QUERY);
+    const sync = () => setNarrow(query.matches);
+    sync();
+    query.addEventListener('change', sync);
+    return () => query.removeEventListener('change', sync);
+  }, []);
+
+  return narrow;
+}
 
 interface SidebarPermissions {
-  hasClientSettingsAccess: boolean;
+  // Inputs to resolveClientPortalSettingsSurfaces (the Client Settings link reads canOpenSettings).
+  hasClientReadAccess: boolean;
   hasBillingAccess: boolean;
+  hasUserManagementAccess: boolean;
+  hasVisibilityGroupAccess: boolean;
   hasProjectAccess: boolean;
   hasDocumentAccess: boolean;
   isLicenseDistributor: boolean;
@@ -104,7 +126,11 @@ export function ClientPortalSidebar({
     });
   };
 
-  const sidebarOpen = !collapsed;
+  // A phone has no room for the 16rem panel: it would leave a form field a couple of
+  // characters wide. There the rail is the only shape, and the stored preference is
+  // left untouched so a wider screen still opens the way the user left it.
+  const narrowViewport = useNarrowViewport();
+  const sidebarOpen = !collapsed && !narrowViewport;
   const isAlgaDeskPortal = productCode === 'algadesk';
 
   const workspaceItems: NavItem[] = isAlgaDeskPortal
@@ -178,7 +204,7 @@ export function ClientPortalSidebar({
                   }]
                 : []),
             ]),
-        ...(permissions.hasClientSettingsAccess
+        ...(resolveClientPortalSettingsSurfaces(permissions).canOpenSettings
           ? [{
               key: 'client-settings',
               href: '/client-portal/client-settings',
@@ -219,6 +245,8 @@ export function ClientPortalSidebar({
         ].join(' ')}
         data-automation-id={`client-sidebar-menu-${item.key}`}
         aria-current={active ? 'page' : undefined}
+        // The rail shows the icon alone, so the name has to be spoken some other way.
+        aria-label={sidebarOpen ? undefined : item.label}
       >
         <Icon className="h-5 w-5 mr-2 flex-shrink-0" />
         {sidebarOpen && <span className="truncate">{item.label}</span>}
@@ -315,7 +343,7 @@ export function ClientPortalSidebar({
       <aside
         ref={panelRef}
         data-automation-id="client-portal-sidebar"
-        data-collapsed={collapsed ? 'true' : 'false'}
+        data-collapsed={sidebarOpen ? 'false' : 'true'}
         className={`bg-sidebar-bg text-sidebar-text h-screen flex flex-col relative ${transitionClass} ${
           sidebarOpen ? 'w-64' : 'w-16'
         } sticky top-0 flex-shrink-0`}
@@ -401,15 +429,17 @@ export function ClientPortalSidebar({
           {!isAlgaDeskPortal && <ClientPortalExtensionsNav sidebarOpen={sidebarOpen} />}
         </nav>
 
-        {/* Collapse toggle */}
-        <CollapseToggleButton
-          id="client-sidebar-toggle-button"
-          isCollapsed={collapsed}
-          collapsedLabel={t('sidebar.expandSidebar', 'Expand sidebar')}
-          expandedLabel={t('sidebar.collapseSidebar', 'Collapse sidebar')}
-          onClick={() => setCollapsed((v) => !v)}
-          className="absolute -right-3 top-12 z-10"
-        />
+        {/* Collapse toggle — withheld on a phone, where only the rail fits anyway. */}
+        {narrowViewport ? null : (
+          <CollapseToggleButton
+            id="client-sidebar-toggle-button"
+            isCollapsed={collapsed}
+            collapsedLabel={t('sidebar.expandSidebar', 'Expand sidebar')}
+            expandedLabel={t('sidebar.collapseSidebar', 'Collapse sidebar')}
+            onClick={() => setCollapsed((v) => !v)}
+            className="absolute -right-3 top-12 z-10"
+          />
+        )}
       </aside>
     </Tooltip.Provider>
   );

@@ -2,15 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { tenantDb } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { encodeState, generateNonce, type OAuthState } from '@/utils/email/oauthHelpers';
+import { createImapOAuthState } from '@/utils/email/imapOAuthState';
 import { createTenantKnex } from '@/lib/db';
 import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
+import { requireOutboundEmailAdmin } from '@alga-psa/integrations/actions/email-actions/mspOutboundEmailAccess';
 
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const { knex, tenant } = await createTenantKnex();
+    if (tenant !== user.tenant) {
+      return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
+    }
+    const access = await requireOutboundEmailAdmin(user, knex);
+    if (!access.allowed) {
+      return NextResponse.json({ error: access.message }, { status: 403 });
     }
     await assertTenantProductAccess({
       tenantId: user.tenant,
@@ -20,12 +29,11 @@ export async function POST(request: NextRequest) {
     });
 
     const body = await request.json();
-    const { providerId, redirectUri } = body;
+    const { providerId } = body;
     if (!providerId) {
       return NextResponse.json({ error: 'providerId is required' }, { status: 400 });
     }
 
-    const { knex, tenant } = await createTenantKnex();
     const db = tenantDb(knex, tenant);
     const provider = await db.table('email_providers')
       .where({ id: providerId, provider_type: 'imap' })
@@ -49,16 +57,23 @@ export async function POST(request: NextRequest) {
 
     const secretProvider = await getSecretProviderInstance();
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL')) || 'http://localhost:3000';
-    const effectiveRedirectUri = redirectUri || `${baseUrl}/api/email/oauth/imap/callback`;
+    const effectiveRedirectUri = new URL('/api/email/oauth/imap/callback', baseUrl).toString();
 
-    const state: OAuthState = {
-      tenant: user.tenant,
+    const { state, token: signedState } = await createImapOAuthState({
+      tenant,
       userId: user.user_id,
       providerId,
       redirectUri: effectiveRedirectUri,
-      timestamp: Date.now(),
-      nonce: generateNonce(),
-    };
+    });
+    await db.table('imap_oauth_states')
+      .where('expires_at', '<=', new Date().toISOString())
+      .delete();
+    await db.table('imap_oauth_states').insert({
+      tenant,
+      nonce: state.nonce,
+      state,
+      expires_at: new Date(state.expiresAt).toISOString(),
+    });
 
     const scopes = imapConfig.oauth_scopes ? imapConfig.oauth_scopes : '';
 
@@ -67,7 +82,7 @@ export async function POST(request: NextRequest) {
       response_type: 'code',
       redirect_uri: effectiveRedirectUri,
       scope: scopes,
-      state: encodeState(state),
+      state: signedState,
       access_type: 'offline',
       prompt: 'consent',
     });
@@ -78,13 +93,13 @@ export async function POST(request: NextRequest) {
       success: true,
       authUrl,
       provider: 'imap',
-      state: Buffer.from(JSON.stringify(state)).toString('base64')
+      state: signedState
     });
   } catch (error: any) {
     if (isProductAccessError(error)) {
       return toProductAccessDeniedResponse(error);
     }
-    console.error('IMAP OAuth initiate error:', error);
+    console.error('IMAP OAuth initiate failed');
     return NextResponse.json({ error: 'Failed to initiate IMAP OAuth. Please try again.' }, { status: 500 });
   }
 }

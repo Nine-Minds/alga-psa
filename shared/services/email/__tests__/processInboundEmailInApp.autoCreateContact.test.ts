@@ -76,6 +76,8 @@ function makeQueryBuilder(firstResult: unknown) {
   const builder: any = {
     select: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
+    whereIn: vi.fn().mockReturnThis(),
+    whereRaw: vi.fn().mockReturnThis(),
     whereNotNull: vi.fn().mockReturnThis(),
     andWhereRaw: vi.fn().mockReturnThis(),
     andWhere: vi.fn((arg: unknown) => {
@@ -230,6 +232,24 @@ describe('processInboundEmailInApp auto-create contact', () => {
     expect(createTicketFromEmailMock).toHaveBeenCalledWith(expect.objectContaining({ client_id: 'client-domain', contact_id: 'created-contact', email_metadata: expect.objectContaining({ autoCreatedContactId: 'created-contact' }) }), 'tenant-1');
     expect(createCommentFromEmailMock).toHaveBeenCalledWith(expect.objectContaining({ contact_id: 'created-contact', author_type: 'contact', metadata: expect.objectContaining({ unmatchedSender: false }) }), 'tenant-1');
     expect(upsertTicketWatchListRecipientsMock).not.toHaveBeenCalled();
+  });
+
+  it('marks the new-ticket comment as the opener with the non-inline attachment count and no legacy suppress flag', async () => {
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+    await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        attachments: [
+          { id: 'a1', name: 'invoice.pdf', contentType: 'application/pdf', size: 10 },
+          { id: 'a2', name: 'logo.png', contentType: 'image/png', size: 5, contentId: 'cid-1', isInline: true },
+        ],
+      }),
+    });
+    const payload = createCommentFromEmailMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(payload.opensTicket).toBe(true);
+    expect(payload.attachmentCount).toBe(1);
+    expect('suppressTechEmailNotification' in payload).toBe(false);
   });
 
   it('leaves the primary-contact fallback when domain auto-create is disabled', async () => {

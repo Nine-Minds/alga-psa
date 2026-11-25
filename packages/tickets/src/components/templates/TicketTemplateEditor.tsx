@@ -1,5 +1,6 @@
 'use client';
 
+import { searchClientsForPicker } from '../../actions/clientLookupActions';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -7,7 +8,7 @@ import type { PartialBlock } from '@blocknote/core';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { toast } from 'react-hot-toast';
-import type { IClient, ITicketTemplate, PendingTag, TicketTemplateReferenceProblem, TicketTemplateUsage } from '@alga-psa/types';
+import type { ITicketTemplate, PendingTag, TicketTemplateReferenceProblem, TicketTemplateUsage } from '@alga-psa/types';
 import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import BackNav from '@alga-psa/ui/components/BackNav';
@@ -37,7 +38,6 @@ import {
 import { listExternalSystems, type ExternalSystemOption } from '../../actions/externalLinks/externalLinkActions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions/priorityActions';
 import { getTicketTemplateDraftFromTicket } from '../../actions/ticketActions';
-import { getAllClients } from '../../actions/clientLookupActions';
 import { TICKET_TITLE_TOKENS } from '../../lib/ticketTitleTokens';
 import { ticketTemplateInputSchema } from '../../lib/ticketTemplateSchema';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../../lib/ticketRichText';
@@ -262,7 +262,6 @@ function TicketTemplateEditorBody({ templateId, fromTicketId }: TicketTemplateEd
   const [form, setForm] = useState<FormState>(emptyForm);
   const [baseline, setBaseline] = useState<string>(() => snapshot(emptyForm()));
   const [fromTicket, setFromTicket] = useState<{ number: string; hasInlineImages: boolean } | null>(null);
-  const [clients, setClients] = useState<IClient[]>([]);
   const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [loading, setLoading] = useState(!isNew || Boolean(fromTicketId));
@@ -344,15 +343,6 @@ function TicketTemplateEditorBody({ templateId, fromTicketId }: TicketTemplateEd
     })();
     return () => { cancelled = true; };
   }, [templateId, fromTicketId, isNew, seed]);
-
-  // The scope picker's options. A failure only costs the names, so the editor still loads.
-  useEffect(() => {
-    let cancelled = false;
-    getAllClients(true)
-      .then((all) => { if (!cancelled) setClients(all); })
-      .catch(() => { if (!cancelled) setClients([]); });
-    return () => { cancelled = true; };
-  }, []);
 
   const dirty = useMemo(() => !loading && snapshot(form) !== baseline, [form, baseline, loading]);
 
@@ -587,7 +577,7 @@ function TicketTemplateEditorBody({ templateId, fromTicketId }: TicketTemplateEd
           <div className="flex items-center gap-2">
             <ClientPicker
               id={`${ID}-client`}
-              clients={clients}
+              searchClients={searchClientsForPicker}
               selectedClientId={form.client_id}
               onSelect={(clientId) => patch({ client_id: clientId })}
               filterState={clientFilterState}

@@ -132,6 +132,7 @@ interface EditableNotificationRule {
   temp_id: string;
   rule_id?: string;
   notify_on_create: boolean;
+  notify_on_unassigned_client_reply: boolean;
   status_ids: string[];
   user_ids: string[];
   team_ids: string[];
@@ -143,6 +144,7 @@ function createEmptyNotificationRule(index: number): EditableNotificationRule {
   return {
     temp_id: `notification-rule-${Date.now()}-${index}`,
     notify_on_create: true,
+    notify_on_unassigned_client_reply: false,
     status_ids: [],
     user_ids: [],
     team_ids: [],
@@ -918,6 +920,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             temp_id: rule.rule_id,
             rule_id: rule.rule_id,
             notify_on_create: rule.notify_on_create,
+            notify_on_unassigned_client_reply: rule.notify_on_unassigned_client_reply ?? false,
             status_ids: rule.status_ids,
             user_ids: rule.user_ids,
             team_ids: rule.team_ids,
@@ -1157,6 +1160,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
       rules: rulesToSave.map((rule) => ({
         rule_id: rule.rule_id,
         notify_on_create: rule.notify_on_create,
+        notify_on_unassigned_client_reply: rule.notify_on_unassigned_client_reply,
         status_ids: rule.status_ids,
         user_ids: rule.user_ids,
         team_ids: rule.team_ids,
@@ -1204,8 +1208,8 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
       }
 
       for (const rule of notificationRules) {
-        if (!rule.notify_on_create && rule.status_ids.length === 0) {
-          failInSection('notifications', t('ticketing.boards.editor.sections.notificationsTriggerRequired', 'Each notification rule needs at least one trigger: ticket creation or a status.'));
+        if (!rule.notify_on_create && !rule.notify_on_unassigned_client_reply && rule.status_ids.length === 0) {
+          failInSection('notifications', t('ticketing.boards.editor.sections.notificationsTriggerRequired', 'Each notification rule needs at least one trigger: ticket creation, a client reply on an unassigned ticket, or a status.'));
           return;
         }
         if ((invalidNotificationEmails[rule.temp_id] ?? []).length > 0) {
@@ -2256,7 +2260,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             id="notifications"
             error={sectionErrors['notifications']}
             title={t('ticketing.boards.editor.sections.notifications', 'Notifications')}
-            description={t('ticketing.boards.editor.sections.notificationsHelp', 'Notify technicians about new tickets and status changes, and set default watchers')}
+            description={t('ticketing.boards.editor.sections.notificationsHelp', 'Notify technicians about new tickets, status changes and client replies on unassigned tickets, and set default watchers')}
             icon={<Bell className="h-4 w-4" />}
             open={!collapsedSections.has('notifications')}
             dirty={isSectionDirty('notifications')}
@@ -2339,6 +2343,16 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                       />
                       <Label htmlFor={`board-notification-rule-${index}-create`}>
                         {t('ticketing.boards.editor.sections.notificationsOnCreate', 'When a ticket is created on this board')}
+                      </Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id={`board-notification-rule-${index}-client-reply`}
+                        checked={rule.notify_on_unassigned_client_reply}
+                        onChange={(e) => updateRule({ notify_on_unassigned_client_reply: (e.target as HTMLInputElement).checked })}
+                      />
+                      <Label htmlFor={`board-notification-rule-${index}-client-reply`}>
+                        {t('ticketing.boards.editor.sections.notificationsOnClientReplyUnassigned', 'When a client replies on an unassigned ticket')}
                       </Label>
                     </div>
                     <div>
@@ -2965,8 +2979,8 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                 {isLoadingBoardStatuses ? (
                   <p className="text-sm text-muted-foreground">{t('ticketing.boards.fields.ticketStatuses.loading')}</p>
                 ) : formData.ticket_statuses.map((status, index) => (
-                  <div key={status.temp_id} className="grid gap-3 rounded-md border border-gray-200 p-3 md:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto] md:items-center">
-                    <div>
+                  <div key={status.temp_id} className="flex flex-col gap-3 rounded-md border border-gray-200 p-3 md:flex-row md:flex-wrap md:items-center">
+                    <div className="md:flex-1 md:min-w-[14rem]">
                       <Label htmlFor={`inline-ticket-status-name-${index}`}>{t('ticketing.boards.fields.ticketStatuses.statusName')}</Label>
                       <Input
                         id={`inline-ticket-status-name-${index}`}
@@ -3003,11 +3017,12 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                         onCheckedChange={(checked) => updateManagedTicketStatus(status.temp_id, { portal_selectable: checked })}
                       />
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 md:ml-auto">
                       <Button
                         id={`move-inline-ticket-status-up-${index}`}
                         type="button"
                         variant="ghost"
+                        size="sm"
                         onClick={() => moveManagedTicketStatus(status.temp_id, 'up')}
                         disabled={index === 0}
                       >
@@ -3017,6 +3032,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                         id={`move-inline-ticket-status-down-${index}`}
                         type="button"
                         variant="ghost"
+                        size="sm"
                         onClick={() => moveManagedTicketStatus(status.temp_id, 'down')}
                         disabled={index === formData.ticket_statuses.length - 1}
                       >
@@ -3026,6 +3042,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                         id={`remove-inline-ticket-status-${index}`}
                         type="button"
                         variant="ghost"
+                        size="sm"
                         onClick={() => removeManagedTicketStatus(status.temp_id)}
                         disabled={formData.ticket_statuses.length === 1}
                       >

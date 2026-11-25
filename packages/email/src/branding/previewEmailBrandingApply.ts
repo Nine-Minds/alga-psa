@@ -1,4 +1,5 @@
-import { classifyTenantTemplate } from './classifyTenantTemplate';
+import type { BrandAttributionStripOptions } from './brandAssets';
+import { classifyTenantTemplate, copiedFromSystemRowFor, type CopiedFromTemplates } from './classifyTenantTemplate';
 import { planEmailBrandingApply } from './planEmailBrandingApply';
 import type {
   BrandableSystemRow,
@@ -35,7 +36,9 @@ export interface EmailBrandingPreviewInput {
   language: string;
   /** Preview the forced rebuild instead of the palette-only pass. */
   overwrite?: boolean;
-  decorate?: (html: string) => string;
+  decorate?: (html: string, options?: BrandAttributionStripOptions) => string;
+  /** Client template name -> the template its tenant rows were copied from at a split. */
+  copiedFrom?: CopiedFromTemplates | null;
 }
 
 /**
@@ -52,20 +55,26 @@ export interface EmailBrandingPreviewInput {
  * the one input the planner can say nothing about.
  */
 export function previewEmailBrandingApply(input: EmailBrandingPreviewInput): EmailBrandingPreview | null {
-  const { systemRows, tenantRows, target, appliedPalette, name, language, overwrite, decorate } = input;
+  const { systemRows, tenantRows, target, appliedPalette, name, language, overwrite, decorate, copiedFrom } = input;
 
   const systemRow = systemRows.find((row) => row.name === name && row.language_code === language);
   if (!systemRow) return null;
 
   const tenantRow = tenantRows.find((row) => row.name === name && row.language_code === language);
   const currentHtml = tenantRow?.html_content ?? systemRow.html_content;
-  const { state } = classifyTenantTemplate({ tenantRow, systemRow, appliedPalette: appliedPalette ?? null });
+  const { state } = classifyTenantTemplate({
+    tenantRow,
+    systemRow,
+    appliedPalette: appliedPalette ?? null,
+    copiedFromSystemRow: copiedFromSystemRowFor(systemRows, copiedFrom, name, language),
+  });
 
   const plan = planEmailBrandingApply({
     systemRows,
     tenantRows,
     target,
     appliedPalette,
+    copiedFrom,
     scope: {
       names: [name],
       languages: [language],

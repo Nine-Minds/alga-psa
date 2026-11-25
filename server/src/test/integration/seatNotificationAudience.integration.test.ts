@@ -359,7 +359,8 @@ describe('audience-safe notifications for a seat technician (integration)', () =
     expect(mailTo(CLIENT_EMAIL).map(addressesOf)).toEqual([[CLIENT_EMAIL, OUTSIDER_EMAIL]]);
     const external = sent.filter(mail => addressesOf(mail).includes(SEAT_EMAIL));
     expect(external.map(addressesOf)).toEqual([[SEAT_EMAIL]]);
-    expect(external[0].template).toBe('ticket-closed');
+    // An external party gets the client template, like every other client-side recipient.
+    expect(external[0].template).toBe('ticket-closed-client');
     expect(JSON.stringify(external[0].context)).not.toContain('/msp/');
 
     // Their own client's ticket: one message of their own.
@@ -367,7 +368,8 @@ describe('audience-safe notifications for a seat technician (integration)', () =
     expect(mailTo(CLIENT_EMAIL).map(addressesOf)).toEqual([[CLIENT_EMAIL, OUTSIDER_EMAIL]]);
     const withSeat = sent.filter(mail => addressesOf(mail).includes(SEAT_EMAIL));
     expect(withSeat.map(addressesOf)).toEqual([[SEAT_EMAIL]]);
-    expect(withSeat[0].template).toBe('ticket-closed');
+    // Copied on the client's message, so it is the client rendering they are sent.
+    expect(withSeat[0].template).toBe('ticket-closed-client');
   });
 
   it('resolves a seat technician only while the ticket is in their scope', async () => {
@@ -385,10 +387,10 @@ describe('audience-safe notifications for a seat technician (integration)', () =
     expect(await resolve(otherBoard, { userId: seat })).toEqual(external);
     expect(await resolve(otherClient, { userId: seat })).toEqual(external);
     expect(recipientInScope(await resolve(inScope, { userId: seat }))).toBe(true);
-    expect(recipientRendering(await resolve(inScope, { userId: seat }))).toBe('msp');
+    expect(recipientRendering(await resolve(inScope, { userId: seat }), 'msp')).toBe('msp');
     expect(recipientInScope(await resolve(otherClient, { userId: seat }))).toBe(false);
-    expect(recipientRendering(await resolve(otherClient, { userId: seat }))).toBe('client');
-    expect(recipientRendering(await resolve(inScope, { userId: msp }))).toBe('msp');
+    expect(recipientRendering(await resolve(otherClient, { userId: seat }), 'msp')).toBe('client');
+    expect(recipientRendering(await resolve(inScope, { userId: msp }), 'msp')).toBe('msp');
     expect(await resolve(inScope, { userId: msp })).toEqual({ seat: false });
     expect(await resolve(otherClient, { email: 'someone@elsewhere.example.com' })).toEqual({ seat: false });
   });

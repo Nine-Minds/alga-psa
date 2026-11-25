@@ -14,12 +14,13 @@ import type { IClientContractLine } from '@alga-psa/types';
 import type { InvoiceViewModel } from '@alga-psa/types';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
-const isBillingActionError = (
-  value: unknown
-): value is { readonly actionError: string } | { readonly permissionError: string } =>
-  isActionMessageError(value) || isActionPermissionError(value);
+interface ClientAccountProps {
+  /** Hidden cards are never mounted, and their actions are never called. */
+  showPlanCard?: boolean;
+  showInvoicesCard?: boolean;
+}
 
-export default function ClientAccount() {
+export default function ClientAccount({ showPlanCard = true, showInvoicesCard = true }: ClientAccountProps = {}) {
   const { t: tProfile } = useTranslation('client-portal');
   const { t: tCommon } = useTranslation('common');
   const { t: tBilling } = useTranslation('features/billing');
@@ -32,6 +33,8 @@ export default function ClientAccount() {
   const [hasInvoiceAccess, setHasInvoiceAccess] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [invoiceError, setInvoiceError] = useState<string | null>(null);
+  const [planHidden, setPlanHidden] = useState(false);
+  const [invoicesHidden, setInvoicesHidden] = useState(false);
 
   // Note: Invoice amounts are stored in cents; money() takes minor units and
   // formats with the tenant's locale + currency from CurrencyFormatProvider.
@@ -62,22 +65,35 @@ export default function ClientAccount() {
       try {
         const [clientData, plan] = await Promise.all([
           getClientClient(),
-          getClientContractLine(),
+          showPlanCard ? getClientContractLine() : Promise.resolve(null),
         ]);
 
         if (!mounted) return;
         setClient(clientData);
-        if (isBillingActionError(plan)) {
+        if (isActionPermissionError(plan)) {
+          // A denial is not a message for the end user: hide the card, render nothing.
+          console.debug('ClientAccount: contract line hidden (permission denied)');
+          setPlanHidden(true);
+          setContractLine(null);
+        } else if (isActionMessageError(plan)) {
           setContractLine(null);
           setError(getErrorMessage(plan));
           return;
+        } else {
+          setContractLine(plan);
         }
-        setContractLine(plan);
 
+        if (!showInvoicesCard) return;
         try {
           const inv = await getClientInvoices();
           if (!mounted) return;
-          if (isBillingActionError(inv)) {
+          if (isActionPermissionError(inv)) {
+            console.debug('ClientAccount: invoices hidden (permission denied)');
+            setInvoicesHidden(true);
+            setInvoices([]);
+            return;
+          }
+          if (isActionMessageError(inv)) {
             setInvoices([]);
             setHasInvoiceAccess(false);
             setInvoiceError(getErrorMessage(inv));
@@ -100,7 +116,7 @@ export default function ClientAccount() {
     };
     load();
     return () => { mounted = false; };
-  }, []);
+  }, [showPlanCard, showInvoicesCard]);
 
   // const onCancelSubscription = () => {
   //   toast('Cancel subscription is not implemented yet.');
@@ -117,6 +133,12 @@ export default function ClientAccount() {
       </div>
     );
   }
+
+  const planVisible = showPlanCard && !planHidden;
+  const invoicesVisible = showInvoicesCard && !invoicesHidden;
+
+  // Every card hidden: the Account tab body is empty.
+  if (!planVisible && !invoicesVisible) return null;
 
   if (error) {
     return (
@@ -152,6 +174,7 @@ export default function ClientAccount() {
       </Card>
 
       {/* Contract Line */}
+      {planVisible && (
       <Card id="contract-line-card" className="bg-white">
         <CardHeader>
           <CardTitle>{tBilling('currentContractLine')}</CardTitle>
@@ -175,7 +198,10 @@ export default function ClientAccount() {
         </CardContent>
       </Card>
 
+      )}
+
       {/* Invoices */}
+      {invoicesVisible && (
       <Card className="bg-white">
         <CardHeader>
           <CardTitle>{tBilling('tabs.invoices')}</CardTitle>
@@ -213,6 +239,7 @@ export default function ClientAccount() {
           )}
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }

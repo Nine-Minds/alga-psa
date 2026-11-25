@@ -2,26 +2,30 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCapability } from '@alga-psa/ui/hooks';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { ClientCoManagedIntegrationProps, ClientCoManagedSlots } from '@alga-psa/clients/context/ClientCrossFeatureContext';
 import { getCoManagedClientManagement, getCoManagedPurchaseState } from '@/lib/actions/coManagedActions';
-import CoManagedClientSummary from './CoManagedClientSummary';
 import CoManagedClientView from './CoManagedClientView';
 import { getCoManagedSeatClientState } from '@/lib/actions/coManagedSeatActions';
 import CoManagedSeatClientView, { type CoManagedSeatClientState } from './CoManagedSeatClientView';
-import CoManagedSeatSummary from './CoManagedSeatSummary';
+import { hasSeatTrialRecoveryAction } from '@enterprise/lib/actions/coManagedSeatTrialRecovery';
+import CoManagedSeatTrial from '@enterprise/components/co-managed/CoManagedSeatTrial';
 import CoManagedShapeChooser from './CoManagedShapeChooser';
+import { useSeatTrialOffer } from './useSeatTrialOffer';
+import { workspaceSetupOpen } from '@/lib/co-managed/clientRelationshipSummary';
+import { resolveSeatEnableStory } from '@/lib/co-managed/seatEnableStory';
 
 type View = Awaited<ReturnType<typeof getCoManagedClientManagement>>;
 
 /**
  * App-owned co-managed integration for the client record. It owns capability
- * admission and the shared refresh state behind the summary and the co-managed
- * tab. When the capability does not admit this tenant it renders the ordinary
- * client with no feature slots and starts no feature read.
+ * admission and the shared refresh state behind the co-managed tab. When the
+ * capability does not admit this tenant it renders the ordinary client with no
+ * feature slots and starts no feature read.
  */
-export default function ClientCoManagedIntegration({ clientId, clientName, idPrefix, relationshipId, onOpenTab, children }: ClientCoManagedIntegrationProps) {
+export default function ClientCoManagedIntegration({ clientId, clientName, idPrefix, relationshipId, children }: ClientCoManagedIntegrationProps) {
   const { t } = useTranslation('msp/licensing');
+  const { formatDate } = useFormatters();
   const { admitted } = useCapability('co-managed');
   // The seat shape is a second capability. With it closed nothing below reads or renders seat state.
   const seatCapability = useCapability('co-managed-seat');
@@ -31,6 +35,16 @@ export default function ClientCoManagedIntegration({ clientId, clientName, idPre
   const seatOpen = seatCapability.enabled || seatCapability.admitted;
   const [seatState, setSeatState] = useState<CoManagedSeatClientState | null>(null);
   const seatGeneration = useRef(0);
+  // One read of the seat trial offer feeds both the trial card and the Enable chooser, so they tell one story.
+  const { offer: trialOffer, loading: trialLoading, reload: reloadTrial, story: trialStory } = useSeatTrialOffer(clientId);
+  const [recoveryClient, setRecoveryClient] = useState<string>();
+  useEffect(() => {
+    let current = true;
+    if (!seatOpen) void hasSeatTrialRecoveryAction(clientId).then(open => {
+      if (current) setRecoveryClient(open ? clientId : undefined);
+    }).catch(() => { if (current) setRecoveryClient(undefined); });
+    return () => { current = false; };
+  }, [clientId, seatOpen]);
   const [view, setView] = useState<View | null>(null);
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [selectedRelationshipId, setSelectedRelationshipId] = useState<string | null>(relationshipId ?? null);
@@ -128,14 +142,25 @@ export default function ClientCoManagedIntegration({ clientId, clientName, idPre
   const workspaceReady = admitted && status === 'ready' && view !== null;
   // Seat state may not be there yet or may be unreadable; then the client renders as it always has.
   const seat = seatOpen ? seatState : null;
-  if (!workspaceReady && !seat) return <>{children(null)}</>;
+
 
   const enable = seat?.enable ?? null;
-  const chooser = enable ? (workspace: React.ReactNode) => (
+  // Held back until the trial read settles, so a trial never shows as a red blocker first and a neutral note after.
+  const trialEnds = trialStory === 'active' && trialOffer?.pilot?.deadline ? formatDate(new Date(trialOffer.pilot.deadline)) : undefined;
+  const story = enable && !trialLoading
+    ? resolveSeatEnableStory({ enable, trial: trialStory, purchaseOpen, workspaceOffered: true }) : null;
+  const trial = <CoManagedSeatTrial key={clientId} offer={trialOffer} onReload={reloadTrial} clientId={clientId} onChanged={reloadAll} />;
+  // When the trial is how Seat is enabled, the Seat option opens the trial card, so the tab shows it there and not twice.
+  const showsChooser = Boolean(seat && !seat.panel && (!workspaceReady || (view !== null && workspaceSetupOpen(view))));
+  const trialInChooser = story?.seatLeadsTo === 'trial' && showsChooser;
+  const chooser = enable && story ? (workspace: React.ReactNode) => (
     <CoManagedShapeChooser clientId={clientId} idPrefix={idPrefix} enable={enable} workspaceSetup={workspace} purchaseOpen={purchaseOpen}
+      story={story} trialEnds={trialEnds}
+      seatTrial={trialInChooser ? trial : undefined}
       onEnabled={reloadAll} onDirtyChange={(dirty) => { dirtyRef.current = dirty; }} />
   ) : null;
-
+  const heading = story?.heading ?? 'notEnabled';
+  const topTrial = trialInChooser ? null : trial;
   const tabLabel = t('coManaged.client.tab', { defaultValue: 'Co-managed IT' });
   const tabBase = {
     id: 'co-managed',
@@ -144,27 +169,24 @@ export default function ClientCoManagedIntegration({ clientId, clientName, idPre
     onDiscardUnsavedChanges: () => { dirtyRef.current = false; setResetKey((key) => key + 1); },
   };
   if (!workspaceReady || !view) {
-    if (!seat) return <>{children(null)}</>;
+    if (!seat) return <>{children(recoveryClient === clientId
+      ? { tab: { ...tabBase, content: trial } } : null)}</>;
     // Seat-only: the workspace side is not open for this tenant, so the tab is the seat panel or chooser.
     const slots: ClientCoManagedSlots = {
-      summary: <CoManagedSeatSummary state={seat} idPrefix={idPrefix} onOpenTab={onOpenTab} />,
-      tab: { ...tabBase, content: (
-        <CoManagedSeatClientView key={resetKey} state={seat} clientName={clientName} idPrefix={idPrefix} onReload={reloadAll}>
+      tab: { ...tabBase, content: (<>
+        {topTrial}
+        <CoManagedSeatClientView key={resetKey} state={seat} clientName={clientName} idPrefix={idPrefix} onReload={reloadAll} notEnabledHeading={heading}>
           {chooser?.(null)}
-        </CoManagedSeatClientView>) },
+        </CoManagedSeatClientView></>) },
     };
     return <>{children(slots)}</>;
   }
 
   const slots: ClientCoManagedSlots = {
-    summary: seat?.panel
-      ? <CoManagedSeatSummary state={seat} idPrefix={idPrefix} onOpenTab={onOpenTab} />
-      : <CoManagedClientSummary view={view} clientId={clientId} idPrefix={idPrefix}
-        selectedRelationshipId={selectedRelationshipId} onSelectRelationship={selectRelationship} onOpenTab={onOpenTab} />,
     tab: {
       ...tabBase,
-      content: seat?.panel ? (
-        <CoManagedSeatClientView key={resetKey} state={seat} clientName={clientName} idPrefix={idPrefix} onReload={reloadAll} />
+      content: <>{topTrial}{seat?.panel ? (
+        <CoManagedSeatClientView key={resetKey} state={seat} clientName={clientName} idPrefix={idPrefix} onReload={reloadAll} notEnabledHeading={heading} />
       ) : (
         <CoManagedClientView
           view={view}
@@ -177,8 +199,9 @@ export default function ClientCoManagedIntegration({ clientId, clientName, idPre
           resetKey={resetKey}
           onDirtyChange={(dirty) => { dirtyRef.current = dirty; }}
           renderSetup={chooser ?? undefined}
+          notEnabledHeading={heading}
         />
-      ),
+      )}</>,
     },
   };
   return <>{children(slots)}</>;

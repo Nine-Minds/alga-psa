@@ -33,10 +33,8 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
 }));
 // Presentational seat children are stood in for by markers; the gate under test is above them.
 vi.mock('@/components/co-managed/CoManagedSeatClientView', () => ({ default: ({ children }: any) => <div>seat-tab-body{children}</div> }));
-vi.mock('@/components/co-managed/CoManagedSeatSummary', () => ({ default: () => <div>seat-summary</div> }));
 vi.mock('@/components/co-managed/CoManagedShapeChooser', () => ({ default: () => <div>seat-shape-chooser</div> }));
 vi.mock('@/components/co-managed/CoManagedClientView', () => ({ default: () => <div>workspace-tab</div> }));
-vi.mock('@/components/co-managed/CoManagedClientSummary', () => ({ default: () => <div>workspace-summary</div> }));
 vi.mock('@/components/co-managed/CoManagedCombinedOverview', () => ({ default: () => <div>seat-overview-rows</div> }));
 
 import Integration from '@/components/co-managed/CoManagedClientIntegration';
@@ -66,21 +64,20 @@ describe('client co-managed tab', () => {
   const mount = (flags: Record<string, boolean | string>) => {
     const Wrapper = withBootstrap(flags);
     return render(<Wrapper><Integration clientId="client-1" clientName="Acme" idPrefix="t"
-      children={(slots: any) => <div>{slots ? <>{slots.summary}{slots.tab.content}</> : 'ordinary-client'}</div>} /></Wrapper>);
+      children={(slots: any) => <div>{slots ? slots.tab.content : 'ordinary-client'}</div>} /></Wrapper>);
   };
 
-  it('seat capability off (release flag off): no seat tab content, summary or chooser, and no seat read', async () => {
+  it('seat capability off (release flag off): no seat tab content or chooser, and no seat read', async () => {
     mount(OFF);
     expect(screen.getByText('ordinary-client')).toBeInTheDocument();
     await new Promise((r) => setTimeout(r, 0));
-    for (const marker of ['seat-tab-body', 'seat-summary', 'seat-shape-chooser']) expect(screen.queryByText(marker)).not.toBeInTheDocument();
+    for (const marker of ['seat-tab-body', 'seat-shape-chooser']) expect(screen.queryByText(marker)).not.toBeInTheDocument();
     noSeatCalls();
   });
 
-  it('seat capability on: the seat summary and tab content appear and the seat state is read', async () => {
+  it('seat capability on: the seat tab content appears and the seat state is read', async () => {
     mount(SEAT_ON);
-    await waitFor(() => expect(screen.getByText('seat-summary')).toBeInTheDocument());
-    expect(screen.getByText('seat-tab-body')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('seat-tab-body')).toBeInTheDocument());
     expect(seatActions.clientState).toHaveBeenCalledWith('client-1');
   });
 

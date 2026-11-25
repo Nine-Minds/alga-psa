@@ -7,20 +7,23 @@ const workerPaths = loadConfig(path.join(__dirname, 'tsconfig.json'));
 if (workerPaths.resultType !== 'success') throw new Error(`Cannot load worker source paths: ${workerPaths.message}`);
 const matchWorkspacePath = createMatchPath(workerPaths.absoluteBaseUrl, workerPaths.paths, ['main'], false);
 
-// @alga-psa/db publishes subpaths that do not mirror its source tree
-// (./tenantDb -> src/lib/tenantDb.ts), so derive each subpath's source from the
-// package's own exports map. The `.js` specifier form used by runtime code is
-// accepted too. Anything not exported falls through to the src/ mirror below.
-const dbPackageRoot = path.resolve(__dirname, '../../packages/db');
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-export const dbSubpathSourceAliases = Object.entries(
-  JSON.parse(fs.readFileSync(path.join(dbPackageRoot, 'package.json'), 'utf8')).exports as Record<string, { types?: string }>,
+// Workspace packages may publish subpaths whose names do not mirror their
+// source tree. Derive source aliases from each package's exports map, accepting
+// the `.js` specifier form used by runtime code as well as the bare form.
+const packageSubpathSourceAliases = (packageName: string, packageRoot: string) => Object.entries(
+  JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8')).exports as Record<string, { types?: string }>,
 )
   .filter(([subpath, target]) => subpath.startsWith('./') && !subpath.includes('*') && target.types?.endsWith('.ts'))
   .map(([subpath, target]) => ({
-    find: new RegExp(`^@alga-psa/db/${escapeRegExp(subpath.slice(2))}(\\.js)?$`),
-    replacement: path.join(dbPackageRoot, target.types as string),
+    find: new RegExp(`^${escapeRegExp(packageName)}/${escapeRegExp(subpath.slice(2))}(\\.js)?$`),
+    replacement: path.join(packageRoot, target.types as string),
   }));
+
+const corePackageRoot = path.resolve(__dirname, '../../packages/core');
+const dbPackageRoot = path.resolve(__dirname, '../../packages/db');
+export const coreSubpathSourceAliases = packageSubpathSourceAliases('@alga-psa/core', corePackageRoot);
+export const dbSubpathSourceAliases = packageSubpathSourceAliases('@alga-psa/db', dbPackageRoot);
 
 export default defineConfig({
   // Keep the worker's workspace source mappings in sync with its build. Explicit
@@ -79,7 +82,11 @@ export default defineConfig({
       { find: /^@alga-psa\/notifications\/notifications\/email$/, replacement: path.resolve(__dirname, '../../packages/notifications/src/notifications/email.ts') },
       { find: /^@alga-psa\/notifications\/notifications\/emailLocaleResolver$/, replacement: path.resolve(__dirname, '../../packages/notifications/src/notifications/emailLocaleResolver.ts') },
       { find: /^@alga-psa\/notifications\/(.*)$/, replacement: `${path.resolve(__dirname, './src/typings/notifications')}/$1` },
-      { find: '@/lib/db', replacement: path.resolve(__dirname, '../server/src/lib/db.ts') },
+      { find: /^@\/lib\/db$/, replacement: path.resolve(__dirname, '../server/src/lib/db.ts') },
+      // The worker tsconfig maps @/lib/* to the shared server source tree.
+      // Keep this more-specific than the worker-local @/* mapping so server
+      // modules that use @/lib imports resolve to their own dependencies.
+      { find: /^@\/lib\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/lib')}/$1` },
       // Match the worker tsconfig's enterprise email-domain entry point.
       { find: '@alga-psa/integrations/email/domains/entry', replacement: path.resolve(__dirname, '../../packages/integrations/src/email/domains/ee/entry.ts') },
       // tsconfig maps @ee/* → ../server/src/*; mirror it here (strip the ESM .js suffix to hit the .ts source)
@@ -131,6 +138,7 @@ export default defineConfig({
       { find: /^@alga-psa\/core\/logger$/, replacement: path.resolve(__dirname, '../../packages/core/src/lib/logger.ts') },
       { find: /^@alga-psa\/core\/encryption$/, replacement: path.resolve(__dirname, '../../packages/core/src/lib/encryption.ts') },
       { find: /^@alga-psa\/core\/jobRunnerAccessor$/, replacement: path.resolve(__dirname, '../../packages/core/src/lib/jobRunnerAccessor.ts') },
+      ...coreSubpathSourceAliases,
       { find: /^@alga-psa\/core\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/core/src')}/$1` },
       { find: /^@alga-psa\/marketing$/, replacement: path.resolve(__dirname, '../../packages/marketing/src/index.ts') },
       { find: /^@alga-psa\/marketing\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/marketing/src')}/$1` },

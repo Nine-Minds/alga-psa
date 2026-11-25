@@ -1,4 +1,5 @@
 import { InboundRetryLaterError, isInboundRetryLaterError } from './inboundRetryLaterError';
+import { countNonInlineAttachments } from './countNonInlineAttachments';
 import { classifyReplyToken, coManagedDeliverySeam, coManagedInboundCommentSeam, coManagedInboundOperationId, parseCm2Metadata } from '../../lib/coManagedDelivery';
 import { resolveCommentAudienceForRead, type CommentAudience } from '../../lib/commentAudience';
 import { readNotificationAudience, resolveInboundReplyAudience } from '../../lib/notificationAudience';
@@ -10,6 +11,7 @@ import type { InboundEmailExecutionOptions } from '../../workflow/actions/emailW
 import { createHash, randomUUID } from 'node:crypto';
 import { ticketStatusClockPatch } from '../../lib/ticketStatusClock';
 import { extractEmailDomain, normalizeEmailAddress } from '../../lib/email/addressUtils';
+import { analyzeForwardedSender, isForwardedSenderResolutionEnabled } from '../../lib/email/forwardedMessage';
 import {
   detectAutomatedInboundMessage,
   extractRelevantInboundHeaders,
@@ -40,6 +42,10 @@ import { evaluateInboundEmailRules } from './inboundEmailRules';
 import { normalizeRfc822MessageId, rfcMessageIdLookupForms } from './inboundEmailIdentity';
 import { captureTicketTransitionSnapshot, publishTicketTransitionsAfterCommit } from '../../lib/tickets/ticketLifecycleEvents';
 import { withTenantAdminTransaction } from './tenantAdminTransaction';
+import { QUARANTINE_REASONS, surfaceInboundQuarantine, type QuarantineReason } from './inboundQuarantine';
+
+export { QUARANTINE_REASONS };
+export type { QuarantineReason };
 import { associateAssetWithTicket } from '../assets/assetTicketAssociation';
 import {
   detectOutboundNotificationLoop,
@@ -209,7 +215,7 @@ type ProcessInboundEmailInAppBaseResult =
     }
   | {
       outcome: 'quarantined';
-      reason: 'unauthorized_thread_header_sender' | 'co_managed_token_refused' | 'co_managed_token_unserved' | 'co_managed_sender_unauthenticated' | 'reply_outside_sender_audience';
+      reason: QuarantineReason;
       ticketId: string;
       matchedBy: 'thread_headers' | 'reply_token';
     };
@@ -802,69 +808,120 @@ async function resolveReplyTargetFromCommentThread(params: {
   });
 }
 
-export async function resolveReplyTargetFromOutboundMessageId(params: {
-  tenantId: string;
-  rfcMessageId: string;
-}): Promise<{ ticketId: string; threadId: string | null; parentCommentId: string | null } | null> {
-  const normalizedMessageId = params.rfcMessageId.trim();
-  if (!normalizedMessageId) {
-    return null;
-  }
+type OutboundLogRow = { threadId: string | null; entityType: string | null; entityId: string | null };
+type ReplyTarget = { ticketId: string; threadId: string | null; parentCommentId: string | null };
 
-  const row = await withTenantAdminTransaction(params.tenantId, async (_trx: any, db: any) => {
-    return db.table('email_sending_logs')
-      .select('comment_thread_id as threadId', 'entity_type as entityType', 'entity_id as entityId')
-      .where({ rfc_message_id: normalizedMessageId })
-      .orderBy('created_at', 'desc')
-      .first();
+// LEVERAGE: friction rfc-lookup-forms-bracketed — rfcMessageIdLookupForms yields bare + raw forms, but
+// email_sending_logs stores the bracketed header value, so callers re-derive the bracketed variant.
+function outboundLookupForms(rfcMessageId: string): string[] {
+  return Array.from(
+    new Set(rfcMessageIdLookupForms(rfcMessageId).flatMap((form) => (form.startsWith('<') ? [form] : [form, `<${form}>`])))
+  );
+}
+
+/** Cap on Message-IDs resolved per inbound email (newest kept); bounds the IN lists. */
+const MAX_OUTBOUND_LOOKUP_IDS = 50;
+
+/**
+ * Predicate matching a log row by either id a reply can name: the on-wire id (rfc_message_id, index
+ * idx_email_sending_logs_tenant_rfc_message) or the id we generated before the provider replaced it
+ * (metadata.generatedRfcMessageId, kept for References already sent to customers; index
+ * idx_email_sending_logs_tenant_generated_rfc_message, so the second branch must stay that index's exact
+ * expression and partial predicate). Wrapped in parentheses so the OR stays inside the tenant filter.
+ */
+const OUTBOUND_MESSAGE_ID_MATCH_SQL =
+  "(rfc_message_id = ANY(?) OR ((metadata->>'generatedRfcMessageId') IS NOT NULL AND (metadata->>'generatedRfcMessageId') = ANY(?)))";
+
+/**
+ * Find the email_sending_logs row for each Message-ID (same index as input; null = no match) with ONE
+ * tenant-scoped statement regardless of how many ids are given (both indexes combine as a bitmap OR).
+ * Per id an on-wire match wins over a generated-id match; within each kind the newest row wins.
+ * Old generated ids stored with an upper-case domain are not matched.
+ */
+async function findOutboundLogRowsForMessageIds(
+  tenantId: string,
+  messageIds: string[]
+): Promise<Array<OutboundLogRow | null>> {
+  const formsById = messageIds.map((id) => outboundLookupForms(id));
+  const result: Array<OutboundLogRow | null> = messageIds.map(() => null);
+  const allForms = Array.from(new Set(formsById.flat()));
+  if (allForms.length === 0) return result;
+
+  const toRow = (r: any): OutboundLogRow => ({ threadId: r.threadId ?? null, entityType: r.entityType ?? null, entityId: r.entityId ?? null });
+  const generatedIdOf = (r: any): unknown => {
+    let meta = r.metadata;
+    if (typeof meta === 'string') {
+      try { meta = JSON.parse(meta); } catch { meta = null; }
+    }
+    return meta?.generatedRfcMessageId;
+  };
+
+  const rows: any[] = await withTenantAdminTransaction(tenantId, async (_trx: any, db: any) => {
+    const found = await db.table('email_sending_logs')
+      .select('rfc_message_id', 'metadata', 'comment_thread_id as threadId', 'entity_type as entityType', 'entity_id as entityId')
+      .whereRaw(OUTBOUND_MESSAGE_ID_MATCH_SQL, [allForms, allForms])
+      .orderBy('created_at', 'desc');
+    return Array.isArray(found) ? found : [];
   });
 
-  if (!row) {
-    return null;
-  }
+  // Rows are newest first, so the first row seen for an id is the newest one.
+  formsById.forEach((forms, index) => {
+    const hit = rows.find((r) => forms.includes(r.rfc_message_id))
+      ?? rows.find((r) => forms.includes(generatedIdOf(r) as string));
+    if (hit) result[index] = toRow(hit);
+  });
+  return result;
+}
 
+async function resolveReplyTargetFromOutboundLogRow(tenantId: string, row: OutboundLogRow): Promise<ReplyTarget | null> {
   // Comment-thread match: resolve to the latest comment in the thread.
   if (row.threadId) {
-    return resolveReplyTargetFromCommentThread({
-      tenantId: params.tenantId,
-      threadId: row.threadId,
-    });
+    return resolveReplyTargetFromCommentThread({ tenantId, threadId: row.threadId });
   }
 
   // Ticket-scoped match: a reply to any non-comment ticket notification
   // (created/updated/closed/assigned). Append at ticket level, no parent comment.
   if (row.entityType === 'ticket' && row.entityId) {
-    const ticketExists = await withTenantAdminTransaction(params.tenantId, async (_trx: any, db: any) => {
+    const entityId = row.entityId;
+    const ticketExists = await withTenantAdminTransaction(tenantId, async (_trx: any, db: any) => {
       return db.table('tickets')
-        .where({ ticket_id: row.entityId })
+        .where({ ticket_id: entityId })
         .first('ticket_id');
     });
     if (ticketExists?.ticket_id) {
-      return { ticketId: row.entityId, threadId: null, parentCommentId: null };
+      return { ticketId: entityId, threadId: null, parentCommentId: null };
     }
   }
 
   return null;
 }
 
+export async function resolveReplyTargetFromOutboundMessageId(params: {
+  tenantId: string;
+  rfcMessageId: string;
+}): Promise<ReplyTarget | null> {
+  const [row] = await findOutboundLogRowsForMessageIds(params.tenantId, [params.rfcMessageId]);
+  return row ? resolveReplyTargetFromOutboundLogRow(params.tenantId, row) : null;
+}
+
 async function resolveReplyTargetFromReferences(params: {
   tenantId: string;
   references?: string[];
-}): Promise<{ ticketId: string; threadId: string | null; parentCommentId: string | null } | null> {
+}): Promise<ReplyTarget | null> {
   const references = (params.references ?? [])
     .map((value) => value.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .slice(-MAX_OUTBOUND_LOOKUP_IDS);
+  if (references.length === 0) return null;
 
+  // One batched lookup for the whole chain, then prefer the newest reference that resolves.
+  const rows = await findOutboundLogRowsForMessageIds(params.tenantId, references);
   for (let index = references.length - 1; index >= 0; index -= 1) {
-    const target = await resolveReplyTargetFromOutboundMessageId({
-      tenantId: params.tenantId,
-      rfcMessageId: references[index],
-    });
-    if (target) {
-      return target;
-    }
+    const row = rows[index];
+    if (!row) continue;
+    const target = await resolveReplyTargetFromOutboundLogRow(params.tenantId, row);
+    if (target) return target;
   }
-
   return null;
 }
 
@@ -1320,6 +1377,48 @@ export async function processInboundEmailInApp(
     }
   };
 
+  /**
+   * THE choke point for every quarantined return. Builds the result, marks the
+   * diagnostics, keeps the `security_event` log, and surfaces the quarantine
+   * (durable row + best-effort admin notification). Surfacing never throws and
+   * never changes the outcome. No site may build a quarantined result
+   * without going through here.
+   */
+  const quarantined = async (params: {
+    reason: QuarantineReason;
+    ticketId: string;
+    matchedBy: 'thread_headers' | 'reply_token';
+    /** Overrides the generic security log line for sites that already had a specific one. */
+    securityEvent?: { name: string; details: Record<string, unknown> };
+  }): Promise<ProcessInboundEmailInAppResult> => {
+    if (diagnostics) diagnostics.threading.failureReason = 'quarantined';
+    console.warn(`security_event: ${params.securityEvent?.name ?? 'inbound_quarantined'}`, params.securityEvent?.details ?? {
+      tenantId,
+      providerId,
+      ticketId: params.ticketId,
+      emailId: emailData.id,
+      reason: params.reason,
+      matchedBy: params.matchedBy,
+    });
+    await surfaceInboundQuarantine({
+      tenant: tenantId,
+      providerId,
+      messageId: emailData.id,
+      sender: senderEmail ?? emailData.from?.email ?? null,
+      subject: emailData.subject ?? null,
+      receivedAt: emailData.receivedAt ?? null,
+      reason: params.reason,
+      matchedBy: params.matchedBy,
+      ticketId: params.ticketId,
+    });
+    return withDiagnostics({
+      outcome: 'quarantined',
+      reason: params.reason,
+      ticketId: params.ticketId,
+      matchedBy: params.matchedBy,
+    }, diagnostics);
+  };
+
   let rerouteToNewTicket = false;
   let rerouteReasonMetadata: InboundReplyDecisionMetadata | null = null;
 
@@ -1348,13 +1447,11 @@ export async function processInboundEmailInApp(
       || matchedSenderContact.user_type === 'internal'
       || matchedSenderContact.is_inactive !== false
     )) {
-      if (diagnostics) diagnostics.threading.failureReason = 'quarantined';
-      return withDiagnostics({
-        outcome: 'quarantined',
+      return quarantined({
         reason: 'co_managed_token_refused',
         ticketId: params.ticketId,
         matchedBy: params.matchedBy,
-      }, diagnostics);
+      });
     }
     const existingCommentId = await findExistingEmailComment({
       tenantId,
@@ -1389,27 +1486,44 @@ export async function processInboundEmailInApp(
     const matchedSenderIsInternalUser = senderContact?.user_type === 'internal';
     const matchedSenderContactId = senderContact?.contact_id || undefined;
     const senderKind = matchedSenderIsInternalUser ? 'internal' : 'client';
+    if (matchedSenderIsInternalUser && isForwardedSenderResolutionEnabled()) {
+      // Observability only: forwards into an existing thread keep the thread's client.
+      try {
+        const forwarded = await analyzeForwardedSender({
+          headers: emailData.headers,
+          text: emailData.body?.text,
+          html: emailData.body?.html,
+          attachments: emailData.attachments,
+        });
+        if (forwarded.status !== 'none') {
+          console.info('inbound_email_forwarded_sender_not_applied', {
+            tenantId, providerId, emailId: emailData.id, reason: 'thread-path',
+          });
+        }
+      } catch {
+        // log-only; never affects the reply path
+      }
+    }
 
     // Reply audience (S33). A seat technician's reply keeps the audience of the notification it
     // answers; out of scope they are an external party, so it is stored as `requester`. A token that recorded a narrower
     // audience than `requester` was sent to a seat technician, so a reply to it from a sender
     // not attributed to an internal user is refused rather than retargeted to a public thread.
-    const refuseReplyOutsideAudience = () => {
-      console.warn('security_event: inbound_reply_outside_sender_audience', {
-        tenantId,
-        providerId,
-        ticketId: params.ticketId,
-        emailId: emailData.id,
-        matchedBy: params.matchedBy,
-      });
-      if (diagnostics) diagnostics.threading.failureReason = 'quarantined';
-      return withDiagnostics({
-        outcome: 'quarantined' as const,
-        reason: 'reply_outside_sender_audience' as const,
-        ticketId: params.ticketId,
-        matchedBy: params.matchedBy,
-      }, diagnostics);
-    };
+    const refuseReplyOutsideAudience = () => quarantined({
+      reason: 'reply_outside_sender_audience',
+      ticketId: params.ticketId,
+      matchedBy: params.matchedBy,
+      securityEvent: {
+        name: 'inbound_reply_outside_sender_audience',
+        details: {
+          tenantId,
+          providerId,
+          ticketId: params.ticketId,
+          emailId: emailData.id,
+          matchedBy: params.matchedBy,
+        },
+      },
+    });
     const replyAudience = matchedSenderIsInternalUser && senderContact?.user_id
       ? await withTenantAdminTransaction(tenantId, async (trx: any) => resolveInboundReplyAudience(trx, tenantId, {
           ticketId: params.ticketId,
@@ -1489,33 +1603,32 @@ export async function processInboundEmailInApp(
         // Keep this a structured security log rather than creating a ticket by default.
         // Operations can route this event through their log/audit pipeline without giving
         // an untrusted sender another ticket-creation side effect.
-        console.warn('security_event: inbound_thread_header_sender_quarantined', {
-          tenantId,
-          providerId,
-          ticketId: params.ticketId,
-          senderEmail: senderEmail ?? null,
-          matchedMessageId: emailData.inReplyTo ?? emailData.references?.at(-1) ?? null,
-          emailId: emailData.id,
-          matchedContactId: matchedSenderContactId ?? null,
-          ticketClientId: policyContext?.clientId ?? null,
-          authorization: {
-            senderIsTicketClientContact,
-            senderIsInternalUser: Boolean(matchedSenderIsInternalUser),
-            senderIsActiveWatcher,
-            senderIsOneOffRecipient,
-          },
-          securityBoardTicketHookEnabled:
-            process.env.INBOUND_THREAD_HEADER_QUARANTINE_CREATE_SECURITY_TICKET === 'true',
-        });
-        if (diagnostics) {
-          diagnostics.threading.failureReason = 'quarantined';
-        }
-        return withDiagnostics({
-          outcome: 'quarantined',
+        return quarantined({
           reason: 'unauthorized_thread_header_sender',
           ticketId: params.ticketId,
           matchedBy: 'thread_headers',
-        }, diagnostics);
+          securityEvent: {
+            name: 'inbound_thread_header_sender_quarantined',
+            details: {
+              tenantId,
+              providerId,
+              ticketId: params.ticketId,
+              senderEmail: senderEmail ?? null,
+              matchedMessageId: emailData.inReplyTo ?? emailData.references?.at(-1) ?? null,
+              emailId: emailData.id,
+              matchedContactId: matchedSenderContactId ?? null,
+              ticketClientId: policyContext?.clientId ?? null,
+              authorization: {
+                senderIsTicketClientContact,
+                senderIsInternalUser: Boolean(matchedSenderIsInternalUser),
+                senderIsActiveWatcher,
+                senderIsOneOffRecipient,
+              },
+              securityBoardTicketHookEnabled:
+                process.env.INBOUND_THREAD_HEADER_QUARANTINE_CREATE_SECURITY_TICKET === 'true',
+            },
+          },
+        });
       }
     }
 
@@ -1809,13 +1922,11 @@ export async function processInboundEmailInApp(
       if (match?.ticketId && match.expiryValid === false && tokenClass === 'cm2') {
         // A known expired cm2 bearer credential is terminal. Do this
         // before admission fallbacks, thread-header matching, or ticket creation.
-        if (diagnostics) diagnostics.threading.failureReason = 'quarantined';
-        return withDiagnostics({
-          outcome: 'quarantined',
+        return await quarantined({
           reason: 'co_managed_token_refused',
           ticketId: match.ticketId,
           matchedBy: 'reply_token',
-        }, diagnostics);
+        });
       }
       // CM L5 admission hook: the prefix check is a string compare, so a native (psa) token costs
       // 0 extra statements. Only cm1:/cm2: tokens consult the delivery seam, and a refusal happens
@@ -1849,13 +1960,14 @@ export async function processInboundEmailInApp(
           if (!verdict.served && !(await cmTokenIsRequesterThread(tenantId, match.metadata))) {
             // Genuinely not served and the token points at a shared_it / organization_private thread:
             // the native writer cannot take it. Terminal, visible, no write.
-            if (diagnostics) diagnostics.threading.failureReason = 'co_managed_token_unserved';
-            return withDiagnostics({
-              outcome: 'quarantined',
+            const result = await quarantined({
               reason: 'co_managed_token_unserved',
               ticketId: match.ticketId,
               matchedBy: 'reply_token',
-            }, diagnostics);
+            });
+            // Keep the more specific failure reason this site has always reported.
+            if (diagnostics) diagnostics.threading.failureReason = 'co_managed_token_unserved';
+            return result;
           }
         }
         // Not served, requester-thread token: the token is inert and thread headers decide (native writer).
@@ -1880,13 +1992,11 @@ export async function processInboundEmailInApp(
               });
             }
           }
-          if (diagnostics) diagnostics.threading.failureReason = 'quarantined';
-          return withDiagnostics({
-            outcome: 'quarantined',
+          return await quarantined({
             reason: admission.reason === 'sender_unauthenticated' ? 'co_managed_sender_unauthenticated' : 'co_managed_token_refused',
             ticketId: match.ticketId,
             matchedBy: 'reply_token',
-          }, diagnostics);
+          });
         }
         if (admission && admission.admitted === true && admission.actor) {
           // shared_it / organization_private reply: written through L4a's writer as the verified
@@ -1925,8 +2035,7 @@ export async function processInboundEmailInApp(
           ? admission.requesterClientId
           : undefined;
         if (admission?.admitted === true && admission.audience === 'requester' && (!authorizedRequesterContactId || !authorizedRequesterClientId)) {
-          if (diagnostics) diagnostics.threading.failureReason = 'quarantined';
-          return withDiagnostics({ outcome: 'quarantined', reason: 'co_managed_token_refused', ticketId: admission.ticketId, matchedBy: 'reply_token' }, diagnostics);
+          return await quarantined({ reason: 'co_managed_token_refused', ticketId: admission.ticketId, matchedBy: 'reply_token' });
         }
       }
       if (match?.ticketId && !tokenInert) {
@@ -2130,6 +2239,64 @@ export async function processInboundEmailInApp(
     defaultClientId: ruleAssignedClientId ?? providerDefaults?.client_id ?? null,
   });
 
+  // Forwarded-sender attribution. `authorContact` is the forwarder: an authenticated internal user
+  // who stays the author of the ticket's first comment. `destinationContact` is the client-side
+  // contact recovered from the forwarded content; it only chooses the ticket's client/contact.
+  // They must stay separate: the recovered address is unauthenticated text, so it may select a
+  // destination but must never supply an identity or authorship.
+  const authorContact = matchedSenderContact;
+  let destinationContact: NonNullable<typeof matchedSenderContact> | null = null;
+  if (authorContact?.user_type === 'internal' && isForwardedSenderResolutionEnabled()) {
+    const logNotApplied = (reason: string, extra: Record<string, unknown> = {}) =>
+      console.info('inbound_email_forwarded_sender_not_applied', {
+        tenantId, providerId, emailId: emailData.id, reason, ...extra,
+      });
+    try {
+      const forwarded = await analyzeForwardedSender({
+        headers: emailData.headers,
+        text: emailData.body?.text,
+        html: emailData.body?.html,
+        attachments: emailData.attachments,
+      });
+      if (forwarded.status === 'not-applied') {
+        logNotApplied(forwarded.reason);
+      } else if (forwarded.status === 'attributed') {
+        if (ruleAssignedClientId) {
+          logNotApplied('rule-assigned-client', { source: forwarded.source });
+        } else {
+          const candidate = await findContactByEmail(forwarded.sender.email, tenantId, {
+            defaultClientId: providerDefaults?.client_id ?? null,
+          });
+          if (!candidate) {
+            logNotApplied('no-contact-match', { source: forwarded.source });
+          } else if (candidate.user_type === 'internal') {
+            // A forward may hand the app a contact, never an identity.
+            logNotApplied('internal-match', { source: forwarded.source });
+          } else if (!candidate.contact_id || !candidate.client_id) {
+            logNotApplied('no-contact-match', { source: forwarded.source });
+          } else {
+            destinationContact = candidate;
+            console.info('inbound_email_forwarded_sender_attributed', {
+              tenantId,
+              providerId,
+              emailId: emailData.id,
+              source: forwarded.source,
+              original_contact_id: candidate.contact_id,
+              client_id: candidate.client_id,
+              forwarder_user_id: authorContact.user_id ?? null,
+            });
+          }
+        }
+      }
+    } catch (error) {
+      // Attribution is an enhancement: failing to read the forward falls back to today's behaviour.
+      console.warn('processInboundEmailInApp: forwarded sender detection failed (continuing)', {
+        tenantId, providerId, emailId: emailData.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   let domainMatchedClientId: string | null = null;
   let domainAutoCreateContacts = false;
   let domainMatchedContactId: string | null = null;
@@ -2147,6 +2314,10 @@ export async function processInboundEmailInApp(
 
   const matchedSenderClientId = matchedSenderContact?.client_id || undefined;
   const matchedSenderContactId = matchedSenderContact?.contact_id || undefined;
+  // Routing identity: the forwarded contact when attribution applied, else the sender's own match.
+  // Authorship below keeps using matchedSenderContact (the forwarder), never these.
+  const routingClientId = destinationContact?.client_id || matchedSenderClientId;
+  const routingContactId = destinationContact?.contact_id || matchedSenderContactId;
 
   // A rule-assigned client wins over sender-based matching: the sender is a
   // service mailbox, not the client the email is about. The sender contact is
@@ -2182,14 +2353,14 @@ export async function processInboundEmailInApp(
         ? ruleAssignedContactIdFromMatch ?? (senderContactInRuleClient
           ? matchedSenderContactId ?? null
           : null)
-        : matchedSenderContactId ?? null,
+        : routingContactId ?? null,
       matchedContactClientId: ruleAssignedClientId
         ? ruleAssignedContactIdFromMatch
           ? ruleAssignedClientId
           : senderContactInRuleClient
           ? ruleAssignedClientId
           : null
-        : matchedSenderClientId ?? null,
+        : routingClientId ?? null,
       domainMatchedClientId: ruleAssignedClientId
         ? senderContactInRuleClient
           ? null
@@ -2222,10 +2393,10 @@ export async function processInboundEmailInApp(
     source: destinationSource,
     fallbackReason: destinationFallbackReason,
   });
-  let targetClientId = ruleAssignedClientId ?? matchedSenderClientId ?? defaults.client_id;
+  let targetClientId = ruleAssignedClientId ?? routingClientId ?? defaults.client_id;
   let targetContactId = ruleAssignedClientId
     ? ruleAssignedContactId ?? undefined
-    : matchedSenderContactId;
+    : routingContactId;
 
   // Domain fallback: if no exact contact match, use explicitly configured inbound-domain client mapping.
   if (!ruleAssignedClientId && !matchedSenderContact && domainMatchedClientId) {
@@ -2248,7 +2419,9 @@ export async function processInboundEmailInApp(
   const clientMatchSource =
     ruleOutcome.kind === 'assign_client'
       ? ruleOutcome.matchSource
-      : matchedSenderContact?.contact_id
+      : destinationContact
+        ? 'forwarded_sender_match'
+        : matchedSenderContact?.contact_id
         ? 'email_match'
         : domainMatchedClientId
           ? 'domain_match'
@@ -2397,6 +2570,9 @@ export async function processInboundEmailInApp(
           : {}),
       },
       attributes: seededAttributes ?? undefined,
+      // A forwarded ticket belongs to the original sender's contact, but that contact did not send
+      // this email: the internal forwarder did. Keep the recovered address out of the actor record.
+      ...(destinationContact ? { sender_contact_id: null } : {}),
     },
     tenantId,
     ...helperExtraArgs('ticket')
@@ -2420,9 +2596,10 @@ export async function processInboundEmailInApp(
       ticket_id: ticketResult.ticket_id,
       content: serializedBlocks,
       source: 'email',
-      // First comment on a brand-new ticket: the TICKET_CREATED email already notifies
-      // the tech with the same body, so keep this comment in-app only to avoid a duplicate.
-      suppressTechEmailNotification: true,
+      // First comment on a brand-new ticket: marked as the opener. `opensTicket` implies in-app
+      // only (the TICKET_CREATED email already notifies the tech with the same body).
+      opensTicket: true,
+      attachmentCount: countNonInlineAttachments(emailData.attachments),
       // Unmatched inbound senders are still customer-originated replies even
       // when we cannot resolve them to an existing contact record.
       author_type: commentAuthorType,

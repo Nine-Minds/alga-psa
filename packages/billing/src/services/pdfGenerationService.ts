@@ -28,7 +28,7 @@ import { sanitizeEmailHtml } from '@alga-psa/shared/lib/email/sanitizeEmailHtml'
 import { enrichContractChangeDescriptions } from '../lib/billing/contractChangeInvoiceProjection.server';
 import { mapDbInvoiceToWasmViewModel } from '../lib/adapters/invoiceAdapters';
 import { enrichInvoiceViewModelWithLocations } from '../lib/adapters/invoiceAdapters.server';
-import { OPTIONAL_INCLUDED_LABEL, OPTIONAL_PENDING_LABEL, mapDbQuoteToViewModel } from '../lib/adapters/quoteAdapters';
+import { OPTIONAL_INCLUDED_LABEL, OPTIONAL_PENDING_LABEL, UNASSIGNED_LOCATION_LABEL, mapDbQuoteToViewModel } from '../lib/adapters/quoteAdapters';
 import { mapDbSalesOrderToViewModel } from '../lib/adapters/salesOrderAdapters';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
@@ -75,7 +75,8 @@ async function localizeQuoteCadenceGroups(
 ): Promise<void> {
   const groups = viewModel.groups_by_cadence ?? [];
   const optionalGroups = viewModel.groups_by_cadence_with_optionals ?? [];
-  if (!locale || (groups.length === 0 && optionalGroups.length === 0)) {
+  const locationGroups = viewModel.groups_by_location ?? [];
+  if (!locale || (groups.length === 0 && optionalGroups.length === 0 && locationGroups.length === 0)) {
     return;
   }
 
@@ -119,6 +120,17 @@ async function localizeQuoteCadenceGroups(
     };
     groups.forEach(localize);
     optionalGroups.forEach(localize);
+
+    // The "no single site" band on the by-location layout. Real locations keep
+    // the name the client gave them; only the adapter's English placeholder is
+    // translated.
+    for (const group of locationGroups) {
+      if (group.location_id === null && group.name === UNASSIGNED_LOCATION_LABEL) {
+        group.name = String(
+          t('labels.unassignedLocation', { defaultValue: UNASSIGNED_LOCATION_LABEL }),
+        );
+      }
+    }
 
     // Per-row optional markers: the adapter emits the English fallback; every
     // collection shares the same line-item objects, so localize each once.
@@ -229,6 +241,14 @@ interface RenderedPdf {
   renderedLocale: string;
 }
 
+export function escapeHtmlText(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 /** Appended to the sent copy's file name to name the signed copy. */
 export const SIGNED_QUOTE_FILE_SUFFIX = '-signed';
 
@@ -1326,10 +1346,7 @@ export class PDFGenerationService {
       // templates can retain their trusted inline SVG barcodes and QR codes.
       htmlContent = (await sanitizeEmailHtml(htmlContent)) ?? '';
 
-      const escapedTitle = (document.document_name || 'Document')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+      const escapedTitle = escapeHtmlText(document.document_name || 'Document');
 
       return `<!DOCTYPE html>
 <html lang="en">

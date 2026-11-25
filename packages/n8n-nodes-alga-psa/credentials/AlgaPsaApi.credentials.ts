@@ -5,7 +5,7 @@ export class AlgaPsaApi implements ICredentialType {
 
   displayName = 'AlgaPSA API';
 
-  documentationUrl = 'https://github.com/alga-psa/alga-psa';
+  documentationUrl = 'https://github.com/Nine-Minds/alga-psa';
 
   properties: INodeProperties[] = [
     {

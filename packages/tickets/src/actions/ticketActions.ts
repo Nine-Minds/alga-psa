@@ -694,7 +694,11 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
           : (billing_profile_id as string),
         contact_id: contact_name_id === '' ? undefined : (contact_name_id as string), // Note: maps to contact_name_id
         status_id: data.get('status_id') as string,
-        assigned_to: data.get('assigned_to') as string,
+        // Missing means omitted (board defaults may apply); an empty submitted
+        // value means the caller explicitly cleared assignment.
+        assigned_to: data.has('assigned_to')
+          ? ((data.get('assigned_to') as string) || null)
+          : undefined,
         description: description as string,
         category_id: category_id === '' ? undefined : (category_id as string),
         subcategory_id: subcategory_id === '' ? undefined : (subcategory_id as string),
@@ -840,6 +844,19 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         });
       }
 
+      // Server-specific: Get full ticket data for return
+      const fullTicket = await tenantScopedTable(trx, 'tickets', tenant)
+        .where({ ticket_id: ticketResult.ticket_id })
+        .first();
+
+      if (!fullTicket) {
+        throw new Error('Created ticket could not be reloaded after insert.');
+      }
+
+      // Shared creation may apply a board user or team lead. Publish the final
+      // assignment once, after commit, for explicit and default routing alike.
+      const assignedTo = fullTicket.assigned_to;
+
       // Additional agents are part of the authorized create operation. Validate and persist
       // them before commit so a caller lacking later ticket-update access cannot lose staffing.
       const creationAuthorization = { kind: 'creation' as const, ticketId: ticketResult.ticket_id };
@@ -850,14 +867,14 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         registerAfterCommit(trx, () => publishTicketResourceEvent(event), `${event.eventType} ticket=${ticketResult.ticket_id}`);
       }
 
-      // Server-specific: Handle assigned ticket event
-      if (createTicketInput.assigned_to) {
+      // Server-specific: Handle the final assignment, including a board default.
+      if (assignedTo) {
         registerAfterCommit(trx, () =>
           publishWorkflowEvent({
             eventType: 'TICKET_ASSIGNED',
             payload: buildTicketAssignedPayload({
               ticketId: ticketResult.ticket_id,
-              userId: createTicketInput.assigned_to,  // The user being assigned to the ticket
+              userId: assignedTo,  // The user being assigned to the ticket
               assignedByUserId: user.user_id  // The user who created and assigned the ticket
             }),
             ctx: {
@@ -867,15 +884,6 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
           }),
           `TICKET_ASSIGNED ticket=${ticketResult.ticket_id}`
         );
-      }
-
-      // Server-specific: Get full ticket data for return
-      const fullTicket = await tenantScopedTable(trx, 'tickets', tenant)
-        .where({ ticket_id: ticketResult.ticket_id })
-        .first();
-
-      if (!fullTicket) {
-        throw new Error('Created ticket could not be reloaded after insert.');
       }
 
       // Write activity-timeline entry for ticket creation. The details
@@ -1873,6 +1881,22 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         };
       }
 
+      const hasChangedTicketFields = Object.entries(updateData).some(([field, value]) =>
+        value !== undefined && JSON.stringify(value) !== JSON.stringify(currentTicket[field])
+      );
+      if (hasChangedTicketFields) {
+        await writeTicketActivity(trx, {
+          tenant,
+          ticketId: id,
+          eventType: TICKET_ACTIVITY_EVENT.UPDATED,
+          entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+          actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: user.user_id },
+          source: TICKET_ACTIVITY_SOURCE.UI,
+          occurredAt: occurredAt,
+          changes: structuredChanges,
+        });
+      }
+
       // Keep the ticket row's denormalized close flag aligned with the selected status.
       if (updateData.status_id !== undefined && updateData.status_id !== currentTicket.status_id) {
         const nextIsClosed = !!newStatus?.is_closed;
@@ -2235,6 +2259,7 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
     if (validatedFilters.tags && validatedFilters.tags.length > 0) {
       const idsByText = await resolveTicketTagIdsByText(trx, tenant, validatedFilters.tags);
       const compiledTags = compileTicketTagIdsFilter(
+        tenant,
         (validatedFilters.tags as string[]).map((text) => idsByText[text]).filter((id): id is string => !!id)
       );
       query = query.whereRaw(compiledTags.sql, compiledTags.bindings as Knex.RawBinding[]);

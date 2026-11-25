@@ -9,7 +9,7 @@ import {
   resolveContactLocationId,
 } from '@alga-psa/shared/models/contactLocation';
 import type { ContactFilterStatus } from '@alga-psa/shared/ticketClients/types';
-import { getAllClients as getAllClientsModel, getClientById as getClientByIdModel } from '@alga-psa/shared/ticketClients/clients';
+import { getClientById as getClientByIdModel } from '@alga-psa/shared/ticketClients/clients';
 import {
   getContactByContactNameId as getContactByContactNameIdModel,
   getAllActiveContacts as getAllActiveContactsModel,
@@ -70,19 +70,6 @@ async function assertInternalClientRowAccess(user: IUserWithRoles): Promise<{ bi
   }
   return { billingVisible: Boolean(billing?.granted) };
 }
-
-export const getAllClients = withAuth(async (user, { tenant }, includeInactive: boolean = true): Promise<IClient[]> => {
-  const { billingVisible } = await assertInternalClientRowAccess(user);
-  const { knex } = await createTenantKnex();
-
-  // Resolved before the transaction opens; the predicate is applied inside the list query.
-  const narrowing = await (await scopeFor(knex, tenant, user)).narrowing('client', 'clients');
-
-  const clients = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return getAllClientsModel(trx, tenant, includeInactive, { narrowQuery: (query) => { narrowing.apply(query); } });
-  });
-  return billingVisible ? clients : clients.map(omitClientBillingColumns);
-});
 
 export const getClientById = withAuth(async (user, { tenant }, clientId: string): Promise<IClient | null> => {
   const { billingVisible } = await assertInternalClientRowAccess(user);

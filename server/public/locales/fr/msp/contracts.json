@@ -510,8 +510,6 @@
     "po": {
       "amountLabel": "Montant du bon de commande (facultatif)",
       "amountPlaceholder": "0.00",
-      "comingSoon": "Intégration de la facturation bientôt disponible. Les paramètres seront enregistrés, mais l'application du bon de commande ne sera active que dans une prochaine version.",
-      "noteLabel": "Note :",
       "numberLabel": "Numéro de bon de commande *",
       "numberPlaceholder": "par ex., PO-2024-12345",
       "requirePurchaseOrder": "Exiger un bon de commande",
@@ -1442,6 +1440,8 @@
       "client": "Contexte client",
       "hypothetical": "Profil client hypothétique",
       "open": "Simuler",
+      "pickClient": "Sélectionnez un client",
+      "specificClient": "Un client précis",
       "title": "Simulation du modèle"
     },
     "pricing": {

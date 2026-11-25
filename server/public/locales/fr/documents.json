@@ -11,7 +11,8 @@
       "oneTime": "Unique",
       "other": "Autre",
       "quarterly": "Trimestriel",
-      "semiAnnually": "Semestriel"
+      "semiAnnually": "Semestriel",
+      "weekly": "Hebdomadaire"
     },
     "cadenceTotal": "Total {{cadence}}",
     "currency": "Devise",
@@ -29,6 +30,7 @@
     "invoiceTitle": "FACTURE",
     "issueDate": "Date d'émission",
     "locationSubtotal": "Sous-total du site",
+    "unassignedLocation": "Ensemble du devis",
     "monthly": "Mensuel",
     "monthlyItems": "Articles mensuels",
     "monthlyTotal": "Total mensuel",
@@ -140,7 +142,9 @@
     "replacementSerial": "Numéro de série du remplacement",
     "shipping": "Expédition",
     "returnBy": "Retour avant le",
-    "returnShipTo": "Adresse de retour"
+    "returnShipTo": "Adresse de retour",
+    "yes": "Oui",
+    "no": "Non"
   },
   "errors": {
     "permissions": {

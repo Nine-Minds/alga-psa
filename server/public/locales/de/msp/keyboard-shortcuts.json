@@ -396,6 +396,12 @@
         "label": "Linkhinweise in neuem Tab anzeigen",
         "description": "Tastaturhinweise anzeigen und Links nach Möglichkeit in einem neuen Tab öffnen."
       }
+    },
+    "designer": {
+      "toggleFocusMode": {
+        "label": "Fokusmodus umschalten",
+        "description": "Den Layout-Editor auf das ganze Fenster erweitern oder zum normalen Layout zurückkehren."
+      }
     }
   },
   "platform": {

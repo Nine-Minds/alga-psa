@@ -68,10 +68,29 @@ describe('ClientPortalSidebar persistence + skeleton contract', () => {
     );
   });
 
+  it('falls back to the icon rail on a phone-sized viewport', () => {
+    // A 16rem panel on a 390px screen leaves a request form field a few characters
+    // wide, so below the breakpoint the rail is the only shape on offer.
+    expect(sidebarSource).toContain("const NARROW_VIEWPORT_QUERY = '(max-width: 767px)'");
+    expect(sidebarSource).toContain('const sidebarOpen = !collapsed && !narrowViewport;');
+    // The stored preference is read, never rewritten, by the viewport check.
+    expect(sidebarSource).toMatch(/useNarrowViewport\(\)[\s\S]{0,400}removeEventListener\('change', sync\)/);
+    expect(sidebarSource).toContain('{narrowViewport ? null : (');
+    // Icon-only links still have to say what they are.
+    expect(sidebarSource).toContain('aria-label={sidebarOpen ? undefined : item.label}');
+  });
+
   it('contains explicit AlgaDesk portal navigation gating', () => {
     expect(sidebarSource).toContain('const isAlgaDeskPortal = productCode === \'algadesk\'');
     expect(sidebarSource).toContain('/client-portal/knowledge-base');
     expect(sidebarSource).toContain('/client-portal/profile');
     expect(sidebarSource).toContain('!isAlgaDeskPortal && <ClientPortalExtensionsNav');
+  });
+});
+
+describe('ClientPortalSidebar Client Settings link', () => {
+  it('is gated only on the shared surfaces resolver', () => {
+    expect(sidebarSource).toContain('resolveClientPortalSettingsSurfaces(permissions).canOpenSettings');
+    expect(sidebarSource).not.toContain('hasClientSettingsAccess');
   });
 });

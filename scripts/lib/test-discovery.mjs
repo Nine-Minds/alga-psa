@@ -48,6 +48,7 @@ export function isApplianceNodeTest(file) {
 // Nx test targets. Keep runtime requirements explicit during reconciliation.
 export function isAdditionalWorkspaceTest(file, lane) {
   if (lane === 'temporal-database') return file === 'ee/temporal-workflows/src/__tests__/e2e/tenant-creation-workflow.e2e.test.ts' || file === 'ee/temporal-workflows/src/db/__tests__/database-connection.integration.test.ts' || file === 'ee/temporal-workflows/src/activities/__tests__/user-activities-simple.test.ts' || file === 'ee/temporal-workflows/src/activities/__tests__/tenant-activities.test.ts' || /^ee\/temporal-workflows\/src\/db\/__tests__\/(product-upgrade-operations|tenant-setup-idempotency)\.integration\.test\.ts$/.test(file);
+  // LEVERAGE: pattern lane-membership-twice — temporal-engine membership is also listed in ee/temporal-workflows/vitest.engine.config.ts; a new test must be added to both.
   if (lane === 'temporal-engine') {
     if (file === 'ee/temporal-workflows/src/__tests__/e2e/email-only.e2e.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/workflows/__tests__/production-index.engine.test.ts') return true;
@@ -57,7 +58,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
     if (file === 'ee/temporal-workflows/src/workflows/__tests__/generic-job-workflow.engine.test.ts') return true;
     return file === 'ee/temporal-workflows/src/workflows/__tests__/sla-ticket-workflow.integration.test.ts'
       || file === 'ee/temporal-workflows/src/workflows/portal-domains/__tests__/registration.workflow.integration.test.ts'
-      || /^ee\/temporal-workflows\/src\/workflows\/__tests__\/(tenant-product-upgrade-workflow|trial-payment-reminder-workflow|tenant-creation-appliance|tenant-creation-portal-access|sla-ticket-workflow|managed-email-domain-workflow|invoice-autopay-workflow|autopay-reconcile-workflow)\.test\.ts$/.test(file);
+      || /^ee\/temporal-workflows\/src\/workflows\/__tests__\/(tenant-product-upgrade-workflow|trial-payment-reminder-workflow|tenant-creation-appliance|tenant-creation-portal-access|tenant-creation-stripe-checkout-merge|sla-ticket-workflow|managed-email-domain-workflow|invoice-autopay-workflow|autopay-reconcile-workflow)\.test\.ts$/.test(file);
   }
   if (lane === 'temporal-readiness') {
     if ([
@@ -78,6 +79,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
     if (file === 'ee/temporal-workflows/src/__tests__/worker-queue-ownership.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/__tests__/worker-health.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/__tests__/worker.capabilityBoot.test.ts') return true;
+    if (file === 'ee/temporal-workflows/src/__tests__/worker.billingCatalogLoader.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/workflows/__tests__/tenant-deletion-workflow.behavior.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/tenant-deletion-external-links.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/tenant-deletion-answer-mappings.test.ts') return true;
@@ -101,7 +103,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
       || file === 'ee/temporal-workflows/src/db/__tests__/permission-catalog-packaging.test.ts'
       || file === 'ee/temporal-workflows/src/db/__tests__/tenantTableManifest.test.ts'
       || /^ee\/temporal-workflows\/src\/activities\/__tests__\/(portal-domain-activities(?:\.git)?|portal-domain-nextauth-url|portal-domain-redirect-uri-gate)\.test\.ts$/.test(file)
-      || /^ee\/temporal-workflows\/src\/activities\/__tests__\/(workflow-runtime-v2-activities|autopay-activities|appliance-check-in-activities|sla-activities|marketing-activities|tenant-suspension-activities|tenant-email-ingestion-activities|product-upgrade-activities|product-upgrade-co-managed-activity|appliance-console-stripe-seat-change|trial-payment-reminder-activities|trial-payment-reminder-email|comment-recovery-forwarding|migration-apply-forwarding|customer-tracking-activities|email-activities-portal-status|portal-user-operations|email-activities-simple|email-activities-standalone|gmail-adapter-secret-log-hygiene|microsoft-email-filesystem-secret-provider)\.test\.ts$/.test(file);
+      || /^ee\/temporal-workflows\/src\/activities\/__tests__\/(workflow-runtime-v2-activities|autopay-activities|appliance-check-in-activities|sla-activities|marketing-activities|tenant-suspension-activities|tenant-email-ingestion-activities|product-upgrade-activities|product-upgrade-co-managed-activity|appliance-console-stripe-seat-change|trial-payment-reminder-activities|trial-payment-reminder-email|comment-recovery-forwarding|migration-apply-forwarding|customer-tracking-activities|entra-sync-record-tenant-result|email-activities-portal-status|portal-user-operations|email-activities-simple|email-activities-standalone|gmail-adapter-secret-log-hygiene|microsoft-email-filesystem-secret-provider)\.test\.ts$/.test(file);
   }
   if (lane === 'api-e2e') {
     return (/^server\/src\/test\/e2e\/api\//.test(file)

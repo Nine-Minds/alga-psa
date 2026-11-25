@@ -2,12 +2,6 @@
   "page": {
     "title": "Raporty"
   },
-  "actions": {
-    "refresh": "Odśwież"
-  },
-  "placeholders": {
-    "selectContract": "Wybierz kontrakt..."
-  },
   "units": {
     "hoursShort": "h",
     "days": "dni",
@@ -433,64 +427,6 @@
       "label": "Kolumny",
       "title": "Kolumny",
       "reset": "Przywróć domyślne kolumny"
-    }
-  },
-  "contractPerformance": {
-    "title": "Metryki wydajności kontraktu",
-    "errors": {
-      "loadData": "Nie udało się załadować danych kontraktu"
-    },
-    "metrics": {
-      "totalClients": "Łączna liczba klientów",
-      "activeClients": "Aktywni klienci",
-      "totalPlans": "Łączna liczba planów",
-      "averagePlansPerClient": "Średnia liczba planów na klienta",
-      "totalRevenue": "Łączny przychód",
-      "averageRevenuePerClient": "Średni przychód na klienta"
-    },
-    "empty": {
-      "selectContract": "Wybierz kontrakt, aby zobaczyć metryki wydajności",
-      "noContracts": "Brak dostępnych kontraktów"
-    },
-    "comparison": {
-      "title": "Porównanie kontraktów",
-      "table": {
-        "contract": "Kontrakt",
-        "clients": "Klienci",
-        "plans": "Plany",
-        "revenue": "Przychód"
-      }
-    }
-  },
-  "contractUsage": {
-    "title": "Raport wykorzystania kontraktu",
-    "errors": {
-      "loadInitialData": "Nie udało się załadować danych początkowych",
-      "loadUsageData": "Nie udało się załadować danych wykorzystania kontraktu"
-    },
-    "empty": {
-      "noClientsUsingContract": "Żaden klient nie korzysta z tego kontraktu",
-      "selectContract": "Wybierz kontrakt, aby zobaczyć dane wykorzystania"
-    },
-    "table": {
-      "client": "Klient",
-      "startDate": "Data rozpoczęcia",
-      "endDate": "Data zakończenia",
-      "contractLines": "Pozycje kontraktu",
-      "totalBilled": "Łącznie rozliczone",
-      "status": "Status"
-    },
-    "statusValues": {
-      "active": "Aktywny",
-      "inactive": "Nieaktywny",
-      "ongoing": "Trwający",
-      "unknownClient": "Nieznany klient"
-    },
-    "summary": {
-      "title": "Podsumowanie",
-      "totalClients": "Łączna liczba klientów",
-      "activeAssignments": "Aktywne przypisania",
-      "totalBilled": "Łącznie rozliczone"
     }
   },
   "deferredRevenue": {

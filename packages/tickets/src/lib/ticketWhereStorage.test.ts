@@ -22,7 +22,7 @@ describe('where in stored views (sanitize / validate)', () => {
     const out = sanitizeStoredTicketView({ filters: { where, requester_vip: true, tags: ['x'] } });
     expect(out?.filters?.where).toEqual(where);
     expect((out?.filters as Record<string, unknown>).requester_vip).toBeUndefined();
-    expect(out?.schemaVersion).toBe(2);
+    expect(out?.schemaVersion).toBe(3);
   });
 
   it('sanitizeStoredTicketView drops malformed clauses and nested groups', () => {
@@ -76,7 +76,7 @@ describe('where in stored views (sanitize / validate)', () => {
 
   it('capture stamps the current version and skips an empty where; the write schema accepts it', () => {
     const captured = captureTicketViewSettings({ filters: { where, tags: [] } });
-    expect(captured.schemaVersion).toBe(2);
+    expect(captured.schemaVersion).toBe(3);
     expect(parseTicketViewSettings(captured).filters?.where).toEqual(where);
     expect(captureTicketViewSettings({ filters: { where: { join: 'and', clauses: [] } } }).filters).toEqual({});
   });

@@ -6,6 +6,7 @@ import { Suspense } from 'react';
 import { TicketDetailsSkeleton } from '@alga-psa/tickets/components/ticket/TicketDetailsSkeleton';
 import { getSurveyTicketSummary } from '@alga-psa/surveys/actions/survey-actions/surveyDashboardActions';
 import AssociatedAssets from '@/components/tickets/TicketAssociatedAssets';
+import { TicketQuarantineBanner } from '@alga-psa/integrations/components/email/admin/TicketQuarantineBanner';
 import MspTicketDetailsContainerClient from '@alga-psa/msp-composition/tickets/MspTicketDetailsContainerClient';
 
 import { getTicketById } from '@alga-psa/tickets/actions/ticketActions';
@@ -32,6 +33,7 @@ import { unwrapAssetActionResult } from '@alga-psa/assets/actions/assetActionErr
 import { getLinkedTasksForTicketAction } from '@alga-psa/projects/actions/projectTaskActions';
 import { findTagsByEntityId, isTagActionError } from '@alga-psa/tags/actions';
 import { getTeams, isTeamActionError } from '@alga-psa/teams/actions';
+import { isActivityOnMyList } from '@alga-psa/user-activities/actions';
 import { fetchTimeEntriesForTicket } from '@alga-psa/scheduling/actions/timeEntryTicketActions';
 import { AIChatContextBoundary } from '@product/chat/context';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
@@ -155,6 +157,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
       teams,
       displaySettings,
       tags,
+      onMyActivityList,
     ] = await Promise.all([
       getConsolidatedTicketData(id, capabilities),
       firstPaintPreloads.surveySummary,
@@ -166,6 +169,9 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
       getTeams().catch(() => null),
       getTicketingDisplaySettings().catch(() => null),
       findTagsByEntityId(id, 'ticket').catch(() => null),
+      // The hero's personal "My group" chip (MSP only): answered here so it is on the first paint
+      // rather than popping in above the hero form once a client check returns.
+      isAlgaDesk ? Promise.resolve(null) : isActivityOnMyList('ticket', id).catch(() => null),
     ]);
 
     const ticketDataError = getActionErrorMessage(ticketData);
@@ -207,6 +213,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
       teams: safeTeams,
       displaySettings,
       tags: safeTags,
+      onMyActivityList: typeof onMyActivityList === 'boolean' ? onMyActivityList : null,
       streams: {
         timelineEntries: getTicketTimelineEntries(id, {
           order: 'asc',
@@ -276,6 +283,8 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
     );
     const detailsContent = (
       <div id="ticket-details-container" className="bg-[rgb(var(--color-app-ground))]">
+        {/* MSP-side only (this route is /msp/*; the action also rejects client users). */}
+        {!isAlgaDesk ? <TicketQuarantineBanner ticketId={id} /> : null}
         <Suspense fallback={<TicketDetailsSkeleton />}>
           {coManaged
             ? <CoManagedLocalTicketDataSourceProvider ticketId={id} readOnly={workspaceReadOnly}>{detailsClient}</CoManagedLocalTicketDataSourceProvider>

@@ -271,13 +271,25 @@ export function recipientInScope(recipient: TicketNotificationRecipient): boolea
   return !recipient.seat || recipient.reader.kind === 'seat';
 }
 
+/** The two renderings of a ticket message: for MSP staff, or for the client side. */
+export type TicketRendering = 'msp' | 'client';
+
 /**
- * Which rendering of a ticket message this recipient gets: `msp` (MSP link, internal-user
- * template) or `client` (portal link, client template). An out-of-scope seat technician is an
- * external party and gets `client`; everyone else keeps `msp` or `client` by their own type.
+ * Which rendering of a ticket message this recipient gets: `msp` (MSP link, internal template,
+ * every variable) or `client` (portal link, client template, client-safe variables only).
+ *
+ * `addressedAs` is who the send path addressed: `client` for a requester contact, an external
+ * watcher or a copied address; `msp` for staff (assignee, additional agent, internal watcher,
+ * board-rule recipient). A send path names the person, never the template. An out-of-scope seat
+ * technician is an external party and gets `client` however they were addressed.
+ *
+ * `addressedAs` has no default: a caller that forgot it would get the staff rendering.
  */
-export function recipientRendering(recipient: TicketNotificationRecipient): 'msp' | 'client' {
-  return recipientInScope(recipient) ? 'msp' : 'client';
+export function recipientRendering(
+  recipient: TicketNotificationRecipient,
+  addressedAs: TicketRendering,
+): TicketRendering {
+  return addressedAs === 'client' || !recipientInScope(recipient) ? 'client' : 'msp';
 }
 
 /** An audience known now, or read only if a seat technician turns out to be among the recipients. */

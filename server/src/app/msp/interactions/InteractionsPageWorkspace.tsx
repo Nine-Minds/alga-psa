@@ -11,7 +11,6 @@ type InteractionsPageWorkspaceProps = MspInteractionsPageData;
 export default function InteractionsPageWorkspace({
   users,
   contacts,
-  clients,
   telephonyOverview,
 }: InteractionsPageWorkspaceProps) {
   const { openDrawer } = useDrawer();
@@ -24,7 +23,6 @@ export default function InteractionsPageWorkspace({
     <MspInteractionsWorkspace
       users={users}
       contacts={contacts}
-      clients={clients}
       telephonyOverview={telephonyOverview}
       onOpenUser={openUserDetails}
     />

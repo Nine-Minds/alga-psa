@@ -5,7 +5,9 @@ import {
   stripColorLiterals,
 } from './applyEmailPalette';
 import { removeBrandLogo, stripBrandAttribution } from './brandAssets';
+import { normalizeChangesBox } from './changesBox';
 import { stripGradientFallback } from './gradientFallback';
+import { stripOrphanedBrandFooter } from './orphanedSlogan';
 import { STOCK_EMAIL_PALETTE } from './stockPalette';
 import type {
   EmailPaletteTokens,
@@ -24,6 +26,42 @@ export interface ClassifyTenantTemplateInput {
   systemRow: ClassifiableTemplate;
   /** The token map the apply flow last wrote, if any. */
   appliedPalette?: EmailPaletteTokens | null;
+  /**
+   * The stock row of the template this one's tenant rows were copied from, same language.
+   * When a client template is split off a shared one, each tenant's shared row is copied to the
+   * client name. A copy of a row the branding tool wrote is still nothing the tenant typed.
+   */
+  copiedFromSystemRow?: ClassifiableTemplate | null;
+}
+
+/** Client template name -> the template its tenant rows were copied from at a split. */
+export type CopiedFromTemplates = Readonly<Record<string, string>>;
+
+/** The stock row a `(name, language)` tenant row may be a copy of, if its template was split off another. */
+export function copiedFromSystemRowFor<T extends { name: string; language_code: string }>(
+  systemRows: readonly T[],
+  copiedFrom: CopiedFromTemplates | null | undefined,
+  name: string,
+  language: string,
+): T | null {
+  const sourceName = copiedFrom?.[name];
+  if (!sourceName) return null;
+  return systemRows.find((row) => row.name === sourceName && row.language_code === language) ?? null;
+}
+
+/** Does the row equal this stock template with the applied palette substituted, subject included? */
+function equalsBrandedStock(
+  tenantRow: ClassifiableTemplate,
+  stockRow: ClassifiableTemplate,
+  appliedPalette: EmailPaletteTokens | null | undefined,
+): boolean {
+  // With no palette applied yet the expected HTML is the stock template itself.
+  const expectedHtml = appliedPalette
+    ? applyEmailPalette(stockRow.html_content, STOCK_EMAIL_PALETTE, appliedPalette)
+    : stockRow.html_content;
+  return tenantRow.subject === stockRow.subject
+    && (tenantRow.html_content === expectedHtml
+      || withoutBrandAssets(tenantRow.html_content) === withoutBrandAssets(expectedHtml));
 }
 
 /**
@@ -32,10 +70,34 @@ export interface ClassifyTenantTemplateInput {
  * attribution line. Normalizing both sides is what lets a tenant turn the
  * attribution back on and have the footer restored. The flat gradient fallback
  * is ours too: rows written before the layout carried it must still read as
- * branded against the corrected system templates.
+ * branded against the corrected system templates. So is the stock "Changes Made"
+ * box, which moved from pre-rendered HTML to a template loop (see changesBox.ts),
+ * and the orphaned slogan (or empty coloured band) an older attribution strip
+ * left in the footer of rows it wrote (see orphanedSlogan.ts), which must still
+ * read as ours so the next apply rewrites that footer rather than freezing it as
+ * a hand edit.
+ *
+ * Only the footers we have shipped are ours to normalize away, though: a footer
+ * row a tenant reworded around the attribution has to survive this pass, or it
+ * would collapse to the same nothing our own footer does and read as a row the
+ * tool wrote — free for an apply to overwrite and for "Remove branding" to
+ * delete. Hence `footerRow: 'shipped-slogan'`.
+ *
+ * A footer row that is simply gone, on the other hand, reads as ours, and
+ * deliberately: the row an apply writes with the attribution hidden is byte for
+ * byte the row a tenant leaves by deleting ours, so nothing in the HTML tells
+ * the two apart — and reading its absence as a hand edit would freeze every
+ * such copy as `customized`, leaving a tenant who hid the attribution no way to
+ * ever get the footer back. The stock row holds nothing but our own attribution
+ * and slogan, and the toggle that drops it is Enterprise-only, so an apply
+ * putting that row back is the licensing rule rather than a lost edit. A footer
+ * with the tenant's own words in it is a different thing, and the mode above is
+ * what keeps it.
  */
 const withoutBrandAssets = (html: string): string =>
-  stripGradientFallback(stripBrandAttribution(removeBrandLogo(html)));
+  normalizeChangesBox(stripGradientFallback(stripOrphanedBrandFooter(
+    stripBrandAttribution(removeBrandLogo(html), { footerRow: 'shipped-slogan' }),
+  )));
 
 /**
  * Decides whether a tenant row is untouched, something the branding tool wrote,
@@ -63,6 +125,11 @@ export function classifyTenantTemplate(input: ClassifyTenantTemplateInput): Tena
     || withoutBrandAssets(tenantRow.html_content) === withoutBrandAssets(expectedHtml);
 
   if (htmlMatches && subjectMatches) return { state: 'branded', differs: [] };
+
+  // An untouched copy of the template this one was split from: still the tool's own row.
+  if (input.copiedFromSystemRow && equalsBrandedStock(tenantRow, input.copiedFromSystemRow, appliedPalette)) {
+    return { state: 'branded', differs: [], copyOfSplitSource: true };
+  }
 
   const carriesStock = containsEmailPaletteTokens(tenantRow.html_content, STOCK_EMAIL_PALETTE);
   const carriesApplied = appliedPalette

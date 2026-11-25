@@ -124,3 +124,16 @@ describe('tombstoneCommentForClient', () => {
     expect(out.is_internal).toBe(false);
   });
 });
+
+describe('redactCommentForClient opener marker', () => {
+  it('keeps opensTicket and attachmentCount while stripping metadata.email', () => {
+    const source: any = {
+      ...base,
+      metadata: { responseSource: 'inbound_email', opensTicket: true, attachmentCount: 2, email: { fromAddress: 'a@x.example', messageId: 'm1' } },
+    };
+    const out: any = redactCommentForClient(source);
+    expect(out.metadata.opensTicket).toBe(true);
+    expect(out.metadata.attachmentCount).toBe(2);
+    expect(out.metadata.email).toBeUndefined();
+  });
+});

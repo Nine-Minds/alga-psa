@@ -14,6 +14,7 @@ export class ApiStatusController extends ApiBaseController {
 
     super(statusService, {
       resource: 'status',
+      permissionResource: 'ticket',
       createSchema: createStatusSchema,
       updateSchema: updateStatusSchema,
       querySchema: statusListQuerySchema,

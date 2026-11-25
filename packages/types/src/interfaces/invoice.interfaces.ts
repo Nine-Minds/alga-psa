@@ -507,6 +507,8 @@ export interface InvoiceBillingEmailWarning {
  * which keep the generic error string. Only allowlisted codes belong here.
  */
 export type RecurringInvoiceFailureCode =
+  | 'BILLING_PROFILE_NOT_FOUND'
+  | 'BILLING_PROFILE_MISMATCH'
   | 'NO_BILLING_EMAIL'
   | 'TIME_APPROVAL_REQUIRED'
   | 'USAGE_RECORDS_MISSING'

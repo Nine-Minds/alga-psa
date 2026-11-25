@@ -134,6 +134,11 @@ export type TicketComment = {
   scheduled_publish_at?: string | null;
   scheduled_publish_tz?: string | null;
   published_at?: string | null;
+  /**
+   * Comment metadata as returned by the v1 comments API (full format). Carries the
+   * `opensTicket` marker and `attachmentCount` for the comment that opened a ticket by email.
+   */
+  metadata?: Record<string, unknown> | string | null;
   /** One-off Cc/Bcc the agent added to this single comment. */
   email_recipients?: {
     cc?: Array<{ email: string; name?: string }>;
@@ -155,6 +160,8 @@ export type TicketStatus = {
 export type TicketPriority = {
   priority_id: string;
   priority_name: string;
+  /** Absent on older servers. */
+  is_from_itil_standard?: boolean;
 };
 
 /** Parents have parent_category null; subcategories point at their parent. */
@@ -277,6 +284,8 @@ export function addTicketComment(
     /** One-off Cc/Bcc for this comment's email; rejected on internal notes. */
     cc?: string[];
     bcc?: string[];
+    /** Who a new thread is for, on a ticket whose client has a co-managed seat arrangement. */
+    collaboration_audience?: "requester" | "shared_it";
     auditHeaders?: Record<string, string | undefined>;
   },
 ): Promise<ApiResult<SuccessResponse<TicketComment>>> {
@@ -298,6 +307,7 @@ export function addTicketComment(
       // Older servers reject unknown keys, so send these only when used.
       ...(params.cc?.length ? { cc: params.cc } : {}),
       ...(params.bcc?.length ? { bcc: params.bcc } : {}),
+      ...(params.collaboration_audience ? { collaboration_audience: params.collaboration_audience } : {}),
     },
   });
 }

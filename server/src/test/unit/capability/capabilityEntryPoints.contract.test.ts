@@ -87,9 +87,10 @@ export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string
   'independent-upgrade-activity': { glob: 'ee/temporal-workflows/src/activities/co-managed-upgrade-activities.ts', files: 1 },
   'tenant-deletion-cleanup': { glob: 'ee/temporal-workflows/src/activities/co-managed-tenant-deletion-activities.ts', files: 1 },
   'temporal-workflows-kebab': { glob: 'ee/temporal-workflows/src/workflows/co-managed*', files: 2 },
-  'ee-server-actions': { glob: 'ee/server/src/lib/actions/coManaged*', files: 3 },
+  'ee-server-actions': { glob: 'ee/server/src/lib/actions/coManaged*', files: 6 },
   'shared-services': { glob: 'shared/services/**/coManaged*', files: 0 },
-  'server-ui': { glob: 'server/src/components/co-managed/**', files: 92 },
+  // +2 (card 23c57327): useSeatTrialOffer.ts (the one trial-offer reader) and CoManagedSeatTrialSection.tsx.
+  'server-ui': { glob: 'server/src/components/co-managed/**', files: 97 },
   'package-ui': { glob: 'packages/co-managed/src/components/**', files: 0 },
 };
 
@@ -136,6 +137,7 @@ export const SEAT_UI_FAMILIES: readonly SeatUiFamily[] = [
 export const EXPECTED_SEAT_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string; files: number }>> = {
   'seat-client-integration': { glob: 'server/src/components/co-managed/CoManagedClientIntegration.tsx', files: 1 },
   'seat-shape-chooser': { glob: 'server/src/components/co-managed/CoManagedShapeChooser.tsx', files: 1 },
+  // +1 (card 23c57327): CoManagedSeatTrialSection.tsx, mounted only by the co-managed page under its server-side trial gate.
   'seat-components': { glob: 'server/src/components/co-managed/CoManagedSeat*', files: 9 },
   'seat-arrangement-end': { glob: 'server/src/components/co-managed/CoManagedSeatArrangementEnd.tsx', files: 1 },
   'seat-overview': { glob: 'server/src/components/co-managed/CoManagedOverview.tsx', files: 1 },
@@ -190,6 +192,12 @@ export const ADAPTER_EXPORTS = new Set([
   // 7 purchase surface (L8a): a purchase creates the FIRST entitlement, so `admits` (flag AND entitlement)
   // would make it unreachable. The surface is price AND kill switch AND release flag; it grants nothing.
   'isCoManagedPurchaseSurfaceOpen',
+  // 8 first-purchase discovery: the commercial decision for an actor with no entitlement yet. It opens with
+  // the purchase surface (7) and then account permissions and the hosted-Pro tenant row; it grants only the
+  // pool view and never co-managed operational access.
+  'resolveCoManagedPurchaseDiscovery',
+  // Trial discovery checks intake for new trials and client scope for existing-trial recovery.
+  'canDiscoverSeatTrial',
 ]);
 
 const DB_TOUCHING = new Set(['createTenantKnex', 'tenantDb', 'runWithTenant', 'knex']);
@@ -360,6 +368,7 @@ export const SESSION_TENANT_ADAPTERS = new Map([
   ['requireCapabilityEitherMode', 1],
   ['capabilityRouteGuard', 1],
   ['requireCapabilityForPage', 1],
+  ['canDiscoverSeatTrial', 1],
 ]);
 /** Calls whose result carries the session tenant at `.tenant` (user) or `.user.tenant` (session). */
 const SESSION_OBJECT_SOURCES = new Set(['getSession', 'auth', 'getServerSession', 'getCurrentUser', 'getCurrentUserWithRevocationCheck']);
@@ -1045,5 +1054,56 @@ describe('Seat UI entry points (T047)', () => {
 
   it('seat UI names no raw release flag anywhere, including strings in the slot contributions', () => {
     for (const f of seatFiles) expect(f.source, f.path).not.toMatch(/useFeatureFlag\(\s*['"](release-v2-0-feature|capability:)/);
+  });
+});
+
+describe('billing catalog context loader registration (co-managed-offer-context-at-the-gate)', () => {
+  // The licensing gate resolves the offer catalog through a loader that EE's surfaceProbe registers as an
+  // import side effect. An entry point that can reach the gate (`isCoManagedPurchaseSurfaceOpen`, or
+  // `admits('co-managed-seat')` through the trial path) without importing it would silently fall back to
+  // the env var. Add the new entry to this list, or its bootstrap to one that already imports the module.
+  const EE_GATE_ENTRY_POINTS = [
+    { file: 'ee/server/src/instrumentation.ts', importPath: '@enterprise/lib/stripe/offerCatalog/surfaceProbe' },
+    { file: 'server/src/instrumentation.ts', importPath: '@enterprise/lib/stripe/offerCatalog/surfaceProbe' },
+    // The Temporal worker registers through a worker-safe module (it must not import StripeService).
+    { file: 'ee/temporal-workflows/src/worker.ts', importPath: '@ee/lib/stripe/offerCatalog/workerRegistration' },
+  ] as const;
+
+  const importsModule = (source: string, importPath: string): boolean => {
+    const sf = ts.createSourceFile('x.ts', source, ts.ScriptTarget.Latest, true);
+    let found = false;
+    const visit = (node: ts.Node): void => {
+      if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier) && node.moduleSpecifier.text === importPath) found = true;
+      if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword
+        && node.arguments[0] && ts.isStringLiteralLike(node.arguments[0]) && node.arguments[0].text === importPath) found = true;
+      ts.forEachChild(node, visit);
+    };
+    visit(sf);
+    return found;
+  };
+
+  it.each(EE_GATE_ENTRY_POINTS)('$file imports surfaceProbe', ({ file: path, importPath }) => {
+    expect(importsModule(readFileSync(join(REPO, path), 'utf8'), importPath)).toBe(true);
+  });
+
+  it('the matcher bites when the import is missing', () => {
+    expect(importsModule(`export async function register() { await import('@/lib/initializeApp'); }`, '@enterprise/lib/stripe/offerCatalog/surfaceProbe')).toBe(false);
+    expect(importsModule(`import "@ee/lib/stripe/offerCatalog/surfaceProbe";`, '@ee/lib/stripe/offerCatalog/surfaceProbe')).toBe(true);
+  });
+
+  it('the worker registration registers the loader and stays out of StripeService and Next', () => {
+    const source = readFileSync(join(REPO, 'ee/server/src/lib/stripe/offerCatalog/workerRegistration.ts'), 'utf8');
+    expect(source).toMatch(/^registerBillingCatalogContextLoader\(loadWorkerBillingCatalogContext\);$/m);
+    expect(source).not.toMatch(/from ['"][^'"]*(StripeService|next\/)/);
+    // The worker's fail-open import sits inside a try block, like the write-admission install.
+    expect(readFileSync(join(REPO, 'ee/temporal-workflows/src/worker.ts'), 'utf8'))
+      .toMatch(/try \{\s*await import\('@ee\/lib\/stripe\/offerCatalog\/workerRegistration'\);\s*\} catch/);
+  });
+
+  it('EE surfaceProbe registers the loader and the CE alias registers nothing', () => {
+    expect(readFileSync(join(REPO, 'ee/server/src/lib/stripe/offerCatalog/surfaceProbe.ts'), 'utf8'))
+      .toMatch(/^registerBillingCatalogContextLoader\(loadBillingCatalogContext\);$/m);
+    expect(readFileSync(join(REPO, 'packages/ee/src/lib/stripe/offerCatalog/surfaceProbe.ts'), 'utf8'))
+      .not.toMatch(/registerBillingCatalogContextLoader|@alga-psa\/licensing/);
   });
 });

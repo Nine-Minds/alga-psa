@@ -3467,9 +3467,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "post-_api_v1_users_bulk_create",
     "method": "post",
     "path": "/api/v1/users/bulk/create",
-    "displayName": "Bulk create users (route currently mapped to single create)",
-    "summary": "Bulk create users (route currently mapped to single create)",
-    "description": "Route currently delegates to ApiUserController.create(), so behavior is single-user create schema rather than bulk payload handling.",
+    "displayName": "Bulk create users",
+    "summary": "Bulk create users",
+    "description": "Creates up to 100 users in one transaction. Each user is created under its own savepoint: with skip_invalid (the default) a rejected user is reported in errors[] by index and the rest are still created; with skip_invalid false the first failure rolls the whole batch back. options.force_password_reset records the must_change_password preference on each account (not yet enforced at sign-in), options.send_welcome_email (default true) mails each new user a link to set their own password, and options.dry_run validates every user and creates nothing.",
     "tags": [
       "Access Control & Users v1"
     ],
@@ -3478,66 +3478,38 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {
-        "username": {
-          "type": "string",
-          "minLength": 3
-        },
-        "email": {
-          "type": "string",
-          "format": "email"
-        },
-        "password": {
-          "type": "string",
-          "minLength": 8
-        },
-        "first_name": {
-          "type": "string"
-        },
-        "last_name": {
-          "type": "string"
-        },
-        "phone": {
-          "type": "string"
-        },
-        "timezone": {
-          "type": "string"
-        },
-        "user_type": {
-          "type": "string",
-          "enum": [
-            "internal",
-            "client",
-            "admin",
-            "contractor"
-          ]
-        },
-        "contact_id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "two_factor_enabled": {
-          "type": "boolean"
-        },
-        "is_google_user": {
-          "type": "boolean"
-        },
-        "is_inactive": {
-          "type": "boolean"
-        },
-        "role_ids": {
+        "users": {
           "type": "array",
           "items": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/AccessCreateUserBodyV1"
           },
-          "minItems": 1
+          "minItems": 1,
+          "maxItems": 100
+        },
+        "options": {
+          "type": "object",
+          "properties": {
+            "send_welcome_email": {
+              "type": "boolean",
+              "description": "Default true. Mails each created user a link to set their own password."
+            },
+            "force_password_reset": {
+              "type": "boolean",
+              "description": "Default false. Records the must_change_password preference on each account, the same flag an admin-initiated password reset sets. Nothing enforces it at sign-in yet, so pair it with send_welcome_email to make the owner choose their own password."
+            },
+            "skip_invalid": {
+              "type": "boolean",
+              "description": "Default true: a rejected user is reported in errors[] and the rest are still created. Set false to roll the whole batch back on the first failure."
+            },
+            "dry_run": {
+              "type": "boolean",
+              "description": "Validates every user and creates nothing."
+            }
+          }
         }
       },
       "required": [
-        "username",
-        "email",
-        "password",
-        "role_ids"
+        "users"
       ]
     },
     "responseBodySchema": {
@@ -3572,9 +3544,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "put-_api_v1_users_bulk_deactivate",
     "method": "put",
     "path": "/api/v1/users/bulk/deactivate",
-    "displayName": "Bulk deactivate users (route currently mapped to update-by-id)",
-    "summary": "Bulk deactivate users (route currently mapped to update-by-id)",
-    "description": "Route currently delegates to ApiUserController.update(); id extraction reads \"bulk\" from path and fails UUID validation.",
+    "displayName": "Bulk deactivate users",
+    "summary": "Bulk deactivate users",
+    "description": "Deactivates (or, with deactivate false, reactivates) up to 100 users by UUID. Role floors refuse a request that would leave the tenant without an active MSP admin, and reactivation is admitted one user at a time against the seat limit.",
     "tags": [
       "Access Control & Users v1"
     ],
@@ -3583,57 +3555,23 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {
-        "username": {
-          "type": "string",
-          "minLength": 3
-        },
-        "email": {
-          "type": "string",
-          "format": "email"
-        },
-        "first_name": {
-          "type": "string"
-        },
-        "last_name": {
-          "type": "string"
-        },
-        "phone": {
-          "type": "string"
-        },
-        "timezone": {
-          "type": "string"
-        },
-        "user_type": {
-          "type": "string",
-          "enum": [
-            "internal",
-            "client",
-            "admin",
-            "contractor"
-          ]
-        },
-        "contact_id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "two_factor_enabled": {
-          "type": "boolean"
-        },
-        "is_google_user": {
-          "type": "boolean"
-        },
-        "is_inactive": {
-          "type": "boolean"
-        },
-        "role_ids": {
+        "user_ids": {
           "type": "array",
           "items": {
             "type": "string",
             "format": "uuid"
           },
-          "minItems": 1
+          "minItems": 1,
+          "maxItems": 100
+        },
+        "deactivate": {
+          "type": "boolean",
+          "description": "Default true; false reactivates the listed users (subject to seat limits)."
         }
-      }
+      },
+      "required": [
+        "user_ids"
+      ]
     },
     "responseBodySchema": {
       "type": "object",
@@ -14935,7 +14873,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts/{id}",
     "displayName": "Update contact",
     "summary": "Update contact",
-    "description": "Inherited ApiBaseController update route for one contact_name_id. work_arrangement and locations[] behave as on create; locations omitted leaves the links untouched, an empty array removes them all, and changing client_id removes them (a location never crosses clients).",
+    "description": "Inherited ApiBaseController update route for one contact_name_id. work_arrangement and locations[] behave as on create; locations omitted leaves the links untouched, an empty array removes them all, and changing client_id removes them (a location never crosses clients). A different email replaces the primary address and drops the old one unless it is re-sent in additional_email_addresses (sending one of the contact's own additional addresses with no additional_email_addresses in the body promotes it and keeps the old primary as an additional row, leaving the contact's other addresses alone); an address already used by another contact is refused.",
     "tags": [
       "Contacts"
     ],
@@ -15952,6 +15890,170 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "properties": {
         "data": {
           "$ref": "#/components/schemas/ClientBillingProfile"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_clients_id_portalinvitations",
+    "method": "post",
+    "path": "/api/v1/clients/{id}/portal-invitations",
+    "displayName": "Invite a client's contacts to the client portal",
+    "summary": "Invite a client's contacts to the client portal",
+    "description": "Sends client portal invitations for one client: either every eligible contact (all_eligible) or a named subset (contact_ids) validated against the client in the path. Invitations go out one at a time, so a contact that cannot be invited never costs the rest of the batch theirs; the response reports each contact's outcome and the request is a 200 even when some were skipped or failed.",
+    "tags": [
+      "Portal Invitations"
+    ],
+    "rbacResource": "user",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Client UUID from clients.client_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Client UUID from clients.client_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "contact_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minItems": 1,
+          "maxItems": 500,
+          "description": "Contacts to invite. Ids that do not belong to the client in the path come back as skipped, never invited."
+        },
+        "all_eligible": {
+          "type": "boolean",
+          "description": "Invite every active contact of the client that has no client portal user yet. Ignored when contact_ids is given."
+        }
+      },
+      "description": "Supply contact_ids, or all_eligible=true. One of the two is required."
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "total": {
+              "type": "integer",
+              "description": "Contacts considered by this request."
+            },
+            "sent": {
+              "type": "integer"
+            },
+            "skipped": {
+              "type": "integer"
+            },
+            "failed": {
+              "type": "integer"
+            },
+            "results": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/PortalInvitationResult"
+              }
+            }
+          },
+          "required": [
+            "total",
+            "sent",
+            "skipped",
+            "failed",
+            "results"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_portalinvitations_bulk",
+    "method": "post",
+    "path": "/api/v1/portal-invitations/bulk",
+    "displayName": "Invite contacts to the client portal in bulk",
+    "summary": "Invite contacts to the client portal in bulk",
+    "description": "Sends client portal invitations for the named contacts, which may belong to different clients; each contact is authorized against its own client before anything is sent. Same per-contact result envelope as the client-scoped endpoint.",
+    "tags": [
+      "Portal Invitations"
+    ],
+    "rbacResource": "user",
+    "approvalRequired": true,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "contact_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minItems": 1,
+          "maxItems": 500,
+          "description": "Contacts to invite, in any client. Each contact is authorized against its own client."
+        }
+      },
+      "required": [
+        "contact_ids"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "total": {
+              "type": "integer",
+              "description": "Contacts considered by this request."
+            },
+            "sent": {
+              "type": "integer"
+            },
+            "skipped": {
+              "type": "integer"
+            },
+            "failed": {
+              "type": "integer"
+            },
+            "results": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/PortalInvitationResult"
+              }
+            }
+          },
+          "required": [
+            "total",
+            "sent",
+            "skipped",
+            "failed",
+            "results"
+          ]
         },
         "meta": {
           "type": "object",
@@ -18892,7 +18994,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/documents",
     "displayName": "Attach File to Record",
     "summary": "Attach one file to a ticket, project task, client, contact or asset",
-    "description": "Attaches ONE file to a ticket, project_task, client, contact or asset. Prefer source.type=url: give an https URL and the server downloads it (max size is the tenant storage limit). The URL host must be on the workspace's allowed download hosts (a tenant admin manages the list under Settings > MCP Server > Allowed download hosts; the ChatGPT file host is built in). If the call fails with 400 FETCH_HOST_NOT_ALLOWED, nothing was downloaded: tell the user an admin can add that host, and do not retry with other URLs. Use source.type=base64 only for small content you wrote yourself, never to relay a user's file, and file_name is then required. One file per call; make several calls for several files. In an MCP client with the attach_file tool, use that instead. Returns 201 with the stored document; 400 for a disallowed type, oversize file, unfetchable URL or a host that is not allowed (FETCH_HOST_NOT_ALLOWED), 403 without permission, 404 for a missing record.",
+    "description": "Attaches ONE file to a ticket, project_task, client, contact or asset. Prefer source.type=url: give an https URL and the server downloads it (max size is the tenant storage limit). The URL host must be on the workspace's allowed download hosts (a tenant admin manages the list under Settings > MCP Server > Allowed download hosts; the ChatGPT file host is built in). If the call fails with 400 FETCH_HOST_NOT_ALLOWED, nothing was downloaded: tell the user an admin can add that host, and do not retry with other URLs. Use source.type=base64 only for small content you wrote yourself, never to relay a user's file, and file_name is then required. One file per call; make several calls for several files. The file is internal-only unless you pass is_client_visible=true (only when the user asks for the client to see it; ticket, project_task and client only, contact and asset get 400; needs document:update); the returned document shows is_client_visible. In an MCP client with the attach_file tool, use that instead. Returns 201 with the stored document; 400 for a disallowed type, oversize file, unfetchable URL or a host that is not allowed (FETCH_HOST_NOT_ALLOWED), 403 without permission, 404 for a missing record.",
     "tags": [
       "Documents"
     ],
@@ -18968,6 +19070,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "mime_type": {
           "type": "string",
           "description": "Declared MIME type. The server sniffs the bytes and a recognised type overrides this; the storage allowlist is applied to the resolved type."
+        },
+        "is_client_visible": {
+          "type": "boolean",
+          "description": "Whether the client portal can show the document. Default false (internal only). Only ticket, project_task and client support true; contact and asset get 400. true also needs the document:update permission. The created document in the response carries the resulting is_client_visible."
         }
       },
       "required": [
@@ -37271,6 +37377,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "client_portal_visible": {
           "type": "boolean"
+        },
+        "default_assigned_team_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
         }
       },
       "additionalProperties": false,
@@ -40837,7 +40950,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/webhooks/templates",
     "displayName": "List webhook templates",
     "summary": "List webhook templates",
-    "description": "Returns webhook templates visible to the tenant (own + system templates).",
+    "description": "Webhook templates are not persisted, so this always returns 200 with an empty list. There is no template storage to read from.",
     "tags": [
       "Webhooks"
     ],
@@ -40868,7 +40981,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/webhooks/templates",
     "displayName": "Create webhook template",
     "summary": "Create webhook template",
-    "description": "Creates a reusable webhook template. Requires system_settings RBAC.",
+    "description": "Not implemented: webhook templates have no storage. Returns 501 NOT_IMPLEMENTED after the system_settings RBAC check and body validation.",
     "tags": [
       "Webhooks"
     ],
@@ -40932,9 +41045,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_webhooks_templates_id",
     "method": "get",
     "path": "/api/v1/webhooks/templates/{id}",
-    "displayName": "Get webhook template detail (webhook getById wiring)",
-    "summary": "Get webhook template detail (webhook getById wiring)",
-    "description": "Template detail route delegates to ApiWebhookController.getById() and looks up rows from the webhooks table by the URL id, not webhook_templates. Calling with a true template_id will return 404.",
+    "displayName": "Get webhook template detail",
+    "summary": "Get webhook template detail",
+    "description": "Webhook templates are not persisted, so a template id never resolves: returns 404 NOT_FOUND after the RBAC check and id validation.",
     "tags": [
       "Webhooks"
     ],
@@ -40956,7 +41069,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "type": "object",
       "properties": {
         "data": {
-          "$ref": "#/components/schemas/WebhookRecordV1"
+          "$ref": "#/components/schemas/WebhookTemplateRecordV1"
         },
         "meta": {
           "type": "object",
@@ -40972,9 +41085,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "put-_api_v1_webhooks_templates_id",
     "method": "put",
     "path": "/api/v1/webhooks/templates/{id}",
-    "displayName": "Update webhook template (webhook update wiring)",
-    "summary": "Update webhook template (webhook update wiring)",
-    "description": "Template update route delegates to ApiWebhookController.update() and operates on webhooks rows, not webhook_templates.",
+    "displayName": "Update webhook template",
+    "summary": "Update webhook template",
+    "description": "Not implemented: webhook templates have no storage. Returns 501 NOT_IMPLEMENTED after the system_settings RBAC check, id validation and body validation.",
     "tags": [
       "Webhooks"
     ],
@@ -40996,269 +41109,32 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "type": "object",
       "properties": {
         "name": {
-          "type": "string",
-          "minLength": 1
+          "type": "string"
         },
         "description": {
           "type": "string"
         },
-        "url": {
-          "type": "string",
-          "format": "uri"
+        "category": {
+          "type": "string"
         },
-        "method": {
-          "type": "string",
-          "enum": [
-            "GET",
-            "POST",
-            "PUT",
-            "PATCH",
-            "DELETE"
-          ]
+        "default_config": {
+          "type": "object",
+          "additionalProperties": {}
         },
-        "event_types": {
+        "required_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "supported_events": {
           "type": "array",
           "items": {
             "$ref": "#/components/schemas/WebhookEventTypeV1"
-          },
-          "minItems": 1
-        },
-        "security": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "payload_format": {
-          "type": "string",
-          "enum": [
-            "json",
-            "xml",
-            "form_data",
-            "custom"
-          ]
-        },
-        "content_type": {
-          "type": "string"
-        },
-        "custom_headers": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
           }
         },
-        "event_filter": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "payload_fields": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "properties": {
-            "ticket": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string",
-                "enum": [
-                  "ticket_number",
-                  "title",
-                  "url",
-                  "status_id",
-                  "status_name",
-                  "is_closed",
-                  "response_state",
-                  "previous_status_id",
-                  "previous_status_name",
-                  "previous_response_state",
-                  "new_response_state",
-                  "priority_id",
-                  "priority_name",
-                  "client_id",
-                  "client_name",
-                  "contact_name_id",
-                  "contact_name",
-                  "contact_email",
-                  "assigned_to",
-                  "assigned_to_name",
-                  "assigned_team_id",
-                  "board_id",
-                  "board_name",
-                  "category_id",
-                  "subcategory_id",
-                  "entered_at",
-                  "updated_at",
-                  "closed_at",
-                  "due_date",
-                  "tags",
-                  "comment",
-                  "changes",
-                  "comments"
-                ]
-              }
-            },
-            "project": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string",
-                "enum": [
-                  "project_name",
-                  "wbs_code",
-                  "description",
-                  "status_id",
-                  "status_name",
-                  "is_closed",
-                  "previous_status_id",
-                  "previous_status_name",
-                  "client_id",
-                  "client_name",
-                  "contact_name_id",
-                  "contact_name",
-                  "contact_email",
-                  "assigned_to",
-                  "assigned_to_name",
-                  "start_date",
-                  "end_date",
-                  "budgeted_hours",
-                  "url",
-                  "changes",
-                  "phases",
-                  "task_counts",
-                  "task_id",
-                  "phase_id",
-                  "phase_name",
-                  "task_name",
-                  "estimated_hours",
-                  "actual_hours",
-                  "due_date",
-                  "priority_id",
-                  "priority_name",
-                  "tags"
-                ]
-              }
-            },
-            "client": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string",
-                "enum": [
-                  "changed_fields"
-                ]
-              }
-            },
-            "contact": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string",
-                "enum": [
-                  "client_id",
-                  "changed_fields"
-                ]
-              }
-            },
-            "client_location": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string",
-                "enum": [
-                  "client_id",
-                  "changed_fields"
-                ]
-              }
-            },
-            "quote": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string",
-                "enum": [
-                  "client_id",
-                  "quote_number",
-                  "version",
-                  "contact_id",
-                  "opportunity_id",
-                  "previous_status",
-                  "new_status",
-                  "currency_code",
-                  "total_amount",
-                  "performed_by_type",
-                  "performed_by_id",
-                  "sent_at",
-                  "viewed_at",
-                  "approved_at",
-                  "accepted_at",
-                  "rejected_at",
-                  "expired_at",
-                  "converted_at",
-                  "conversion_reverted_at",
-                  "superseded_at",
-                  "cancelled_at",
-                  "accepted_by_name",
-                  "accepted_on_behalf",
-                  "selected_optional_item_ids",
-                  "rejection_reason",
-                  "conversion_targets",
-                  "contract_id",
-                  "invoice_id",
-                  "sales_order_id",
-                  "released_invoice_id",
-                  "superseded_by_quote_id",
-                  "next_version"
-                ]
-              }
-            }
-          },
-          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags; client: changed_fields; contact: client_id, changed_fields; client_location: client_id, changed_fields; quote: client_id, quote_number, version, contact_id, opportunity_id, previous_status, new_status, currency_code, total_amount, performed_by_type, performed_by_id, sent_at, viewed_at, approved_at, accepted_at, rejected_at, expired_at, converted_at, conversion_reverted_at, superseded_at, cancelled_at, accepted_by_name, accepted_on_behalf, selected_optional_item_ids, rejection_reason, conversion_targets, contract_id, invoice_id, sales_order_id, released_invoice_id, superseded_by_quote_id, next_version."
-        },
-        "payload_transformation": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "retry_config": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "is_active": {
+        "is_system_template": {
           "type": "boolean"
-        },
-        "is_test_mode": {
-          "type": "boolean"
-        },
-        "verify_ssl": {
-          "type": "boolean"
-        },
-        "secret_token": {
-          "type": "string"
-        },
-        "rate_limit": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "metadata": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "tags": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
         }
       }
     },
@@ -41266,7 +41142,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "type": "object",
       "properties": {
         "data": {
-          "$ref": "#/components/schemas/WebhookRecordV1"
+          "$ref": "#/components/schemas/WebhookTemplateRecordV1"
         },
         "meta": {
           "type": "object",
@@ -41282,9 +41158,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "delete-_api_v1_webhooks_templates_id",
     "method": "delete",
     "path": "/api/v1/webhooks/templates/{id}",
-    "displayName": "Delete webhook template (webhook delete wiring)",
-    "summary": "Delete webhook template (webhook delete wiring)",
-    "description": "Template delete route delegates to ApiWebhookController.delete() and removes a webhooks row, not a webhook_templates row.",
+    "displayName": "Delete webhook template",
+    "summary": "Delete webhook template",
+    "description": "Not implemented: webhook templates have no storage. Returns 501 NOT_IMPLEMENTED after the system_settings RBAC check and id validation.",
     "tags": [
       "Webhooks"
     ],
@@ -41309,7 +41185,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/webhooks/templates/{id}/create",
     "displayName": "Create webhook from template",
     "summary": "Create webhook from template",
-    "description": "Instantiates a webhook configuration from a template, merging caller-supplied overrides.",
+    "description": "Not implemented: webhook templates have no storage. Returns 501 NOT_IMPLEMENTED after the RBAC check and body validation.",
     "tags": [
       "Webhooks"
     ],
@@ -44521,6 +44397,178 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "format": "uuid",
           "description": "Project task UUID."
+        }
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_projects_id_materials",
+    "method": "get",
+    "path": "/api/v1/projects/{id}/materials",
+    "displayName": "List project materials",
+    "summary": "List project materials",
+    "description": "Returns the materials (products) recorded against a project, newest first, with product name and SKU. Requires project:read and read access to the project.",
+    "tags": [
+      "Projects"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Project UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/ProjectMaterialResource"
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_projects_id_materials",
+    "method": "post",
+    "path": "/api/v1/projects/{id}/materials",
+    "displayName": "Add a project material",
+    "summary": "Add a project material",
+    "description": "Adds a product to a project with quantity, rate and currency. A stock-tracked product consumes stock and a serialized product delivers the picked unit_id. Insufficient stock, or stock reserved or held for a sales order, is refused with 400 on quantity and nothing is written. Requires project:update. Returns the created material.",
+    "tags": [
+      "Projects"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Project UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project UUID."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "service_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "quantity": {
+          "type": "integer",
+          "exclusiveMinimum": 0
+        },
+        "rate": {
+          "type": "number",
+          "minimum": 0
+        },
+        "currency_code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1000
+        },
+        "unit_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "billing_destination": {
+          "type": "string",
+          "enum": [
+            "next_project_invoice",
+            "schedule_entry",
+            "separate",
+            "project_completion",
+            "on_hold"
+          ]
+        },
+        "billing_schedule_entry_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "service_id",
+        "quantity",
+        "rate",
+        "currency_code"
+      ],
+      "additionalProperties": false,
+      "description": "Material to add to a project. client_id is taken from the project and is rejected if sent; allow_reserved_override is not accepted. rate is integer minor units. unit_id is required for serialized stock-tracked products."
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/ProjectMaterialResource"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_projects_id_materials_materialid",
+    "method": "delete",
+    "path": "/api/v1/projects/{id}/materials/{materialId}",
+    "displayName": "Delete a project material",
+    "summary": "Delete a project material",
+    "description": "Deletes an unbilled material from the project and restores the stock it consumed. Returns 404 if the material does not belong to the project, and 409 if it has been billed. Requires project:update.",
+    "tags": [
+      "Projects"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Project UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project UUID."
+        }
+      },
+      {
+        "name": "materialId",
+        "in": "path",
+        "required": true,
+        "description": "Project material UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project material UUID."
         }
       }
     ]
@@ -54969,7 +55017,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/stopwatch/{id}/log",
     "displayName": "Log stopwatch as time entry",
     "summary": "Log stopwatch as time entry",
-    "description": "Logs the session as exactly one time entry: start = first segment start (to the minute), end = start + active duration, billable_duration = active minutes (min 1). Any body field overrides the derived value. The time sheet is resolved server-side from the start date; a locked (submitted/approved) sheet returns 409 and the session is left untouched.",
+    "description": "Logs the session as one time entry per work day (in the entry user timezone) that has active time: each entry starts at the first active instant of that day (to the minute) and lasts the active minutes of that day, ending no later than 23:59; paused time is never booked. A session within one day is one entry (billable_duration = active minutes, min 1). An explicit start_time/end_time in the body produces exactly one entry over that span. Other body fields override the derived value. The time sheet is resolved server-side from the start date; a locked (submitted/approved) sheet returns 409 and the session is left untouched.",
     "tags": [
       "Work Management v1"
     ],
@@ -55026,12 +55074,21 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "time_entry": {
               "type": "object",
               "additionalProperties": {},
-              "description": "The persisted time entry."
+              "description": "The persisted time entry (the first one when the session spans several work days)."
+            },
+            "time_entries": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "description": "Every persisted time entry, one per work day with active time."
             }
           },
           "required": [
             "session",
-            "time_entry"
+            "time_entry",
+            "time_entries"
           ]
         }
       },
@@ -55046,7 +55103,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/priorities",
     "displayName": "List ticket priorities",
     "summary": "List ticket priorities",
-    "description": "Returns the tenant ticket priorities (item_type=ticket), ordered by name.",
+    "description": "Returns the tenant ticket priorities (item_type=ticket), ordered by name, each with is_from_itil_standard. A board whose priority_type is itil accepts only ITIL priorities; any other board only the custom ones.",
     "tags": [
       "Work Management v1"
     ],
@@ -65764,7 +65821,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/opportunities/{id}/stage",
     "displayName": "Set opportunity stage",
     "summary": "Set opportunity stage",
-    "description": "Sets an open-pipeline stage through the declared-evidence flow the board drag uses; won and lost answer 400 pointing at /win and /lose.",
+    "description": "Sets an open-pipeline stage through the declared-evidence flow the board drag uses; won and lost answer 400 pointing at /win and /lose. detail and citations (interaction or document sources of this opportunity) set the declaration note and sources; omitted fields keep an existing declaration. refType and refId are shorthand for one citation and are refused with 400 beside citations.",
     "tags": [
       "Opportunities v1"
     ],
@@ -65802,6 +65859,40 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "string",
             "null"
           ]
+        },
+        "citations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "minLength": 1
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ]
+          }
+        },
+        "refType": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "refId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
         }
       },
       "required": [
@@ -66029,7 +66120,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/opportunities/{id}/evidence",
     "displayName": "List opportunity evidence",
     "summary": "List opportunity evidence",
-    "description": "Lists append-only evidence and corrected records in recorded order.",
+    "description": "Lists append-only evidence and corrected records in recorded order, with the sources each declaration cites.",
     "tags": [
       "Opportunities v1"
     ],
@@ -66073,7 +66164,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/opportunities/{id}/evidence",
     "displayName": "Record declared evidence",
     "summary": "Record declared evidence",
-    "description": "Records the declared qualified checkpoint only.",
+    "description": "Declares a stage (identified through verbal) with an optional note (detail) and citations of interactions or documents attached to this opportunity. Omitted fields keep an existing declaration. refType and refId are shorthand for one citation and are refused with 400 beside citations.",
     "tags": [
       "Opportunities v1"
     ],
@@ -66110,6 +66201,26 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "null"
           ]
         },
+        "citations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "minLength": 1
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ]
+          }
+        },
         "refType": {
           "type": [
             "string",
@@ -66128,6 +66239,95 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "checkpoint"
       ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_opportunities_id_declarations_checkpoint",
+    "method": "put",
+    "path": "/api/v1/opportunities/{id}/declarations/{checkpoint}",
+    "displayName": "Edit stage declaration",
+    "summary": "Edit stage declaration",
+    "description": "Replaces the note (detail) and sources (citations) of the declaration for a reached checkpoint (qualified, assessment, proposed or verbal) without moving the deal and without publishing a stage-changed event. Omitted fields keep their current value; null detail or an empty citations array clears it. Works on closed opportunities. An unreached checkpoint answers 409; won answers 400.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      },
+      {
+        "name": "checkpoint",
+        "in": "path",
+        "required": true,
+        "description": "The stage checkpoint whose declaration is edited. won is refused.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "qualified",
+            "assessment",
+            "proposed",
+            "verbal",
+            "won"
+          ],
+          "description": "The stage checkpoint whose declaration is edited. won is refused."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "detail": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "citations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "minLength": 1
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ]
+          }
+        }
+      }
     },
     "responseBodySchema": {
       "type": "object",

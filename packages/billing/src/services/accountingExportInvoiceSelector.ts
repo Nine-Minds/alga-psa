@@ -1,3 +1,4 @@
+import { projectAccountingExportRecurringPeriods } from './accountingExportServicePeriods';
 import { Knex } from 'knex';
 
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
@@ -280,36 +281,13 @@ export class AccountingExportInvoiceSelector {
         .map(toIsoString)
         .filter((value): value is string => value !== null)
         .sort();
-      const recurringDetailPeriodsByKey = new Map<
-        string,
-        {
-          service_period_start: string | null;
-          service_period_end: string | null;
-          billing_timing: 'arrears' | 'advance' | null;
-        }
-      >();
-      for (const detailRow of chargeRows) {
-        const start = toIsoString(detailRow.detail_service_period_start);
-        const end = toIsoString(detailRow.detail_service_period_end);
-        const billingTiming =
-          detailRow.detail_billing_timing === 'advance' || detailRow.detail_billing_timing === 'arrears'
-            ? detailRow.detail_billing_timing
-            : null;
-        if (!start && !end) {
-          continue;
-        }
-        recurringDetailPeriodsByKey.set(`${start ?? ''}|${end ?? ''}|${billingTiming ?? ''}`, {
-          service_period_start: start,
-          service_period_end: end,
-          billing_timing: billingTiming,
-        });
-      }
-      const recurringDetailPeriods = Array.from(recurringDetailPeriodsByKey.values()).sort((left, right) => {
-        if (left.service_period_start !== right.service_period_start) {
-          return String(left.service_period_start ?? '').localeCompare(String(right.service_period_start ?? ''));
-        }
-        return String(left.service_period_end ?? '').localeCompare(String(right.service_period_end ?? ''));
-      });
+      const recurringDetailPeriods = projectAccountingExportRecurringPeriods(
+        chargeRows.map((detailRow) => ({
+          service_period_start: detailRow.detail_service_period_start,
+          service_period_end: detailRow.detail_service_period_end,
+          billing_timing: detailRow.detail_billing_timing
+        }))
+      );
       const hasCanonicalDetailPeriods = recurringDetailPeriods.length > 0;
       const servicePeriodStart = hasCanonicalDetailPeriods
         ? recurringDetailPeriods[0]?.service_period_start ?? detailServicePeriodStarts[0] ?? null

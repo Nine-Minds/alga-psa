@@ -100,12 +100,18 @@ export function buildAttachFileRequest(rawArgs: Record<string, unknown> | undefi
     source = { type: 'base64', content: args.content_base64 as string };
   }
 
+  const isClientVisible = args.is_client_visible;
+  if (isClientVisible !== undefined && isClientVisible !== null && typeof isClientVisible !== 'boolean') {
+    throw new AttachFileInputError('is_client_visible must be a boolean (true or false), or left out for an internal-only file.');
+  }
+
   const body: Record<string, unknown> = {
     entity_type: entityType,
     entity_id: entityId,
     source,
     ...(fileName ? { file_name: fileName } : {}),
     ...(mimeType ? { mime_type: mimeType } : {}),
+    ...(typeof isClientVisible === 'boolean' ? { is_client_visible: isClientVisible } : {}),
   };
 
   return {

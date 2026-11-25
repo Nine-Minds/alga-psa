@@ -46,11 +46,11 @@ const RESOURCE_CATEGORIES: Record<string, 'operational' | 'sales' | 'billing' | 
   vendor: 'accounting', vendor_bill: 'accounting',
 
   account_management: 'settings', co_management: 'settings', email: 'settings', extension: 'settings', import_export: 'settings',
-  inbound_webhook: 'settings', notification: 'settings', priority: 'settings', secrets: 'settings',
+  inbound_webhook: 'settings', metadata: 'settings', notification: 'settings', priority: 'settings', secrets: 'settings',
   security_settings: 'settings', settings: 'settings', sla_policy: 'settings', storage: 'settings',
-  system_settings: 'settings', ticket_settings: 'settings', user_settings: 'settings', workflow: 'settings',
+  system_settings: 'settings', ticket_settings: 'settings', user_settings: 'settings', webhook: 'settings', workflow: 'settings',
 
-  service_principal: 'user-administration', team: 'user-administration', user: 'user-administration',
+  permission: 'user-administration', role: 'user-administration', service_principal: 'user-administration', team: 'user-administration', user: 'user-administration',
   user_schedule: 'user-administration',
 
   // Not one of the five closed categories, and not seat work either.

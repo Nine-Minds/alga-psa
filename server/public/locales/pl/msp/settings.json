@@ -868,7 +868,7 @@
           "assignment": "Przypisanie i SLA",
           "assignmentHelp": "Domyślne kierowanie, SLA i menedżer tablicy",
           "notifications": "Powiadomienia",
-          "notificationsHelp": "Powiadamiaj techników o nowych zgłoszeniach i zmianach statusu oraz ustaw domyślnych obserwatorów",
+          "notificationsHelp": "Powiadamiaj techników o nowych zgłoszeniach, zmianach statusu i odpowiedziach klientów w nieprzypisanych zgłoszeniach oraz ustaw domyślnych obserwatorów",
           "notificationsRulesLabel": "Reguły powiadomień",
           "notificationsRulesHelp": "Odbiorcy otrzymują jedno powiadomienie na zdarzenie. Nie są dodawani jako obserwatorzy.",
           "notificationsAddRule": "Dodaj regułę",
@@ -876,6 +876,7 @@
           "notificationsRuleEnabled": "Włączona",
           "notificationsRemoveRule": "Usuń regułę",
           "notificationsOnCreate": "Gdy zgłoszenie zostanie utworzone na tej tablicy",
+          "notificationsOnClientReplyUnassigned": "Gdy klient odpowie w nieprzypisanym zgłoszeniu",
           "notificationsOnStatus": "Gdy zgłoszenie przechodzi do statusu",
           "notificationsNoStatuses": "Statusy można wybrać po zapisaniu tablicy.",
           "notificationsRecipients": "Powiadom",
@@ -888,7 +889,7 @@
           "notificationsDefaultWatchers": "Domyślni obserwatorzy",
           "notificationsDefaultWatchersPlaceholder": "Wybierz użytkowników...",
           "notificationsDefaultWatchersHelp": "Dodawani do listy obserwatorów każdego nowego zgłoszenia na tej tablicy i powiadamiani o każdej późniejszej aktualizacji.",
-          "notificationsTriggerRequired": "Każda reguła powiadomień wymaga co najmniej jednego wyzwalacza: utworzenia zgłoszenia lub statusu.",
+          "notificationsTriggerRequired": "Każda reguła powiadomień wymaga co najmniej jednego wyzwalacza: utworzenia zgłoszenia, odpowiedzi klienta w nieprzypisanym zgłoszeniu lub statusu.",
           "notificationsRecipientRequired": "Każda reguła powiadomień wymaga co najmniej jednego użytkownika, zespołu lub adresu e-mail do powiadomienia.",
           "notificationsFetchFailed": "Nie udało się wczytać ustawień powiadomień",
           "notificationsStatusRemapFailed": "Tablica została utworzona, ale nie udało się dopasować statusu reguły powiadomień do nowej tablicy. Dodaj reguły powiadomień ponownie.",
@@ -2207,6 +2208,8 @@
       },
       "title": "Informacje o zmiennych szablonów e-mail",
       "panelTitle": "Zmienne szablonu",
+      "mspOnly": "Tylko MSP",
+      "clientSafeHelp": "Wysyłany do klientów. Zmienne tylko dla MSP są niedostępne.",
       "inferredContract": "Obecnie nie jest wysyłany. Ten kontrakt został wywnioskowany z szablonu.",
       "empty": "Brak pasujących zmiennych.",
       "example": "Przykład:",
@@ -2719,7 +2722,8 @@
         "general": {
           "title": "Ogólne",
           "defaultClient": "Domyślny klient dla rekordów bez powiązania",
-          "defaultClientHelp": "Kontakty i zasoby, których organizacji nie można ustalić, są przypisywane do tego klienta."
+          "defaultClientHelp": "Kontakty i zasoby, których organizacji nie można ustalić, są przypisywane do tego klienta.",
+          "clearDefaultClient": "Wyczyść"
         },
         "saved": "Zapisano konfigurację. Uruchom kontrolę wstępną, aby sprawdzić ją względem przygotowanych rekordów.",
         "saving": "Zapisywanie…",
@@ -4250,7 +4254,7 @@
   },
   "loginPolicy": {
     "title": "Zasady logowania",
-    "description": "Określ, w jaki sposób pracownicy i użytkownicy portalu klienta mogą logować się za pomocą hasła. Te reguły są egzekwowane na serwerze.",
+    "description": "Określ, w jaki sposób pracownicy i użytkownicy portalu klienta mogą logować się za pomocą hasła lub logowania jednokrotnego. Te reguły są egzekwowane na serwerze.",
     "requireSso": {
       "title": "Wymagaj logowania jednokrotnego dla pracowników MSP",
       "body": "Użytkownicy wewnętrzni muszą logować się przez Google, Microsoft lub dostawcę Keycloak. Logowanie hasłem i resetowanie hasła są zablokowane, z wyjątkiem administratorów awaryjnych wskazanych poniżej.",
@@ -4282,10 +4286,21 @@
         "not_found": "Użytkownik już nie istnieje."
       }
     },
+    "clientPortalSso": {
+      "title": "Opcje logowania w portalu klienta",
+      "body": "Wybierz, którzy dostawcy logowania jednokrotnego pojawiają się na stronie logowania portalu klienta. Wyświetlani są tylko dostawcy, za pomocą których może logować się Twoja organizacja. Logowanie hasłem pozostaje bez zmian.",
+      "providers": {
+        "google": "Google",
+        "azure-ad": "Microsoft",
+        "keycloak": "Keycloak"
+      },
+      "noneAvailable": "Dla Twojej organizacji nie skonfigurowano żadnego dostawcy logowania jednokrotnego. Skonfiguruj go w ustawieniach logowania jednokrotnego, aby udostępnić go w portalu klienta."
+    },
     "guard": {
       "sso_provider_required": "Skonfiguruj co najmniej jednego dostawcę logowania jednokrotnego, zanim go wymusisz.",
       "break_glass_required": "Wybierz co najmniej jednego administratora awaryjnego, zanim wymusisz logowanie jednokrotne.",
-      "break_glass_invalid_user": "Użytkownicy awaryjni muszą być aktywnymi administratorami z włączonym uwierzytelnianiem dwuskładnikowym."
+      "break_glass_invalid_user": "Użytkownicy awaryjni muszą być aktywnymi administratorami z włączonym uwierzytelnianiem dwuskładnikowym.",
+      "client_portal_sso_provider_invalid": "Wybierz tylko obsługiwanych dostawców logowania jednokrotnego."
     },
     "errors": {
       "load": "Nie udało się wczytać zasad logowania.",
@@ -4619,7 +4634,6 @@
       "title": "Numeracja zasobów",
       "description": "Jedna sekwencja dla całej organizacji jest formatowana z prefiksem każdego klienta. Podgląd i drukowanie nie przydzielają numerów. Porzucone wydane numery pozostawiają luki i nigdy nie są ponownie używane.",
       "clientPrefixes": "Prefiksy klientów",
-      "noPrefix": "Brak prefiksu",
       "prefixSaved": "Zapisano prefiks klienta",
       "uniquenessEnabled": "Unikalność etykiet zasobów jest aktywna",
       "legacyAudit": "Audyt istniejących etykiet",
@@ -4633,7 +4647,25 @@
       "continuationReview": "Przegląd istniejących danych objął {{scanned}} zapisanych etykiet; {{numeric}} ma sufiksy numeryczne. Najwyższy sufiks to {{maximum}}; sprawdź wartość początkową {{next}}. To tylko sugestia. Wprowadź i zapisz powyżej zatwierdzoną wartość kontynuacji; ten przegląd nie zużywa żadnej wartości sekwencji.",
       "continuationExamples": "Przykłady: {{examples}}",
       "blankTag": "(pusta etykieta)",
-      "normalizedTag": "Znormalizowana: {{tag}}"
+      "normalizedTag": "Znormalizowana: {{tag}}",
+      "loadFailed": "Nie udało się wczytać ustawień numeracji zasobów",
+      "readOnly": "Możesz przeglądać numerację zasobów. Aby ją zmienić, potrzebujesz uprawnienia do aktualizacji ustawień systemowych.",
+      "columns": {
+        "client": "Klient",
+        "prefix": "Prefiks"
+      },
+      "addPrefix": "Dodaj prefiks",
+      "addPrefixTitle": "Dodaj prefiks klienta",
+      "editPrefixTitle": "Edytuj prefiks klienta",
+      "prefixHelp": "Do 10 liter, cyfr lub łączników.",
+      "edit": "Edytuj",
+      "remove": "Usuń",
+      "removeTitle": "Usunąć prefiks?",
+      "removeMessage": "Usunąć prefiks dla {{client}}? Nowe numery zasobów tego klienta nie będą miały prefiksu. Istniejące etykiety nie zostaną zmienione.",
+      "prefixRemoved": "Usunięto prefiks klienta",
+      "noPrefixes": "Brak prefiksów klientów.",
+      "openMenu": "Otwórz menu",
+      "inactive": "Nieaktywny"
     }
   }
 }

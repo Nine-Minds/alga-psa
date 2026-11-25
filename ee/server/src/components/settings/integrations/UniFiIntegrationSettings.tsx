@@ -11,8 +11,11 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useQuickAddClient } from '@alga-psa/ui/context';
-import { getAllClients, getAllContacts } from '@alga-psa/clients/actions';
-import type { IClient, IContact, ColumnDefinition } from '@alga-psa/types';
+import { getAllContacts } from '@alga-psa/clients/actions';
+import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
+import { lookupClientsByIds } from '@alga-psa/ui/hooks/useClientNames';
+import type { PickerClientOption } from '@alga-psa/ui/components/AsyncClientPicker';
+import type { IContact, ColumnDefinition } from '@alga-psa/types';
 import {
   disconnectUniFiIntegration,
   getUniFiConnectionSummary,
@@ -56,7 +59,8 @@ export default function UniFiIntegrationSettings() {
   const [syncError, setSyncError] = useState<string | null>(null);
 
   const [mappings, setMappings] = useState<MappingRow[]>([]);
-  const [clients, setClients] = useState<IClient[]>([]);
+  // The mapped clients, resolved by id in one batch; the row pickers search on the server.
+  const [knownClients, setKnownClients] = useState<PickerClientOption[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const { renderQuickAddContact } = useQuickAddClient();
   const [quickAddContactFor, setQuickAddContactFor] = useState<{ mappingId: string; clientId: string } | null>(null);
@@ -78,16 +82,14 @@ export default function UniFiIntegrationSettings() {
     if (!background) setIsLoading(true);
     if (!background) setError(null);
     try {
-      const [settingsResult, mappingResult, summaryResult, contactsResult, clientsResult] = await Promise.all([
+      const [settingsResult, mappingResult, summaryResult, contactsResult] = await Promise.all([
         getUniFiSettings(),
         listUniFiSiteMappings(),
         getUniFiConnectionSummary(),
         getAllContacts('active'),
-        getAllClients(false),
       ]);
 
       setContacts(contactsResult ?? []);
-      setClients(clientsResult ?? []);
 
       if (!settingsResult.success) {
         setError(settingsResult.error || t('integrations.rmm.unifi.errors.loadSettings', { defaultValue: 'Failed to load UniFi settings' }));
@@ -108,7 +110,14 @@ export default function UniFiIntegrationSettings() {
       if (!mappingResult.success) {
         setError((prev) => prev || mappingResult.error || t('integrations.rmm.unifi.errors.loadMappings', { defaultValue: 'Failed to load UniFi site mappings' }));
       } else {
-        setMappings((mappingResult.mappings || []) as MappingRow[]);
+        const mappingRows = (mappingResult.mappings || []) as MappingRow[];
+        setKnownClients(
+          await lookupClientsByIds(
+            searchClientsForPicker,
+            mappingRows.map((m) => m.client_id).filter((id): id is string => !!id),
+          ),
+        );
+        setMappings(mappingRows);
       }
 
       if (!summaryResult.success) {
@@ -298,7 +307,8 @@ export default function UniFiIntegrationSettings() {
       render: (_v, mapping) => (
         <ClientPicker
           id={`unifi-client-picker-${mapping.mapping_id}`}
-          clients={clients}
+          searchClients={searchClientsForPicker}
+          knownClients={knownClients}
           selectedClientId={mapping.client_id ?? null}
           onSelect={(clientId) => handleMappingClientChange(mapping.mapping_id, clientId)}
           filterState="active"
@@ -524,7 +534,6 @@ export default function UniFiIntegrationSettings() {
           }
           setQuickAddContactFor(null);
         },
-        clients,
         selectedClientId: quickAddContactFor?.clientId ?? null,
       })}
     </div>
