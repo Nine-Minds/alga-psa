@@ -4670,7 +4670,7 @@
   },
   "managedRole": {
     "badge": "Zarządzane przez Co-managed IT",
-    "readOnlyNotice": "Tę rolę zarządza Alga. Jej nazwy, uprawnień i członków nie można tutaj zmieniać.",
+    "readOnlyNotice": "Tą rolą zarządza Alga. Jej nazwy, uprawnień i członków nie można tutaj zmieniać.",
     "scopeHint": "Aby zmienić, do jakich tablic i projektów ma dostęp technik, edytuj ustalenie współzarządzania klienta.",
     "openArrangement": "Otwórz Co-managed IT",
     "permissionsLocked": "Uprawnienia roli {{role}} są zarządzane przez Co-managed IT i nie można ich tutaj zmieniać.",
