@@ -589,7 +589,8 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     // correct for the HTML body only.
     const subjectTemplate = Handlebars.compile(emailSubject, { noEscape: true });
 
-    const attachmentCommentId = isTicketCommentTemplate(params.template)
+    const attachmentCommentId = (isTicketCommentTemplate(params.template) ||
+      params.template === 'ticket-board-client-reply-unassigned')
       ? params.commentSource?.commentId || params.replyContext?.commentId : undefined;
     const attachmentTicketId = params.commentSource?.ticketId || params.replyContext?.ticketId;
     const hasRichTextSource = Boolean(

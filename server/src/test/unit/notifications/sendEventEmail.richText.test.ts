@@ -130,6 +130,44 @@ beforeEach(() => {
 });
 
 describe('ticket rich-text email delivery', () => {
+  it.each([
+    { recipient: 'internal user', recipientUserId: 'user-1', classification: 'internal' },
+    { recipient: 'plain address', recipientUserId: undefined, classification: 'unknown' },
+  ])('reconstructs board client-reply content for a $recipient using current authorization', async ({
+    recipientUserId, classification,
+  }) => {
+    state.classifyRecipient.mockResolvedValue(classification);
+    await sendEventEmail({
+      ...baseParams(),
+      template: 'ticket-board-client-reply-unassigned',
+      recipientUserId,
+      cc: undefined,
+      bcc: undefined,
+    });
+
+    expect(state.prepareComment).toHaveBeenCalledWith(expect.objectContaining({
+      ticketId: 'ticket-1',
+      commentId: 'comment-1',
+      recipients: ['to@example.test'],
+      audience: 'authorized',
+      allowInlineImages: classification === 'internal',
+      suppressProtectedContent: classification === 'unknown',
+    }));
+    const sent = state.sendEmail.mock.calls[0][0];
+    expect(sent.templateProcessor.html).toContain('Current comment');
+    expect(sent.templateProcessor.html).not.toContain('old comment');
+    expect(sent.attachments).toEqual(classification === 'internal' ? [image] : []);
+    expect(sent.revalidateCommentOnRetry).toBe(true);
+  });
+
+  it('does not send a board client-reply email when the current comment is no longer deliverable', async () => {
+    state.prepareComment.mockResolvedValue(null);
+    await sendEventEmail({ ...baseParams(), template: 'ticket-board-client-reply-unassigned' });
+
+    expect(state.prepareComment).toHaveBeenCalled();
+    expect(state.sendEmail).not.toHaveBeenCalled();
+  });
+
   it('prepares persisted content for To, Cc and Bcc using the resolved locale', async () => {
     await sendEventEmail({
       ...baseParams(),
