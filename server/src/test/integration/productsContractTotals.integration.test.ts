@@ -57,7 +57,7 @@ vi.mock('server/src/lib/tenant', () => ({
 vi.mock('@alga-psa/auth/withAuth', () => ({
   withAuth: (action: (...args: any[]) => Promise<unknown>) =>
     (...args: any[]) =>
-      action({ user_id: 'products-totals-test', tenant: tenantId, roles: [{ role_name: 'Admin' }] } as any, { tenant: tenantId }, ...args),
+      action({ user_id: 'products-totals-test', tenant: tenantId, user_type: 'internal', roles: [{ role_name: 'Admin' }] } as any, { tenant: tenantId }, ...args),
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
 

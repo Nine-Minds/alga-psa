@@ -43,7 +43,9 @@ describe('Multi-active contracts singleton blocker removal wiring', () => {
     expect(contractDialogSource).not.toContain('fetchClientIdsWithActiveContracts');
     expect(contractDialogSource).not.toContain('checkClientHasActiveContract');
     expect(contractDialogSource).not.toContain('clientHasActiveContract');
-    expect(contractDialogSource).toContain('disabled={!contractName.trim() || !clientId}');
+    // The only gates on Create are the two required fields and a save already
+    // in flight (the double-click guard) — nothing about sibling contracts.
+    expect(contractDialogSource).toContain('disabled={!contractName.trim() || !clientId || isSaving}');
   });
 
   it('T009/T010/T011: activation flows no longer run singleton prechecks in either contracts tab shell', () => {

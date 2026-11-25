@@ -332,6 +332,8 @@ describe("Contract simulator – migrated-schema integration", () => {
         effective_date: "2025-07-01T00:00:00Z",
         end_date: null,
         custom_rate: 12_500,
+        // A stored whole-contract schedule keeps that scope in the scenario.
+        contract_line_key: null,
       },
     ]);
     expect(scenario.available_services).toEqual(
