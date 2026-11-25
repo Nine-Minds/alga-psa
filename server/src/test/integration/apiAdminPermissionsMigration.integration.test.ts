@@ -17,7 +17,6 @@ const require = createRequire(import.meta.url);
 const migrationsDir = path.resolve(__dirname, '../../../migrations');
 const permissionsDir = path.join(migrationsDir, 'utils/permissions');
 const { DEFAULT_ROLES } = require(path.join(permissionsDir, 'roleGrants.cjs'));
-const { ACTIVE_PERMISSIONS, getProductPermissions } = require(path.join(permissionsDir, 'catalog.cjs'));
 const { syncPermissionCatalog } = require(path.join(permissionsDir, 'syncPermissionCatalog.cjs'));
 const migration = require(path.join(migrationsDir, '20261115120000_add_api_admin_permissions.cjs'));
 const permissionMigration = require(path.join(migrationsDir, '20261115230000_add_permission_catalog_resource.cjs'));
@@ -86,7 +85,7 @@ describe('add_api_admin_permissions migration integration', () => {
     expect({ permissions: await total(tenantId, 'permissions'), grants: await total(tenantId, 'role_permissions') }).toEqual(before);
   }, HOOK_TIMEOUT);
 
-  async function tenantFor(product: 'psa' | 'algadesk'): Promise<string> {
+  async function tenantFor(product: 'psa' | 'algadesk' | 'co_managed'): Promise<string> {
     const tenantId = await createTenant(ctx.db, `permission ${product} tenant`, { productCode: product });
     await table(tenantId, 'roles').insert(DEFAULT_ROLES[product]
       .filter((role: any) => !role.legacy)
@@ -101,7 +100,9 @@ describe('add_api_admin_permissions migration integration', () => {
     return tenantId;
   }
 
-  it.each(['psa', 'algadesk'] as const)('grants permission:* to msp:Admin only in %s', async (product) => {
+  // The REST backfill extended permission administration to co-managed Admins.
+  // Exercise persisted grants for every product, including exclusion of all other roles.
+  it.each(['psa', 'algadesk', 'co_managed'] as const)('grants permission:* to msp:Admin only in %s', async (product) => {
     const tenantId = await tenantFor(product);
     expect(await heldBy(tenantId, 'Admin')).not.toEqual(expect.arrayContaining(PERMISSION_KEYS));
 
@@ -115,16 +116,6 @@ describe('add_api_admin_permissions migration integration', () => {
     expect(new Set(holders.map((row) => `${row.msp ? 'msp' : 'client'}:${row.role_name}`))).toEqual(new Set(['msp:Admin']));
     expect(holders.map((row) => row.action).sort()).toEqual(['create', 'delete', 'read', 'update']);
   }, HOOK_TIMEOUT);
-
-  it('does not grant permission:* to the co-managed Admin', () => {
-    const entries = ACTIVE_PERMISSIONS.filter((entry: any) => entry.resource === 'permission');
-    expect(entries).toHaveLength(4);
-    for (const entry of entries) {
-      expect(entry.products).not.toContain('co_managed');
-      expect(entry.defaultGrants.co_managed).toBeUndefined();
-    }
-    expect(getProductPermissions('co_managed').filter((entry: any) => entry.resource === 'permission')).toEqual([]);
-  });
 
   it('is irreversible and non-transactional like its sibling migrations', async () => {
     await expect(migration.down()).rejects.toThrow(/irreversible/);
