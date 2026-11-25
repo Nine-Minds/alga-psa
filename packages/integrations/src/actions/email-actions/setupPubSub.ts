@@ -1,6 +1,6 @@
 'use server';
 
-import { google } from 'googleapis';
+import * as google from 'googleapis/build/src/apis/pubsub/index.js';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import {
   GMAIL_PUBLISHER_ROLE,
