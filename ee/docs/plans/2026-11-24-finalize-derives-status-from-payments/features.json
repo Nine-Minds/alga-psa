@@ -1,0 +1,68 @@
+[
+  {
+    "id": "F001",
+    "description": "A pure invoice status derivation in packages/billing/src/lib/balanceDue.ts takes total, credit applied, net payments and current lifecycle status, and returns paid / partially_applied / sent while never overwriting draft, cancelled or void",
+    "implemented": true,
+    "prdRefs": ["Goal", "Design notes"]
+  },
+  {
+    "id": "F002",
+    "description": "recordExternalPayment (record and reverse paths) uses the shared derivation in place of its private resolveStatus, with unchanged behaviour",
+    "implemented": true,
+    "prdRefs": ["Design notes"]
+  },
+  {
+    "id": "F003",
+    "description": "finalizeInvoiceWithKnex writes the derived status (from net recorded payments) instead of hard-coded 'sent', for every caller (UI action, REST InvoiceService, recurring generation, prepaid auto-replenishment)",
+    "implemented": true,
+    "prdRefs": ["Problem", "Design notes", "Risks"]
+  },
+  {
+    "id": "F004",
+    "description": "The invoice_finalized audit row records the derived status in after.status",
+    "implemented": true,
+    "prdRefs": ["Design notes"]
+  },
+  {
+    "id": "F005",
+    "description": "Post-finalize credit auto-apply computes headroom with computeBalanceDue (net of payments), so a paid invoice draws no client credit",
+    "implemented": true,
+    "prdRefs": ["Problem", "Design notes"]
+  },
+  {
+    "id": "F006",
+    "description": "Credit application sets invoice status through the shared derivation (only if it sets status today)",
+    "implemented": true,
+    "prdRefs": ["Design notes"]
+  },
+  {
+    "id": "F007",
+    "description": "Credit notes, negative-total and prepayment invoices with no payments keep their current post-finalize status (paid requires net payments > 0)",
+    "implemented": true,
+    "prdRefs": ["Risks"]
+  },
+  {
+    "id": "F008",
+    "description": "A draft invoice with recorded payments shows the net amount paid, using getInvoicePaymentSummary",
+    "implemented": true,
+    "prdRefs": ["Users and flows", "Design notes"]
+  },
+  {
+    "id": "F009",
+    "description": "A draft invoice whose total is below its recorded payments shows a warning that finalizing will leave it overpaid",
+    "implemented": true,
+    "prdRefs": ["Users and flows", "Design notes"]
+  },
+  {
+    "id": "F010",
+    "description": "New UI strings for F008/F009 are added to every msp/invoicing locale file",
+    "implemented": true,
+    "prdRefs": ["Design notes"]
+  },
+  {
+    "id": "F011",
+    "description": "A Citus-safe migration recomputes status for finalized, non-cancelled, non-void invoices with recorded payments whose stored status disagrees with the derivation; drafts are untouched",
+    "implemented": true,
+    "prdRefs": ["Design notes", "Acceptance criteria"]
+  }
+]

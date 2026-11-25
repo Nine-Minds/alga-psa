@@ -3065,5 +3065,9 @@
     "toasts": {
       "reversed": "Zahlung storniert"
     }
+  },
+  "draftInvoicePayments": {
+    "amountPaid": "Für diese Rechnung sind Zahlungen in Höhe von {{amount}} erfasst.",
+    "overpaidWarning": "Der Entwurfsbetrag liegt unter dem bereits gezahlten Betrag ({{paid}}). Beim Finalisieren ist die Rechnung überzahlt."
   }
 }

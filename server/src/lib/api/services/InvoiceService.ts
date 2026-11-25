@@ -1925,6 +1925,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         // Total paid includes both credits and payments
         const totalPaid = newCreditApplied + totalPayments;
 
+        // LEVERAGE: friction invoice-status-derivation — REST applyCredit re-implements payment status inline (and counts credit as paid); should call deriveInvoiceStatus from balanceDue.ts
         // Update invoice status based on total paid
         let newStatus = invoice.status;
         if (totalPaid >= invoice.total_amount) {
@@ -2107,6 +2108,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       const creditApplied = Number(invoice.credit_applied || 0);
       const totalPaid = netPaid + creditApplied;
 
+      // LEVERAGE: pattern invoice-status-derivation — refund path re-implements payment status inline; should call deriveInvoiceStatus from balanceDue.ts
       // Update invoice status based on net paid amount
       let newStatus: string;
       if (totalPaid <= 0) {

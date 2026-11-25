@@ -3065,5 +3065,9 @@
     "toasts": {
       "reversed": "Paiement annulé"
     }
+  },
+  "draftInvoicePayments": {
+    "amountPaid": "Des paiements de {{amount}} sont enregistrés pour cette facture.",
+    "overpaidWarning": "Le total du brouillon est inférieur au montant déjà payé ({{paid}}). La finalisation laissera cette facture en trop-perçu."
   }
 }

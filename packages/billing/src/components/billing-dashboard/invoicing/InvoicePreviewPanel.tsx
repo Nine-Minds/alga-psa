@@ -35,6 +35,7 @@ import { useInvoiceSyncStatuses } from '../../invoices/useInvoiceSyncStatuses';
 import { resolveTemplatePrintSettingsFromAst } from '../../../lib/invoice-template-ast/printSettings';
 import DraftInvoiceDetailsCard, { type DraftInvoiceDetailsSummary } from './DraftInvoiceDetailsCard';
 import DraftInvoiceAdjustmentsCard from './DraftInvoiceAdjustmentsCard';
+import DraftInvoicePaymentsNotice from './DraftInvoicePaymentsNotice';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
@@ -541,6 +542,13 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
           <DraftInvoiceDetailsCard
             invoice={draftInvoiceEditorSummary}
             onSaved={handleDraftInvoiceUpdated}
+          />
+        ) : null}
+
+        {!readOnly && !isFinalized && draftInvoiceSummary && draftInvoiceSummary.status === 'draft' ? (
+          <DraftInvoicePaymentsNotice
+            invoiceId={draftInvoiceSummary.invoice_id}
+            refreshKey={previewRefreshCounter}
           />
         ) : null}
 

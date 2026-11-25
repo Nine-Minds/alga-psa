@@ -3117,5 +3117,9 @@
     "toasts": {
       "reversed": "Płatność wycofana"
     }
+  },
+  "draftInvoicePayments": {
+    "amountPaid": "Dla tej faktury zarejestrowano płatności na kwotę {{amount}}.",
+    "overpaidWarning": "Suma wersji roboczej jest niższa niż kwota już zapłacona ({{paid}}). Sfinalizowanie spowoduje nadpłatę tej faktury."
   }
 }

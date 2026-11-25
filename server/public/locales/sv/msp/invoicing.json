@@ -3065,5 +3065,9 @@
     "toasts": {
       "reversed": "Betalningen återfördes"
     }
+  },
+  "draftInvoicePayments": {
+    "amountPaid": "Betalningar på {{amount}} är registrerade för den här fakturan.",
+    "overpaidWarning": "Utkastets totalsumma är lägre än det redan betalda beloppet ({{paid}}). Om du slutför fakturan blir den överbetald."
   }
 }

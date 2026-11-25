@@ -3065,5 +3065,9 @@
     "toasts": {
       "reversed": "Pagamento revertido"
     }
+  },
+  "draftInvoicePayments": {
+    "amountPaid": "Há pagamentos de {{amount}} registrados nesta fatura.",
+    "overpaidWarning": "O total do rascunho é inferior ao valor já pago ({{paid}}). Ao finalizar, a fatura ficará com pagamento excedente."
   }
 }

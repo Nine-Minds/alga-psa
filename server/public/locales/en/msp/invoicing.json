@@ -3065,5 +3065,9 @@
     "toasts": {
       "reversed": "Payment reversed"
     }
+  },
+  "draftInvoicePayments": {
+    "amountPaid": "Payments of {{amount}} are recorded against this invoice.",
+    "overpaidWarning": "The draft total is below the amount already paid ({{paid}}). Finalizing will leave this invoice overpaid."
   }
 }
