@@ -28,6 +28,8 @@ const ENDPOINTS = [
   '/api/v1/rbac/audit',
 ];
 
+const PERMISSION_CHECK_BODY = { permissions: [{ resource: 'user', action: 'read' }] };
+
 describe('Admin-only API endpoints (catalog-provisioned roles)', () => {
   let env: E2ETestEnvironment;
   let adminClient: ApiTestClient;
@@ -79,6 +81,37 @@ describe('Admin-only API endpoints (catalog-provisioned roles)', () => {
 
   it.each(ENDPOINTS)('non-admin API key gets 403 on %s', async (endpoint) => {
     assertError(await technicianClient.get(resolve(endpoint)), 403);
+  });
+
+  describe('permission:* endpoints', () => {
+    let permissionId: string;
+    const permissionEndpoints = () => [
+      ['GET', '/api/v1/permissions'],
+      ['GET', '/api/v1/permissions/categories'],
+      ['GET', `/api/v1/permissions/${permissionId}`],
+      ['POST', '/api/v1/permission-checks'],
+    ] as const;
+    const call = (client: ApiTestClient, method: string, endpoint: string) =>
+      method === 'POST' ? client.post(endpoint, PERMISSION_CHECK_BODY) : client.get(endpoint);
+
+    beforeAll(async () => {
+      const row = await tenantDb(env.db, env.tenant).table('permissions').first('permission_id') as { permission_id: string };
+      permissionId = row.permission_id;
+    });
+
+    it('Admin API key gets 200 on every permission endpoint', async () => {
+      // Not merely "not 403": a 500 would pass that, and a 500 is exactly what a
+      // half-provisioned resource looks like from the outside.
+      for (const [method, endpoint] of permissionEndpoints()) {
+        assertSuccess(await call(adminClient, method, endpoint), 200);
+      }
+    });
+
+    it('non-admin API key still gets 403', async () => {
+      for (const [method, endpoint] of permissionEndpoints()) {
+        assertError(await call(technicianClient, method, endpoint), 403);
+      }
+    });
   });
 
   it('template detail is a deliberate 404 for Admin (no template storage) and 403 for non-admin', async () => {
