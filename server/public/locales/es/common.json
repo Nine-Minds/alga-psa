@@ -1782,6 +1782,21 @@
       "commentBy": "Comentario de {{author}}:",
       "readAt": "Leído {{time}}"
     },
+    "mentions": {
+      "subject": "{{authorName}} lo mencionó",
+      "headerLabel": "Le han mencionado",
+      "taskIntro": "{{authorName}} lo mencionó en un comentario de la tarea {{taskName}}",
+      "ticketIntro": "{{authorName}} lo mencionó en el ticket #{{ticketNumber}}",
+      "documentIntro": "{{authorName}} lo mencionó en el documento {{documentName}}",
+      "closingNote": "Abra el enlace para ver la mención en contexto y responder.",
+      "viewButton": "Ver en AlgaPSA",
+      "footer": "Desarrollado por AlgaPSA &middot; Manteniendo a los equipos alineados",
+      "textTaskIntro": "{{authorName}} lo mencionó en un comentario de la tarea {{taskName}}",
+      "textTicketIntro": "{{authorName}} lo mencionó en el ticket #{{ticketNumber}}",
+      "textDocumentIntro": "{{authorName}} lo mencionó en el documento {{documentName}}",
+      "textClosingNote": "Abra el enlace para ver la mención en contexto y responder.",
+      "textView": "Ver en AlgaPSA"
+    },
     "item": {
       "unknown": "Desconocido",
       "justNow": "Ahora mismo",

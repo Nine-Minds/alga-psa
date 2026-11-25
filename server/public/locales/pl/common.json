@@ -1794,6 +1794,21 @@
       "commentBy": "Komentarz użytkownika {{author}}:",
       "readAt": "Przeczytano {{time}}"
     },
+    "mentions": {
+      "subject": "{{authorName}} wspomniał(a) o Tobie",
+      "headerLabel": "Wspomniano o Tobie",
+      "taskIntro": "{{authorName}} wspomniał(a) o Tobie w komentarzu do zadania {{taskName}}",
+      "ticketIntro": "{{authorName}} wspomniał(a) o Tobie w zgłoszeniu #{{ticketNumber}}",
+      "documentIntro": "{{authorName}} wspomniał(a) o Tobie w dokumencie {{documentName}}",
+      "closingNote": "Otwórz link, aby zobaczyć wzmiankę w kontekście i odpowiedzieć.",
+      "viewButton": "Zobacz w AlgaPSA",
+      "footer": "Napędzane przez AlgaPSA &middot; Zgrane zespoły",
+      "textTaskIntro": "{{authorName}} wspomniał(a) o Tobie w komentarzu do zadania {{taskName}}",
+      "textTicketIntro": "{{authorName}} wspomniał(a) o Tobie w zgłoszeniu #{{ticketNumber}}",
+      "textDocumentIntro": "{{authorName}} wspomniał(a) o Tobie w dokumencie {{documentName}}",
+      "textClosingNote": "Otwórz link, aby zobaczyć wzmiankę w kontekście i odpowiedzieć.",
+      "textView": "Zobacz w AlgaPSA"
+    },
     "item": {
       "unknown": "Nieznany",
       "justNow": "Przed chwilą",

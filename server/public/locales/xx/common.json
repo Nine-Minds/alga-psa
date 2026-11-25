@@ -1782,6 +1782,21 @@
       "commentBy": "⟦Ƈȯḿḿḗƞŧ ƀẏ {{author}}:⟧",
       "readAt": "⟦Řḗȧḓ {{time}}⟧"
     },
+    "mentions": {
+      "subject": "⟦{{authorName}} ḿḗƞŧīȯƞḗḓ ẏȯŭ⟧",
+      "headerLabel": "⟦Ẏȯŭ ẇḗřḗ ḿḗƞŧīȯƞḗḓ⟧",
+      "taskIntro": "⟦{{authorName}} ḿḗƞŧīȯƞḗḓ ẏȯŭ īƞ ȧ ƈȯḿḿḗƞŧ ȯƞ ŧȧşķ {{taskName}}⟧",
+      "ticketIntro": "⟦{{authorName}} ḿḗƞŧīȯƞḗḓ ẏȯŭ īƞ ŧīƈķḗŧ #{{ticketNumber}}⟧",
+      "documentIntro": "⟦{{authorName}} ḿḗƞŧīȯƞḗḓ ẏȯŭ īƞ ḓȯƈŭḿḗƞŧ {{documentName}}⟧",
+      "closingNote": "⟦Ȯƥḗƞ ŧħḗ ŀīƞķ ŧȯ şḗḗ ŧħḗ ḿḗƞŧīȯƞ īƞ ƈȯƞŧḗẋŧ ȧƞḓ řḗƥŀẏ.⟧",
+      "viewButton": "⟦Ṽīḗẇ īƞ ȦŀɠȧƤŞȦ⟧",
+      "footer": "⟦Ƥȯẇḗřḗḓ ƀẏ ȦŀɠȧƤŞȦ &ḿīḓḓȯŧ; Ķḗḗƥīƞɠ ŧḗȧḿş ȧŀīɠƞḗḓ⟧",
+      "textTaskIntro": "⟦{{authorName}} ḿḗƞŧīȯƞḗḓ ẏȯŭ īƞ ȧ ƈȯḿḿḗƞŧ ȯƞ ŧȧşķ {{taskName}}⟧",
+      "textTicketIntro": "⟦{{authorName}} ḿḗƞŧīȯƞḗḓ ẏȯŭ īƞ ŧīƈķḗŧ #{{ticketNumber}}⟧",
+      "textDocumentIntro": "⟦{{authorName}} ḿḗƞŧīȯƞḗḓ ẏȯŭ īƞ ḓȯƈŭḿḗƞŧ {{documentName}}⟧",
+      "textClosingNote": "⟦Ȯƥḗƞ ŧħḗ ŀīƞķ ŧȯ şḗḗ ŧħḗ ḿḗƞŧīȯƞ īƞ ƈȯƞŧḗẋŧ ȧƞḓ řḗƥŀẏ.⟧",
+      "textView": "⟦Ṽīḗẇ īƞ ȦŀɠȧƤŞȦ⟧"
+    },
     "item": {
       "unknown": "⟦Ŭƞķƞȯẇƞ⟧",
       "justNow": "⟦Ĵŭşŧ ƞȯẇ⟧",

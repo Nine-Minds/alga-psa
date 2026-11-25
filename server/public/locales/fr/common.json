@@ -1782,6 +1782,21 @@
       "commentBy": "Commentaire de {{author}} :",
       "readAt": "Lu {{time}}"
     },
+    "mentions": {
+      "subject": "{{authorName}} vous a mentionné",
+      "headerLabel": "Vous avez été mentionné",
+      "taskIntro": "{{authorName}} vous a mentionné dans un commentaire de la tâche {{taskName}}",
+      "ticketIntro": "{{authorName}} vous a mentionné dans le ticket #{{ticketNumber}}",
+      "documentIntro": "{{authorName}} vous a mentionné dans le document {{documentName}}",
+      "closingNote": "Ouvrez le lien pour voir la mention dans son contexte et répondre.",
+      "viewButton": "Voir dans AlgaPSA",
+      "footer": "Propulsé par AlgaPSA &middot; Gardons les équipes alignées",
+      "textTaskIntro": "{{authorName}} vous a mentionné dans un commentaire de la tâche {{taskName}}",
+      "textTicketIntro": "{{authorName}} vous a mentionné dans le ticket #{{ticketNumber}}",
+      "textDocumentIntro": "{{authorName}} vous a mentionné dans le document {{documentName}}",
+      "textClosingNote": "Ouvrez le lien pour voir la mention dans son contexte et répondre.",
+      "textView": "Voir dans AlgaPSA"
+    },
     "item": {
       "unknown": "Inconnu",
       "justNow": "À l’instant",

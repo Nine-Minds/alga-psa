@@ -77,6 +77,9 @@ const { getTemplate: slaWarning } = require('../../migrations/utils/templates/em
 const { getTemplate: slaBreach } = require('../../migrations/utils/templates/email/sla/slaBreach.cjs');
 const { getTemplate: slaEscalation } = require('../../migrations/utils/templates/email/sla/slaEscalation.cjs');
 
+// System
+const { getTemplate: userMentioned } = require('../../migrations/utils/templates/email/system/userMentioned.cjs');
+
 // ── Collect all template getters ──────────────────────────────────
 const TEMPLATE_GETTERS = [
   authPasswordReset,
@@ -125,6 +128,7 @@ const TEMPLATE_GETTERS = [
   slaWarning,
   slaBreach,
   slaEscalation,
+  userMentioned,
 ];
 
 exports.TEMPLATE_GETTERS = TEMPLATE_GETTERS;

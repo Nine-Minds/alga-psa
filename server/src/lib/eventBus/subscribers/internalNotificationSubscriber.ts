@@ -20,6 +20,7 @@ import { formatDate as formatAppointmentDate, formatTime as formatAppointmentTim
 import type { Knex } from 'knex';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { resolveNotificationLinks } from '../../utils/notificationLinkResolver';
+import { deliverUserMentionEmail } from '../../notifications/mentionEmailDelivery';
 import {
   INBOUND_OUTBOX_EVENT_TYPES,
   reserveInboundOutboxEventForConsumer,
@@ -1537,34 +1538,45 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
           taskCommentId
         });
 
-        await Promise.all(mentionedUsers.map(mentionedUser => {
+        await Promise.all(mentionedUsers.map(async mentionedUser => {
           notifiedUserIds.add(mentionedUser.user_id);
-          return createNotificationFromTemplateInternal(db, {
-            tenant: tenantId,
-            user_id: mentionedUser.user_id,
-            template_name: 'user-mentioned',
-            type: 'info',
-            category: 'messages',
-            link: internalUrl,
-            data: {
+          await Promise.allSettled([
+            createNotificationFromTemplateInternal(db, {
+              tenant: tenantId,
+              user_id: mentionedUser.user_id,
+              template_name: 'user-mentioned',
+              type: 'info',
+              category: 'messages',
+              link: internalUrl,
+              data: {
+                authorName,
+                entityType: 'task comment',
+                entityName: task.task_name
+              },
+              metadata: {
+                taskId: task.task_id,
+                projectId: task.project_id,
+                taskName: task.task_name,
+                projectName: task.project_name,
+                taskCommentId: taskCommentId,
+                commentText: commentText,
+                commentPreview: commentPreview,
+                commentAuthor: authorName,
+                commentAuthorId: userId,
+                contextType: 'task',
+                contextId: taskId
+              }
+            }),
+            deliverUserMentionEmail(db, tenantId, mentionedUser.user_id, {
               authorName,
               entityType: 'task comment',
-              entityName: task.task_name
-            },
-            metadata: {
-              taskId: task.task_id,
-              projectId: task.project_id,
-              taskName: task.task_name,
-              projectName: task.project_name,
-              taskCommentId: taskCommentId,
-              commentText: commentText,
-              commentPreview: commentPreview,
-              commentAuthor: authorName,
-              commentAuthorId: userId,
-              contextType: 'task',
-              contextId: taskId
-            }
-          });
+              entityName: task.task_name,
+              commentPreview,
+              url: internalUrl,
+              mailClass: 'project',
+              entityId: task.task_id,
+            }),
+          ]);
         }));
 
         logger.info('[InternalNotificationSubscriber] Created mention notifications for task comment', {
@@ -1743,32 +1755,43 @@ async function handleTaskCommentUpdated(event: TaskCommentUpdatedEvent): Promise
           });
 
           await Promise.all(newlyMentionedUsers.map(mentionedUser =>
-            createNotificationFromTemplateInternal(db, {
-              tenant: tenantId,
-              user_id: mentionedUser.user_id,
-              template_name: 'user-mentioned',
-              type: 'info',
-              category: 'messages',
-              link: internalUrl,
-              data: {
+            Promise.allSettled([
+              createNotificationFromTemplateInternal(db, {
+                tenant: tenantId,
+                user_id: mentionedUser.user_id,
+                template_name: 'user-mentioned',
+                type: 'info',
+                category: 'messages',
+                link: internalUrl,
+                data: {
+                  authorName,
+                  entityType: 'task comment',
+                  entityName: task.task_name
+                },
+                metadata: {
+                  taskId: task.task_id,
+                  projectId: task.project_id,
+                  taskName: task.task_name,
+                  projectName: task.project_name,
+                  taskCommentId: taskCommentId,
+                  commentText: commentText,
+                  commentPreview: commentPreview,
+                  commentAuthor: authorName,
+                  commentAuthorId: userId,
+                  contextType: 'task',
+                  contextId: taskId
+                }
+              }),
+              deliverUserMentionEmail(db, tenantId, mentionedUser.user_id, {
                 authorName,
                 entityType: 'task comment',
-                entityName: task.task_name
-              },
-              metadata: {
-                taskId: task.task_id,
-                projectId: task.project_id,
-                taskName: task.task_name,
-                projectName: task.project_name,
-                taskCommentId: taskCommentId,
-                commentText: commentText,
-                commentPreview: commentPreview,
-                commentAuthor: authorName,
-                commentAuthorId: userId,
-                contextType: 'task',
-                contextId: taskId
-              }
-            })
+                entityName: task.task_name,
+                commentPreview,
+                url: internalUrl,
+                mailClass: 'project',
+                entityId: task.task_id,
+              }),
+            ])
           ));
 
           logger.info('[InternalNotificationSubscriber] Created mention notifications for updated task comment', {
@@ -1902,35 +1925,48 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
             commentId: comment?.id
           });
 
-          await Promise.all(mentionedUsersToNotify.map(mentionedUser => {
+          await Promise.all(mentionedUsersToNotify.map(async mentionedUser => {
             notifiedUserIds.add(mentionedUser.user_id);
-            return createNotificationFromTemplateInternal(db, {
-              tenant: tenantId,
-              user_id: mentionedUser.user_id,
-              template_name: 'user-mentioned-in-comment',
-              ticketAudience: { ticketId, audience: commentAudience },
-              type: 'info',
-              category: 'messages',
-              link: internalUrl,
-              data: {
-                commentAuthor: authorName,
-                ticketNumber: ticket.ticket_number || 'New Ticket',
-                commentPreview
-              },
-              metadata: {
-                ticketId: ticket.ticket_id,
-                ticketNumber: ticket.ticket_number || 'New Ticket',
-                ticketTitle: ticket.title,
-                commentId: comment?.id || '',
-                commentText: commentText,
-                commentPreview: commentPreview,
-                commentAuthor: authorName,
-                ...(userId ? { commentAuthorId: userId } : {}),
-                ...(actor.actorReference ? { commentActorReference: actor.actorReference } : {}),
-                contextType: 'ticket',
-                contextId: ticketId
-              }
-            });
+            const ticketNumber = ticket.ticket_number || 'New Ticket';
+            await Promise.allSettled([
+              createNotificationFromTemplateInternal(db, {
+                tenant: tenantId,
+                user_id: mentionedUser.user_id,
+                template_name: 'user-mentioned-in-comment',
+                ticketAudience: { ticketId, audience: commentAudience },
+                type: 'info',
+                category: 'messages',
+                link: internalUrl,
+                data: {
+                  commentAuthor: authorName,
+                  ticketNumber,
+                  commentPreview
+                },
+                metadata: {
+                  ticketId: ticket.ticket_id,
+                  ticketNumber,
+                  ticketTitle: ticket.title,
+                  commentId: comment?.id || '',
+                  commentText: commentText,
+                  commentPreview: commentPreview,
+                  commentAuthor: authorName,
+                  ...(userId ? { commentAuthorId: userId } : {}),
+                  ...(actor.actorReference ? { commentActorReference: actor.actorReference } : {}),
+                  contextType: 'ticket',
+                  contextId: ticketId
+                }
+              }),
+              deliverUserMentionEmail(db, tenantId, mentionedUser.user_id, {
+                authorName,
+                entityType: 'ticket',
+                entityName: `#${ticketNumber}`,
+                commentPreview,
+                url: internalUrl,
+                mailClass: 'ticket',
+                entityId: ticket.ticket_id,
+                boardId: ticket.board_id,
+              }),
+            ]);
           }));
 
           logger.info('[InternalNotificationSubscriber] Created mention notifications for ticket comment', {
@@ -2289,34 +2325,46 @@ async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent, opts
             commentId: newComment?.id
           });
 
-          await Promise.all(newlyMentionedUsers.map(mentionedUser =>
-            createNotificationFromTemplateInternal(db, {
-              tenant: tenantId,
-              user_id: mentionedUser.user_id,
-              template_name: 'user-mentioned-in-comment',
-              ticketAudience: { ticketId, audience: commentAudience },
-              type: 'info',
-              category: 'messages',
-              link: internalUrl,
-              data: {
-                commentAuthor: authorName,
-                ticketNumber: ticket.ticket_number || 'New Ticket',
-                commentPreview
-              },
-              metadata: {
-                ticketId: ticket.ticket_id,
-                ticketNumber: ticket.ticket_number || 'New Ticket',
-                ticketTitle: ticket.title,
-                commentId: newComment?.id || '',
-                commentText: commentText,
-                commentPreview: commentPreview,
-                commentAuthor: authorName,
-                ...(userId ? { commentAuthorId: userId } : {}),
-                contextType: 'ticket',
-                contextId: ticketId
-              }
-            })
-          ));
+          await Promise.all(newlyMentionedUsers.map(mentionedUser => {
+            const ticketNumber = ticket.ticket_number || 'New Ticket';
+            return Promise.allSettled([
+              createNotificationFromTemplateInternal(db, {
+                tenant: tenantId,
+                user_id: mentionedUser.user_id,
+                template_name: 'user-mentioned-in-comment',
+                ticketAudience: { ticketId, audience: commentAudience },
+                type: 'info',
+                category: 'messages',
+                link: internalUrl,
+                data: {
+                  commentAuthor: authorName,
+                  ticketNumber,
+                  commentPreview
+                },
+                metadata: {
+                  ticketId: ticket.ticket_id,
+                  ticketNumber,
+                  ticketTitle: ticket.title,
+                  commentId: newComment?.id || '',
+                  commentText: commentText,
+                  commentPreview: commentPreview,
+                  commentAuthor: authorName,
+                  ...(userId ? { commentAuthorId: userId } : {}),
+                  contextType: 'ticket',
+                  contextId: ticketId
+                }
+              }),
+              deliverUserMentionEmail(db, tenantId, mentionedUser.user_id, {
+                authorName,
+                entityType: 'ticket',
+                entityName: `#${ticketNumber}`,
+                commentPreview,
+                url: internalUrl,
+                mailClass: 'ticket',
+                entityId: ticket.ticket_id,
+              }),
+            ]);
+          }));
 
           logger.info('[InternalNotificationSubscriber] Created mention notifications for updated ticket comment', {
             ticketId,
@@ -2423,25 +2471,36 @@ async function handleUserMentionedInDocument(event: UserMentionedInDocumentEvent
     });
 
     // Create notifications for all mentioned users
+    const documentName = document.document_name || 'Untitled Document';
     const notificationPromises = mentionedUsers.map(mentionedUser =>
-      createNotificationFromTemplateInternal(db, {
-        tenant: tenantId,
-        user_id: mentionedUser.user_id,
-        template_name: 'user-mentioned-in-document',
-        type: 'info',
-        category: 'messages',
-        link: internalUrl,
-        data: {
+      Promise.allSettled([
+        createNotificationFromTemplateInternal(db, {
+          tenant: tenantId,
+          user_id: mentionedUser.user_id,
+          template_name: 'user-mentioned-in-document',
+          type: 'info',
+          category: 'messages',
+          link: internalUrl,
+          data: {
+            authorName,
+            documentName
+          },
+          metadata: {
+            documentId: document.document_id,
+            documentName,
+            authorName: authorName,
+            authorId: userId
+          }
+        }),
+        deliverUserMentionEmail(db, tenantId, mentionedUser.user_id, {
           authorName,
-          documentName: document.document_name || 'Untitled Document'
-        },
-        metadata: {
-          documentId: document.document_id,
-          documentName: document.document_name || 'Untitled Document',
-          authorName: authorName,
-          authorId: userId
-        }
-      })
+          entityType: 'document',
+          entityName: documentName,
+          url: internalUrl,
+          mailClass: 'general',
+          entityId: document.document_id,
+        }),
+      ])
     );
 
     await Promise.all(notificationPromises);
