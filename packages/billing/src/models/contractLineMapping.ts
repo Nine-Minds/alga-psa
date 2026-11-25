@@ -421,6 +421,7 @@ const ContractLineMapping = {
           'cl.custom_rate',
           'cl.rate_provenance',
           'cl.cadence_owner',
+          'cl.cadence_anchor',
           'cl.invoice_line_description',
           'cl.start_date',
           'cl.end_date',

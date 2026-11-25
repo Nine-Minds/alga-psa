@@ -98,7 +98,11 @@ const ELIGIBLE_LINES_CTE = `
            -- Hourly/Usage lines always bill in arrears whatever is stored.
            case when lower(cl.contract_line_type) in ('hourly', 'usage', 'time')
                 then 'arrears' else cl.billing_timing end as billing_timing,
-           cc.start_date as assignment_start,
+           -- Cadence anchor: the assignment start (contract anniversary), or the
+           -- effective line start for the contract line schedule.
+           case when cl.cadence_anchor = 'line'
+                then greatest(cc.start_date, coalesce(cl.start_date, cc.start_date))
+                else cc.start_date end as assignment_start,
            cc.end_date as assignment_end
     from contract_lines cl
     join contracts ct

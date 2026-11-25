@@ -12,6 +12,7 @@ import {
 import { ensureUtcMidnightIsoDate } from '../lib/billing/billingCycleAnchors';
 import { lockTenantBilling } from '../lib/billing/billingMutationLock';
 import { normalizeCadenceBillingCycle } from '../lib/cadenceVocabulary';
+import { normalizeCadenceAnchor } from '../lib/billing/contractLineWindow';
 import { materializeContractCadenceServicePeriods } from '@shared/billingClients/materializeContractCadenceServicePeriods';
 import { whereLiveRecurringContractLine } from '@shared/billingClients/liveClientCadenceRecurringLine';
 import { backfillRecurringServicePeriods } from '@shared/billingClients/backfillRecurringServicePeriods';
@@ -37,6 +38,8 @@ type ContractCadenceObligationRow = {
   contract_line_id: string;
   contract_line_type: string | null;
   cadence_owner: string | null;
+  /** contract_lines.cadence_anchor: 'assignment' (default) or 'line'. */
+  cadence_anchor?: string | null;
   billing_frequency: string | null;
   billing_timing: string | null;
   assignment_start_date: unknown;
@@ -373,6 +376,7 @@ async function loadContractCadenceObligations(
       'cl.contract_line_id',
       'cl.contract_line_type',
       'cl.cadence_owner',
+      'cl.cadence_anchor',
       'cl.billing_frequency',
       'cl.billing_timing',
       'cc.start_date as assignment_start_date',
@@ -489,13 +493,18 @@ async function syncContractCadenceStream(
   }
 
   const assignmentEnd = normalizeDateOnlyValue(params.obligation.assignment_end_date);
-  // The authored line window narrows the assignment window. The cadence anchor
-  // stays at the assignment start so period boundaries do not shift; clipping
-  // trims coverage to the line bounds instead.
+  // The authored line window narrows the assignment window. With the default
+  // 'assignment' anchor the cadence anchor stays at the assignment start so
+  // period boundaries do not shift; clipping trims coverage to the line bounds
+  // instead. The 'line' anchor (contract line schedule) anchors on the
+  // effective line start so the line bills on its own renewal date.
   const lineStart = normalizeDateOnlyValue(params.obligation.line_start_date);
   const lineEnd = normalizeDateOnlyValue(params.obligation.line_end_date);
   const obligationStart = lineStart && compareIsoDateOnly(lineStart, assignmentStart) > 0
     ? lineStart
+    : assignmentStart;
+  const cadenceAnchorDate = normalizeCadenceAnchor(params.obligation.cadence_anchor) === 'line'
+    ? obligationStart
     : assignmentStart;
   const obligationEnd = assignmentEnd && lineEnd
     ? (compareIsoDateOnly(lineEnd, assignmentEnd) < 0 ? lineEnd : assignmentEnd)
@@ -513,7 +522,7 @@ async function syncContractCadenceStream(
   const sourceRuleVersion = [
     'contract_cadence',
     `billing_cycle:${frequency}`,
-    `anchor:${assignmentStart.slice(0, 10)}`,
+    `anchor:${cadenceAnchorDate.slice(0, 10)}`,
     `due:${duePosition}`,
   ].join('|');
   const sourceRunKey = `${params.sourceRunPrefix}:${params.obligation.contract_line_id}:${materializedAt}`;
@@ -555,7 +564,7 @@ async function syncContractCadenceStream(
   const materializeInputBase = {
     materializedAt,
     billingCycle: frequency,
-    anchorDate: assignmentStart,
+    anchorDate: cadenceAnchorDate,
     coverageAnchorDate,
     sourceObligation: {
       tenant: params.tenant,
@@ -823,6 +832,7 @@ async function loadEligibleContractCadenceObligationsForReplenishment(
       'cl.contract_line_id',
       'cl.contract_line_type',
       'cl.cadence_owner',
+      'cl.cadence_anchor',
       'cl.billing_frequency',
       'cl.billing_timing',
       'cc.start_date as assignment_start_date',

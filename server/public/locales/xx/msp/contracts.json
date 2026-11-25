@@ -80,7 +80,8 @@
   "billing": {
     "cadenceOwner": {
       "client": "⟦Ƈŀīḗƞŧ şƈħḗḓŭŀḗ⟧",
-      "contract": "⟦Ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ⟧"
+      "contract": "⟦Ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ⟧",
+      "contractLine": "⟦Ƈȯƞŧřȧƈŧ ŀīƞḗ şƈħḗḓŭŀḗ⟧"
     },
     "frequency": {
       "annually": "⟦Ȧƞƞŭȧŀŀẏ⟧",

@@ -80,7 +80,8 @@
   "billing": {
     "cadenceOwner": {
       "client": "Harmonogram klienta",
-      "contract": "Rocznica umowy"
+      "contract": "Rocznica umowy",
+      "contractLine": "Harmonogram pozycji umowy"
     },
     "frequency": {
       "annually": "Rocznie",

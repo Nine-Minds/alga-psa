@@ -1,6 +1,7 @@
 import { Knex } from 'knex';
 import { toPlainDate } from '@alga-psa/core';
 import { lockTenantBilling } from './billingMutationLock';
+import { resolveContractCadenceAnchorStart } from './contractLineWindow';
 import { tenantDb } from '@alga-psa/db';
 import type { IContractLineUnitPricingRevision } from '@alga-psa/types';
 import type {
@@ -220,7 +221,14 @@ export async function validateProspectivePricingBoundary(trx: Knex.Transaction, 
   }
   const cycles = assignments.length ? await db.table('client_billing_cycles').whereIn('client_id', assignments.map(a => a.client_id))
     .whereNotNull('period_start_date').orderBy('period_start_date', 'desc').select('*') : [];
-  const anchor = last?.service_period_start ?? (line.cadence_owner === 'contract' ? assignments[0]?.start_date : cycles[0]?.period_start_date) ?? assignments[0]?.start_date;
+  const contractAnchor = line.cadence_owner === 'contract' && assignments[0]
+    ? resolveContractCadenceAnchorStart({
+        assignmentStart: assignments[0].start_date,
+        lineStart: line.start_date,
+        cadenceAnchor: line.cadence_anchor,
+      })
+    : null;
+  const anchor = last?.service_period_start ?? (line.cadence_owner === 'contract' ? contractAnchor : cycles[0]?.period_start_date) ?? assignments[0]?.start_date;
   if (!anchor) return assignments.length ? 'Materialize a service period to establish the pricing boundary.' : null;
   const frequency = line.cadence_owner === 'contract' ? line.billing_frequency : cycles[0]?.billing_cycle ?? line.billing_frequency;
   const months = ({monthly: 1, quarterly: 3, semi_annually: 6, semiannually: 6, annually: 12, yearly: 12} as Record<string, number>)[frequency];

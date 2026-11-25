@@ -14,8 +14,10 @@ export interface ContractLineWindowInput {
 
 export interface ContractLineBillingWindow {
   /**
-   * Cadence anchor. Always the contract assignment start, never the authored
-   * line start, so the engine and the service-period materializer derive the
+   * Cadence anchor. The contract assignment start by default (contract
+   * anniversary). With `cadenceAnchor: 'line'` it is the effective line start
+   * (contract line schedule). The engine and the service-period materializer
+   * resolve it through `resolveContractCadenceAnchorStart` so both derive the
    * same period boundaries.
    */
   anchorStart: string | null;
@@ -25,6 +27,34 @@ export interface ContractLineBillingWindow {
   inclusiveEnd: string | null;
   /** Half-open exclusive end used for activity/settlement windows. */
   coverageEndExclusive: string | null;
+}
+
+/** Normalizes a stored cadence anchor; anything other than 'line' is the assignment anchor. */
+export function normalizeCadenceAnchor(value: unknown): 'assignment' | 'line' {
+  return value === 'line' ? 'line' : 'assignment';
+}
+
+/**
+ * Resolves the date contract-owned cadence periods are anchored on.
+ *
+ * - 'assignment' (default): the client contract assignment start.
+ * - 'line': the line's effective start, i.e. the later of the assignment and
+ *   line starts (a null line start inherits the assignment start).
+ */
+export function resolveContractCadenceAnchorStart(input: {
+  assignmentStart: unknown;
+  lineStart?: unknown;
+  cadenceAnchor?: unknown;
+}): string | null {
+  const assignmentStart = normalizeContractLineDate(input.assignmentStart);
+  if (normalizeCadenceAnchor(input.cadenceAnchor) !== 'line') {
+    return assignmentStart;
+  }
+  const lineStart = normalizeContractLineDate(input.lineStart);
+  if (lineStart && assignmentStart) {
+    return lineStart > assignmentStart ? lineStart : assignmentStart;
+  }
+  return lineStart ?? assignmentStart;
 }
 
 /**
@@ -39,7 +69,7 @@ export interface ContractLineBillingWindow {
  */
 export function resolveContractLineBillingWindow(
   assignment: { start_date?: unknown; end_date?: unknown },
-  line: { start_date?: unknown; end_date?: unknown },
+  line: { start_date?: unknown; end_date?: unknown; cadence_anchor?: unknown },
 ): ContractLineBillingWindow {
   const assignmentStart = normalizeContractLineDate(assignment.start_date);
   const assignmentEnd = normalizeContractLineDate(assignment.end_date);
@@ -55,7 +85,11 @@ export function resolveContractLineBillingWindow(
     : (lineEnd ?? assignmentEnd);
 
   return {
-    anchorStart: assignmentStart,
+    anchorStart: resolveContractCadenceAnchorStart({
+      assignmentStart,
+      lineStart,
+      cadenceAnchor: line.cadence_anchor,
+    }),
     coverageStart,
     inclusiveEnd: coverageEndExclusive
       ? addDaysToDateOnly(coverageEndExclusive, -1)

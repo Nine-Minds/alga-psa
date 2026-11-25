@@ -3,9 +3,11 @@ import { describe, expect, it } from 'vitest';
 import {
   isValidDateOnly,
   normalizeContractLineDate,
+  resolveContractCadenceAnchorStart,
   resolveContractLineBillingWindow,
 } from '../src/lib/billing/contractLineWindow';
 import { clipRecurringCandidatesToObligationBounds } from '@alga-psa/shared/billingClients/clipRecurringCandidatesToObligationBounds';
+import { materializeContractCadenceServicePeriods } from '@alga-psa/shared/billingClients/materializeContractCadenceServicePeriods';
 
 describe('resolveContractLineBillingWindow', () => {
   it('keeps the assignment window and anchor when the line has no authored dates', () => {
@@ -125,6 +127,70 @@ describe('resolveContractLineBillingWindow', () => {
       window.coverageEndExclusive as never,
     );
     expect(dropped).toHaveLength(0);
+  });
+});
+
+describe('contract line schedule anchor', () => {
+  it('anchors on the line start when cadence_anchor is line', () => {
+    expect(
+      resolveContractLineBillingWindow(
+        { start_date: '2026-10-26', end_date: null },
+        { start_date: '2027-03-11', end_date: null, cadence_anchor: 'line' },
+      ),
+    ).toEqual({
+      anchorStart: '2027-03-11',
+      coverageStart: '2027-03-11',
+      inclusiveEnd: null,
+      coverageEndExclusive: null,
+    });
+  });
+
+  it('keeps the assignment anchor for the default and unknown anchors', () => {
+    for (const cadenceAnchor of [undefined, null, 'assignment', 'bogus']) {
+      expect(
+        resolveContractCadenceAnchorStart({
+          assignmentStart: '2026-10-26',
+          lineStart: '2027-03-11',
+          cadenceAnchor,
+        }),
+      ).toBe('2026-10-26');
+    }
+  });
+
+  it('falls back to the assignment start when the line has no start or starts earlier', () => {
+    expect(
+      resolveContractCadenceAnchorStart({ assignmentStart: '2026-10-26', lineStart: null, cadenceAnchor: 'line' }),
+    ).toBe('2026-10-26');
+    expect(
+      resolveContractCadenceAnchorStart({ assignmentStart: '2026-10-26', lineStart: '2026-01-01', cadenceAnchor: 'line' }),
+    ).toBe('2026-10-26');
+  });
+
+  it('bills an annual line once a year on its own renewal date', () => {
+    const anchor = resolveContractCadenceAnchorStart({
+      assignmentStart: '2026-11-24',
+      lineStart: '2027-03-11',
+      cadenceAnchor: 'line',
+    });
+    const plan = materializeContractCadenceServicePeriods({
+      asOf: `${anchor}T00:00:00Z` as never,
+      materializedAt: '2026-11-25T00:00:00Z' as never,
+      billingCycle: 'annually',
+      anchorDate: `${anchor}T00:00:00Z` as never,
+      sourceObligation: { tenant: 't', obligationId: 'line', chargeFamily: 'fixed' },
+      duePosition: 'advance',
+      sourceRuleVersion: 'test',
+      sourceRunKey: 'test',
+      targetHorizonDays: 800,
+    });
+
+    expect(plan.records.slice(0, 2).map((record) => [
+      record.servicePeriod.start.slice(0, 10),
+      record.servicePeriod.end.slice(0, 10),
+    ])).toEqual([
+      ['2027-03-11', '2028-03-11'],
+      ['2028-03-11', '2029-03-11'],
+    ]);
   });
 });
 

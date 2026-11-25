@@ -26,6 +26,7 @@ import type {
 } from '@alga-psa/types';
 import { ensureUtcMidnightIsoDate } from '../lib/billing/billingCycleAnchors';
 import { lockTenantBilling } from '../lib/billing/billingMutationLock';
+import { normalizeCadenceAnchor } from '../lib/billing/contractLineWindow';
 import { normalizeCadenceBillingCycle } from '../lib/cadenceVocabulary';
 import {
   getRecurringServicePeriodDisplayState,
@@ -105,10 +106,12 @@ type ObligationContextRow = {
 type LiveScheduleContextRow = ObligationContextRow & {
   contract_line_type: string | null;
   cadence_owner: 'client' | 'contract' | null;
+  cadence_anchor: string | null;
   billing_frequency: string | null;
   billing_timing: 'advance' | 'arrears' | null;
   assignment_start_date: unknown;
   assignment_end_date: unknown;
+  line_start_date: unknown;
   /** contract_line_prepaid_blocks.issue_mode (null when the line has no block config). */
   prepaid_block_issue_mode: string | null;
 };
@@ -522,10 +525,12 @@ async function loadLiveScheduleContext(input: {
       'ct.is_system_managed_default as is_system_managed_default',
       'cl.contract_line_type as contract_line_type',
       'cl.cadence_owner as cadence_owner',
+      'cl.cadence_anchor as cadence_anchor',
       'cl.billing_frequency as billing_frequency',
       'cl.billing_timing as billing_timing',
       'cc.start_date as assignment_start_date',
       'cc.end_date as assignment_end_date',
+      'cl.start_date as line_start_date',
       'pb.issue_mode as prepaid_block_issue_mode',
     ) as LiveScheduleContextRow | undefined;
 
@@ -539,12 +544,14 @@ async function loadLiveScheduleContext(input: {
     is_system_managed_default: row?.is_system_managed_default === true,
     contract_line_type: row?.contract_line_type ?? null,
     cadence_owner: row?.cadence_owner ?? null,
+    cadence_anchor: row?.cadence_anchor ?? null,
     billing_frequency: row?.billing_frequency ?? null,
     billing_timing: row?.billing_timing
       ? resolveEffectiveBillingTiming(row.contract_line_type, row.billing_timing)
       : null,
     assignment_start_date: row?.assignment_start_date ?? null,
     assignment_end_date: row?.assignment_end_date ?? null,
+    line_start_date: row?.line_start_date ?? null,
     prepaid_block_issue_mode: row?.prepaid_block_issue_mode ?? null,
   };
 }
@@ -638,13 +645,20 @@ async function repairScheduleMaterialization(input: {
     const assignmentStart =
       normalizeUtcMidnightDateValue(context.assignment_start_date)
       ?? ensureUtcMidnightIsoDate(repairedAt);
+    // Contract line schedule anchors on the effective line start; the default
+    // contract anniversary keeps the assignment start.
+    const lineStart = normalizeUtcMidnightDateValue(context.line_start_date);
+    const cadenceAnchorDate =
+      normalizeCadenceAnchor(context.cadence_anchor) === 'line' && lineStart
+        ? maxIsoDateOnly(assignmentStart, lineStart)
+        : assignmentStart;
     const assignmentEnd = normalizeUtcMidnightDateValue(context.assignment_end_date);
     const billingCycle = normalizeContractCadenceBillingCycle(context.billing_frequency);
     if (!billingCycle || !context.billing_timing || !scheduleStream) {
       throw new Error('The live contract line no longer matches the requested recurring schedule.');
     }
 
-    if (assignmentEnd && compareIsoDateOnly(assignmentEnd, assignmentStart) <= 0) {
+    if (assignmentEnd && compareIsoDateOnly(assignmentEnd, cadenceAnchorDate) <= 0) {
       return {
         scheduleKey: schedule.scheduleKey,
         repairedAt,
@@ -660,7 +674,7 @@ async function repairScheduleMaterialization(input: {
     const sourceRuleVersion = [
       'contract_cadence',
       `billing_cycle:${billingCycle}`,
-      `anchor:${assignmentStart.slice(0, 10)}`,
+      `anchor:${cadenceAnchorDate.slice(0, 10)}`,
       `due:${schedule.duePosition}`,
     ].join('|');
     const sourceRunKey = `operator-repair:${schedule.scheduleKey}:${repairedAt}`;
@@ -669,14 +683,14 @@ async function repairScheduleMaterialization(input: {
       .map((record) => record.servicePeriod.end)
       .sort((left, right) => compareIsoDateOnly(right, left))[0] ?? null;
     const regenerationStart = billedBoundaryEnd
-      ? maxIsoDateOnly(assignmentStart, billedBoundaryEnd)
-      : assignmentStart;
+      ? maxIsoDateOnly(cadenceAnchorDate, billedBoundaryEnd)
+      : cadenceAnchorDate;
 
     const candidateRecords = materializeContractCadenceServicePeriods({
       asOf: regenerationStart,
       materializedAt: repairedAt,
       billingCycle,
-      anchorDate: assignmentStart,
+      anchorDate: cadenceAnchorDate,
       sourceObligation: {
         tenant,
         obligationId: context.contract_line_id,

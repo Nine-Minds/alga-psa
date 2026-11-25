@@ -3,6 +3,14 @@ import type { ISO8601String } from '../lib/temporal';
 export const CADENCE_OWNERS = ['client', 'contract'] as const;
 export type CadenceOwner = (typeof CADENCE_OWNERS)[number];
 
+/**
+ * Anchor for contract-owned cadence. 'assignment' anchors periods on the client
+ * contract assignment start (contract anniversary); 'line' anchors them on the
+ * contract line's own start date (contract line schedule).
+ */
+export const CADENCE_ANCHORS = ['assignment', 'line'] as const;
+export type CadenceAnchor = (typeof CADENCE_ANCHORS)[number];
+
 export const RECURRING_RUN_EXECUTION_WINDOW_KINDS = [
   'client_cadence_window',
   'contract_cadence_window',

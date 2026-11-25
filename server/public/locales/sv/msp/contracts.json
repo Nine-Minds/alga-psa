@@ -80,7 +80,8 @@
   "billing": {
     "cadenceOwner": {
       "client": "Kundens schema",
-      "contract": "Avtalets årsdag"
+      "contract": "Avtalets årsdag",
+      "contractLine": "Avtalsradens schema"
     },
     "frequency": {
       "annually": "Årligen",

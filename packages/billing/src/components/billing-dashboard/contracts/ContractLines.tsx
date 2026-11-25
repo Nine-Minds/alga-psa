@@ -116,6 +116,8 @@ interface DetailedContractLineMapping {
   billing_frequency: string;
   billing_timing?: 'arrears' | 'advance';
   cadence_owner?: 'client' | 'contract';
+  /** Anchor for contract-owned cadence: 'line' = contract line schedule. */
+  cadence_anchor?: 'assignment' | 'line';
   contract_line_type: string;
   /** Derived label kind: 'PrepaidBlock' for Hourly lines with a prepaid block config. */
   display_kind?: string;
@@ -140,6 +142,25 @@ interface DetailedContractLineMapping {
  * without colliding with a real location UUID.
  */
 const UNASSIGNED_LOCATION_KEY = '__unassigned__';
+
+/** UI value for the cadence selector; 'contract_line' = contract cadence anchored on the line start. */
+type CadenceScheduleValue = 'client' | 'contract' | 'contract_line';
+
+const toCadenceScheduleValue = (
+  cadenceOwner: 'client' | 'contract' | null | undefined,
+  cadenceAnchor: 'assignment' | 'line' | null | undefined,
+): CadenceScheduleValue => {
+  if (cadenceOwner !== 'contract') return 'client';
+  return cadenceAnchor === 'line' ? 'contract_line' : 'contract';
+};
+
+const fromCadenceScheduleValue = (
+  value: CadenceScheduleValue,
+): { cadence_owner: 'client' | 'contract'; cadence_anchor: 'assignment' | 'line' } => {
+  if (value === 'contract_line') return { cadence_owner: 'contract', cadence_anchor: 'line' };
+  if (value === 'contract') return { cadence_owner: 'contract', cadence_anchor: 'assignment' };
+  return { cadence_owner: 'client', cadence_anchor: 'assignment' };
+};
 
 const isReturnedActionError = (value: unknown): boolean =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -228,7 +249,20 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
       value: 'contract',
       label: t('billing.cadenceOwner.contract', { defaultValue: 'Contract anniversary' }),
     },
-  ] as const;
+    // Template lines have no cadence anchor column, so the line schedule is live-contract only.
+    ...(contract.is_template
+      ? []
+      : [{
+          value: 'contract_line',
+          label: t('billing.cadenceOwner.contractLine', { defaultValue: 'Contract line schedule' }),
+        }]),
+  ];
+  const cadenceLabelFor = (value: CadenceScheduleValue) =>
+    value === 'contract_line'
+      ? t('billing.cadenceOwner.contractLine', { defaultValue: 'Contract line schedule' })
+      : value === 'contract'
+        ? t('billing.cadenceOwner.contract', { defaultValue: 'Contract anniversary' })
+        : t('billing.cadenceOwner.client', { defaultValue: 'Client schedule' });
 
   const [contractLines, setContractLines] = useState<DetailedContractLineMapping[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -252,6 +286,18 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
   const [effectiveBoundary, setEffectiveBoundary] = useState('');
   const [requiresEffectiveBoundary, setRequiresEffectiveBoundary] = useState(false);
   const [pricingOnly, setPricingOnly] = useState(false);
+  // The contract line schedule anchors on the line's own start, so preview the first invoice from it.
+  const resolveHintStartDate = (line: DetailedContractLineMapping) => {
+    const editing = editingLineId === line.contract_line_id && !pricingOnly;
+    const schedule = editing
+      ? toCadenceScheduleValue(editLineData.cadence_owner || line.cadence_owner, editLineData.cadence_anchor ?? line.cadence_anchor)
+      : toCadenceScheduleValue(line.cadence_owner, line.cadence_anchor);
+    const lineStart = (editing ? (editLineData.start_date ?? line.start_date) : line.start_date)?.slice(0, 10);
+    if (schedule === 'contract_line' && lineStart && (!startDate || lineStart > startDate)) {
+      return lineStart;
+    }
+    return startDate;
+  };
   // Version token of the line as the editor loaded it (optimistic concurrency).
   const [editLineVersion, setEditLineVersion] = useState<string | null>(null);
   const [editServiceConfigs, setEditServiceConfigs] = useState<Record<string, any>>({});
@@ -738,6 +784,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
       setEditLineData({
         billing_timing: resolveEffectiveBillingTiming(line.contract_line_type, line.billing_timing),
         cadence_owner: line.cadence_owner ?? 'client',
+        cadence_anchor: line.cadence_anchor ?? 'assignment',
         minimum_billable_time: line.minimum_billable_time,
         round_up_to_nearest: line.round_up_to_nearest,
         location_id: line.location_id ?? defaultLocationId ?? null,
@@ -939,6 +986,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
           editLineData.billing_timing,
         ),
         cadence_owner: editLineData.cadence_owner,
+        ...(contract.is_template ? {} : { cadence_anchor: editLineData.cadence_anchor ?? 'assignment' }),
         minimum_billable_time: editLineData.minimum_billable_time,
         round_up_to_nearest: editLineData.round_up_to_nearest,
         location_id: editLineData.location_id ?? null,
@@ -1786,7 +1834,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                           ? editLineData.billing_timing || line.billing_timing || 'arrears'
                                           : line.billing_timing || 'arrears'
                                       }
-                                      startDate={startDate}
+                                      startDate={
+                                        resolveHintStartDate(line)
+                                      }
                                       clientSchedule={clientSchedule}
                                       today={new Date()}
                                     />
@@ -1800,19 +1850,20 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                 {editingLineId === line.contract_line_id && !pricingOnly ? (
                                   <CustomSelect
                                     id={`cadence-owner-${line.contract_line_id}`}
-                                    value={editLineData.cadence_owner || line.cadence_owner || 'client'}
+                                    value={toCadenceScheduleValue(
+                                      editLineData.cadence_owner || line.cadence_owner,
+                                      editLineData.cadence_anchor ?? line.cadence_anchor,
+                                    )}
                                     onValueChange={(value) => setEditLineData({
                                       ...editLineData,
-                                      cadence_owner: value as 'client' | 'contract'
+                                      ...fromCadenceScheduleValue(value as CadenceScheduleValue),
                                     })}
-                                    options={[...cadenceOwnerOptions]}
+                                    options={cadenceOwnerOptions}
                                     className="mt-1"
                                   />
                                 ) : (
                                   <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
-                                    {(line.cadence_owner || 'client') === 'contract'
-                                      ? t('billing.cadenceOwner.contract', { defaultValue: 'Contract anniversary' })
-                                      : t('billing.cadenceOwner.client', { defaultValue: 'Client schedule' })}
+                                    {cadenceLabelFor(toCadenceScheduleValue(line.cadence_owner, line.cadence_anchor))}
                                   </p>
                                 )}
                               </div>

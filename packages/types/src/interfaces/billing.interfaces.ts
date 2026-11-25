@@ -1,6 +1,6 @@
 import { TenantEntity } from './index';
 import type { ISO8601String } from '../lib/temporal';
-import type { CadenceOwner } from './recurringTiming.interfaces';
+import type { CadenceAnchor, CadenceOwner } from './recurringTiming.interfaces';
 import type { FixedPricingBasis } from './contractLineServiceConfiguration.interfaces';
 
 export interface IBillingPeriod extends TenantEntity {
@@ -691,6 +691,8 @@ export interface IContractLine extends TenantEntity {
   contract_line_type: 'Fixed' | 'Hourly' | 'Usage';
   billing_timing?: 'arrears' | 'advance';
   cadence_owner?: CadenceOwner;
+  /** Anchor for contract-owned cadence; 'line' anchors on this line's start_date. */
+  cadence_anchor?: CadenceAnchor;
   custom_rate?: number | null;
   display_order?: number;
   enable_proration?: boolean;
