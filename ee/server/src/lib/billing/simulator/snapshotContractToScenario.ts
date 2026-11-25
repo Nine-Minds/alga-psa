@@ -58,6 +58,7 @@ interface ContractRow {
 
 interface ContractLineRow {
   contract_line_id: string;
+  is_active: boolean;
   contract_line_name: string;
   contract_line_type: string;
   billing_frequency: string | null;
@@ -277,6 +278,7 @@ export async function snapshotContractToScenario(
       );
     lineRows = rows.map((row) => ({
       contract_line_id: row.template_line_id,
+      is_active: true,
       contract_line_name: row.template_line_name,
       contract_line_type: row.line_type || "Fixed",
       billing_frequency: row.billing_frequency,
@@ -297,6 +299,7 @@ export async function snapshotContractToScenario(
       .orderBy("contract_line_name", "asc")
       .select(
         "contract_line_id",
+        "is_active",
         "contract_line_name",
         "contract_line_type",
         "billing_frequency",
@@ -694,6 +697,7 @@ async function buildScenarioLine(
   return {
     key: lineRow.contract_line_id,
     origin_contract_line_id: lineRow.contract_line_id,
+    is_active: lineRow.is_active,
     contract_line_name: lineRow.contract_line_name,
     contract_line_type: contractLineType,
     billing_frequency: lineRow.billing_frequency || contract.billing_frequency,
@@ -889,6 +893,7 @@ function buildTemplateScenarioLine(
   return {
     key: lineRow.contract_line_id,
     origin_contract_line_id: lineRow.contract_line_id,
+    is_active: lineRow.is_active,
     contract_line_name: lineRow.contract_line_name,
     contract_line_type: lineType,
     billing_frequency: lineRow.billing_frequency || contract.billing_frequency,

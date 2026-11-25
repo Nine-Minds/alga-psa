@@ -336,6 +336,9 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
           service.configuration.pricing_basis !== "unit",
         );
   });
+  // Keep inactive lines available for historical bindings; only the warning
+  // counts active lines. Older snapshots and scenario-added lines omit status.
+  const activeScheduleLineCount = eligibleScheduleLines.filter((line) => line.is_active !== false).length;
   const [newScheduleLineKey, setNewScheduleLineKey] = useState("");
   const selectedScheduleLineKey = eligibleScheduleLines.some((line) => line.key === newScheduleLineKey)
     ? newScheduleLineKey
@@ -1593,11 +1596,11 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                     )}
                     {eligibleScheduleLines.map((line) => <option key={line.key} value={line.key}>{line.contract_line_name}</option>)}
                   </select>
-                  {!schedule.contract_line_key && <p role="status" className="mt-1 text-xs text-amber-700">
-                    {eligibleScheduleLines.length > 1 && schedule.custom_rate != null
+                  {!schedule.contract_line_key && <p role="status" className="mt-1 text-xs text-warning">
+                    {activeScheduleLineCount > 1 && schedule.custom_rate != null
                       ? t("pricingSchedules.dialog.notices.wholeContractEffect", {
                           defaultValue: "Whole contract: fallback fee of {{amount}} per active fixed-fee line per billing period ({{count}} lines). Line-specific schedules take precedence.",
-                          count: eligibleScheduleLines.length,
+                          count: activeScheduleLineCount,
                           amount: money(schedule.custom_rate, currencyCode),
                         })
                       : t("pricingSchedules.dialog.notices.wholeContract", { defaultValue: "Whole contract: fallback schedule for active fixed-fee lines. Line-specific schedules take precedence." })}

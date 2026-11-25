@@ -192,6 +192,8 @@ export interface ScenarioLine {
   key: string;
   /** Live row this line originated from; null for scenario-added lines. */
   origin_contract_line_id: string | null;
+  /** Live activity status; omitted by older snapshots and scenario-added lines. */
+  is_active?: boolean;
   contract_line_name: string;
   contract_line_type: "Fixed" | "Hourly" | "Usage";
   billing_frequency: string;

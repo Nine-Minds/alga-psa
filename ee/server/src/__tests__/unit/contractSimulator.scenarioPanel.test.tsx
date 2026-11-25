@@ -325,6 +325,33 @@ describe('simulator schedule line selection', () => {
     expect(screen.getByRole('status').textContent).toContain(`fallback fee of ${amount} per active fixed-fee line per billing period (2 lines)`);
   });
 
+  it('counts only active fixed-fee lines while retaining inactive schedule bindings', () => {
+    render(<Harness initialLines={[
+      { ...fixedLine('line-a'), is_active: true },
+      { ...fixedLine('line-b'), is_active: true },
+      { ...fixedLine('inactive'), is_active: false },
+    ]} initialSchedules={[
+      { effective_date: '2026-06-01', end_date: null, custom_rate: 90000 },
+      { effective_date: '2026-06-01', end_date: null, custom_rate: 70000, contract_line_key: 'inactive' },
+    ]} />);
+    expect(screen.getByRole('status')).toHaveTextContent('fallback fee of $900.00 per active fixed-fee line per billing period (2 lines)');
+    expect(screen.getAllByLabelText('Applies To')[1]).toHaveValue('inactive');
+    fireEvent.change(screen.getAllByLabelText('Schedule rate')[1], { target: { value: '750' } });
+    expect(scheduleState()[1]).toMatchObject({ contract_line_key: 'inactive', custom_rate: 75000 });
+    expect(scheduleState()[0].contract_line_key).toBeUndefined();
+  });
+
+  it('omits the multi-line effect when only one eligible line is active', () => {
+    render(<Harness initialLines={[
+      { ...fixedLine('active'), is_active: true },
+      { ...fixedLine('inactive-fallback'), is_active: false, services: [{ ...usageService, item_kind: 'service' }] },
+    ]} initialSchedules={[
+      { effective_date: '2026-06-01', end_date: null, custom_rate: 90000 },
+    ]} />);
+    expect(screen.getByRole('status')).toHaveTextContent('Whole contract: fallback schedule for active fixed-fee lines.');
+    expect(screen.getByRole('status')).not.toHaveTextContent('(2 lines)');
+  });
+
   it('preselects the only eligible line and never authors whole-contract scope', () => {
     render(<Harness initialLines={[fixedLine('bundle'), fixedLine('product', 'product'), fixedLine('units', 'service', 'unit')]} />);
     const picker = screen.getByLabelText('Applies to');

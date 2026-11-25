@@ -172,7 +172,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currenc
       && schedule.custom_rate !== undefined && schedule.custom_rate !== null;
 
     return (
-      <span className="text-amber-700 flex items-center gap-1">
+      <span className="text-warning flex items-center gap-1">
         <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
         {statesEffect
           ? t('pricingSchedules.list.values.wholeContractEffect', {
