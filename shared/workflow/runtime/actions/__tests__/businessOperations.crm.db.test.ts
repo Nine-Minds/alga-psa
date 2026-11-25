@@ -906,6 +906,26 @@ describe('crm workflow runtime DB-backed action handlers', () => {
 
   it('T008/T009: crm.convert_quote converts accepted quotes and rejects ineligible/template/cross-tenant/permission cases', async () => {
     const clientId = await createClient(db, runtimeState.tenantId, 'Convert Client');
+    // Recurring contract items need a catalog service so the converted line can be billed.
+    const serviceTypeId = uuidv4();
+    await tenantTable(db, runtimeState.tenantId, 'service_types').insert({
+      id: serviceTypeId,
+      tenant: runtimeState.tenantId,
+      name: 'Workflow Conversion Service Type',
+      is_active: true,
+      order_number: 1,
+    });
+    const serviceId = uuidv4();
+    await tenantTable(db, runtimeState.tenantId, 'service_catalog').insert({
+      service_id: serviceId,
+      tenant: runtimeState.tenantId,
+      service_name: 'Recurring Contract Service',
+      billing_method: 'fixed',
+      custom_service_type_id: serviceTypeId,
+      item_kind: 'service',
+      default_rate: 5000,
+      unit_of_measure: 'each',
+    });
     const quoteId = await createQuote(db, {
       tenantId: runtimeState.tenantId,
       actorUserId: runtimeState.actorUserId,
@@ -919,6 +939,7 @@ describe('crm workflow runtime DB-backed action handlers', () => {
       actorUserId: runtimeState.actorUserId,
       quoteId,
       description: 'Recurring Contract Line',
+      serviceId,
       unitPrice: 5000,
       isRecurring: true,
       billingFrequency: 'monthly',
