@@ -1,0 +1,6 @@
+The deployment failed with this error:
+> ACCESS DENIED (code 5). The service account cannot access the deployment share.
+> Retry failed. No machines were updated.
+
+--- Please reply above this line ---
+Old notification

@@ -244,6 +244,11 @@ describe('Gmail reply to the contact’s own reply (alga-2026-0003353)', () => {
     'The service account wrote:',
     'On startup the deployment script wrote:',
     'On Tuesday the service account wrote:',
+    'On startup at 09:15 the deployment script wrote:',
+    'On Nov 17 the deployment script wrote:',
+    'On Nov 17 at 09:15 the deployment script wrote:',
+    'On Mon, Nov 17, 2026 Dana Tech wrote:',
+    'On Nov 17 I emailed jane.client@example.com about the invoice.\nShe wrote:',
     'On Tuesday I emailed jane.client@example.com about the invoice.\nShe wrote:',
   ])('preserves a trailing authored quotation introduced by %s', (introduction) => {
     const fixture = readFixture('authored-trailing-quotation.txt');
@@ -260,14 +265,16 @@ describe('Gmail reply to the contact’s own reply (alga-2026-0003353)', () => {
     }
   });
 
-  it('still strips a quoted provider attribution above the explicit boundary', () => {
+  it.each(['', '> '])('still strips a provider attribution with prefix %j above the explicit boundary', (prefix) => {
+    // A timestamp and display name alone remain ambiguous above our boundary;
+    // the sender address distinguishes this provider attribution from authored prose.
     const result = parseEmailReply({
-      text: 'Please investigate.\n> On Mon, Nov 17, 2026 Dana Tech wrote:\n'
+      text: `Please investigate.\n${prefix}On Mon, Nov 17, 2026 Dana Tech <dana@example.test> wrote:\n`
         + '> Previous reply\n\n--- Please reply above this line ---\nOld notification',
     });
 
     expect(result.sanitizedText).toBe('Please investigate.');
-    expect(result.appliedHeuristics).toContain('quote-prefix');
+    expect(result.appliedHeuristics).toContain(prefix ? 'quote-prefix' : 'provider-header');
   });
 
   it('still strips a quoted coherent envelope above the explicit boundary', () => {

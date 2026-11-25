@@ -1720,6 +1720,10 @@ describe('processInboundEmailInApp', () => {
       'On startup the deployment script wrote:',
       'Deployment details:\nOn startup the deployment script wrote:',
       'Deployment details:\n> On startup the deployment script wrote:',
+      'Deployment details:\nOn startup at 09:15 the deployment script wrote:',
+      'Deployment details:\n> On startup at 09:15 the deployment script wrote:',
+      'Deployment details:\nOn Nov 17 the deployment script wrote:',
+      'Deployment details:\n> On Nov 17 the deployment script wrote:',
     ])(
       'stores the trailing error quotation introduced by %s above an explicit reply boundary', async (prefix) => {
         parseEmailReplyBodyMock.mockImplementation(async (body: any) => parseEmailReply(body));

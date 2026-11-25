@@ -170,8 +170,8 @@ const attributionDateTimeRegex = new RegExp(
   + `|\\b${ATTRIBUTION_MONTHS},?\\s+\\d{1,2}\\b|\\b\\d{1,2}\\s+${ATTRIBUTION_MONTHS}`,
   'i',
 );
-/** The address a provider attribution wraps on sits directly before `wrote:`. */
-const wrappedAttributionTailRegex = /[^\s<>@]+@[^\s<>@]+\.[A-Za-z]{2,}>?\s*wrote:$/i;
+/** A provider attribution's sender address sits directly before `wrote:`. */
+const providerAttributionTailRegex = /[^\s<>@]+@[^\s<>@]+\.[A-Za-z]{2,}>?\s*wrote:$/i;
 
 /**
  * Does a quoted run start here and carry on to the end of the message, or to a signature?
@@ -245,7 +245,7 @@ function isWrappedProviderReplyHeader(lines: string[], startIndex: number, confi
 
   for (let offset = 1; offset <= 2; offset += 1) {
     const continuation = (lines[startIndex + offset] ?? '').trim();
-    if (wrappedAttributionTailRegex.test(continuation)) {
+    if (providerAttributionTailRegex.test(continuation)) {
       return isTrailingQuotedHistory(lines, startIndex + offset + 1, config);
     }
     // A third line is allowed only after a folded display name, not an empty line,
@@ -664,11 +664,11 @@ function stripProviderHeaders(text: string, config: ReplyParserConfig, preserveU
   let heuristic: string | undefined;
   let removedQuoted = false;
   const isProviderHeader = (line: string): boolean => {
-    // Above our boundary, "On startup the script wrote:" can introduce authored
-    // evidence. Require the date/time evidence used for wrapped attributions
-    // before treating this English header shape as quoted history.
+    // Above our boundary, even "On startup at 09:15 the script wrote:" can
+    // introduce authored evidence. Require both the date/time and sender-address
+    // evidence used for wrapped attributions; a date/time alone is ambiguous.
     if (preserveUnattributedQuotes && /^on .+wrote:$/i.test(line)
-      && !attributionDateTimeRegex.test(line)) {
+      && (!attributionDateTimeRegex.test(line) || !providerAttributionTailRegex.test(line))) {
       return false;
     }
     return config.providerReplyHeaders.some((regex) => regex.test(line));
