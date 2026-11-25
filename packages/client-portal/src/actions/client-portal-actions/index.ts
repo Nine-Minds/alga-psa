@@ -15,3 +15,4 @@ export * from './dashboard';
 export * from './notificationActivities';
 export * from './client-assets';
 export * from './clientPortalFeatureSettingsActions';
+export * from './clientPortalNoticeActions';

@@ -1145,6 +1145,8 @@
       "invoiceData": "Unauthorized to access invoice data",
       "billingData": "Unauthorized to access billing data",
       "settingsUpdate": "You do not have permission to update these settings.",
+      "settingsRead": "You do not have permission to view these settings.",
+      "mspOnly": "Client portal notices can only be managed by MSP users.",
       "billingSegment": "Unauthorized to access that billing segment"
     },
     "billing": {

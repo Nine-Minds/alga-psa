@@ -1145,6 +1145,8 @@
       "invoiceData": "Du har inte behörighet att komma åt fakturauppgifterna",
       "billingData": "Du har inte behörighet att komma åt faktureringsuppgifterna",
       "settingsUpdate": "Du har inte behörighet att uppdatera de här inställningarna.",
+      "settingsRead": "Du har inte behörighet att visa de här inställningarna.",
+      "mspOnly": "Meddelanden i kundportalen kan bara hanteras av MSP-användare.",
       "billingSegment": "Du har inte behörighet att komma åt det faktureringssegmentet"
     },
     "billing": {
