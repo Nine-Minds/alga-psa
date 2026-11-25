@@ -24,7 +24,8 @@ exports.up = async function up(knex) {
       ) THEN
         ALTER TABLE contract_lines
           ADD CONSTRAINT contract_lines_cadence_anchor_check
-          CHECK (cadence_anchor IN ('assignment', 'line'));
+          CHECK (cadence_anchor IN ('assignment', 'line'))
+          NOT VALID;
       END IF;
     END $$;
   `);
