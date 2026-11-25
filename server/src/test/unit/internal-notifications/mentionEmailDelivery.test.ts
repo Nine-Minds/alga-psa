@@ -35,6 +35,15 @@ const state = vi.hoisted(() => ({
   categorySetting: undefined as { is_enabled: boolean } | undefined,
   preference: undefined as { is_enabled: boolean } | undefined,
   user: { email: 'mentioned@example.test' } as { email: string } | undefined,
+  recipient: { seat: false } as Record<string, unknown>,
+  admitted: true,
+  rendering: 'msp' as 'msp' | 'client',
+}));
+
+vi.mock('@alga-psa/shared/lib/notificationAudience', () => ({
+  resolveTicketNotificationRecipient: vi.fn(async () => state.recipient),
+  selectAudienceContent: vi.fn(async () => ({ admitted: state.admitted })),
+  recipientRendering: vi.fn(() => state.rendering),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -108,6 +117,30 @@ describe('deliverUserMentionEmail', () => {
     state.categorySetting = undefined;
     state.preference = undefined;
     state.user = { email: 'mentioned@example.test' };
+    state.recipient = { seat: false };
+    state.admitted = true;
+    state.rendering = 'msp';
+  });
+
+  it.each([
+    ['outside the comment audience', false, 'msp'],
+    ['an external party on the ticket', true, 'client'],
+  ] as const)('does not mail a seat technician %s', async (_label, admitted, rendering) => {
+    state.recipient = { seat: true, userId: 'user-1', reader: { kind: 'requester', tenant: 'tenant-1' } };
+    state.admitted = admitted;
+    state.rendering = rendering;
+
+    const delivered = await deliverUserMentionEmail(fakeDb(), 'tenant-1', 'user-1', {
+      authorName: 'Alice Author',
+      entityType: 'ticket',
+      entityName: '#T-42',
+      url: '/msp/tickets/ticket-1',
+      mailClass: 'ticket',
+      ticketAudience: { ticketId: 'ticket-1', audience: 'organization_private' },
+    });
+
+    expect(delivered).toBe(false);
+    expect(state.sendEventEmail).not.toHaveBeenCalled();
   });
 
   it('sends through sendEventEmail with a ticket subtype and mention context', async () => {

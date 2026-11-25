@@ -5,6 +5,12 @@ import { tenantDb } from '@alga-psa/db';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { sendEventEmail, resolveEventEmailLocale } from './sendEventEmail';
 import { resolveEmailNotificationPreference } from './emailNotificationPreferences';
+import {
+  recipientRendering,
+  resolveTicketNotificationRecipient,
+  selectAudienceContent,
+  type AudienceSource,
+} from '@alga-psa/shared/lib/notificationAudience';
 
 export const USER_MENTION_SUBTYPE = 'user-mentioned';
 export const USER_MENTION_TEMPLATE = 'user-mentioned';
@@ -18,6 +24,8 @@ export interface MentionEmailContext {
   mailClass: OutboundMailClass;
   entityId?: string;
   boardId?: string;
+  /** The ticket and comment audience a ticket mention quotes. Omitted for task and document mentions. */
+  ticketAudience?: { ticketId: string; audience: AudienceSource };
 }
 
 /**
@@ -32,6 +40,14 @@ export async function deliverUserMentionEmail(
   input: MentionEmailContext,
 ): Promise<boolean> {
   try {
+    // Same recipient boundary as the in-app mention: a seat technician is mailed only about an
+    // in-scope ticket whose comment audience admits them, and never for task or document mentions.
+    const recipient = await resolveTicketNotificationRecipient(
+      knex, tenantId, { ticketId: input.ticketAudience?.ticketId }, { userId });
+    const admission = await selectAudienceContent(
+      recipient, input.ticketAudience ? [{ audience: input.ticketAudience.audience }] : undefined);
+    if (!admission.admitted || recipientRendering(recipient, 'msp') !== 'msp') return false;
+
     const preference = await resolveEmailNotificationPreference(
       knex,
       tenantId,

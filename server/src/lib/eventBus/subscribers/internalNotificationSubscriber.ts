@@ -1925,6 +1925,10 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
             commentId: comment?.id
           });
 
+          // Assignees and additional agents already receive this comment by email, so the mention
+          // email would be a second copy of the same note.
+          const commentEmailAssignees = new Set(await getAllTicketAssignees(db, tenantId, ticketId));
+
           await Promise.all(mentionedUsersToNotify.map(async mentionedUser => {
             notifiedUserIds.add(mentionedUser.user_id);
             const ticketNumber = ticket.ticket_number || 'New Ticket';
@@ -1956,16 +1960,19 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
                   contextId: ticketId
                 }
               }),
-              deliverUserMentionEmail(db, tenantId, mentionedUser.user_id, {
-                authorName,
-                entityType: 'ticket',
-                entityName: `#${ticketNumber}`,
-                commentPreview,
-                url: internalUrl,
-                mailClass: 'ticket',
-                entityId: ticket.ticket_id,
-                boardId: ticket.board_id,
-              }),
+              commentEmailAssignees.has(mentionedUser.user_id)
+                ? Promise.resolve(false)
+                : deliverUserMentionEmail(db, tenantId, mentionedUser.user_id, {
+                  authorName,
+                  entityType: 'ticket',
+                  entityName: `#${ticketNumber}`,
+                  commentPreview,
+                  url: internalUrl,
+                  mailClass: 'ticket',
+                  entityId: ticket.ticket_id,
+                  boardId: ticket.board_id,
+                  ticketAudience: { ticketId, audience: commentAudience },
+                }),
             ]);
           }));
 
@@ -2362,6 +2369,7 @@ async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent, opts
                 url: internalUrl,
                 mailClass: 'ticket',
                 entityId: ticket.ticket_id,
+                ticketAudience: { ticketId, audience: commentAudience },
               }),
             ]);
           }));
