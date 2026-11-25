@@ -3751,7 +3751,6 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           template: 'ticket-board-client-reply-unassigned',
           context: buildContext(internalUrl),
           replyContext: boardReplyReplyContext,
-          attachments: inlineCommentImageAttachments,
         }, 'Board Client Reply Unassigned', recipient.userId);
       }
 
@@ -3769,7 +3768,6 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           template: 'ticket-board-client-reply-unassigned',
           context: buildContext(internalUrl),
           replyContext: { ...boardReplyReplyContext, issueReplyToken: false },
-          attachments: inlineCommentImageAttachments,
         }, 'Board Client Reply Unassigned');
         if (sentToAddress) addressesSent += 1;
       }
