@@ -16,6 +16,9 @@ vi.mock('../../../db/db', () => ({ getConnection: async () => fakeDb() }));
 vi.mock('../../../db', () => ({ createTenantKnex: async () => ({ knex: fakeDb() }) }));
 vi.mock('@alga-psa/db', () => ({
   getUserWithRoles: vi.fn(async () => null),
+  registerManagedRoleIdentity: vi.fn(),
+  registerManagedRoleRefusal: vi.fn(),
+  runAsRoleOwner: vi.fn((_owner: string, fn: () => unknown) => fn()),
   tenantDb: (conn: any) => ({ table: (name: string) => conn(name), tenantJoin: (query: any) => query }),
 }));
 vi.mock('../../../notifications/projectNotificationAudience', () => ({

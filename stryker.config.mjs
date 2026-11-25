@@ -19,6 +19,7 @@ export default {
     '!packages/db/src/lib/tenantTableMetadata.ts',
     '!packages/db/src/lib/tenantTableForeignKeys.ts',
     '!packages/db/src/lib/tenantDb.ts',
+    '!packages/db/src/lib/managedRoleOwnership.ts',
     '!packages/db/src/lib/tenantScopedQuery.ts',
     '!packages/db/src/lib/operationalWriteTables.ts',
     '!packages/db/src/lib/writeAdmission.ts',
