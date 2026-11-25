@@ -53,16 +53,31 @@ import {
   type NotificationLoopDetectionResult,
 } from './notificationLoopDetection';
 import {
-  allowsContactSenderAttribution,
   isMicrosoftIntraOrgSender,
   allowsInternalSenderAttribution,
   verifySenderAuthentication,
 } from '../../lib/email/senderAuthVerification';
+import {
+  evaluateContactAttribution,
+  parseArcAuthenticationResults,
+  parseAuthenticationResults,
+  type ArcSealVerdict,
+  type InboundAuthTrustPolicy,
+} from '../../lib/email/authResultsChain';
 
 export interface ProcessInboundEmailInAppInput {
   tenantId: string;
   providerId: string;
   emailData: EmailMessageDetails;
+  /**
+   * The inbox's trusted-gateway policy and the ARC seal verdict computed from the
+   * raw MIME (see inboundAuthTrust.ts). Absent means mode `off`, i.e. only the
+   * receiving MTA's own Authentication-Results block can attribute a contact.
+   */
+  inboundAuthTrust?: {
+    policy: InboundAuthTrustPolicy;
+    arcSeal?: ArcSealVerdict | null;
+  };
 }
 
 async function logInboundSenderAuthFailure(input: {
@@ -1036,11 +1051,25 @@ export async function processInboundEmailInApp(
     ([name]) => name.toLowerCase() === 'authentication-results'
   )?.[1];
   const senderAuthResults = verifySenderAuthentication(authenticationResultsHeader, senderEmail);
+  const headerValue = (name: string) =>
+    Object.entries(emailData.headers ?? {}).find(([key]) => key.toLowerCase() === name)?.[1];
+  const contactAttribution = evaluateContactAttribution({
+    blocks: parseAuthenticationResults(authenticationResultsHeader, senderEmail),
+    arcSets: parseArcAuthenticationResults(
+      { authenticationResults: headerValue('arc-authentication-results'), seal: headerValue('arc-seal') },
+      senderEmail
+    ),
+    arcSeal: input.inboundAuthTrust?.arcSeal ?? null,
+    policy: input.inboundAuthTrust?.policy ?? null,
+  });
   const isVerifiedListRewrite = Boolean(emailData.headers?.['x-resolved-original-sender']);
   // Same-M365-tenant mail has no Authentication-Results; Exchange's internal-auth stamp
   // stands in for aligned SPF/DKIM for both contact and internal-user attribution.
   const isTrustedIntraOrgSender = isMicrosoftIntraOrgSender(emailData.provider, emailData.headers);
-  const contactSenderTrusted = allowsContactSenderAttribution(senderAuthResults) || isVerifiedListRewrite || isTrustedIntraOrgSender;
+  const contactSenderTrusted = contactAttribution.trusted || isVerifiedListRewrite || isTrustedIntraOrgSender;
+  // Set when a known contact matched the From address but authentication did not vouch
+  // for it; such an unverified address must not be added as a watcher (and so mailed).
+  let contactMatchDroppedForAuth = false;
   const durableExecution = options.durableExecution ?? null;
 
   const helperExecutionOptions = (kind: 'ticket' | 'comment'): InboundEmailExecutionOptions | undefined => {
@@ -1146,11 +1175,14 @@ export async function processInboundEmailInApp(
       return null;
     }
     if (contactSenderTrusted) return matched;
+    contactMatchDroppedForAuth = true;
     console.warn('processInboundEmailInApp: sender auth not aligned; discarding contact match', {
       tenantId, providerId, emailId: emailData.id, senderEmail,
       contactId: matched.contact_id ?? null,
       contactClientId: matched.client_id ?? null,
       authResults: senderAuthResults,
+      authSource: contactAttribution.source,
+      reason: contactAttribution.reason,
     });
     return null;
   };
@@ -1314,6 +1346,13 @@ export async function processInboundEmailInApp(
     oneOffRecipients?: Set<string>
   ) => {
     if (matchedContactId || !senderEmail || senderIsProviderMailbox) {
+      return [] as TicketWatchListRecipientInput[];
+    }
+
+    // The From address matched a contact but failed authentication: it may be
+    // spoofed, so it is neither a watcher nor a notification recipient. The
+    // address stays in the message metadata, and the Default Contact is untouched.
+    if (contactMatchDroppedForAuth) {
       return [] as TicketWatchListRecipientInput[];
     }
 

@@ -226,6 +226,7 @@ const PROVIDER_COLUMNS = [
   'is_active as isActive',
   'inbound_paused_at as inboundPausedAt',
   'inbound_pause_reason as inboundPauseReason',
+  'inbound_auth_trust as inboundAuthTrust',
   'status',
   'last_sync_at as lastSyncAt',
   'error_message as errorMessage',

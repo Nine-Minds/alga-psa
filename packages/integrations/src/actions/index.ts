@@ -88,6 +88,10 @@ export {
   type EmailProviderPauseActionResult
 } from './email-actions/inboundPauseActions';
 export {
+  getInboundAuthTrust,
+  updateInboundAuthTrust,
+} from './email-actions/inboundAuthTrustActions';
+export {
   getEmailDomains,
   addEmailDomain,
   verifyEmailDomain,

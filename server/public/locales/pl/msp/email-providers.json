@@ -222,6 +222,27 @@
       "missingDescription": "Dla {{mailbox}} nie zarejestrowano obserwacji Gmaila, więc żadna poczta przychodząca nie dotrze. Użyj Odśwież Pub/Sub i oglądaj, aby ją zarejestrować.",
       "expiringTitle": "Dostarczanie push z Gmaila wygaśnie w ciągu doby",
       "expiringDescription": "Obserwacje Gmaila trwają siedem dni. Użyj Odśwież Pub/Sub i oglądaj, zanim ta wygaśnie, w przeciwnym razie poczta przychodząca ustanie bez dalszego ostrzeżenia."
+    },
+    "trustedGateway": {
+      "title": "Zaufana bramka przychodząca",
+      "description": "Jeśli bramka bezpieczeństwa poczty przepisuje wiadomości, zanim trafią do tej skrzynki, serwer odbierający może uznać uwierzytelnienie nadawcy za nieudane, mimo że bramka je potwierdziła. Wybierz, jak ufać werdyktowi bramki. Dotyczy to wyłącznie przypisania nadawcy do kontaktu klienta – nigdy użytkowników wewnętrznych.",
+      "modeLabel": "Tryb zaufania bramki",
+      "modes": {
+        "off": "Wyłączony (tylko serwer odbierający)",
+        "arcSealed": "Weryfikuj pieczęć ARC bramki",
+        "mtaArcPass": "Polegaj na wyniku ARC serwera pocztowego"
+      },
+      "idsLabel": "Zaufane authserv-id",
+      "idsPlaceholder": "mx.example.net",
+      "idsHelp": "Rozdzielone przecinkami. Użyj nazwy, którą bramka umieszcza na początku nagłówka Authentication-Results (na przykład mx.avanan.net). Zaufane są tylko bramki wymienione tutaj.",
+      "contactOnly": "Tylko przypisanie kontaktu. Wiadomości z adresów należących do użytkowników wewnętrznych są nadal weryfikowane wyłącznie przez serwer odbierający.",
+      "verifies": {
+        "arcSealed": "Alga samodzielnie sprawdza pieczęcie ARC wiadomości. Wymieniona bramka jest zaufana tylko wtedy, gdy pieczęć zostanie zweryfikowana, domena podpisu pieczęci jest identyfikatorem authserv-id bramki lub jego domeną nadrzędną, a bramka zgłasza zgodny wynik SPF lub DKIM pass.",
+        "mtaArcPass": "Alga nie sprawdza samodzielnie pieczęci ARC. Polega na tym, że odbierający serwer poczty zgłasza arc=pass. Wymieniona bramka jest zaufana tylko wtedy, gdy domena podpisu pieczęci jest jej authserv-id lub jego domeną nadrzędną, a bramka zgłasza zgodny wynik SPF lub DKIM pass."
+      },
+      "save": "Zapisz",
+      "saved": "Zapisano ustawienia zaufanej bramki",
+      "saveFailed": "Nie udało się zapisać ustawień zaufanej bramki"
     }
   },
   "forms": {

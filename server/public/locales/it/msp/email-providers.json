@@ -222,6 +222,27 @@
       "missingDescription": "Nessun watch di Gmail è registrato per {{mailbox}}, quindi non arriverà posta in entrata. Usa Aggiorna Pub/Sub e guarda per registrarne uno.",
       "expiringTitle": "Il recapito push di Gmail scade entro un giorno",
       "expiringDescription": "I watch di Gmail durano sette giorni. Usa Aggiorna Pub/Sub e guarda prima che scada, altrimenti la posta in entrata si fermerà senza altro preavviso."
+    },
+    "trustedGateway": {
+      "title": "Gateway in entrata attendibile",
+      "description": "Se un gateway di sicurezza della posta riscrive i messaggi prima che questa casella li riceva, il server ricevente può considerare fallita l’autenticazione del mittente anche se il gateway l’ha verificata. Scegli come fidarti del verdetto del gateway. Riguarda solo l’associazione del mittente a un contatto del cliente, mai gli utenti interni.",
+      "modeLabel": "Modalità di fiducia del gateway",
+      "modes": {
+        "off": "Disattivato (solo server di posta ricevente)",
+        "arcSealed": "Verifica il sigillo ARC del gateway",
+        "mtaArcPass": "Affidati al risultato ARC del server di posta"
+      },
+      "idsLabel": "authserv-id attendibili",
+      "idsPlaceholder": "mx.example.net",
+      "idsHelp": "Separati da virgole. Usa il nome che il gateway mette all’inizio della sua intestazione Authentication-Results (ad esempio mx.avanan.net). Sono considerati attendibili solo i gateway elencati qui.",
+      "contactOnly": "Solo associazione ai contatti. I messaggi da indirizzi di utenti interni continuano a essere verificati solo dal server ricevente.",
+      "verifies": {
+        "arcSealed": "Alga verifica da solo i sigilli ARC del messaggio. Un gateway elencato è attendibile solo se il sigillo è valido, il dominio di firma del sigillo è l’authserv-id del gateway o un suo dominio padre, e il gateway segnala un esito SPF o DKIM allineato positivo.",
+        "mtaArcPass": "Alga non verifica da solo il sigillo ARC. Si affida al server di posta ricevente, che deve segnalare arc=pass. Un gateway elencato è attendibile solo se il dominio di firma del sigillo è il suo authserv-id o un suo dominio padre, e se segnala un esito SPF o DKIM allineato positivo."
+      },
+      "save": "Salva",
+      "saved": "Impostazioni del gateway attendibile salvate",
+      "saveFailed": "Impossibile salvare le impostazioni del gateway attendibile"
     }
   },
   "forms": {

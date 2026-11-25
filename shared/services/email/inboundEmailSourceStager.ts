@@ -19,6 +19,7 @@ import { INBOUND_MIME_PARSE_OPTIONS } from './inboundMimeParseOptions';
 import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfaces';
 import { buildInboundSourceObjectKey, normalizeInboundMessageIdentity } from './inboundEmailIdentity';
 import { extractMessageIds, repairUtf8Mojibake } from './inboundEmailMimeHelpers';
+import { collectWireHeaders } from './inboundWireHeaders';
 import type { InboundProviderType } from '../../interfaces/inbound-email.interfaces';
 
 export interface StagedInboundSource {
@@ -193,6 +194,13 @@ export async function parseStagedMimeIntoEmailDetails(params: {
     references: references.length ? references : undefined,
     inReplyTo: inReplyTo || undefined,
     rawMimeBase64: params.rawMime.toString('base64'),
+    // Wire headers (Authentication-Results, ARC-*, Exchange stamps, loop markers)
+    // for the sender-auth gate, same shape as the V1 queue path. Without them the
+    // durable path could never attribute a contact through a trusted gateway.
+    headers: (() => {
+      const wire = collectWireHeaders(parsed?.headers);
+      return Object.keys(wire).length ? wire : undefined;
+    })(),
   };
 
   return {

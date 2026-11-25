@@ -14,7 +14,9 @@ import {
   pauseEmailProvider,
   resumeEmailProvider,
   updateEmailProvider,
+  updateInboundAuthTrust,
 } from '@alga-psa/integrations/actions';
+import type { InboundAuthTrustPolicy } from '@alga-psa/shared/lib/email/authResultsChain';
 import type { PublicEmailProvider } from './types';
 import { EmailProviderCard, EmptyProviderPlaceholder } from './EmailProviderCard';
 import { RefreshCw } from 'lucide-react';
@@ -101,6 +103,12 @@ export function EmailProviderList({
     } finally {
       setUpdatingProviderId(null);
     }
+  };
+
+  const handleSaveInboundAuthTrust = async (provider: PublicEmailProvider, policy: InboundAuthTrustPolicy) => {
+    const result = await updateInboundAuthTrust(provider.id, policy);
+    if (result.success) onRefresh();
+    return result;
   };
 
   const handleTestConnectionInternal = async (provider: PublicEmailProvider) => {
@@ -226,6 +234,7 @@ export function EmailProviderList({
             onRunDiagnostics={onRunDiagnostics}
             onChangeDefaults={handleChangeDefaults}
             onTogglePause={handleTogglePause}
+            onSaveInboundAuthTrust={handleSaveInboundAuthTrust}
             onReconnect={onReconnect}
           />
         ))}
