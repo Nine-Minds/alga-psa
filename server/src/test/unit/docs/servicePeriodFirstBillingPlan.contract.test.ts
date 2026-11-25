@@ -110,7 +110,14 @@ const persistedReaderExclusions = new Set([
 // inventory snapshot was taken; they are excluded from the snapshot equality
 // check so the inventory remains an accurate record of its point in time.
 const billingCycleAlignmentPostInventoryRefs = new Set([
+  // Atomic quick-add contract saves extracted preset copying into a shared
+  // transactional service after the pass-0 snapshot.
+  'packages/billing/src/services/contractLinePresetCopyService.ts',
   'packages/billing/src/services/quoteConversionService.ts',
+  // Quote-to-contract quantity parity moved line construction into a shared
+  // builder and added alignment comparison coverage after the pass-0 snapshot.
+  'shared/billingClients/quoteToContractLines.ts',
+  'server/src/test/infrastructure/billing/quotes/quoteConversion.test.ts',
   // Prepaid balance alert subscriber integration test (feature/low-balance-alerts)
   // seeds billing_cycle_alignment in fixtures; landed after the pass-0 snapshot.
   'server/src/lib/eventBus/subscribers/prepaidBalanceAlertSubscriber.integration.test.ts',
