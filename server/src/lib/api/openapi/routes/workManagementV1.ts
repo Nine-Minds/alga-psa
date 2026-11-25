@@ -843,7 +843,8 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       data: zOpenApi.object({
         session: StopwatchSessionSchema,
-        time_entry: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).describe('The persisted time entry.'),
+        time_entry: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).describe('The persisted time entry (the first one when the session spans several work days).'),
+        time_entries: zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())).describe('Every persisted time entry, one per work day with active time.'),
       }),
     }),
   );
@@ -975,7 +976,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     method: 'post',
     path: '/api/v1/stopwatch/{id}/log',
     summary: 'Log stopwatch as time entry',
-    description: 'Logs the session as exactly one time entry: start = first segment start (to the minute), end = start + active duration, billable_duration = active minutes (min 1). Any body field overrides the derived value. The time sheet is resolved server-side from the start date; a locked (submitted/approved) sheet returns 409 and the session is left untouched.',
+    description: 'Logs the session as one time entry per work day (in the entry user timezone) that has active time: each entry starts at the first active instant of that day (to the minute) and lasts the active minutes of that day, ending no later than 23:59; paused time is never booked. A session within one day is one entry (billable_duration = active minutes, min 1). An explicit start_time/end_time in the body produces exactly one entry over that span. Other body fields override the derived value. The time sheet is resolved server-side from the start date; a locked (submitted/approved) sheet returns 409 and the session is left untouched.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: { params: IdParam, body: { schema: StopwatchLogBody } },
@@ -1716,7 +1717,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   registry.registerRoute({
     method: 'post', path: '/api/v1/tickets/{id}/documents',
     summary: 'Upload a ticket document',
-    description: 'Uploads a file as a document attachment to a ticket. Send multipart/form-data with a `file` field. Returns the created document. Multipart only: MCP and JSON clients should use `POST /api/v1/documents` (or the `attach_file` MCP tool) instead.',
+    description: 'Uploads a file as a document attachment to a ticket. Send multipart/form-data with a `file` field and, optionally, `is_client_visible` (`true` or `false`, default `false`: internal only). Client-visible needs document:update in addition to the ticket update permission, and the returned document shows `is_client_visible`. Returns the created document. Multipart only: MCP and JSON clients should use `POST /api/v1/documents` (or the `attach_file` MCP tool) instead.',
     tags: [tag], security: [{ ApiKeyAuth: [] }],
     request: { params: IdParam },
     responses: ticketStdResponses({ code: 201, description: 'Document uploaded.' }),

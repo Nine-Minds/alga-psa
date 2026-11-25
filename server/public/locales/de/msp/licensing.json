@@ -453,6 +453,8 @@
       },
       "error": {
         "operationConflict": "Diese Anfrage wurde bereits mit anderen Angaben gesendet. Aktualisieren Sie die Ansicht und beginnen Sie neu.",
+        "trialClaimUnavailable": "Diese Testversion wird bereits verwendet oder wurde für einen anderen Kunden gestartet. Aktualisieren Sie die Ansicht und versuchen Sie es erneut.",
+        "trialSponsorNotEligible": "Dieser Arbeitsbereich ist nicht für eine Seat-Testversion berechtigt. Prüfen Sie den Tarif und den Abrechnungsstatus des Kontos.",
         "invalidSeats": "Geben Sie eine ganze Zahl von Plätzen ein, mindestens 1.",
         "invalidInvitation": "Wählen Sie einen Kontakt zum Einladen aus.",
         "contactNotFound": "Dieser Kontakt ist nicht mehr verfügbar. Wählen Sie einen anderen Kontakt.",
@@ -505,8 +507,7 @@
         "save": "Standardwerte für Übergaben speichern"
       },
       "client": {
-        "seatArrangement": "Platzvereinbarung",
-        "summary": "Platzvereinbarung: {{used}} von {{count}} Plätzen belegt"
+        "seatArrangement": "Platzvereinbarung"
       },
       "technicians": {
         "sent": "Einladung gesendet.",
@@ -551,6 +552,13 @@
         "addedUnavailable": "{{name}} wurde hinzugefügt, kann aber nicht eingeladen werden.",
         "unavailable": "Nicht aufgeführt, weil inaktiv, ohne E-Mail-Adresse oder bereits mit Platz oder Einladung: {{count}}."
       },
+      "trial": {
+        "available": "Oben ist eine kostenlose 15-Tage-Testphase verfügbar. Co-Managed-Plätze können jederzeit hinzugefügt werden.",
+        "availableTrialEnables": "Mit der Einladung des Technikers beginnt die Testphase und Co-Managed IT wird für diesen Kunden aktiviert. Kaufen Sie nach den 15 Tagen einen Platz, um den Techniker zu behalten.",
+        "pending": "Eine Einladung zur 15-Tage-Testphase wartet auf den Techniker. Co-Managed-Plätze können jederzeit hinzugefügt werden.",
+        "active": "Die 15-Tage-Testphase läuft. Fügen Sie Co-Managed-Plätze hinzu, um den Techniker danach zu behalten.",
+        "ended": "Die 15-Tage-Testphase ist beendet. Fügen Sie Co-Managed-Plätze hinzu, um den Techniker zu behalten."
+      },
       "chooser": {
         "seat": "Platz",
         "seatHint": "Die Techniker des Kunden arbeiten in Ihrer PSA, beschränkt auf ihr Unternehmen.",
@@ -558,7 +566,11 @@
         "workspaceHint": "Das IT-Team des Kunden erhält einen eigenen Servicedesk und eskaliert an Sie.",
         "description": "Wählen Sie, wie das IT-Team dieses Kunden mit Ihnen zusammenarbeitet.",
         "shape": "Co-Managed-Form",
-        "pool": "{{available}} von {{purchased}} Plätzen verfügbar. {{allocated}} zugewiesen."
+        "pool": "{{available}} von {{purchased}} Plätzen verfügbar. {{allocated}} zugewiesen.",
+        "poolEmpty": "Noch keine Co-Managed-Plätze.",
+        "seatHintAfterTrial": "Fügen Sie Co-Managed-Plätze hinzu, um den Techniker nach der 15-Tage-Testphase zu behalten.",
+        "seatHintTrialCovers": "Der Testplatz deckt diesen Techniker bis {{date}} ab. Kaufen Sie einen Platz, um ihn zu behalten.",
+        "seatHintTrial": "15 Tage kostenlos. Laden Sie einen Techniker ein, um Co-Managed IT für diesen Kunden zu aktivieren."
       },
       "states": {
         "active": "Aktiv",
@@ -569,12 +581,12 @@
       "title": "Arbeitsbereich exportieren",
       "description": "Laden Sie ein verschlüsseltes, portables Archiv der Datensätze und Dateien Ihres Arbeitsbereichs herunter.",
       "recovery": "Bewahren Sie die Wiederherstellungspassphrase sicher auf. Ohne sie lässt sich das Archiv nicht öffnen.",
-      "connections": "Das Archiv enthält die Datensätze Ihres Arbeitsbereichs und die darin gespeicherten Dateien. Dokumentdatensätze und -verknüpfungen sowie Zeit-, Termin-, Besprechungs- und Unterhaltungsverläufe sind noch nicht enthalten und folgen in einer späteren Version. Abrechnungsdaten, MSP-interne Daten und Integrationsgeheimnisse sind nicht enthalten.",
+      "connections": "Das Archiv enthält die Datensätze Ihres Arbeitsbereichs und die darin gespeicherten Dateien. Dokumentdatensätze und -zuordnungen sowie Zeit-, Termin-, Besprechungs- und Konversationsverlauf sind noch nicht enthalten und folgen in einer späteren Version. Abrechnungsdaten, MSP-interne Daten und Integrationsgeheimnisse sind nicht enthalten.",
       "passphrase": "Wiederherstellungspassphrase",
       "confirmPassphrase": "Wiederherstellungspassphrase bestätigen",
       "download": "Archiv vorbereiten und herunterladen",
       "requested": "Ihre Anfrage wird in einem neuen Tab geöffnet. Die Vorbereitung kann einige Minuten dauern; Ihr Browser lädt die Datei herunter, sobald sie bereit ist.",
-      "loadError": "Mit Ihrem aktuellen Zugriff können Sie diesen Arbeitsbereich nicht exportieren.",
+      "loadError": "Mit Ihren aktuellen Berechtigungen können Sie diesen Arbeitsbereich nicht exportieren.",
       "lengthError": "Verwenden Sie eine Passphrase mit 16 bis 1024 UTF-8-Bytes.",
       "matchError": "Die Wiederherstellungspassphrasen müssen übereinstimmen.",
       "unavailable": "Der Export von Arbeitsbereichen ist in dieser Edition nicht verfügbar.",
@@ -606,8 +618,6 @@
     },
     "client": {
       "awaitingAcceptance": "Der Kundenadministrator muss zustimmen, bevor der Zugriff gewährt wird.",
-      "chooseRelationship": "Beziehung auswählen",
-      "endedHint": "Diese Beziehung wurde beendet. Aufbewahrter Verlauf und Archive bleiben verfügbar.",
       "endedOn": "Beendet am {{date}}",
       "failedHint": "Die Einrichtung wurde nicht abgeschlossen. Die Plätze bleiben reserviert. Versuchen Sie es erneut, um fortzufahren, oder brechen Sie die Einrichtung ab.",
       "forClient": "Co-Managed IT für {{name}}",
@@ -616,6 +626,7 @@
       "inconsistentHint": "Eine Co-Managed-Einrichtung für diesen Kunden verweist auf einen Arbeitsbereich-Datensatz, der zu einem anderen Kunden gehört. Hier kann nichts verwaltet oder eingerichtet werden, bis der Support den Datensatz korrigiert.",
       "invitation": "Administrator-Einladung",
       "notEnabled": "Co-Managed IT ist nicht aktiviert",
+      "notEnabledTrialEnables": "Co-Managed IT ist noch nicht aktiviert. Mit dem Start der kostenlosen 15-Tage-Testphase für einen Platz wird es für diesen Kunden aktiviert.",
       "progress": "Einrichtungsfortschritt",
       "provisioningHint": "Reservierte Plätze bleiben reserviert, bis die Einrichtung abgeschlossen oder die Bereinigung bestätigt ist.",
       "relationship": "Beziehung",
@@ -624,12 +635,11 @@
       "setupHint": "Aktivieren Sie Co-Managed IT für diesen Kunden, um Kundentechniker zu reservieren und einen Administrator einzuladen.",
       "tab": "Co-Managed IT",
       "viewDetails": "Details anzeigen",
-      "viewHistory": "Verlauf anzeigen",
       "workspace": "Kundenarbeitsbereich",
       "seatUsage": "{{used}} von {{count}} Technikerplätzen",
       "seatAllocation": "{{count}} zugewiesene Technikerplätze"
     },
-    "description": "Verwalten Sie die Technikerplätze, die Ihren Kunden-Workspaces zur Verfügung stehen.",
+    "description": "Mit Co-Managed IT arbeiten die IT-Mitarbeitenden eines Kunden in AlgaPSA gemeinsam mit Ihrem Team an denselben Tickets – mit Zugriff nur auf ihr eigenes Unternehmen. Jeder Kundentechniker belegt einen Platz aus einem Pool, den Sie hier kaufen.",
     "directory": {
       "empty": "Es sind keine Co-Managed-Workspaces zur Verwaltung verfügbar.",
       "prompt": "Wählen Sie den zu verwaltenden Co-Managed-Workspace aus."
@@ -639,7 +649,7 @@
       "descriptionWith": "{{name}} hat keinen Zugriff mehr. Der Verlauf der gemeinsamen Arbeit bleibt erhalten und ist schreibgeschützt.",
       "title": "Co-Managed IT beendet am {{date}}"
     },
-    "loading": "Kundenplatzkapazität wird geladen…",
+    "loading": "Kapazität der Co-Managed-Plätze wird geladen…",
     "overview": {
       "shape": "Form",
       "state": "Status",
@@ -720,15 +730,15 @@
       "description": "Dieser Arbeitsbereich ist derzeit nicht verfügbar. Wenden Sie sich an Ihren IT-Dienstleister, wenn Sie ihn nutzen wollten.",
       "title": "Co-Managed IT ist nicht verfügbar"
     },
-    "capacity": "Gekaufte Plätze",
+    "capacity": "Gekauft",
     "allocated": "Kunden zugewiesen",
-    "available": "Verfügbare Plätze",
-    "seatPool": "Technikerplätze für Kunden",
-    "seatDescription": "Weisen Sie Plätze aus diesem gemeinsamen Pool zu. Anfragende sind kostenlos, und Ihre MSP-Techniker belegen keine Kundenplätze.",
+    "available": "Verfügbar",
+    "seatPool": "Co-Managed-Plätze",
+    "seatDescription": "Nur die Techniker Ihrer Kunden brauchen einen Platz. Anfragende und Ihre eigenen Techniker nicht.",
     "quantity": "Plätze insgesamt in Ihrem Pool",
     "reviewPurchase": "Kauf prüfen",
     "resumePurchase": "Kauf fortsetzen",
-    "confirmTitle": "Kauf von Kundenplätzen prüfen",
+    "confirmTitle": "Kauf von Co-Managed-Plätzen prüfen",
     "monthlyTotal_one": "{{count}} Platz · {{amount}} pro Monat",
     "monthlyTotal_other": "{{count}} Plätze · {{amount}} pro Monat",
     "dueNow": "Geschätzter jetzt fälliger Betrag: {{amount}}",
@@ -736,7 +746,7 @@
     "checkoutTitle": "Platzkauf abschließen",
     "manageLicense": "Ihre selbst gehostete Lizenz verwalten",
     "proRequired": "Zum Sponsern von Kunden-Workspaces ist ein Pro-PSA-Abonnement erforderlich.",
-    "loadError": "Die Kundenplatzkapazität konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
+    "loadError": "Die Kapazität der Co-Managed-Plätze konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
     "purchaseError": "Der Platzkauf konnte nicht abgeschlossen werden. Sie können ihn sicher fortsetzen.",
     "termsChanged": "Der Preis hat sich seit Ihrer Prüfung geändert. Prüfen Sie die neuen Konditionen, bevor Sie den Kauf bestätigen.",
     "offerUnavailable": "Neue Sitzplatzkäufe sind vorübergehend nicht verfügbar. Es wurde nichts berechnet.",
@@ -751,9 +761,6 @@
     "awaitingVerification_one": "Ihr Kauf von {{count}} Platz wartet auf die Zahlungsbestätigung. Der Platz erscheint hier, sobald die Zahlung bestätigt ist.",
     "awaitingVerification_other": "Ihr Kauf von {{count}} Plätzen wartet auf die Zahlungsbestätigung. Die Plätze erscheinen hier, sobald die Zahlung bestätigt ist.",
     "refreshStatus": "Status aktualisieren",
-    "purchaseOnly": {
-      "intro": "Kaufen Sie hier einen Pool von Co-Managed-Plätzen. Nach dem Kauf weisen Sie Plätze über den jeweiligen Kunden zu."
-    },
     "previewError": "Diese Änderung konnte nicht bepreist werden. Aktualisieren Sie und versuchen Sie es erneut.",
     "billingCustomerUnlinked": "Für diesen Arbeitsbereich konnte kein Stripe-Abrechnungskonto verifiziert werden. Wenden Sie sich an den Support, um das Konto zu verknüpfen.",
     "proSubscriptionRequired": "Für Co-Managed-Plätze ist ein laufendes Pro-Abonnement erforderlich. Überprüfen Sie Ihr Abonnement in der Kontoverwaltung.",
@@ -976,21 +983,6 @@
       "settings": "SLA-Richtlinien verwalten",
       "mappingFor": "Kundenpriorität {{name}} entspricht",
       "unmapped": "Nicht zugeordnet"
-    },
-    "portableExport": {
-      "title": "Arbeitsbereich exportieren",
-      "description": "Laden Sie ein verschlüsseltes, portables Archiv der Datensätze und Dateien Ihres Arbeitsbereichs herunter.",
-      "recovery": "Bewahren Sie die Wiederherstellungspassphrase sicher auf. Ohne sie lässt sich das Archiv nicht öffnen.",
-      "connections": "Das Archiv enthält die Datensätze Ihres Arbeitsbereichs und die darin gespeicherten Dateien. Dokumentdatensätze und -zuordnungen sowie Zeit-, Termin-, Besprechungs- und Konversationsverlauf sind noch nicht enthalten und folgen in einer späteren Version. Abrechnungsdaten, MSP-interne Daten und Integrationsgeheimnisse sind nicht enthalten.",
-      "passphrase": "Wiederherstellungspassphrase",
-      "confirmPassphrase": "Wiederherstellungspassphrase bestätigen",
-      "download": "Archiv vorbereiten und herunterladen",
-      "requested": "Ihre Anfrage wird in einem neuen Tab geöffnet. Die Vorbereitung kann einige Minuten dauern; Ihr Browser lädt die Datei herunter, sobald sie bereit ist.",
-      "loadError": "Mit Ihren aktuellen Berechtigungen können Sie diesen Arbeitsbereich nicht exportieren.",
-      "lengthError": "Verwenden Sie eine Passphrase mit 16 bis 1024 UTF-8-Bytes.",
-      "matchError": "Die Wiederherstellungspassphrasen müssen übereinstimmen.",
-      "unavailable": "Der Export von Arbeitsbereichen ist in dieser Edition nicht verfügbar.",
-      "loading": "Wird geladen…"
     },
     "section": {
       "title": "Co-Managed",
@@ -1275,6 +1267,49 @@
       "reviewSeatChange": "Sitzänderung prüfen",
       "billingError": "Die Abrechnung konnte nicht geöffnet werden. Aktualisieren Sie den Status und versuchen Sie es erneut.",
       "purchaseUnconfigured": "Käufe sind für diese Bereitstellung nicht konfiguriert."
+    },
+    "howMany": "Wie viele Plätze möchten Sie?",
+    "noSeatsYet": "Sie haben noch keine Plätze.",
+    "perMonth": "pro Monat",
+    "priceBreakdown_one": "{{count}} Platz × {{unit}}",
+    "priceBreakdown_other": "{{count}} Plätze × {{unit}}",
+    "reviewHint": "Es wird nichts berechnet, bevor Sie im nächsten Schritt bestätigen.",
+    "changeTitle": "Anzahl der Plätze ändern",
+    "adding_one": "{{count}} Platz wird hinzugefügt",
+    "adding_other": "{{count}} Plätze werden hinzugefügt",
+    "removing_one": "{{count}} Platz wird entfernt",
+    "removing_other": "{{count}} Plätze werden entfernt",
+    "fromTo": "{{from}} → {{to}} Plätze",
+    "monthlyWithDifference": "{{total}} pro Monat ({{difference}})",
+    "reviewChange": "Änderung prüfen",
+    "manageBilling": "Abrechnung verwalten",
+    "freeToAllocate_one": "{{count}} Platz kann noch zugewiesen werden. Öffnen Sie einen Kundendatensatz, um ihn zuzuweisen.",
+    "freeToAllocate_other": "{{count}} Plätze können noch zugewiesen werden. Öffnen Sie einen Kundendatensatz, um sie zuzuweisen.",
+    "noneFree": "Alle Plätze sind zugewiesen. Fügen Sie unten Plätze hinzu oder geben Sie einen bei einem Kunden frei.",
+    "goToClients": "Zu den Kunden",
+    "belowAllocated_one": "Sie können nicht unter {{count}} Platz gehen: Er ist einem Kunden zugewiesen. Geben Sie ihn zuerst bei diesem Kunden frei.",
+    "belowAllocated_other": "Sie können nicht unter {{count}} Plätze gehen: Sie sind Kunden zugewiesen. Geben Sie zuerst Plätze bei einem Kunden frei.",
+    "decreaseSeats": "Plätze verringern",
+    "increaseSeats": "Plätze erhöhen",
+    "usage": "{{allocated}} von {{purchased}} Plätzen zugewiesen",
+    "howItWorks": {
+      "title": "So funktioniert es",
+      "buy": {
+        "title": "Plätze kaufen",
+        "body": "Die Plätze kommen in einen gemeinsamen Pool für Ihren gesamten MSP. Die Anzahl lässt sich jederzeit ändern."
+      },
+      "enable": {
+        "title": "Co-Managed IT für einen Kunden aktivieren",
+        "body": "Öffnen Sie den Kundendatensatz und legen Sie fest, wie viele Plätze dieser Kunde erhält."
+      },
+      "signIn": {
+        "title": "Die Techniker des Kunden melden sich an",
+        "body": "Jeder Kundentechniker belegt einen Platz und sieht nur die Arbeit seines eigenen Unternehmens."
+      }
+    },
+    "whoNeedsSeat": {
+      "label": "Wer braucht einen Platz?",
+      "answer": "Nur die Techniker Ihrer Kunden. Wer nur Tickets einreicht, ist kostenlos, und Ihre eigenen Techniker sind durch Ihre AlgaPSA-Lizenzen abgedeckt."
     }
   },
   "common": {

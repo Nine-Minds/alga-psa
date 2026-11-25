@@ -1,3 +1,4 @@
+import { redirectToAppPath } from '@alga-psa/core/redirectToAppPath';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionCookieName } from '@alga-psa/auth';
 import { validateMobileRedirectUri } from '@/lib/mobileAuth/redirectUri';
@@ -26,8 +27,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const redirectParam = url.searchParams.get('redirect');
   const redirectUrl = redirectParam ? validateMobileRedirectUri(redirectParam, 'signed-out') : null;
 
-  const target = redirectUrl ?? new URL('/auth/signin', url.origin);
-  const response = NextResponse.redirect(target.toString(), { status: 302 });
+  // Back to the app's own scheme when the redirect is valid; otherwise to sign-in via a
+  // relative Location: the request's own origin is the internal upstream (localhost:3000) on hosted.
+  const response = redirectUrl
+    ? NextResponse.redirect(redirectUrl.toString(), { status: 302 })
+    : redirectToAppPath('/auth/signin', { status: 302 });
 
   for (const name of sessionCookieNamesToClear(req.cookies.getAll().map((cookie) => cookie.name))) {
     response.cookies.set(name, '', {

@@ -453,6 +453,8 @@
       },
       "error": {
         "operationConflict": "To żądanie zostało już wysłane z innymi danymi. Odśwież i zacznij od nowa.",
+        "trialClaimUnavailable": "Ten okres próbny jest już używany lub został rozpoczęty dla innego klienta. Odśwież i spróbuj ponownie.",
+        "trialSponsorNotEligible": "Ten obszar roboczy nie kwalifikuje się do okresu próbnego Seat. Sprawdź plan i status rozliczeń konta.",
         "invalidSeats": "Wpisz liczbę całkowitą stanowisk, co najmniej 1.",
         "invalidInvitation": "Wybierz kontakt do zaproszenia.",
         "contactNotFound": "Ten kontakt nie jest już dostępny. Wybierz inny kontakt.",
@@ -505,8 +507,7 @@
         "save": "Zapisz domyślne ustawienia przekazania"
       },
       "client": {
-        "seatArrangement": "Uzgodnienie stanowisk",
-        "summary": "Uzgodnienie stanowisk: wykorzystano {{used}} z {{count}} stanowisk"
+        "seatArrangement": "Uzgodnienie stanowisk"
       },
       "technicians": {
         "sent": "Wysłano zaproszenie.",
@@ -551,6 +552,13 @@
         "addedUnavailable": "Dodano {{name}}, ale nie można go zaprosić.",
         "unavailable": "Niewyświetlone, bo nieaktywne, bez adresu e-mail lub już z miejscem albo zaproszeniem: {{count}}."
       },
+      "trial": {
+        "available": "Powyżej dostępny jest bezpłatny 15-dniowy okres próbny. Stanowiska współzarządzania można dodać w dowolnym momencie.",
+        "availableTrialEnables": "Zaproszenie technika rozpoczyna okres próbny i włącza współzarządzane IT dla tego klienta. Po 15 dniach kup stanowisko, aby zachować technika.",
+        "pending": "Zaproszenie do 15-dniowego okresu próbnego czeka na technika. Stanowiska współzarządzania można dodać w dowolnym momencie.",
+        "active": "15-dniowy okres próbny trwa. Dodaj stanowiska współzarządzania, aby zachować technika po jego zakończeniu.",
+        "ended": "15-dniowy okres próbny dobiegł końca. Dodaj stanowiska współzarządzania, aby zachować technika."
+      },
       "chooser": {
         "seat": "Stanowisko",
         "seatHint": "Technicy klienta pracują w Twoim PSA, w granicach swojej firmy.",
@@ -558,7 +566,11 @@
         "workspaceHint": "Zespół IT klienta ma własny service desk i eskaluje zgłoszenia do Ciebie.",
         "description": "Wybierz, jak zespół IT tego klienta współpracuje z Tobą.",
         "shape": "Model współzarządzania",
-        "pool": "Dostępne stanowiska: {{available}} z {{purchased}}. Przydzielone: {{allocated}}."
+        "pool": "Dostępne stanowiska: {{available}} z {{purchased}}. Przydzielone: {{allocated}}.",
+        "poolEmpty": "Brak jeszcze stanowisk współzarządzania.",
+        "seatHintAfterTrial": "Dodaj stanowiska współzarządzania, aby zachować technika po 15-dniowym okresie próbnym.",
+        "seatHintTrialCovers": "Stanowisko próbne obejmuje tego technika do {{date}}. Kup stanowisko, aby go zachować.",
+        "seatHintTrial": "Bezpłatnie przez 15 dni. Zaproś technika, aby włączyć współzarządzane IT dla tego klienta."
       },
       "states": {
         "active": "Aktywny",
@@ -568,15 +580,15 @@
     "portableExport": {
       "title": "Eksportuj obszar roboczy",
       "description": "Pobierz zaszyfrowane, przenośne archiwum rekordów i plików z obszaru roboczego.",
-      "recovery": "Przechowuj hasło odzyskiwania w bezpiecznym miejscu. Bez niego nie można otworzyć archiwum.",
-      "connections": "Archiwum zawiera rekordy obszaru roboczego oraz przechowywane w nim pliki. Rekordy i powiązania dokumentów oraz historia czasu pracy, harmonogramów, spotkań i rozmów nie są jeszcze uwzględnione i pojawią się w późniejszej wersji. Dane rozliczeniowe, prywatne dane MSP i sekrety integracji nie są uwzględnione.",
+      "recovery": "Przechowuj hasło odzyskiwania w bezpiecznym miejscu. Bez niego archiwum nie da się otworzyć.",
+      "connections": "Archiwum zawiera rekordy obszaru roboczego oraz zapisane w nim pliki. Rekordy i powiązania dokumentów oraz historia czasu pracy, harmonogramu, spotkań i rozmów nie są jeszcze uwzględnione i pojawią się w późniejszej wersji. Dane rozliczeniowe, prywatne dane MSP i sekrety integracji nie są uwzględnione.",
       "passphrase": "Hasło odzyskiwania",
       "confirmPassphrase": "Potwierdź hasło odzyskiwania",
       "download": "Przygotuj i pobierz archiwum",
       "requested": "Żądanie otworzy się w nowej karcie. Przygotowanie może potrwać kilka minut; przeglądarka pobierze plik, gdy będzie gotowy.",
-      "loadError": "Przy obecnych uprawnieniach nie możesz wyeksportować tego obszaru roboczego.",
+      "loadError": "Nie możesz wyeksportować tego obszaru roboczego przy obecnych uprawnieniach.",
       "lengthError": "Użyj hasła o długości od 16 do 1024 bajtów UTF-8.",
-      "matchError": "Hasła odzyskiwania muszą być zgodne.",
+      "matchError": "Hasła odzyskiwania muszą być identyczne.",
       "unavailable": "Eksport obszaru roboczego nie jest dostępny w tej edycji.",
       "loading": "Ładowanie…"
     },
@@ -606,8 +618,6 @@
     },
     "client": {
       "awaitingAcceptance": "Administrator klienta musi zaakceptować, zanim dostęp zostanie przyznany.",
-      "chooseRelationship": "Wybierz relację",
-      "endedHint": "Ta relacja została zakończona. Zachowana historia i archiwa pozostają dostępne.",
       "endedOn": "Zakończona {{date}}",
       "failedHint": "Konfiguracja nie została ukończona. Stanowiska pozostają zarezerwowane; spróbuj ponownie, aby ją kontynuować, lub anuluj konfigurację.",
       "forClient": "Współzarządzane IT dla {{name}}",
@@ -616,6 +626,7 @@
       "inconsistentHint": "Konfiguracja współzarządzania dla tego klienta wskazuje rekord obszaru roboczego należący do innego klienta. Niczym nie można tu zarządzać ani niczego konfigurować, dopóki wsparcie nie poprawi rekordu.",
       "invitation": "Zaproszenie administratora",
       "notEnabled": "Współzarządzane IT nie jest włączone",
+      "notEnabledTrialEnables": "Współzarządzane IT nie zostało jeszcze włączone. Rozpoczęcie bezpłatnego 15-dniowego okresu próbnego stanowiska włącza je dla tego klienta.",
       "progress": "Postęp konfiguracji",
       "provisioningHint": "Zarezerwowane miejsca pozostają zarezerwowane, dopóki konfiguracja nie zostanie ukończona lub czyszczenie nie zostanie potwierdzone.",
       "relationship": "Relacja",
@@ -624,12 +635,11 @@
       "setupHint": "Włącz współzarządzane IT dla tego klienta, aby zarezerwować techników klienta i zaprosić administratora.",
       "tab": "Współzarządzane IT",
       "viewDetails": "Zobacz szczegóły",
-      "viewHistory": "Zobacz historię",
       "workspace": "Obszar roboczy klienta",
       "seatUsage": "{{used}} z {{count}} stanowisk technika",
       "seatAllocation": "{{count}} przydzielonych stanowisk technika"
     },
-    "description": "Zarządzaj stanowiskami techników dostępnymi dla obszarów roboczych Twoich klientów.",
+    "description": "Współzarządzane IT pozwala pracownikom IT klienta pracować razem z Twoim zespołem w AlgaPSA — na tych samych zgłoszeniach, z dostępem ograniczonym do ich firmy. Każdy technik klienta zajmuje jedno stanowisko z puli, którą kupujesz tutaj.",
     "directory": {
       "empty": "Brak współzarządzanych obszarów roboczych do zarządzania.",
       "prompt": "Wybierz współzarządzany obszar roboczy do zarządzania."
@@ -639,7 +649,7 @@
       "descriptionWith": "{{name}} nie ma już dostępu. Historia wspólnej pracy jest zachowana w trybie tylko do odczytu.",
       "title": "Współzarządzane IT zakończone {{date}}"
     },
-    "loading": "Wczytywanie liczby stanowisk dla klientów…",
+    "loading": "Wczytywanie liczby stanowisk współzarządzania…",
     "overview": {
       "shape": "Model",
       "state": "Stan",
@@ -720,15 +730,15 @@
       "description": "Ten obszar roboczy jest obecnie niedostępny. Skontaktuj się ze swoim dostawcą IT, jeśli zamierzałeś z niego korzystać.",
       "title": "Współzarządzane IT jest niedostępne"
     },
-    "capacity": "Zakupione stanowiska",
+    "capacity": "Kupione",
     "allocated": "Przydzielone klientom",
-    "available": "Dostępne stanowiska",
-    "seatPool": "Stanowiska techników klientów",
-    "seatDescription": "Przydzielaj stanowiska z tej wspólnej puli. Zgłaszający są bezpłatni, a technicy Twojego MSP nie zajmują stanowisk klientów.",
+    "available": "Dostępne",
+    "seatPool": "Stanowiska współzarządzania",
+    "seatDescription": "Stanowisko potrzebują tylko technicy Twoich klientów. Zgłaszający i Twoi technicy — nie.",
     "quantity": "Łączna liczba stanowisk w puli",
     "reviewPurchase": "Przejrzyj zakup",
     "resumePurchase": "Wznów zakup",
-    "confirmTitle": "Przejrzyj zakup stanowisk klientów",
+    "confirmTitle": "Przejrzyj zakup stanowisk współzarządzania",
     "monthlyTotal_one": "{{count}} stanowisko · {{amount}} miesięcznie",
     "monthlyTotal_other": "{{count}} stanowiska · {{amount}} miesięcznie",
     "dueNow": "Szacowana kwota do zapłaty teraz: {{amount}}",
@@ -736,7 +746,7 @@
     "checkoutTitle": "Dokończ zakup stanowisk",
     "manageLicense": "Zarządzaj licencją self-hosted",
     "proRequired": "Do sponsorowania przestrzeni roboczych klientów wymagana jest subskrypcja PSA Pro.",
-    "loadError": "Nie udało się wczytać pojemności stanowisk klientów. Spróbuj ponownie.",
+    "loadError": "Nie udało się wczytać liczby stanowisk współzarządzania. Spróbuj ponownie.",
     "purchaseError": "Nie udało się dokończyć zakupu stanowisk. Możesz go bezpiecznie wznowić.",
     "termsChanged": "Cena zmieniła się od czasu sprawdzenia zakupu. Sprawdź zaktualizowane warunki przed potwierdzeniem.",
     "offerUnavailable": "Zakup nowych stanowisk jest tymczasowo niedostępny. Nie pobrano opłaty.",
@@ -753,9 +763,6 @@
     "awaitingVerification_few": "Zakup {{count}} miejsc oczekuje na weryfikację płatności. Miejsca pojawią się tutaj po potwierdzeniu płatności.",
     "awaitingVerification_many": "Zakup {{count}} miejsc oczekuje na weryfikację płatności. Miejsca pojawią się tutaj po potwierdzeniu płatności.",
     "refreshStatus": "Odśwież status",
-    "purchaseOnly": {
-      "intro": "Kup tutaj pulę miejsc współzarządzania. Po zakupie przydziel miejsca klientom z karty każdego klienta."
-    },
     "previewError": "Nie udało się wycenić tej zmiany. Odśwież i spróbuj ponownie.",
     "billingCustomerUnlinked": "Nie udało się zweryfikować konta rozliczeniowego Stripe dla tego obszaru roboczego. Skontaktuj się z pomocą techniczną, aby powiązać konto.",
     "proSubscriptionRequired": "Stanowiska współzarządzane wymagają aktualnej subskrypcji Pro. Sprawdź subskrypcję w sekcji zarządzania kontem.",
@@ -982,21 +989,6 @@
       "settings": "Zarządzaj politykami SLA",
       "mappingFor": "Priorytet klienta {{name}} odpowiada",
       "unmapped": "Nieprzypisany"
-    },
-    "portableExport": {
-      "title": "Eksportuj obszar roboczy",
-      "description": "Pobierz zaszyfrowane, przenośne archiwum rekordów i plików z obszaru roboczego.",
-      "recovery": "Przechowuj hasło odzyskiwania w bezpiecznym miejscu. Bez niego archiwum nie da się otworzyć.",
-      "connections": "Archiwum zawiera rekordy obszaru roboczego oraz zapisane w nim pliki. Rekordy i powiązania dokumentów oraz historia czasu pracy, harmonogramu, spotkań i rozmów nie są jeszcze uwzględnione i pojawią się w późniejszej wersji. Dane rozliczeniowe, prywatne dane MSP i sekrety integracji nie są uwzględnione.",
-      "passphrase": "Hasło odzyskiwania",
-      "confirmPassphrase": "Potwierdź hasło odzyskiwania",
-      "download": "Przygotuj i pobierz archiwum",
-      "requested": "Żądanie otworzy się w nowej karcie. Przygotowanie może potrwać kilka minut; przeglądarka pobierze plik, gdy będzie gotowy.",
-      "loadError": "Nie możesz wyeksportować tego obszaru roboczego przy obecnych uprawnieniach.",
-      "lengthError": "Użyj hasła o długości od 16 do 1024 bajtów UTF-8.",
-      "matchError": "Hasła odzyskiwania muszą być identyczne.",
-      "unavailable": "Eksport obszaru roboczego nie jest dostępny w tej edycji.",
-      "loading": "Ładowanie…"
     },
     "section": {
       "title": "Współzarządzanie",
@@ -1287,6 +1279,59 @@
       "reviewSeatChange": "Sprawdź zmianę liczby stanowisk",
       "billingError": "Nie można otworzyć rozliczeń. Odśwież status i spróbuj ponownie.",
       "purchaseUnconfigured": "Zakupy nie są skonfigurowane w tym wdrożeniu."
+    },
+    "howMany": "Ile stanowisk chcesz?",
+    "noSeatsYet": "Nie masz jeszcze żadnych stanowisk.",
+    "perMonth": "miesięcznie",
+    "priceBreakdown_one": "{{count}} stanowisko × {{unit}}",
+    "priceBreakdown_few": "{{count}} stanowiska × {{unit}}",
+    "priceBreakdown_many": "{{count}} stanowisk × {{unit}}",
+    "priceBreakdown_other": "{{count}} stanowiska × {{unit}}",
+    "reviewHint": "Nic nie zostanie pobrane, dopóki nie potwierdzisz w następnym kroku.",
+    "changeTitle": "Zmień liczbę stanowisk",
+    "adding_one": "Dodajesz {{count}} stanowisko",
+    "adding_few": "Dodajesz {{count}} stanowiska",
+    "adding_many": "Dodajesz {{count}} stanowisk",
+    "adding_other": "Dodajesz {{count}} stanowiska",
+    "removing_one": "Usuwasz {{count}} stanowisko",
+    "removing_few": "Usuwasz {{count}} stanowiska",
+    "removing_many": "Usuwasz {{count}} stanowisk",
+    "removing_other": "Usuwasz {{count}} stanowiska",
+    "fromTo": "{{from}} → {{to}} stanowisk",
+    "monthlyWithDifference": "{{total}} miesięcznie ({{difference}})",
+    "reviewChange": "Przejrzyj zmianę",
+    "manageBilling": "Zarządzaj rozliczeniami",
+    "freeToAllocate_one": "{{count}} stanowisko jest wolne do przydzielenia. Otwórz kartę klienta, aby je przydzielić.",
+    "freeToAllocate_few": "{{count}} stanowiska są wolne do przydzielenia. Otwórz kartę klienta, aby je przydzielić.",
+    "freeToAllocate_many": "{{count}} stanowisk jest wolnych do przydzielenia. Otwórz kartę klienta, aby je przydzielić.",
+    "freeToAllocate_other": "{{count}} stanowiska są wolne do przydzielenia. Otwórz kartę klienta, aby je przydzielić.",
+    "noneFree": "Wszystkie stanowiska są przydzielone. Dodaj stanowiska poniżej lub zwolnij jedno u klienta.",
+    "goToClients": "Przejdź do klientów",
+    "belowAllocated_one": "Nie możesz zejść poniżej {{count}} stanowiska: jest ono przydzielone klientowi. Najpierw zwolnij je u tego klienta.",
+    "belowAllocated_few": "Nie możesz zejść poniżej {{count}} stanowisk: są przydzielone klientom. Najpierw zwolnij stanowiska u klienta.",
+    "belowAllocated_many": "Nie możesz zejść poniżej {{count}} stanowisk: są przydzielone klientom. Najpierw zwolnij stanowiska u klienta.",
+    "belowAllocated_other": "Nie możesz zejść poniżej {{count}} stanowisk: są przydzielone klientom. Najpierw zwolnij stanowiska u klienta.",
+    "decreaseSeats": "Zmniejsz liczbę stanowisk",
+    "increaseSeats": "Zwiększ liczbę stanowisk",
+    "usage": "Przydzielono {{allocated}} z {{purchased}} stanowisk",
+    "howItWorks": {
+      "title": "Jak to działa",
+      "buy": {
+        "title": "Kup stanowiska",
+        "body": "Stanowiska trafiają do jednej wspólnej puli dla całego Twojego MSP. Liczbę możesz zmienić w dowolnym momencie."
+      },
+      "enable": {
+        "title": "Włącz współzarządzane IT dla klienta",
+        "body": "Otwórz kartę klienta i wybierz, ile stanowisk otrzyma ten klient."
+      },
+      "signIn": {
+        "title": "Ich technicy się logują",
+        "body": "Każdy technik klienta zajmuje jedno stanowisko i widzi tylko pracę własnej firmy."
+      }
+    },
+    "whoNeedsSeat": {
+      "label": "Kto potrzebuje stanowiska?",
+      "answer": "Tylko technicy Twoich klientów. Osoby, które tylko zgłaszają sprawy, nie płacą, a Twoi technicy są objęci licencjami AlgaPSA."
     }
   },
   "common": {

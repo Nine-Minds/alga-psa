@@ -153,7 +153,8 @@
       "endAfterStartPicker": "La hora de finalización debe ser posterior a la hora de inicio.",
       "durationSameDay": "La duración debe terminar el mismo día",
       "endSameDay": "La hora de finalización debe ser el mismo día que la hora de inicio",
-      "invalidTimeRange": "Introduzca un rango de tiempo válido"
+      "invalidTimeRange": "Introduzca un rango de tiempo válido",
+      "billableExceedsDuration": "La duración facturable no puede superar la duración total"
     },
     "serviceSource": {
       "task": "Predeterminado de la tarea",
@@ -531,6 +532,12 @@
     "save": {
       "noPeriod": "Ningún período cubre el {{date}}. Elige un día dentro de un período.",
       "sheetLocked": "La hoja de tiempo del {{date}} tiene el estado «{{status}}». Elige un día de una hoja borrador o de una hoja con cambios solicitados."
+    },
+    "multiDay": {
+      "notice": "Este temporizador abarcó {{count}} días, por lo que se guardará como una entrada de tiempo por día. Elimina un día para dejar fuera su tiempo.",
+      "dayHeading": "Día {{index}} de {{count}} · {{date}}",
+      "remove": "Eliminar",
+      "total": "Total: {{duration}}"
     }
   },
   "launch": {

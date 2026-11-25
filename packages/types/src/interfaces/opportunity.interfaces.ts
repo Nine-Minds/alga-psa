@@ -167,6 +167,12 @@ export interface IOpportunityEvidence extends TenantEntity {
   /** User id, or null when recorded by the system from a domain event. */
   recorded_by?: string | null;
   recorded_at: ISO8601String;
+  /**
+   * Sources a user cited on a declaration, in the order they picked them. Set
+   * by the REST evidence list; ref_type / ref_id name only the system record
+   * behind a system evidence row.
+   */
+  citations?: Array<{ type: OpportunityCitationType; id: string }>;
 }
 
 export interface IOpportunitySuggestion extends TenantEntity {
@@ -289,12 +295,31 @@ export interface IOpportunityListItem {
 export interface IOpportunityEvidenceLadderStep {
   checkpoint: OpportunityCheckpoint | 'identified';
   state: 'reached' | 'skipped' | 'pending';
-  evidence?: (Pick<IOpportunityEvidence, 'evidence_id' | 'source' | 'ref_type' | 'ref_id' | 'detail' | 'recorded_at'> & {
-    /** Display name of the cited interaction/document; null when uncited or the target is gone. */
-    ref_label?: string | null;
-    /** True when the evidence cites a source that no longer exists. Never an error. */
-    ref_missing?: boolean;
-  }) | null;
+  evidence?: Pick<IOpportunityEvidence, 'evidence_id' | 'source' | 'ref_type' | 'ref_id' | 'detail' | 'recorded_at'> | null;
+  /**
+   * The user declaration behind this rung: its note and the sources it cites.
+   * Null when the rung has no declaration (it may still have system evidence).
+   */
+  declaration?: IOpportunityLadderDeclaration | null;
+}
+
+export type OpportunityCitationType = 'interaction' | 'document';
+
+export interface IOpportunityLadderCitation {
+  citation_id: string;
+  type: OpportunityCitationType;
+  id: string;
+  /** Interaction title or document name; null when the target is gone. */
+  label: string | null;
+  /** True when the interaction is deleted or moved, or the document is no longer on this deal. Never an error. */
+  missing: boolean;
+}
+
+export interface IOpportunityLadderDeclaration {
+  evidence_id: string;
+  note: string | null;
+  recorded_at: ISO8601String;
+  citations: IOpportunityLadderCitation[];
 }
 
 export interface IOpportunityDetail extends IOpportunity {

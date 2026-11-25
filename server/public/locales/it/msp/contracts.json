@@ -510,8 +510,6 @@
     "po": {
       "amountLabel": "Importo OdA (opzionale)",
       "amountPlaceholder": "0.00",
-      "comingSoon": "L'integrazione delle fatture è in arrivo. Le impostazioni verranno salvate ma l'applicazione dell'ordine d'acquisto non sarà attiva fino a una prossima versione.",
-      "noteLabel": "Nota:",
       "numberLabel": "Numero OdA *",
       "numberPlaceholder": "es., PO-2024-12345",
       "requirePurchaseOrder": "Richiedi ordine d'acquisto",

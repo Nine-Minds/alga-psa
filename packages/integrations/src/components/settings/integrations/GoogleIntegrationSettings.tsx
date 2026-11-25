@@ -140,7 +140,7 @@ export function GoogleIntegrationSettings({ onStatusChange }: GoogleIntegrationS
                 id="google-cloud-docs-link"
                 type="button"
                 variant="outline"
-                onClick={() => window.open('https://nineminds.com/documentation?doc=1014-google-cloud-connector-settings', '_blank')}
+                onClick={() => window.open('https://www.nineminds.com/documentation/google-cloud-connector-settings', '_blank')}
               >
                 <ExternalLink className="mr-2 h-4 w-4" />
                 {t('integrations.google.settings.setupGuide', { defaultValue: 'Setup guide' })}

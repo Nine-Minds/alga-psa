@@ -34,6 +34,11 @@ export interface DocumentsCrossFeatureCallbacks {
   ) => Promise<unknown>;
   getDocumentDownloadUrl: (documentId: string, fileName?: string) => Promise<string>;
   getDocumentsByEntity: (entityId: string, entityType: any) => Promise<any>;
+  /**
+   * One document by id, through the authorised action: the document, null when it does not
+   * exist, or a `{ permissionError }` result when the caller may not read it.
+   */
+  getDocument: (documentId: string) => Promise<any>;
   getDocumentCountsForEntities: (entityIds: string[], entityType: any) => Promise<any>;
   getDocumentsByContractId: (contractId: string) => Promise<any>;
   getDocumentByTicketId: (ticketId: string) => Promise<any>;

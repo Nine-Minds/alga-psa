@@ -61,7 +61,9 @@ vi.mock('@alga-psa/db', async () => {
       callback(knexOrTrx as unknown as Knex.Transaction),
     ),
     requireTenantId: vi.fn(async () => tenantId),
-    runWithTenant: vi.fn(async (_tenant: string, fn: () => Promise<any>) => fn()),
+    // Real tenant context: document authorization's KB read check (hasPermission) enters the
+    // subject's tenant with runWithTenant, and the role lookup beneath it reads that context.
+    runWithTenant: actual.runWithTenant,
   };
 });
 

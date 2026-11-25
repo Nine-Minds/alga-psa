@@ -95,6 +95,106 @@ export function toEntrySpan(segments: readonly StopwatchSegmentLike[], now: Stop
   };
 }
 
+/** Maps instants to work days. Injected so this file stays import-free (see header). */
+export interface WorkDayCalendar {
+  /** Work date (YYYY-MM-DD) of an instant. */
+  dayOf(ms: number): string;
+  /** First instant of the next work day after `ms` (the next local midnight). */
+  nextDayStart(ms: number): number;
+}
+
+export interface StopwatchEntryPlanItem {
+  workDate: string;
+  /** Minute-truncated first active instant of that day. */
+  start: Date;
+  /** start + minutes, capped at 23:59 of that day. */
+  end: Date;
+  minutes: number;
+  /** Exact active milliseconds of that day, before rounding. */
+  activeMs: number;
+  /** Segment pieces that contributed to this day. */
+  segmentCount: number;
+}
+
+/**
+ * One entry per work day that has active time (design 2.1, 2.5).
+ *  - segments are cut at every calendar midnight; paused time is never booked
+ *  - per day: start = first active instant truncated to the minute, minutes = round(active ms / 1 min)
+ *  - end = start + minutes, capped at 23:59 local (an end of 00:00 would belong to the next day);
+ *    the cap can cost at most 1 minute on the earlier day of a segment that crosses midnight
+ *  - days that round to 0 minutes are dropped; if every day drops, one 1-minute item on the first day
+ * A session that stays inside one day yields the same span as toEntrySpan.
+ */
+export function toEntryPlan(
+  segments: readonly StopwatchSegmentLike[],
+  now: StopwatchTimestamp | number,
+  calendar: WorkDayCalendar,
+): StopwatchEntryPlanItem[] {
+  const nowValue = nowMs(now);
+
+  const pieces: Array<{ start: number; end: number }> = [];
+  for (const segment of segments) {
+    const start = toMs(segment.started_at);
+    const end = segment.ended_at == null ? nowValue : toMs(segment.ended_at);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
+    let cursor = start;
+    while (cursor < end) {
+      const boundary = calendar.nextDayStart(cursor);
+      // A calendar that fails to advance would loop forever; treat the rest as one piece.
+      const pieceEnd = Number.isFinite(boundary) && boundary > cursor ? Math.min(boundary, end) : end;
+      pieces.push({ start: cursor, end: pieceEnd });
+      cursor = pieceEnd;
+    }
+  }
+  pieces.sort((a, b) => a.start - b.start);
+
+  const days = new Map<string, { first: number; activeMs: number; count: number }>();
+  for (const piece of pieces) {
+    const key = calendar.dayOf(piece.start);
+    const day = days.get(key);
+    if (day) {
+      day.activeMs += piece.end - piece.start;
+      day.count += 1;
+    } else {
+      days.set(key, { first: piece.start, activeMs: piece.end - piece.start, count: 1 });
+    }
+  }
+
+  const plan: StopwatchEntryPlanItem[] = [];
+  for (const [workDate, day] of days) {
+    const startMs = Math.floor(day.first / MINUTE_MS) * MINUTE_MS;
+    const lastMinuteStart = calendar.nextDayStart(startMs) - MINUTE_MS;
+    const minutes = Math.min(Math.round(day.activeMs / MINUTE_MS), Math.floor((lastMinuteStart - startMs) / MINUTE_MS));
+    if (minutes < 1) continue;
+    plan.push({
+      workDate,
+      start: new Date(startMs),
+      end: new Date(startMs + minutes * MINUTE_MS),
+      minutes,
+      activeMs: day.activeMs,
+      segmentCount: day.count,
+    });
+  }
+
+  if (plan.length > 0) return plan;
+
+  // D5 floor: a session always yields at least one 1-minute entry on its first day.
+  const firstMs = pieces.length > 0 ? pieces[0].start : nowValue;
+  let startMs = Math.floor(firstMs / MINUTE_MS) * MINUTE_MS;
+  const lastMinuteStart = calendar.nextDayStart(startMs) - MINUTE_MS;
+  if (startMs + MINUTE_MS > lastMinuteStart) startMs = lastMinuteStart - MINUTE_MS;
+  return [
+    {
+      workDate: calendar.dayOf(firstMs),
+      start: new Date(startMs),
+      end: new Date(startMs + MINUTE_MS),
+      minutes: 1,
+      activeMs: pieces.reduce((sum, piece) => sum + (piece.end - piece.start), 0),
+      segmentCount: pieces.length,
+    },
+  ];
+}
+
 /**
  * Milliseconds to ADD to the local clock to estimate server time:
  * serverNow - receivedAt, where receivedAt is the local time the response arrived.

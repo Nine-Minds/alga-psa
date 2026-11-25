@@ -1,3 +1,4 @@
+import type { BrandAttributionStripOptions } from './brandAssets';
 import { classifyTenantTemplate, copiedFromSystemRowFor, type CopiedFromTemplates } from './classifyTenantTemplate';
 import { planEmailBrandingApply } from './planEmailBrandingApply';
 import type {
@@ -35,7 +36,7 @@ export interface EmailBrandingPreviewInput {
   language: string;
   /** Preview the forced rebuild instead of the palette-only pass. */
   overwrite?: boolean;
-  decorate?: (html: string) => string;
+  decorate?: (html: string, options?: BrandAttributionStripOptions) => string;
   /** Client template name -> the template its tenant rows were copied from at a split. */
   copiedFrom?: CopiedFromTemplates | null;
 }

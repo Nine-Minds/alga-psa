@@ -161,6 +161,13 @@ export default defineConfig({
       'src/lib/invoice-template-ast/printGeometry.pdf.test.ts',
       'src/lib/invoiceBundleComponents/**/*.test.ts',
       'src/lib/invoice-template-ast/react-renderer.test.tsx',
+      // Template value wording (alga-2026-0003138): the shared formatter, the author's
+      // valueLabels map, and the standard quote template's Optional/Recurring columns.
+      'src/lib/invoice-template-ast/valueFormatting.test.ts',
+      'src/lib/invoice-template-ast/react-renderer.valueLabels.test.tsx',
+      'src/lib/quote-template-ast/standardTemplates.optionalRecurring.test.ts',
+      'src/components/invoice-designer/ast/workspaceAst.roundtrip.i18n.test.ts',
+      'src/components/invoice-designer/inspector/widgets/ValueLabelsEditor.test.tsx',
       'src/lib/invoice-template-ast/server-render.inlineImages.test.ts',
       // The chunker has no route to the app, so a preview it paginates has to carry
       // its images inline or its pages disagree with the printed ones.
@@ -181,11 +188,12 @@ export default defineConfig({
       'src/lib/invoice-template-ast/fieldFormatting.country.test.ts',
       'src/lib/invoice-template-ast/react-renderer.country.test.tsx',
       'src/services/pdfGenerationService.renderCountry.test.ts',
+      'src/services/pdfGenerationService.printSettings.test.ts',
+      'src/services/pdfGenerationService.locale.test.ts',
+      'src/services/pdfGenerationService.documentHtml.test.ts',
       // PDF document rendering must exercise the isolated Chromium policy, and
       // its existing print-settings tests must remain part of the package lane.
       'src/services/pdfGenerationService.ssrf.test.ts',
-      'src/services/pdfGenerationService.printSettings.test.ts',
-      'src/services/pdfGenerationService.locale.test.ts',
       // Per-seat unit-rate rendering on the template detail page and the
       // currency-neutral template review step — listed for the same reason as above.
       'src/components/billing-dashboard/contracts/ContractTemplateDetail.unitRate.test.tsx',
@@ -242,6 +250,10 @@ export default defineConfig({
   resolve: {
     alias: [
       serverOnlyAlias,
+      {
+        find: /^@alga-psa\/core\/net\/safeFetch$/,
+        replacement: path.resolve(__dirname, '../core/src/lib/net/safeFetch.ts'),
+      },
       { find: /^next\/server$/, replacement: path.resolve(__dirname, '../../node_modules/next/server.js') },
       {
         find: /^@alga-psa\/billing\/(.*)$/,

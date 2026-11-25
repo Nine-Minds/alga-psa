@@ -12,6 +12,14 @@ const { COPY: BASE_COPY, buildBodyHtml, buildText } = require('./ticketCreated.c
 const TEMPLATE_NAME = 'ticket-board-created';
 const SUBTYPE_NAME = 'Board Ticket Created';
 
+// The Description box carries the HTML rendition (sanitised in the subscriber) so
+// table descriptions render as tables. buildText keeps the text rendition.
+// LEVERAGE: pattern email-desc-html-override — same HTML-body-only override as ticketCreated.cjs getTemplate().
+const COPY = Object.fromEntries(Object.entries(BASE_COPY).map(([lang, copy]) => [
+  lang,
+  { ...copy, descriptionVar: '{{{ticket.descriptionHtml}}}' },
+]));
+
 /* eslint-disable max-len */
 const LOCALIZED = {
   en: {
@@ -76,7 +84,7 @@ function getTemplate() {
     templateName: TEMPLATE_NAME,
     subtypeName: SUBTYPE_NAME,
     translations: Object.entries(LOCALIZED).map(([lang, loc]) => {
-      const copy = { ...BASE_COPY[lang], ...loc };
+      const copy = { ...COPY[lang], ...loc };
       return {
         language: lang,
         subject: loc.subject,
@@ -88,7 +96,7 @@ function getTemplate() {
           bodyHtml: buildBodyHtml(copy),
           footerText: copy.footer,
         }),
-        textContent: buildText(copy),
+        textContent: buildText({ ...copy, descriptionVar: BASE_COPY[lang].descriptionVar }),
       };
     }),
   };

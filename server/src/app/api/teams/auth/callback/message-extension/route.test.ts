@@ -90,12 +90,13 @@ describe('GET /api/teams/auth/callback/message-extension', () => {
     });
 
     const redirectResponse = await GET(
-      new Request('https://example.com/api/teams/auth/callback/message-extension?tenantId=tenant-1') as any
+      new Request('https://localhost:3000/api/teams/auth/callback/message-extension?tenantId=tenant-1') as any
     );
 
     expect(redirectResponse.status).toBe(307);
+    // Behind the proxy the request origin is the internal upstream; the redirect must stay relative.
     expect(redirectResponse.headers.get('location')).toBe(
-      'https://example.com/auth/msp/signin?callbackUrl=%2Fapi%2Fteams%2Fauth%2Fcallback%2Fmessage-extension%3FtenantId%3Dtenant-1&teamsReauth=1'
+      '/auth/msp/signin?callbackUrl=%2Fapi%2Fteams%2Fauth%2Fcallback%2Fmessage-extension%3FtenantId%3Dtenant-1&teamsReauth=1'
     );
 
     resolveTeamsTabAuthStateMock.mockResolvedValueOnce({

@@ -1,7 +1,11 @@
-import crypto from 'node:crypto';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { fetchMicrosoftGraphAppToken } from '../graphAuth';
+import {
+  assertGraphClientStateFits,
+  fitsGraphClientState,
+  generateGraphClientStateSecret,
+} from '../graphClientState';
 import { isTeamsEmulatorModeEnabled } from '../teams/emulatorMode';
 import { getMicrosoftGraphBaseUrl } from '../teams/microsoftEndpoints';
 import { resolveTeamsMeetingGraphConfig } from './meetingConfig';
@@ -43,8 +47,18 @@ export interface TeamsMeetingArtifactNotificationJobData extends Record<string, 
 // notification really originated from a subscription we created (Microsoft Graph treats
 // clientState as a shared secret). The tenant/kind prefix is only used for routing; the
 // secret is what the webhook validates against the stored value.
-export function buildTeamsArtifactClientState(tenantId: string, kind: ArtifactSubscriptionKind, secret: string): string {
+function formatClientState(tenantId: string, kind: ArtifactSubscriptionKind, secret: string): string {
   return `teams-online-meeting-artifacts:${tenantId}:${kind}:${secret}`;
+}
+
+export function buildTeamsArtifactClientState(tenantId: string, kind: ArtifactSubscriptionKind, secret: string): string {
+  return assertGraphClientStateFits(formatClientState(tenantId, kind, secret), `Teams ${kind} subscription`);
+}
+
+function fitsClientState(tenantId: string, secret: string): boolean {
+  return [TEAMS_RECORDING_KIND, TEAMS_TRANSCRIPT_KIND].every(
+    (kind) => fitsGraphClientState(formatClientState(tenantId, kind, secret)),
+  );
 }
 
 export function parseTeamsArtifactClientState(
@@ -61,10 +75,6 @@ export function parseTeamsArtifactClientState(
   }
 
   return { tenantId, kind, secret };
-}
-
-function generateArtifactWebhookSecret(): string {
-  return crypto.randomBytes(32).toString('hex');
 }
 
 function normalizeString(value: unknown): string {
@@ -147,8 +157,11 @@ async function createSubscription(params: {
     method: 'POST',
     path: '/subscriptions',
     body: {
-      changeType: 'created,updated',
+      // getAllRecordings/getAllTranscripts only support 'created'; Graph rejects 'updated'.
+      changeType: 'created',
       notificationUrl: params.notificationUrl,
+      // Graph requires a lifecycle URL for these resources when expiration exceeds one hour.
+      lifecycleNotificationUrl: params.notificationUrl,
       resource: metadata.resource,
       expirationDateTime,
       clientState: buildTeamsArtifactClientState(params.tenantId, params.kind, params.clientStateSecret),
@@ -219,8 +232,10 @@ export async function renewTeamsMeetingArtifactSubscriptions(input: {
   tenantId: string;
   lookAheadMinutes?: number;
   notificationUrl?: string;
+  // Renew every existing subscription regardless of expiry, e.g. after a lifecycle notification.
+  force?: boolean;
 }): Promise<TeamsMeetingArtifactSubscriptionResult[]> {
-  const { tenantId, lookAheadMinutes = 180 } = input;
+  const { tenantId, lookAheadMinutes = 180, force = false } = input;
   const config = await resolveTeamsMeetingGraphConfig(tenantId);
   if (!config) {
     logger.info('[TeamsMeetingArtifacts] Skipping subscription renewal because Teams is not configured', { tenantId });
@@ -238,9 +253,11 @@ export async function renewTeamsMeetingArtifactSubscriptions(input: {
 
   // Ensure a stable per-tenant clientState secret exists before creating subscriptions,
   // and persist it so the webhook can validate inbound notifications against it.
+  // Secrets stored by earlier releases were too long for Graph's clientState limit, so no
+  // subscription can be using them; replace them rather than failing every renewal.
   let clientStateSecret = normalizeString(row.meeting_artifact_webhook_secret);
-  if (!clientStateSecret) {
-    clientStateSecret = generateArtifactWebhookSecret();
+  if (!clientStateSecret || !fitsClientState(tenantId, clientStateSecret)) {
+    clientStateSecret = generateGraphClientStateSecret();
     await db.table('teams_integrations')
       .update({ meeting_artifact_webhook_secret: clientStateSecret, updated_at: knex.fn.now() });
   }
@@ -257,7 +274,7 @@ export async function renewTeamsMeetingArtifactSubscriptions(input: {
     const columns = subscriptionColumn(kind);
     const currentId = normalizeString(row[columns.idColumn]);
     const currentExpiry = row[columns.expiryColumn];
-    if (currentId && !shouldRenew(currentExpiry, lookAheadMinutes)) {
+    if (currentId && !force && !shouldRenew(currentExpiry, lookAheadMinutes)) {
       continue;
     }
 

@@ -16,7 +16,7 @@ import {
 } from "../../lib/templateVariables";
 
 const DOCUMENTATION_URL =
-  "https://algapsa.com/documentation/email-template-variables";
+  "https://www.nineminds.com/documentation/email-template-variables";
 
 const TICKET_ARRAY_ROWS: Record<string, string> = {
   "ticket.assets": "{{name}}",

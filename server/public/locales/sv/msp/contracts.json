@@ -510,8 +510,6 @@
     "po": {
       "amountLabel": "Inköpsorderbelopp (valfritt)",
       "amountPlaceholder": "0,00",
-      "comingSoon": "Fakturaintegration kommer snart. Inställningarna sparas, men kravet på inköpsorder börjar gälla först i en kommande version.",
-      "noteLabel": "Obs:",
       "numberLabel": "Inköpsordernummer *",
       "numberPlaceholder": "T.ex. PO-2024-12345",
       "requirePurchaseOrder": "Kräv inköpsorder",

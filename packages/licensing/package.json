@@ -17,6 +17,11 @@
       "import": "./src/lifecycle.ts",
       "require": "./src/lifecycle.ts"
     },
+    "./billing-catalog-scope": {
+      "types": "./src/billing-catalog-scope.ts",
+      "import": "./src/billing-catalog-scope.ts",
+      "require": "./src/billing-catalog-scope.ts"
+    },
     "./entitlement-operational": {
       "types": "./src/entitlement-operational.ts",
       "import": "./src/entitlement-operational.ts",

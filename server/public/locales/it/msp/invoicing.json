@@ -263,7 +263,8 @@
       "titleDelete": "Si sono verificati errori durante l'eliminazione delle fatture:",
       "titleReverse": "Si sono verificati errori durante lo storno delle fatture:",
       "loadReady": "Impossibile caricare i periodi di fatturazione. Per favore riprova.",
-      "loadHistory": "Impossibile caricare la cronologia delle fatture ricorrenti. Per favore riprova."
+      "loadHistory": "Impossibile caricare la cronologia delle fatture ricorrenti. Per favore riprova.",
+      "noInvoicesCreated": "Non è stata creata alcuna fattura. Aggiorna l’elenco e verifica se questo periodo è già stato fatturato o non contiene voci da fatturare."
     },
     "loading": {
       "billingData": "Caricamento dati di fatturazione",
@@ -339,6 +340,10 @@
       },
       "nextInvoice": "Verrà fatturato nella prossima fattura",
       "outsideLookback": "Oltre il periodo di retrospettiva — non fatturato"
+    },
+    "billingProfile": {
+      "label": "Profilo di fatturazione — {{client}}, fattura {{index}}",
+      "automatic": "Usa il profilo assegnato al lavoro selezionato"
     }
   },
   "manualInvoices": {
@@ -435,7 +440,8 @@
       "SERVICE_REQUIRED": "Assegna un servizio a questo addebito prima di salvare.",
       "BILLING_PROFILE_NOT_FOUND": "Il profilo di fatturazione selezionato non è disponibile per questo cliente. Aggiorna la pagina e riprova.",
       "sessionExpired": "La sessione è scaduta. Le modifiche sono ancora qui, ma non sono state salvate. Accedi di nuovo in una nuova scheda, poi riprova a salvare.",
-      "saveRefreshFailed": "Le modifiche sono state salvate, ma la pagina della fattura non è stata aggiornata completamente. Ricarica la pagina per vedere la fattura salvata."
+      "saveRefreshFailed": "Le modifiche sono state salvate, ma la pagina della fattura non è stata aggiornata completamente. Ricarica la pagina per vedere la fattura salvata.",
+      "BILLING_PROFILE_MISMATCH": "Il profilo di fatturazione selezionato escluderebbe degli addebiti. Numero di addebiti: {{count}}. Scegli il profilo di fatturazione assegnato a questo lavoro oppure seleziona separatamente le righe di ciascun profilo."
     },
     "warnings": {
       "noBillingEmail": "Questo cliente non ha un'email di fatturazione. La fattura può essere generata, ma non potrà essere inviata via email né pagata online finché non imposti un contatto di fatturazione, un'email di fatturazione del cliente o un'email sulla sede di fatturazione o predefinita."
@@ -2700,6 +2706,15 @@
         "clearLines": "Riga singola",
         "stackedLinesHint": "Ogni riga non vuota viene visualizzata su una riga propria. Quando tutte le righe sono vuote, viene mostrata la chiave di associazione della colonna indicata sopra.",
         "removeLine": "Rimuovi la riga {{index}}",
+        "valueLabels": "Testo dei valori",
+        "addKnownValues": "+ Valori noti",
+        "addValueLabel": "+ Valore",
+        "valueLabelsHint": "Scegli le parole stampate per un valore, ad esempio true → Incluso. Un’etichetta vuota non stampa nulla.",
+        "valueLabelKey": "Valore",
+        "valueLabelKeyPlaceholder": "true",
+        "valueLabelText": "Testo stampato",
+        "valueLabelTextPlaceholder": "Vuoto",
+        "removeValueLabel": "Rimuovi testo",
         "align": "Allineamento",
         "widthPlaceholder": "auto | 50% | 120px"
       },

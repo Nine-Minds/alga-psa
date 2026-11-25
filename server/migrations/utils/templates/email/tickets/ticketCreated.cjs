@@ -328,7 +328,9 @@ function getTemplate() {
         headerLabel: copy.headerLabel,
         headerTitle: '{{ticket.title}}',
         headerMeta: '{{ticket.metaLine}}',
-        bodyHtml: buildBodyHtml(copy),
+        // LEVERAGE: pattern email-desc-html-override — HTML body takes ticket.descriptionHtml, text part keeps ticket.description; same override as ticketBoardCreated.cjs.
+        // COPY stays text-based on purpose: ticketBoardCreated/ticketBoardStatusEntered read it for their text parts.
+        bodyHtml: buildBodyHtml({ ...copy, descriptionVar: '{{{ticket.descriptionHtml}}}' }),
         footerText: copy.footer,
       }),
       textContent: buildText(copy),

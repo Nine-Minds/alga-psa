@@ -263,7 +263,8 @@
       "titleDelete": "Des erreurs se sont produites lors de la suppression des factures :",
       "titleReverse": "Des erreurs se sont produites lors de l'annulation des factures :",
       "loadReady": "Échec du chargement des périodes de facturation. Veuillez réessayer.",
-      "loadHistory": "Échec du chargement de l'historique des factures récurrentes. Veuillez réessayer."
+      "loadHistory": "Échec du chargement de l'historique des factures récurrentes. Veuillez réessayer.",
+      "noInvoicesCreated": "Aucune facture n’a été créée. Actualisez la liste et vérifiez si cette période a déjà été facturée ou ne contient aucun élément à facturer."
     },
     "loading": {
       "billingData": "Chargement des données de facturation",
@@ -339,6 +340,10 @@
       },
       "nextInvoice": "Facturé sur la prochaine facture",
       "outsideLookback": "Hors de la période de rétroaction — non facturé"
+    },
+    "billingProfile": {
+      "label": "Profil de facturation — {{client}}, facture {{index}}",
+      "automatic": "Utiliser le profil attribué aux prestations sélectionnées"
     }
   },
   "manualInvoices": {
@@ -435,7 +440,8 @@
       "SERVICE_REQUIRED": "Attribuez un service à cette ligne avant d’enregistrer.",
       "BILLING_PROFILE_NOT_FOUND": "Le profil de facturation sélectionné n'est pas disponible pour ce client. Actualisez la page et réessayez.",
       "sessionExpired": "Votre session a expiré. Vos modifications sont toujours ici, mais elles n’ont pas été enregistrées. Reconnectez-vous dans un nouvel onglet, puis réessayez l’enregistrement.",
-      "saveRefreshFailed": "Vos modifications ont été enregistrées, mais la page de la facture n’a pas pu s’actualiser complètement. Rechargez la page pour afficher la facture enregistrée."
+      "saveRefreshFailed": "Vos modifications ont été enregistrées, mais la page de la facture n’a pas pu s’actualiser complètement. Rechargez la page pour afficher la facture enregistrée.",
+      "BILLING_PROFILE_MISMATCH": "Le profil de facturation sélectionné exclurait des frais. Nombre de frais concernés : {{count}}. Choisissez le profil de facturation attribué à ces prestations ou sélectionnez les lignes de chaque profil séparément."
     },
     "warnings": {
       "noBillingEmail": "Ce client n'a pas d'e-mail de facturation. La facture peut être générée, mais elle ne pourra pas être envoyée par e-mail ni payée en ligne tant que vous n'aurez pas défini un contact de facturation, un e-mail de facturation du client ou un e-mail sur le site de facturation ou par défaut."
@@ -2700,6 +2706,15 @@
         "clearLines": "Ligne unique",
         "stackedLinesHint": "Chaque ligne non vide s’affiche sur sa propre ligne. Lorsque toutes les lignes sont vides, la clé de liaison de la colonne ci-dessus est affichée.",
         "removeLine": "Retirer la ligne {{index}}",
+        "valueLabels": "Libellé des valeurs",
+        "addKnownValues": "+ Valeurs connues",
+        "addValueLabel": "+ Valeur",
+        "valueLabelsHint": "Choisissez les mots imprimés pour une valeur, par exemple true → Inclus. Un libellé vide n’imprime rien.",
+        "valueLabelKey": "Valeur",
+        "valueLabelKeyPlaceholder": "true",
+        "valueLabelText": "Texte imprimé",
+        "valueLabelTextPlaceholder": "Vide",
+        "removeValueLabel": "Supprimer le libellé",
         "align": "Alignement",
         "widthPlaceholder": "auto | 50% | 120px"
       },

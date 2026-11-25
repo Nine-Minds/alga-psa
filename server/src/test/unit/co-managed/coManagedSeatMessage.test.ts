@@ -28,6 +28,20 @@ describe('seat refusal messages', () => {
     expect(coManagedSeatMessage('ASSIGNMENT_NOT_PENDING', t)).toMatch(/already accepted/);
   });
 
+  it('names the trial refusals', () => {
+    expect(coManagedSeatMessage('TRIAL_CLAIM_UNAVAILABLE', t)).toMatch(/already in use or was started for another client/);
+    expect(coManagedSeatMessage('SPONSOR_NOT_ELIGIBLE', t, 'trial')).toMatch(/not eligible for a Seat trial/);
+    // the seat surface keeps its existing blocker copy
+    expect(coManagedSeatMessage('SPONSOR_NOT_ELIGIBLE', t)).toMatch(/no co-managed pool/);
+  });
+
+  it('asks for the trial keys by name', () => {
+    const keys: string[] = [];
+    coManagedSeatMessage('TRIAL_CLAIM_UNAVAILABLE', key => { keys.push(key); return key; });
+    coManagedSeatMessage('SPONSOR_NOT_ELIGIBLE', key => { keys.push(key); return key; }, 'trial');
+    expect(keys).toEqual(['coManaged.seat.error.trialClaimUnavailable', 'coManaged.seat.error.trialSponsorNotEligible']);
+  });
+
   it('an unknown code is a generic message, never the raw code', () => {
     expect(coManagedSeatMessage('SOMETHING_NEW', t)).toBe('That did not work. Refresh and try again.');
     expect(coManagedSeatMessage(undefined, t)).toBe('That did not work. Refresh and try again.');

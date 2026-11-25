@@ -42,7 +42,7 @@ describe('co-managed portal fulfillment (postgres)', () => {
     await db.raw('TRUNCATE co_managed_fulfillments, co_managed_portal_purchases, stripe_offer_publications, stripe_offer_versions CASCADE');
     writes = []; deliver.mockReset().mockResolvedValue({ result: 'applied' });
     const prices: Record<string, any> = { price_a: price('price_a'), price_b: price('price_b') };
-    catalog = createOfferCatalog({ db, scope: async () => ({ stripeAccount: 'acct_1', livemode: false }), env: { MASTER_BILLING_TENANT_ID: MASTER },
+    catalog = createOfferCatalog({ db: async () => db, scope: async () => ({ stripeAccount: 'acct_1', livemode: false }), env: { MASTER_BILLING_TENANT_ID: MASTER },
       stripe: { prices: { retrieve: async (id: string) => prices[id] } } as any });
     await catalog.publishBinding({ actor: operator, offerKey: KEY, interval: 'month', priceId: 'price_a', expectedCurrentVersionId: null, productId: 'prod_seat' });
     const row = await bindPortalPurchase({ db, catalog, stripe: portalStripe('price_a') }, { entitlementId: 'ent_1', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 5, checkoutSessionId: 'cs_1' });

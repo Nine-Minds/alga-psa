@@ -223,6 +223,15 @@ async function main(): Promise<void> {
       logger.error('Failed to install co-managed write admission:', error);
     }
 
+    // Register the billing catalog context loader so co-managed-seat decisions made here (the trial path
+    // through isCoManagedPurchaseSurfaceOpen) follow the DB catalog like the web server. Fails open: without
+    // it the gate falls back to the legacy STRIPE_CO_MANAGED_USER_PRICE_ID env var.
+    try {
+      await import('@ee/lib/stripe/offerCatalog/workerRegistration');
+    } catch (error) {
+      logger.error('Failed to register the billing catalog context loader:', error);
+    }
+
     // Run startup validations
     try {
       await validateStartup();

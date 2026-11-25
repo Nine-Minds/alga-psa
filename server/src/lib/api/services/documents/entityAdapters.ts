@@ -40,6 +40,12 @@ export function isAttachableEntityType(value: unknown): value is AttachableEntit
 /** Options only the ticket multipart route can set; the JSON endpoint never passes them. */
 export interface AttachHookOptions {
   commentAttachmentDraft?: boolean;
+  /**
+   * The caller asked for the document to be client-visible. Honoured only by adapters with
+   * `portalVisible`; the core refuses it for the others. Never lowers a comment-attachment draft,
+   * which is always visible.
+   */
+  isClientVisible?: boolean;
 }
 
 export interface InTransactionArgs {
@@ -62,6 +68,11 @@ export interface EntityAdapter {
    * availability follows the registry (algadesk: tickets/clients/contacts; PSA-only: the rest).
    */
   productApiPath: string;
+  /**
+   * True when a client-portal surface reads this entity's documents, so `is_client_visible`
+   * means something. Requesting visibility on any other entity is refused (400).
+   */
+  portalVisible?: boolean;
   /** Throws NotFoundError / ForbiddenError. */
   assertCanAttach(apiRequest: AuthenticatedApiRequest, entityId: string, knex: Knex): Promise<void>;
   /** Folder the document is filed in, or undefined for none. */
@@ -126,6 +137,11 @@ async function firstEntityFolder(
   return folder?.folder_path ?? undefined;
 }
 
+/** `is_client_visible` for adapters that support it: a draft always wins, an explicit false never undoes it. */
+function visibilityOverrides(options: AttachHookOptions): { is_client_visible?: boolean } {
+  return options.commentAttachmentDraft || options.isClientVisible ? { is_client_visible: true } : {};
+}
+
 /** Simple entities: RBAC update + existence, filed under their first entity folder. */
 function simpleAdapter(
   entityType: AttachableEntityType,
@@ -136,11 +152,14 @@ function simpleAdapter(
   label: string,
   /** Client-owned entities: the caller's client scope also decides whether the target exists for them. */
   scopeResource?: 'client' | 'contact',
+  portalVisible = false,
 ): EntityAdapter {
   return {
     entityType,
     rbacResource,
     productApiPath,
+    portalVisible,
+    ...(portalVisible ? { documentOverrides: visibilityOverrides } : {}),
     async assertCanAttach(apiRequest, entityId, knex) {
       await assertRbacUpdate(apiRequest, rbacResource, knex);
       await assertRowExists(knex, apiRequest.context.tenant, table, idColumn, entityId, label);
@@ -160,6 +179,7 @@ const ticketAdapter: EntityAdapter = {
   entityType: 'ticket',
   rbacResource: 'ticket',
   productApiPath: '/api/v1/tickets',
+  portalVisible: true,
   async assertCanAttach(apiRequest, ticketId, knex) {
     await assertRbacUpdate(apiRequest, 'ticket', knex);
     const ticket = await tenantDb(knex, apiRequest.context.tenant)
@@ -190,7 +210,7 @@ const ticketAdapter: EntityAdapter = {
       .first();
     return folder?.folder_path ?? undefined;
   },
-  documentOverrides: (options) => (options.commentAttachmentDraft ? { is_client_visible: true } : {}),
+  documentOverrides: visibilityOverrides,
   async inTransaction({ trx, tenant, actorUserId, viaPrincipalUserId, entityId, document, options }) {
     if (options.commentAttachmentDraft) {
       await tenantDb(trx, tenant).table('ticket_comment_attachments').insert({
@@ -225,6 +245,8 @@ const projectTaskAdapter: EntityAdapter = {
   entityType: 'project_task',
   rbacResource: 'project',
   productApiPath: '/api/v1/projects',
+  portalVisible: true,
+  documentOverrides: visibilityOverrides,
   async assertCanAttach(apiRequest, taskId, knex) {
     await assertRbacUpdate(apiRequest, 'project', knex);
     const db = tenantDb(knex, apiRequest.context.tenant);
@@ -269,7 +291,7 @@ const assetAdapter: EntityAdapter = {
 export const ENTITY_ADAPTERS: Record<AttachableEntityType, EntityAdapter> = {
   ticket: ticketAdapter,
   project_task: projectTaskAdapter,
-  client: simpleAdapter('client', 'client', '/api/v1/clients', 'clients', 'client_id', 'Client', 'client'),
+  client: simpleAdapter('client', 'client', '/api/v1/clients', 'clients', 'client_id', 'Client', 'client', true),
   contact: simpleAdapter('contact', 'contact', '/api/v1/contacts', 'contacts', 'contact_name_id', 'Contact', 'contact'),
   asset: assetAdapter,
 };

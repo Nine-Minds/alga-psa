@@ -124,10 +124,14 @@ test('repeated zstd prebuild timeout preserves terminal result after two attempt
   assert.equal(calls, 2); assert.deepEqual(result, zstdPrebuildDownload);
 });
 
-for (const [workflow, jobId] of [
+for (const [workflow, jobId, installFailure = ffmpegDownload.stderr.replace('linux-x64.LICENSE', 'linux-x64.README'), failureCode = 1] of [
   ['node-tests.yml', 'browser-discovery'],
   ['temporal-readiness.yml', 'engine-tests'],
-]) test(`${jobId} install step recovers from a transient README download failure and preserves terminal failures`, t => {
+  ['ext-v2-guard.yml', 'guardrails', zstdPrebuildDownload.stderr, 127],
+  ['workspace-tests.yml', 'workspace-tests', zstdPrebuildDownload.stderr, 127],
+  ['integration-tests.yml', 'integration-tests', zstdPrebuildDownload.stderr, 127],
+  ['integration-tests.yml', 'infrastructure-tests', zstdPrebuildDownload.stderr, 127],
+]) test(`${jobId} install step recovers from a transient binary download failure and preserves terminal failures`, t => {
   const root = path.resolve(import.meta.dirname, '../..');
   const job = parse(readFileSync(path.join(root, '.github/workflows', workflow), 'utf8')).jobs[jobId];
   const step = job.steps.find(step => step.run === 'npm ci' || step.run === 'node scripts/install-api-test-dependencies.mjs');
@@ -136,10 +140,9 @@ for (const [workflow, jobId] of [
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   const callsFile = path.join(directory, 'calls.json');
   // Replay the npm diagnostic from CI without relying on another GitHub outage.
-  const readmeFailure = ffmpegDownload.stderr.replace('linux-x64.LICENSE', 'linux-x64.README');
   for (const [name, diagnostics, failureCount, expectedStatus, expectedCalls] of [
-    ['transient download', readmeFailure, 1, 0, 2],
-    ['persistent download', readmeFailure, 3, 1, 2],
+    ['transient download', installFailure, 1, 0, 2],
+    ['persistent download', installFailure, 3, failureCode, 2],
     ['unrelated lifecycle', 'npm error code 42\nnpm error command failed\n', 3, 42, 1],
   ]) {
     writeFileSync(callsFile, '[]');
@@ -151,7 +154,7 @@ calls.push(process.argv.slice(2));
 fs.writeFileSync(file, JSON.stringify(calls));
 if (calls.length <= ${failureCount}) {
   process.stderr.write(${JSON.stringify(diagnostics)});
-  process.exit(${expectedStatus || 1});
+  process.exit(${expectedStatus || failureCode});
 }
 `, { mode: 0o700 });
     const result = spawnSync('bash', ['-e', '-c', step.run], {

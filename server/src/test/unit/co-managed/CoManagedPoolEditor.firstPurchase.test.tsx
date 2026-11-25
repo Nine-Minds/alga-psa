@@ -39,10 +39,10 @@ afterEach(cleanup);
 describe('pool editor: first co-managed purchase', () => {
   it('zero seats: offers Buy co-managed seats at a minimum of one, and the review prices the configured currency', async () => {
     render(<CoManagedPoolEditor showTotals />);
-    const input = await screen.findByLabelText('coManaged.quantity');
+    const input = await screen.findByLabelText('coManaged.howMany');
     expect(input).toHaveAttribute('min', '1');
-    expect(screen.getAllByTestId(/stat-/).map((node) => node.textContent)).toEqual(['0', '0', '0']);
-    const buy = screen.getByRole('button', { name: /Buy co-managed seats/ });
+    expect(screen.queryAllByTestId(/stat-/)).toHaveLength(0);
+    const buy = screen.getByRole('button', { name: 'coManaged.reviewPurchase' });
     fireEvent.change(input, { target: { value: '0' } });
     expect(buy).toBeDisabled();
     fireEvent.change(input, { target: { value: '3' } });
@@ -64,7 +64,7 @@ describe('pool editor: first co-managed purchase', () => {
   ])('shows the next step for a failed quote (%s)', async (reason, message) => {
     actions.preview.mockResolvedValue({ kind: 'blocked', reason });
     render(<CoManagedPoolEditor showTotals />);
-    fireEvent.click(await screen.findByRole('button', { name: /Buy co-managed seats/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'coManaged.reviewPurchase' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(message);
     expect(screen.queryByText('coManaged.confirmPurchase')).not.toBeInTheDocument();
@@ -74,7 +74,7 @@ describe('pool editor: first co-managed purchase', () => {
   it('shows the quote failure if refreshed terms cannot be priced', async () => {
     actions.purchase.mockResolvedValue({ kind: 'review_required' });
     render(<CoManagedPoolEditor showTotals />);
-    fireEvent.click(await screen.findByRole('button', { name: /Buy co-managed seats/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'coManaged.reviewPurchase' }));
 
     const confirm = await screen.findByText('coManaged.confirmPurchase');
     actions.preview.mockResolvedValueOnce({ kind: 'blocked', reason: 'no_current_pro' });
@@ -85,8 +85,8 @@ describe('pool editor: first co-managed purchase', () => {
 
     // A later purchase attempt cannot reuse the terms from the successful first review.
     actions.preview.mockResolvedValueOnce({ kind: 'quote', unitAmount: 1200, monthlyTotal: 3600, amountDue: 3600, currency: 'eur', offerRef: 'fresh-offer' });
-    fireEvent.click(screen.getByRole('button', { name: /Buy co-managed seats/ }));
-    await waitFor(() => expect(actions.preview).toHaveBeenCalledTimes(3));
+    fireEvent.click(screen.getByRole('button', { name: 'coManaged.reviewPurchase' }));
+    await waitFor(() => expect(actions.preview).toHaveBeenCalledTimes(4));
     expect(await screen.findByText('coManaged.confirmPurchase')).toBeInTheDocument();
     fireEvent.click(screen.getByText('coManaged.confirmPurchase'));
     await waitFor(() => expect(actions.purchase).toHaveBeenCalledTimes(2));
@@ -96,18 +96,18 @@ describe('pool editor: first co-managed purchase', () => {
   it('discards reviewed terms when a refresh unexpectedly rejects', async () => {
     actions.purchase.mockResolvedValue({ kind: 'review_required' });
     render(<CoManagedPoolEditor showTotals />);
-    fireEvent.click(await screen.findByRole('button', { name: /Buy co-managed seats/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'coManaged.reviewPurchase' }));
 
     actions.preview.mockRejectedValueOnce(new Error('private Stripe response detail'));
     fireEvent.click(await screen.findByText('coManaged.confirmPurchase'));
-    await waitFor(() => expect(actions.preview).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(actions.preview).toHaveBeenCalledTimes(3));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not price this change. Refresh and try again.');
     expect(screen.queryByText('coManaged.confirmPurchase')).not.toBeInTheDocument();
 
     actions.preview.mockResolvedValueOnce({ kind: 'quote', unitAmount: 1250, monthlyTotal: 3750, amountDue: 3750, currency: 'eur', offerRef: 'recovered-offer' });
-    fireEvent.click(screen.getByRole('button', { name: /Buy co-managed seats/ }));
-    await waitFor(() => expect(actions.preview).toHaveBeenCalledTimes(3));
+    fireEvent.click(screen.getByRole('button', { name: 'coManaged.reviewPurchase' }));
+    await waitFor(() => expect(actions.preview).toHaveBeenCalledTimes(4));
     fireEvent.click(await screen.findByText('coManaged.confirmPurchase'));
     await waitFor(() => expect(actions.purchase).toHaveBeenCalledTimes(2));
     expect(actions.purchase).toHaveBeenLastCalledWith(expect.objectContaining({ offerRef: 'recovered-offer' }));
@@ -116,33 +116,33 @@ describe('pool editor: first co-managed purchase', () => {
 
   it('dismissing the review starts nothing and leaves the zero pool editable', async () => {
     render(<CoManagedPoolEditor showTotals />);
-    fireEvent.change(await screen.findByLabelText('coManaged.quantity'), { target: { value: '3' } });
-    fireEvent.click(screen.getByRole('button', { name: /Buy co-managed seats/ }));
+    fireEvent.change(await screen.findByLabelText('coManaged.howMany'), { target: { value: '3' } });
+    fireEvent.click(screen.getByRole('button', { name: 'coManaged.reviewPurchase' }));
     const due = await screen.findByText(/coManaged\.dueNow/);
     fireEvent.keyDown(due, { key: 'Escape', code: 'Escape' });
     await waitFor(() => expect(screen.queryByText(/coManaged\.dueNow/)).not.toBeInTheDocument());
     expect(actions.purchase).not.toHaveBeenCalled();
     expect(actions.announce).not.toHaveBeenCalled();
-    expect(screen.getAllByTestId(/stat-/).map((node) => node.textContent)).toEqual(['0', '0', '0']);
-    expect(screen.getByLabelText('coManaged.quantity')).toBeEnabled();
+    expect(screen.queryAllByTestId(/stat-/)).toHaveLength(0);
+    expect(screen.getByLabelText('coManaged.howMany')).toBeEnabled();
   });
 
   it('confirming starts the existing purchase operation with the reviewed total', async () => {
     actions.purchase.mockResolvedValue({ kind: 'checkout', sessionId: 's', clientSecret: 'c', publishableKey: 'pk' });
     render(<CoManagedPoolEditor showTotals />);
-    fireEvent.change(await screen.findByLabelText('coManaged.quantity'), { target: { value: '3' } });
-    fireEvent.click(screen.getByRole('button', { name: /Buy co-managed seats/ }));
+    fireEvent.change(await screen.findByLabelText('coManaged.howMany'), { target: { value: '3' } });
+    fireEvent.click(screen.getByRole('button', { name: 'coManaged.reviewPurchase' }));
     fireEvent.click(await screen.findByText('coManaged.confirmPurchase'));
     await waitFor(() => expect(actions.purchase).toHaveBeenCalledWith(expect.objectContaining({ quantity: 3 })));
     expect(await screen.findByText('Pay in checkout')).toBeInTheDocument();
   });
 
-  it('an existing pool keeps its own minimum (allocated seats) and the ordinary label', async () => {
+  it('an existing pool keeps its own minimum (allocated seats) and labels the total', async () => {
     actions.state.mockResolvedValue(pool({ capacity: 6, allocated: 4, available: 2 }, { minimumQuantity: 4 }));
     render(<CoManagedPoolEditor showTotals />);
     expect(await screen.findByLabelText('coManaged.quantity')).toHaveAttribute('min', '4');
-    expect(screen.queryByRole('button', { name: /Buy co-managed seats/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'coManaged.reviewPurchase' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'coManaged.reviewPurchase' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'coManaged.reviewChange' })).toBeInTheDocument();
   });
 
   it('in flight: recovers the original quantity through the same operation', async () => {
@@ -150,18 +150,18 @@ describe('pool editor: first co-managed purchase', () => {
     render(<CoManagedPoolEditor showTotals />);
     expect(await screen.findByText('A purchase of 5 seats is pending.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'coManaged.resumePurchase' })).toBeInTheDocument();
-    expect(screen.queryByLabelText('coManaged.quantity')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('coManaged.howMany')).not.toBeInTheDocument();
   });
 
   it('awaiting verification: says so, offers only a refresh, and no second purchase', async () => {
     actions.state.mockResolvedValue(pool({}, { awaitingVerification: { operationId: 'o', quantity: 3 }, canPurchase: false, reason: 'awaiting_verification' }));
     render(<CoManagedPoolEditor showTotals />);
     expect(await screen.findByText(/awaiting payment verification/)).toBeInTheDocument();
-    expect(screen.queryByLabelText('coManaged.quantity')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Buy co-managed seats/ })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('coManaged.howMany')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'coManaged.reviewPurchase' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'coManaged.resumePurchase' })).not.toBeInTheDocument();
-    // Totals stay verified (zero): a status or a return never raises them.
-    expect(screen.getAllByTestId(/stat-/).map((node) => node.textContent)).toEqual(['0', '0', '0']);
+    // Totals stay verified (zero, so no tiles): a status or a return never raises them.
+    expect(screen.queryAllByTestId(/stat-/)).toHaveLength(0);
     actions.state.mockResolvedValue(pool({ capacity: 3, available: 3 }, { minimumQuantity: 0, canPurchase: true }));
     fireEvent.click(screen.getByRole('button', { name: 'Refresh status' }));
     await waitFor(() => expect(screen.getAllByTestId(/stat-/).map((node) => node.textContent)).toEqual(['3', '0', '3']));
@@ -172,10 +172,10 @@ describe('pool editor: first co-managed purchase', () => {
   it('an expired checkout is handled by the existing controller and a retry is possible', async () => {
     actions.purchase.mockResolvedValue({ kind: 'expired', publishableKey: null });
     render(<CoManagedPoolEditor showTotals />);
-    fireEvent.change(await screen.findByLabelText('coManaged.quantity'), { target: { value: '2' } });
-    fireEvent.click(screen.getByRole('button', { name: /Buy co-managed seats/ }));
+    fireEvent.change(await screen.findByLabelText('coManaged.howMany'), { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'coManaged.reviewPurchase' }));
     fireEvent.click(await screen.findByText('coManaged.confirmPurchase'));
     expect(await screen.findByText('The checkout session expired. Review the purchase again.')).toBeInTheDocument();
-    expect(screen.getByLabelText('coManaged.quantity')).toBeEnabled();
+    expect(screen.getByLabelText('coManaged.howMany')).toBeEnabled();
   });
 });

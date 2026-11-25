@@ -9,6 +9,7 @@ import { executeClientMerge } from '@alga-psa/clients/lib/clientMergeEngine';
 import { registerCapabilityParticipation } from '@alga-psa/core/capability';
 import { resizeCoManagedSeatAllocation, assertCoManagedSeatTechnicianWrite, reserveCoManagedWorkspace, getCoManagedEntitlementState, readCoManagedPoolCapacity, reserveAndActivateCoManagedSeatAllocation } from '@alga-psa/licensing';
 import { admitSeatTrialCredential, admitSeatTrialSession } from '../../../../ee/server/src/lib/co-managed/seatTrialSession';
+import { readSeatTrialSponsorEligibility } from '../../../../ee/server/src/lib/co-managed/seatTrialEligibility';
 import { cancelCoManagedSeatTrial, replaceCoManagedSeatTrialTechnician, prepareCoManagedSeatTrial, readCoManagedSeatTrialAdmission } from '../../../../ee/server/src/lib/co-managed/seatTrial';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
@@ -87,7 +88,7 @@ describeDb('co-managed Seat trial admission on migrated PostgreSQL', { shuffle: 
     const replacement = await prepareCoManagedSeatTrial(db, choices[1-index]);
     expect(replacement.trialId).toBe(won.trialId);
     await expect(cancelCoManagedSeatTrial(db, { tenant, trialId: won.trialId, allocationId: old.allocation_id }))
-      .rejects.toThrow('TRIAL_CLAIM_UNAVAILABLE');
+      .rejects.toMatchObject({ code: 'TRIAL_CLAIM_UNAVAILABLE' });
     expect((await db('co_managed_seat_assignments').where({ tenant, user_id: accepted.user_id }).first()).state).toBe('revoked');
     expect(await db('co_managed_seat_trial_milestones').where({ tenant })).toHaveLength(0);
   });
@@ -181,7 +182,7 @@ describeDb('co-managed Seat trial admission on migrated PostgreSQL', { shuffle: 
     const ended = await endCoManagedSeatArrangement(db, { sponsorTenant: tenant, arrangementId: setup.arrangementId, actorUserId: staff });
     expect(ended.releasedSeats).toBe(0);
     expect(await readCoManagedSeatTrialAdmission(db, { tenant, assignmentId: setup.assignmentId })).toMatchObject({ status: 'ended' });
-    await expect(prepareCoManagedSeatTrial(db, await draft(tenant))).rejects.toThrow('TRIAL_CLAIM_UNAVAILABLE');
+    await expect(prepareCoManagedSeatTrial(db, await draft(tenant))).rejects.toMatchObject({ code: 'TRIAL_CLAIM_UNAVAILABLE' });
   });
 
   it('acceptance leaves the clock empty; concurrent first sessions establish one 360-hour window', async () => {
@@ -232,7 +233,7 @@ describeDb('co-managed Seat trial admission on migrated PostgreSQL', { shuffle: 
     const request = await draft(tenant);
     await db.transaction(async trx => {
       await trx('license_state').insert({ edition_choice: 'ee' });
-      await expect(prepareCoManagedSeatTrial(trx, request)).rejects.toThrow('SPONSOR_NOT_ELIGIBLE');
+      await expect(prepareCoManagedSeatTrial(trx, request)).rejects.toMatchObject({ code: 'SPONSOR_NOT_ELIGIBLE' });
       await trx('license_state').delete();
     });
     const prepared = await prepareCoManagedSeatTrial(db, request);
@@ -408,6 +409,25 @@ describeDb('co-managed Seat trial admission on migrated PostgreSQL', { shuffle: 
       vi.doUnmock('@alga-psa/auth'); vi.doUnmock('@alga-psa/auth/rbac'); vi.doUnmock('@alga-psa/db');
       vi.doUnmock('@alga-psa/authorization/clientScopeAuthorization'); vi.doUnmock('../../lib/co-managed/browserActor');
       vi.doUnmock('@alga-psa/email'); vi.doUnmock('../../../../ee/server/src/lib/stripe/StripeService');
+    }
+  });
+
+  it('applies one eligibility rule: whatever the rule refuses, prepare refuses with SPONSOR_NOT_ELIGIBLE', async () => {
+    const ready = await sponsorWithBase();
+    expect(await readSeatTrialSponsorEligibility(db, ready)).toMatchObject({ eligible: true, reason: null, baseUntil: expect.any(Date) });
+    const cases: Array<[string, (tenant: string) => Promise<unknown>]> = [
+      ['not Pro', tenant => db('tenants').where({ tenant }).update({ plan: 'basic' })],
+      ['manual billing', tenant => db('tenants').where({ tenant }).update({ billing_source: 'manual' })],
+      ['suspended', tenant => db('tenants').where({ tenant }).update({ suspended_at: db.fn.now() })],
+      ['not PSA', tenant => db('tenants').where({ tenant }).update({ product_code: 'algadesk' })],
+      ['base ended', tenant => db('stripe_subscriptions').where({ tenant }).update({ status: 'canceled', trial_end: new Date(Date.now() - 86400000), current_period_end: new Date(Date.now() - 86400000) })],
+    ];
+    for (const [label, ruin] of cases) {
+      const tenant = await sponsorWithBase();
+      await ruin(tenant);
+      const verdict = await readSeatTrialSponsorEligibility(db, tenant);
+      expect(verdict, label).toMatchObject({ eligible: false, reason: 'SPONSOR_NOT_ELIGIBLE' });
+      await expect(prepareCoManagedSeatTrial(db, await draft(tenant)), label).rejects.toMatchObject({ code: 'SPONSOR_NOT_ELIGIBLE', name: 'CoManagedSeatTrialError' });
     }
   });
 

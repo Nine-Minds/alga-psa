@@ -90,6 +90,10 @@ COPY ./shared/workflow/ ./shared/workflow/
 COPY ./packages/ ./packages/
 RUN test -f /app/packages/core/dist/index.js
 
+# The paginated invoice/quote preview reads this file off disk at runtime; without
+# it the preview silently falls back to one unpaginated roll.
+RUN test -f /app/node_modules/pagedjs/dist/paged.polyfill.min.js
+
 # Copy entrypoint
 COPY server/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh

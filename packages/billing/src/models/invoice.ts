@@ -185,6 +185,7 @@ function attachTimeEntrySnapshots(
   });
 }
 
+// LEVERAGE: pattern recurring-detail-period-projection — third copy of the detail-period projection; the shared definition is projectAccountingExportRecurringPeriods in packages/billing/src/services/accountingExportServicePeriods.ts. Not deduped here: dedupe would change invoice API/template output.
 function attachCanonicalRecurringDetailPeriods(
   charges: IInvoiceCharge[],
   detailRows: InvoiceChargeDetailPeriodRow[]

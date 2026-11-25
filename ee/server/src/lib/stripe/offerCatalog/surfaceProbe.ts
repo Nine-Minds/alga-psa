@@ -1,34 +1,28 @@
-import { runWithBillingCatalogContext, type BillingCatalogContext } from '@alga-psa/licensing';
+import { hasBillingCatalogScope, registerBillingCatalogContextLoader, runWithBillingCatalogContext, type BillingCatalogContext } from '@alga-psa/licensing';
 import { getStripeService } from '../StripeService';
-import { CO_MANAGED_SEAT_OFFER_KEY } from './types';
+import { loadBillingCatalogContextFrom } from './catalogContext';
 
-/** Load request-current platform catalog settings; no module registration or process cache. */
-export async function loadBillingCatalogContext(): Promise<BillingCatalogContext> {
-  let livemode = /^(sk|rk)_live_/.test(process.env.STRIPE_SECRET_KEY ?? process.env.STRIPE_SECRET_KEY_PLATFORM ?? '');
-  let context: BillingCatalogContext = { mode: livemode ? 'live' : 'test', stripeAccount: null,
-    priceId: null, source: 'unconfigured', sellable: false };
-  try {
-    const catalog = await getStripeService().getOfferCatalog();
-    livemode = await catalog.deploymentLivemode();
-    const effective = await catalog.effectiveAccountSetting(livemode);
-    context = {
-      mode: livemode ? 'live' : 'test',
-      stripeAccount: effective.stripeAccount,
-      priceId: effective.priceId,
-      source: effective.priceSource === 'database setting' || effective.priceSource === 'database catalog'
-        ? 'database' : effective.priceSource === 'environment bootstrap' ? 'environment' : 'unconfigured',
-      sellable: false,
-    };
-    if (!context.stripeAccount || !context.priceId) return context;
-    const offer = await catalog.resolveCurrentOffer(CO_MANAGED_SEAT_OFFER_KEY, 'month');
-    return { ...context, sellable: offer.scope.stripeAccount === context.stripeAccount &&
-      offer.scope.livemode === livemode && offer.priceId === context.priceId };
-  } catch {
-    return context;
-  }
-}
+export { resetLoggedContextLoadFailures } from './catalogContext';
 
-export async function withBillingCatalogContext<T>(work: () => T | Promise<T>): Promise<T> {
-  const context = await loadBillingCatalogContext();
+/** Load request-current platform catalog settings through StripeService; no process cache. Registered below as the licensing loader. */
+export const loadBillingCatalogContext = (tenantId?: string): Promise<BillingCatalogContext> =>
+  loadBillingCatalogContextFrom(() => getStripeService().getOfferCatalog(), tenantId);
+
+/**
+ * Optional since the gate resolves the context itself. Kept as an explicit request entry point: it loads
+ * the context once and pins it for everything `work` awaits, however many gate checks that makes. Inside an
+ * already-open request scope (withAuth opens one for every server action) it joins that scope instead, so
+ * the request still loads once.
+ */
+export async function withBillingCatalogContext<T>(work: () => T | Promise<T>, tenantId?: string): Promise<T> {
+  if (hasBillingCatalogScope()) return work();
+  const context = await loadBillingCatalogContext(tenantId);
   return runWithBillingCatalogContext(context, work);
 }
+
+/**
+ * Import side effect: the gate in @alga-psa/licensing resolves the catalog context through this loader
+ * whether or not the caller wrapped in `withBillingCatalogContext`. Every EE entry that can reach the
+ * gate imports this module (see capabilityEntryPoints.contract.test.ts). The CE alias of this file registers nothing.
+ */
+registerBillingCatalogContextLoader(loadBillingCatalogContext);

@@ -334,7 +334,8 @@
     },
     "address": {
       "title": "Indirizzo dell'azienda",
-      "description": "Precompilato dai dati di fatturazione — controlla e correggi se necessario. Questo indirizzo compare su fatture e preventivi.",
+      "description": "Questo indirizzo compare su fatture e preventivi.",
+      "prefilledFromBilling": "Alcuni di questi valori sono stati compilati dai dati di fatturazione. Controllali.",
       "fields": {
         "addressLine1": {
           "label": "Indirizzo riga 1",

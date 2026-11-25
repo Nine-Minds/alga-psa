@@ -263,7 +263,8 @@
       "titleDelete": "Er zijn fouten opgetreden bij het verwijderen van facturen:",
       "titleReverse": "Er zijn fouten opgetreden bij het terugdraaien van facturen:",
       "loadReady": "Kan factureringsperioden niet laden. Probeer het opnieuw.",
-      "loadHistory": "Kan terugkerende factuurgeschiedenis niet laden. Probeer het opnieuw."
+      "loadHistory": "Kan terugkerende factuurgeschiedenis niet laden. Probeer het opnieuw.",
+      "noInvoicesCreated": "Er is geen factuur aangemaakt. Vernieuw de lijst en controleer of deze periode al is gefactureerd of geen factureerbare posten bevat."
     },
     "loading": {
       "billingData": "Factureringsgegevens laden",
@@ -339,6 +340,10 @@
       },
       "nextInvoice": "Wordt gefactureerd op de volgende factuur",
       "outsideLookback": "Buiten de terugkijkperiode — niet gefactureerd"
+    },
+    "billingProfile": {
+      "label": "Facturatieprofiel — {{client}}, factuur {{index}}",
+      "automatic": "Het profiel gebruiken dat aan het geselecteerde werk is toegewezen"
     }
   },
   "manualInvoices": {
@@ -435,7 +440,8 @@
       "SERVICE_REQUIRED": "Wijs een dienst toe aan deze kostenpost voordat u opslaat.",
       "BILLING_PROFILE_NOT_FOUND": "Het geselecteerde facturatieprofiel is niet beschikbaar voor deze klant. Vernieuw de pagina en probeer het opnieuw.",
       "sessionExpired": "Uw sessie is verlopen. Uw wijzigingen staan hier nog, maar zijn niet opgeslagen. Meld u opnieuw aan in een nieuw tabblad en probeer daarna opnieuw op te slaan.",
-      "saveRefreshFailed": "Uw wijzigingen zijn opgeslagen, maar de factuurpagina kon niet volledig worden vernieuwd. Herlaad de pagina om de opgeslagen factuur te bekijken."
+      "saveRefreshFailed": "Uw wijzigingen zijn opgeslagen, maar de factuurpagina kon niet volledig worden vernieuwd. Herlaad de pagina om de opgeslagen factuur te bekijken.",
+      "BILLING_PROFILE_MISMATCH": "Het geselecteerde facturatieprofiel zou kostenposten uitsluiten. Aantal: {{count}}. Kies het facturatieprofiel dat aan dit werk is toegewezen of selecteer de regels van elk profiel afzonderlijk."
     },
     "warnings": {
       "noBillingEmail": "Deze klant heeft geen factuur-e-mailadres. De factuur kan worden gegenereerd, maar kan pas per e-mail worden verzonden of online worden betaald als u een factuurcontact, een factuur-e-mailadres van de klant of een e-mailadres op de factuur- of standaardlocatie instelt."
@@ -2700,6 +2706,15 @@
         "clearLines": "Enkele regel",
         "stackedLinesHint": "Elke niet-lege regel wordt op een eigen rij weergegeven. Wanneer alle regels leeg zijn, wordt de hierboven vermelde bindingssleutel van de kolom weergegeven.",
         "removeLine": "Regel {{index}} verwijderen",
+        "valueLabels": "Tekst voor waarden",
+        "addKnownValues": "+ Bekende waarden",
+        "addValueLabel": "+ Waarde",
+        "valueLabelsHint": "Kies de woorden die voor een waarde worden afgedrukt, bijvoorbeeld true → Inbegrepen. Een leeg label drukt niets af.",
+        "valueLabelKey": "Waarde",
+        "valueLabelKeyPlaceholder": "true",
+        "valueLabelText": "Afgedrukte tekst",
+        "valueLabelTextPlaceholder": "Leeg",
+        "removeValueLabel": "Tekst verwijderen",
         "align": "Uitlijning",
         "widthPlaceholder": "auto | 50% | 120px"
       },

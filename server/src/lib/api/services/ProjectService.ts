@@ -5,7 +5,15 @@
 
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { Knex } from 'knex';
-import { releaseStagingForTask, releaseStagingForTasks } from '@alga-psa/inventory/lib';
+import {
+  addMaterial,
+  deleteMaterial,
+  InsufficientStockError,
+  listMaterials,
+  MaterialValidationError,
+  releaseStagingForTask,
+  releaseStagingForTasks,
+} from '@alga-psa/inventory/lib';
 import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb, withTransaction, registerAfterCommit, withViaPrincipal } from '@alga-psa/db';
 import { 
   IProject, 
@@ -16,7 +24,7 @@ import {
   IProjectTicketLink,
   ProjectStatus
 } from 'server/src/interfaces/project.interfaces';
-import type { ProjectServiceSource } from '@alga-psa/types';
+import type { IProjectMaterial, ProjectServiceSource } from '@alga-psa/types';
 import {
   effectiveServiceIdSql,
   effectiveServiceNameSql,
@@ -27,6 +35,7 @@ import {
   UpdateProjectData,
   ProjectFilterData,
   CreateProjectPhaseData,
+  CreateProjectMaterialData,
   UpdateProjectPhaseData,
   CreateProjectTaskData,
   UpdateProjectTaskData,
@@ -128,6 +137,11 @@ function scopedTable<Row extends object = Record<string, any>>(
   tableExpression: string
 ): Knex.QueryBuilder<any, any> {
   return tenantDb(conn, tenant).table<Row>(tableExpression) as Knex.QueryBuilder<any, any>;
+}
+
+/** rate is a bigint column (the driver returns a string); the REST contract documents integer minor units. */
+function normalizeProjectMaterial<T extends { rate?: unknown }>(material: T): T {
+  return { ...material, rate: Number(material.rate) };
 }
 
 async function resolveUserName(
@@ -675,6 +689,113 @@ export class ProjectService extends BaseService<IProject> {
         throw new NotFoundError('Project phase not found');
       }
     }
+
+
+  // Project materials: thin callers of the shared inventory cores (packages/inventory/src/lib/materials.ts),
+  // the same ones the project server actions call. Stock, serialized-unit and validation rules live there.
+
+  /** Lists a project's materials with product name and SKU. Catalog unit cost is not part of the REST shape. */
+  async getProjectMaterials(projectId: string, context: ServiceContext): Promise<IProjectMaterial[]> {
+    const knex = await this.getDbForContext(context);
+    const rows = await listMaterials(knex, context.tenant, 'project', projectId);
+    return rows.map(({ catalog_unit_cost: _cost, catalog_cost_currency: _costCurrency, ...material }: any) =>
+      normalizeProjectMaterial(material)) as IProjectMaterial[];
+  }
+
+  /**
+   * Adds a material through the shared addMaterial core. client_id comes from the project inside the core
+   * (never from the body), and allow_reserved_override is never passed: reserved or held stock is refused.
+   */
+  async addProjectMaterial(
+    projectId: string,
+    data: CreateProjectMaterialData,
+    context: ServiceContext,
+  ): Promise<IProjectMaterial> {
+    const knex = await this.getDbForContext(context);
+
+    let created: { project_material_id?: string };
+    try {
+      created = (await addMaterial(
+        knex,
+        context.tenant,
+        {
+          parent_type: 'project',
+          parent_id: projectId,
+          service_id: data.service_id,
+          quantity: data.quantity,
+          rate: data.rate,
+          currency_code: data.currency_code,
+          description: data.description ?? null,
+          unit_id: data.unit_id ?? null,
+          billing_destination: data.billing_destination,
+          billing_schedule_entry_id: data.billing_schedule_entry_id ?? null,
+        },
+        context.userId ?? null,
+      )) as { project_material_id?: string };
+    } catch (error) {
+      const name = (error as Error)?.name;
+      if (error instanceof MaterialValidationError || name === 'MaterialValidationError') {
+        const e = error as MaterialValidationError;
+        if (e.path === 'project_id') {
+          throw new NotFoundError('Project not found');
+        }
+        throw new ValidationError('Validation failed', [{ path: [e.path], message: e.message }]);
+      }
+      // Stock that is short, reserved for or held by a sales order is a clean refusal on quantity.
+      if (error instanceof InsufficientStockError || name === 'InsufficientStockError') {
+        throw new ValidationError('Validation failed', [{ path: ['quantity'], message: (error as Error).message }]);
+      }
+      throw error;
+    }
+
+    const material = await this.getProjectMaterialById(created.project_material_id as string, context);
+    if (!material) {
+      throw new Error('Created material could not be loaded');
+    }
+    return material;
+  }
+
+  /**
+   * Deletes a material and restores its stock through the shared deleteMaterial core. The core takes only the
+   * material id, so ownership is confirmed here first: a material of another project (or tenant) is a 404 and
+   * is never touched.
+   */
+  async deleteProjectMaterial(projectId: string, materialId: string, context: ServiceContext): Promise<void> {
+    const knex = await this.getDbForContext(context);
+
+    const owned = await scopedTable(knex, context.tenant, 'project_materials')
+      .where({ project_material_id: materialId, project_id: projectId })
+      .first('project_material_id');
+    if (!owned) {
+      throw new NotFoundError('Project material not found');
+    }
+
+    let deleted: boolean;
+    try {
+      deleted = await deleteMaterial(knex, context.tenant, 'project', materialId, context.userId ?? null);
+    } catch (error) {
+      // LEVERAGE: friction material-billed-delete-untyped — deleteMaterial throws a bare Error for billed materials, so callers match its message text.
+      if ((error as Error)?.message === 'Cannot delete a billed material.') {
+        throw new ConflictError((error as Error).message);
+      }
+      throw error;
+    }
+    if (!deleted) {
+      throw new NotFoundError('Project material not found');
+    }
+  }
+
+  private async getProjectMaterialById(materialId: string, context: ServiceContext): Promise<IProjectMaterial | null> {
+    const knex = await this.getDbForContext(context);
+    const db = tenantDb(knex, context.tenant);
+    const query = db.table('project_materials as pm') as Knex.QueryBuilder<any, any>;
+    db.tenantJoin(query, 'service_catalog as sc', 'pm.service_id', 'sc.service_id', { type: 'left' });
+    const material = await query
+      .where({ 'pm.project_material_id': materialId })
+      .select('pm.*', 'sc.service_name as service_name', 'sc.sku as sku')
+      .first();
+    return material ? (normalizeProjectMaterial(material) as IProjectMaterial) : null;
+  }
 
 
   // Project tasks

@@ -189,10 +189,17 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(compilerSource).toContain('const tenant = tenantColumnOf(this.schema);');
     expect(compilerSource).toContain("bindings: [`${childAlias}.${tenant}`, `${parentAlias}.${tenant}`]");
     const schemaSource = fs.readFileSync(path.resolve(__dirname, '../../../../shared/lib/ticketQuery/ticketQuerySchema.ts'), 'utf8');
-    const resolverTables = schemaSource.match(/FROM \w+ AS __\w+ WHERE __\w+\.tenant = \?\?/g) ?? [];
+    // Each resolver subquery `AS __x` opens with the scope built for that alias, which correlates
+    // on tenant and, given a tenant, filters on it by value.
+    const resolverTables = schemaSource.match(/FROM \w+ AS __(\w+) WHERE \$\{\1\.sql\}/g) ?? [];
     const resolverSubqueries = schemaSource.match(/FROM \w+ AS __\w+/g) ?? [];
     expect(resolverSubqueries.length).toBeGreaterThan(0);
     expect(resolverTables).toHaveLength(resolverSubqueries.length);
+    for (const [, name] of schemaSource.matchAll(/WHERE \$\{(\w+)\.sql\}/g)) {
+      expect(schemaSource).toContain(`const ${name} = tenantScope('__${name}', alias, tenant);`);
+    }
+    expect(schemaSource).toContain('{ sql: `${subAlias}.tenant = ??`, bindings: [`${alias}.tenant`] }');
+    expect(schemaSource).toContain('{ sql: `${subAlias}.tenant = ? AND ${subAlias}.tenant = ??`, bindings: [tenant, `${alias}.tenant`] }');
 
     expect(listActionSection).toContain("tenantScopedTable(trx, 'tag_mappings as tm', tenant)");
     expect(listActionSection).not.toContain(".where('tm.tenant', tenant)");

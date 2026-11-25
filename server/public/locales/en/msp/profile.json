@@ -187,7 +187,7 @@
     "sso": {
       "advanced": {
         "title": "Advanced: custom identity provider routing",
-        "description": "Route MSP login SSO to your own identity provider using verified login domains. Only needed on custom or on-premise installations.",
+        "description": "Route MSP login SSO to your own identity provider using verified login domains. Required when staff sign in through your own Keycloak realm or your own Google / Microsoft application.",
         "inertNotice": "No tenant identity provider is configured, so domain claims currently have no effect. Configure Keycloak above, or on Enterprise Edition your Google / Microsoft app credentials, then claim your staff login domain here."
       }
     },
@@ -803,10 +803,11 @@
     "providers": {
       "title": "Connect a provider",
       "description": "Choose a provider to finish the SSO link. You'll be redirected through the provider's login flow.",
-      "noneConfigured": "No SSO providers are configured for this environment. Ask your administrator to configure Google or Microsoft credentials.",
-      "noneConfiguredAdmin": "No SSO providers are configured yet. Set up your organization's Google or Microsoft application first.",
-      "openProviderSetup": "Set up an SSO provider",
+      "noneConfigured": "No SSO providers are configured for your organization. Ask your administrator to set one up.",
+      "noneConfiguredAdmin": "No SSO providers are configured yet. Use the setup link on a provider below to get started.",
       "notConfigured": "Not configured",
+      "setUpProvider": "Set up {{provider}}",
+      "askAdministrator": "Ask your administrator to set it up.",
       "branding": {
         "google": "Continue with Google",
         "microsoft": "Continue with Microsoft",

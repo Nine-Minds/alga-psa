@@ -313,4 +313,69 @@ describe('createCommentFromEmail response source metadata', () => {
 
     expect(updateTicketStateMock).toHaveBeenCalledWith({ response_state: 'awaiting_internal' });
   });
+
+  it('opensTicket writes top-level metadata.opensTicket + attachmentCount and implies in-app-only', async () => {
+    const { createCommentFromEmail } = await import('../emailWorkflowActions');
+    const setSuppressCommentEmail = vi.fn();
+
+    await createCommentFromEmail(
+      {
+        ticket_id: 'ticket-1',
+        content: 'hello',
+        author_type: 'contact',
+        opensTicket: true,
+        attachmentCount: 2,
+        metadata: { email: { messageId: 'message-1' } },
+      },
+      'tenant-1',
+      undefined,
+      { eventPublisher: { publish: vi.fn(), setSuppressCommentEmail } } as any
+    );
+
+    const metadata = createCommentMock.mock.calls[0][0].metadata;
+    expect(metadata.opensTicket).toBe(true);
+    expect(metadata.attachmentCount).toBe(2);
+    expect(metadata.email.opensTicket).toBeUndefined(); // metadata.email is redacted for clients
+    expect(metadata.responseSource).toBe('inbound_email');
+    expect(setSuppressCommentEmail).toHaveBeenCalledWith(true);
+  });
+
+  it('opensTicket omits attachmentCount when unknown', async () => {
+    const { createCommentFromEmail } = await import('../emailWorkflowActions');
+    await createCommentFromEmail(
+      { ticket_id: 'ticket-1', content: 'hello', author_type: 'contact', opensTicket: true, attachmentCount: undefined },
+      'tenant-1'
+    );
+    const metadata = createCommentMock.mock.calls[0][0].metadata;
+    expect(metadata.opensTicket).toBe(true);
+    expect('attachmentCount' in metadata).toBe(false);
+  });
+
+  it('a reply (no opensTicket) carries no marker and still notifies; attachmentCount alone is ignored', async () => {
+    const { createCommentFromEmail } = await import('../emailWorkflowActions');
+    const setSuppressCommentEmail = vi.fn();
+    await createCommentFromEmail(
+      { ticket_id: 'ticket-1', content: 'reply', author_type: 'contact', attachmentCount: 4 },
+      'tenant-1',
+      undefined,
+      { eventPublisher: { publish: vi.fn(), setSuppressCommentEmail } } as any
+    );
+    const metadata = createCommentMock.mock.calls[0][0].metadata;
+    expect('opensTicket' in metadata).toBe(false);
+    expect('attachmentCount' in metadata).toBe(false);
+    expect(setSuppressCommentEmail).toHaveBeenCalledWith(false);
+  });
+
+  it('the legacy suppressTechEmailNotification flag still suppresses without marking an opener', async () => {
+    const { createCommentFromEmail } = await import('../emailWorkflowActions');
+    const setSuppressCommentEmail = vi.fn();
+    await createCommentFromEmail(
+      { ticket_id: 'ticket-1', content: 'x', author_type: 'contact', suppressTechEmailNotification: true },
+      'tenant-1',
+      undefined,
+      { eventPublisher: { publish: vi.fn(), setSuppressCommentEmail } } as any
+    );
+    expect(setSuppressCommentEmail).toHaveBeenCalledWith(true);
+    expect('opensTicket' in createCommentMock.mock.calls[0][0].metadata).toBe(false);
+  });
 });

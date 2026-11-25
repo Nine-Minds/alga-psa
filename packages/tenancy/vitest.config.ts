@@ -29,6 +29,7 @@ export default defineConfig({
       { find: /^@alga-psa\/types$/, replacement: path.resolve(__dirname, '../types/src/index.ts') },
       { find: /^@alga-psa\/types\/(.*)$/, replacement: path.resolve(__dirname, '../types/src/$1') },
       { find: /^@alga-psa\/core$/, replacement: path.resolve(__dirname, '../core/src/index.ts') },
+      { find: /^@alga-psa\/core\/server$/, replacement: path.resolve(__dirname, '../core/src/server.ts') },
       { find: /^@alga-psa\/core\/logger$/, replacement: path.resolve(__dirname, '../core/src/lib/logger.ts') },
       { find: /^@alga-psa\/core\/i18n\/config$/, replacement: path.resolve(__dirname, '../core/src/lib/i18n/config.ts') },
       { find: /^@alga-psa\/core\/(.*)$/, replacement: path.resolve(__dirname, '../core/src/lib/$1') },

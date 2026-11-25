@@ -578,6 +578,7 @@
     "deleteCommentOnly": "Eliminar solo el comentario",
     "cancelScheduledComment": "Cancelar comentario programado",
     "cancelScheduledCommentConfirm": "¿Cancelar este comentario programado?",
+    "scheduledCommentChangeFailed": "No se pudo cambiar este comentario programado. Actualiza la página e inténtalo de nuevo.",
     "invalidScheduleTime": "Elige una hora futura sin ambigüedades en esta zona horaria.",
     "publishAt": "Publicar el",
     "publishes": "Se publica",
@@ -616,6 +617,13 @@
       },
       "unavailable": "Este ticket no está disponible.",
       "back": "Volver a Tickets de clientes"
+    },
+    "opener": {
+      "openedBy": "Abierto por correo electrónico de {{sender}}",
+      "attachments_one": "{{count}} archivo adjunto",
+      "attachments_other": "{{count}} archivos adjuntos",
+      "show": "Mostrar correo original",
+      "hide": "Ocultar correo original"
     }
   },
   "responseState": {

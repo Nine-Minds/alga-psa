@@ -76,6 +76,13 @@ export interface ActivityGroupControlRenderProps {
   activityType: 'ticket' | 'projectTask';
   /** Changes whenever the record's saved assignment changes; re-runs the eligibility check. */
   assignmentKey: string;
+  /**
+   * The server's answer to "is this record on my list?" for the saved state the screen loaded with
+   * (e.g. the ticket page bootstrap). When given, the control renders it on first paint instead of
+   * popping in after a client check, which would shift the form below it under the pointer.
+   * null/undefined: unknown, so the control checks on mount.
+   */
+  initialOnMyList?: boolean | null;
 }
 
 export interface ActivityCrossFeatureCallbacks {

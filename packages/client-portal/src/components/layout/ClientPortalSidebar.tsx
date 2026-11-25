@@ -30,6 +30,7 @@ import {
   getPreferenceWithFallback,
   savePreference,
 } from '@alga-psa/ui/lib/cookies';
+import { resolveClientPortalSettingsSurfaces } from '../../lib/clientPortalSettingsSurfaces';
 import { ClientPortalExtensionsNav } from './ClientPortalExtensionsNav';
 
 const SIDEBAR_COOKIE_KEY = 'client_portal_sidebar_collapsed';
@@ -53,8 +54,11 @@ function useNarrowViewport(): boolean {
 }
 
 interface SidebarPermissions {
-  hasClientSettingsAccess: boolean;
+  // Inputs to resolveClientPortalSettingsSurfaces (the Client Settings link reads canOpenSettings).
+  hasClientReadAccess: boolean;
   hasBillingAccess: boolean;
+  hasUserManagementAccess: boolean;
+  hasVisibilityGroupAccess: boolean;
   hasProjectAccess: boolean;
   hasDocumentAccess: boolean;
   isLicenseDistributor: boolean;
@@ -200,7 +204,7 @@ export function ClientPortalSidebar({
                   }]
                 : []),
             ]),
-        ...(permissions.hasClientSettingsAccess
+        ...(resolveClientPortalSettingsSurfaces(permissions).canOpenSettings
           ? [{
               key: 'client-settings',
               href: '/client-portal/client-settings',

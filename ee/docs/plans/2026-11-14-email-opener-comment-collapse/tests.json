@@ -1,0 +1,120 @@
+[
+  {
+    "id": "T001",
+    "description": "DB-backed integration: processInboundEmailInApp creating a new ticket stores the opener comment with metadata.opensTicket=true and attachmentCount; a follow-up reply to the same ticket has no opensTicket",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F004",
+      "F005",
+      "F007"
+    ],
+    "note": "Not run as DB-backed. Covered by mock-based unit tests: shared/services/email/__tests__/processInboundEmailInApp.autoCreateContact.test.ts and workflow/actions/__tests__/emailWorkflowActions.responseSource.test.ts."
+  },
+  {
+    "id": "T002",
+    "description": "DB-backed integration: workflow action create_ticket_with_initial_comment marks its comment as opener; create_comment_from_email does not",
+    "implemented": false,
+    "featureIds": [
+      "F006",
+      "F007"
+    ],
+    "note": "Not run as DB-backed. Covered by mock-based unit tests in shared/workflow/runtime/actions/__tests__/registerEmailWorkflowActions.contactAuthorship.test.ts."
+  },
+  {
+    "id": "T003",
+    "description": "New email ticket still produces exactly one technician notification (TICKET_CREATED) and no comment email when the opener is created via opensTicket",
+    "implemented": false,
+    "featureIds": [
+      "F003"
+    ],
+    "note": "Not run as DB-backed. Suppression is asserted at the publisher seam (setSuppressCommentEmail) in emailWorkflowActions.responseSource.test.ts."
+  },
+  {
+    "id": "T004",
+    "description": "DB-backed migration test: marks Message-ID match; marks time-window fallback only for unmatched tickets; leaves replies, manual/portal/API tickets and late comments untouched; one per ticket; re-run is a no-op",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F009",
+      "F010"
+    ],
+    "note": "server/migrations/__tests__/backfillEmailOpenerCommentMarker.integration.test.ts (TEMP tables on a real Postgres; skips when unreachable)."
+  },
+  {
+    "id": "T005",
+    "description": "isTicketOpenerComment unit: true for object and jsonb-string metadata with opensTicket, false for missing/false/malformed",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "CommentItem (RTL): opener comment renders compact row with sender, address, timestamp and attachment count; Show original email expands to full body; Hide collapses; non-opener comment renders unchanged",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F013",
+      "F014",
+      "F015",
+      "F016",
+      "F018"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "CommentItem (RTL) compact variant and unmatched-sender opener: row renders with inbound sender identity",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F017"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "TicketConversation (RTL): opener root with replies shows the row plus thread bar and replies",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "redactCommentForClient keeps opensTicket/attachmentCount while stripping metadata.email; portal row renders without address",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Mobile CommentsSection unit: opener comment renders compact row and expands on tap; other comments unchanged",
+    "implemented": true,
+    "featureIds": [
+      "F021",
+      "F022",
+      "F024"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "E2E (extend e2e-tests/tests/inbound-email.spec.ts): ticket opened by email shows the compact row in the MSP ticket view; expanding shows the resolved inline image body",
+    "implemented": false,
+    "featureIds": [
+      "F005",
+      "F015",
+      "F016"
+    ],
+    "note": "Not written (optional; needs the app server)."
+  },
+  {
+    "id": "T012",
+    "description": "Translation validation passes (scripts/validate-translations.cjs) with new keys in all locales",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  }
+]
