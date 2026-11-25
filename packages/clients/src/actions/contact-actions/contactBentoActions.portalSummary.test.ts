@@ -1,0 +1,162 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+/**
+ * The contact's Portal access tile.
+ *
+ * Lapsed invitations are retained now (the MSP's "who never used theirs?" view
+ * is made of them), so "a row exists" stopped meaning "an invitation is
+ * outstanding": the tile has to tell a live invitation from a dead one, by the
+ * same rule the client's contact list and the Portal tab use. It also dates the
+ * invitation by its last send, because a resend renews the row it reuses.
+ */
+
+const assertMspPermissionMock = vi.fn();
+const invitationOrderMock = vi.fn();
+
+type Row = Record<string, unknown> | undefined;
+
+const state: {
+  portalUser: Row;
+  invitation: Row;
+  contact: Row;
+  /** Addresses the MSP kept on the contact besides its primary one. */
+  additionalEmails: string[];
+} = { portalUser: undefined, invitation: undefined, contact: undefined, additionalEmails: [] };
+
+function builderFor(table: string) {
+  const row = table === 'users'
+    ? state.portalUser
+    : table === 'portal_invitations'
+      ? state.invitation
+      : state.contact;
+  const builder: any = {
+    where: () => builder,
+    orderBy: (...args: unknown[]) => {
+      if (table === 'portal_invitations') invitationOrderMock(...args);
+      return builder;
+    },
+    select: () => builder,
+    first: async () => row,
+    // The additional-address read awaits the query itself, like a knex select.
+    then: (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) =>
+      Promise.resolve(
+        table === 'contact_additional_email_addresses'
+          ? state.additionalEmails.map((email_address) => ({ email_address }))
+          : [],
+      ).then(resolve, reject),
+  };
+  return builder;
+}
+
+vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: async () => ({ knex: {}, tenant: 'tenant-1' }),
+  tenantDb: () => ({ table: (table: string) => builderFor(table) }),
+  withTransaction: (_db: unknown, fn: (trx: unknown) => unknown) => fn({}),
+}));
+
+vi.mock('@alga-psa/auth', () => ({
+  withAuth: (fn: any) => (...args: any[]) =>
+    fn({ user_id: 'user-1', user_type: 'internal' }, { tenant: 'tenant-1' }, ...args),
+}));
+
+vi.mock('../../lib/authHelpers', () => ({
+  assertMspPermission: (...args: any[]) => assertMspPermissionMock(...args),
+}));
+
+vi.mock('@alga-psa/authorization/ticketScopeAuthorization', () => ({
+  createTicketReadScope: vi.fn(),
+}));
+
+const { getContactPortalSummary } = await import('./contactBentoActions');
+
+const CONTACT_EMAIL = 'ada@acme.test';
+const FUTURE = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+const PAST = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  state.portalUser = undefined;
+  state.contact = { email: CONTACT_EMAIL, is_inactive: false };
+  state.invitation = undefined;
+  state.additionalEmails = [];
+});
+
+describe('getContactPortalSummary', () => {
+  it('reports no invitation when the contact never had one', async () => {
+    const summary = await getContactPortalSummary('contact-1');
+
+    expect(summary.invitationState).toBe('none');
+    expect(summary.invitedAt).toBeNull();
+  });
+
+  it('reports a live invitation as pending', async () => {
+    state.invitation = { created_at: PAST, expires_at: FUTURE, email: CONTACT_EMAIL, metadata: {} };
+
+    const summary = await getContactPortalSummary('contact-1');
+
+    expect(summary.invitationState).toBe('pending');
+    expect(summary.invitedAt).toBe(PAST.toISOString());
+  });
+
+  it('reports a lapsed invitation as expired instead of "invitation sent" for ever', async () => {
+    state.invitation = { created_at: PAST, expires_at: PAST, email: CONTACT_EMAIL, metadata: {} };
+
+    expect((await getContactPortalSummary('contact-1')).invitationState).toBe('expired');
+  });
+
+  it('reports a link the setup page would refuse as expired', async () => {
+    // Same two refusals verifyToken applies: a deactivated contact, and an
+    // address the contact no longer has.
+    state.invitation = { created_at: PAST, expires_at: FUTURE, email: 'old@acme.test', metadata: {} };
+    expect((await getContactPortalSummary('contact-1')).invitationState).toBe('expired');
+
+    state.invitation = { created_at: PAST, expires_at: FUTURE, email: CONTACT_EMAIL, metadata: {} };
+    state.contact = { email: CONTACT_EMAIL, is_inactive: true };
+    expect((await getContactPortalSummary('contact-1')).invitationState).toBe('expired');
+  });
+
+  it('keeps a link in an address the contact still has as pending', async () => {
+    // The primary address changed but the old one is still on the contact, so
+    // the link in that mailbox opens — the tile must not send the MSP chasing.
+    state.invitation = { created_at: PAST, expires_at: FUTURE, email: 'old@acme.test', metadata: {} };
+    state.additionalEmails = ['old@acme.test'];
+
+    expect((await getContactPortalSummary('contact-1')).invitationState).toBe('pending');
+  });
+
+  it('treats a used or revoked invitation as nothing outstanding', async () => {
+    // Revoking stamps used_at, exactly as accepting one does.
+    state.invitation = { created_at: PAST, expires_at: FUTURE, used_at: PAST, email: CONTACT_EMAIL, metadata: {} };
+
+    expect((await getContactPortalSummary('contact-1')).invitationState).toBe('none');
+  });
+
+  it('dates the invitation by its last send, not by the row it renewed', async () => {
+    const lastSentAt = '2026-06-01T10:00:00.000Z';
+    state.invitation = {
+      created_at: PAST,
+      expires_at: FUTURE,
+      email: CONTACT_EMAIL,
+      metadata: { last_sent_at: lastSentAt },
+    };
+
+    expect((await getContactPortalSummary('contact-1')).invitedAt).toBe(lastSentAt);
+  });
+
+  it('lets a portal account outrank the invitation it came from', async () => {
+    state.portalUser = { is_inactive: false, last_login_at: PAST };
+    state.invitation = { created_at: PAST, expires_at: PAST, email: CONTACT_EMAIL, metadata: {} };
+
+    const summary = await getContactPortalSummary('contact-1');
+
+    expect(summary.hasAccount).toBe(true);
+    expect(summary.accountInactive).toBe(false);
+  });
+});
+
+it('breaks latest-invitation ties the same way as token verification and the rollout list', async () => {
+  await getContactPortalSummary('contact-1');
+  expect(invitationOrderMock.mock.calls).toEqual([
+    ['created_at', 'desc'], ['invitation_id', 'desc'],
+  ]);
+});

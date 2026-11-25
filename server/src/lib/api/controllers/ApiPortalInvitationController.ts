@@ -62,7 +62,8 @@ export class ApiPortalInvitationController extends ApiBaseController {
           return this.invite({
             clientId,
             contactIds: body.contact_ids,
-            allEligible: body.all_eligible === true
+            allEligible: body.all_eligible === true,
+            invitationStates: body.invitation_states
           });
         });
       } catch (error) {
@@ -81,7 +82,10 @@ export class ApiPortalInvitationController extends ApiBaseController {
           const body = await this.validateData(apiRequest, bulkPortalInvitationRequestSchema);
           // No client in the path: the action authorizes each contact against
           // its own client before inviting it.
-          return this.invite({ contactIds: body.contact_ids });
+          return this.invite({
+            contactIds: body.contact_ids,
+            invitationStates: body.invitation_states
+          });
         });
       } catch (error) {
         return handleApiError(error);
