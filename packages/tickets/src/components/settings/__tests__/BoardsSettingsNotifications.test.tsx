@@ -443,6 +443,27 @@ describe('BoardsSettings notifications section', () => {
     expect(saveBoardNotificationSettingsMock).not.toHaveBeenCalled();
   });
 
+  it('accepts a rule whose only trigger is a client reply on an unassigned ticket', async () => {
+    await openEditor();
+    click('add-board-notification-rule-button');
+    click('board-notification-rule-0-recipients-pick-user');
+
+    // Swap the create trigger for the client-reply one: still exactly one trigger.
+    click('board-notification-rule-0-create');
+    click('board-notification-rule-0-client-reply');
+    click('save-board-section-notifications');
+
+    await waitFor(() => {
+      expect(saveBoardNotificationSettingsMock).toHaveBeenCalledTimes(1);
+    });
+    const [, payload] = saveBoardNotificationSettingsMock.mock.calls[0];
+    expect(payload.rules[0]).toMatchObject({
+      notify_on_create: false,
+      notify_on_unassigned_client_reply: true,
+      status_ids: [],
+    });
+  });
+
   it('saves rules and default watchers through saveBoardNotificationSettings, reusing stable rule ids', async () => {
     getBoardNotificationSettingsMock.mockResolvedValue({
       rules: [
@@ -482,6 +503,7 @@ describe('BoardsSettings notifications section', () => {
         {
           rule_id: 'rule-existing',
           notify_on_create: true,
+          notify_on_unassigned_client_reply: false,
           status_ids: [],
           user_ids: ['user-9'],
           team_ids: [],
@@ -491,6 +513,7 @@ describe('BoardsSettings notifications section', () => {
         {
           rule_id: undefined,
           notify_on_create: false,
+          notify_on_unassigned_client_reply: false,
           status_ids: ['status-new'],
           user_ids: ['user-1'],
           team_ids: ['team-1'],

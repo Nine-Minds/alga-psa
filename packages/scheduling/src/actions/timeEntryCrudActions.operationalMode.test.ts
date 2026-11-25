@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const h = vi.hoisted(() => ({
   surfaceKind: null as string | null,
   persist: vi.fn(),
+  logSession: vi.fn(),
   loadProductPrincipal: vi.fn(),
 }));
 
@@ -32,7 +33,7 @@ vi.mock('../lib/timeEntryWriteCore', () => ({
   persistTimeEntry: (...a: unknown[]) => h.persist(...a),
   publishPersistedTimeEntryEvents: vi.fn(),
 }));
-vi.mock('../lib/stopwatch/stopwatchCore', () => ({ logSession: vi.fn() }));
+vi.mock('../lib/stopwatch/stopwatchCore', () => ({ logSession: (...a: unknown[]) => h.logSession(...a) }));
 vi.mock('../lib/timeEntryAuthorizationSql', () => ({ resolveTimeEntryReadScope: vi.fn() }));
 vi.mock('./timeEntryDelegationAuth', () => ({ assertCanActOnBehalf: vi.fn(), assertCanApproveSubject: vi.fn() }));
 vi.mock('./timeEntryChangeRequestActions', () => ({
@@ -62,6 +63,13 @@ describe('saveTimeEntry billing mode', () => {
       entry: { ...input.entry, entry_id: 'e1' }, isUpdate: false, finalBillableDuration: 0,
       searchEvent: { eventType: 'TIME_ENTRY_CREATED', payload: { tenantId: 'tenant-1' } },
     }));
+    h.logSession.mockReset();
+    h.logSession.mockImplementation(async (_trx: unknown, _tenant: string, _actor: unknown, _sessionId: string, input: any) => ({
+      persisted: input.entries.map((entry: any) => ({
+        entry: { ...entry, entry_id: 'e-sw' }, isUpdate: false, finalBillableDuration: 0,
+        searchEvent: { eventType: 'TIME_ENTRY_CREATED', payload: { tenantId: 'tenant-1' } },
+      })),
+    }));
     h.loadProductPrincipal.mockReset();
     h.loadProductPrincipal.mockImplementation(async () => ({ rawProductCode: 'psa', surfaceKind: h.surfaceKind }));
   });
@@ -80,9 +88,18 @@ describe('saveTimeEntry billing mode', () => {
       expect(h.persist.mock.calls[0][1].mode).toBe('operational');
     });
 
-    it('does not log a stopwatch session (that path writes commercial entries)', async () => {
-      const result = await save(payload({ stopwatch_session_id: '6f1d1a3e-0000-4000-8000-000000000001' }));
-      expect(result).toMatchObject({ actionError: expect.stringContaining('operational surface') });
+    // alga-2026-0003428: a seat technician's stopwatch save is logged, as client IT effort. The session is handed to
+    // logSession, which resolves the billing mode from the actor itself; the action passes no mode it could get wrong.
+    it('logs a stopwatch session through logSession, which decides the mode itself', async () => {
+      const sessionId = '6f1d1a3e-0000-4000-8000-000000000001';
+      const result = await save(payload({ billable_duration: 0, stopwatch_session_id: sessionId }));
+      expect(result).not.toHaveProperty('actionError');
+      expect(h.logSession).toHaveBeenCalledTimes(1);
+      const [, tenant, actor, loggedSession, input] = h.logSession.mock.calls[0];
+      expect({ tenant, actor: (actor as any).user_id, loggedSession }).toEqual({ tenant: 'tenant-1', actor: 'user-1', loggedSession: sessionId });
+      expect(input).not.toHaveProperty('mode');
+      expect(input.entries).toHaveLength(1);
+      expect(input.entries[0]).not.toHaveProperty('mode');
       expect(h.persist).not.toHaveBeenCalled();
     });
   });

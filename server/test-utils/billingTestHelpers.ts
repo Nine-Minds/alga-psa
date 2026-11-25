@@ -1283,7 +1283,12 @@ export async function generateInvoiceForCycle(
     };
   }
 
-  return generateInvoiceForSelectionInputs(selectorInputs, options, { billingCycleId });
+  // This helper explicitly requests a cycle's invoice, including after a client
+  // merge. Calendar bridge metadata alone must not select the invoice profile.
+  return generateInvoiceForSelectionInputs(selectorInputs, {
+    ...options,
+    billingProfileId: options.billingProfileId ?? cycle.billing_profile_id ?? undefined,
+  }, { billingCycleId });
 }
 
 // generateManualInvoice returns a {success, invoice} | {success:false, error}
