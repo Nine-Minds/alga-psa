@@ -408,6 +408,13 @@
         "used": "Verwendet",
         "expired": "Abgelaufen",
         "revoked": "Widerrufen"
+      },
+      "lastSentPrefix": "Zuletzt gesendet:",
+      "resendCount_one": "einmal erneut gesendet",
+      "resendCount_other": "{{count}}-mal erneut gesendet",
+      "unusable": {
+        "contactInactive": "Dieser Kontakt ist inaktiv, daher kann der Link nicht verwendet werden. Aktivieren Sie den Kontakt wieder und senden Sie dann eine neue Einladung.",
+        "emailChanged": "Diese Einladung ging an eine Adresse, die der Kontakt nicht mehr hat, daher funktioniert der Link nicht mehr. Senden Sie die Einladung erneut, damit ein neuer Link an die aktuelle Adresse des Kontakts geht."
       }
     },
     "actions": {
@@ -455,13 +462,15 @@
         "contactNotFound": "Kontakt nicht gefunden.",
         "contactMissingEmail": "Der Kontakt hat keine E-Mail-Adresse. Bitte fügen Sie dem Kontakt eine E-Mail-Adresse hinzu, bevor Sie eine Einladung senden.",
         "contactInvalidEmail": "Der Kontakt hat eine ungültige E-Mail-Adresse. Bitte aktualisieren Sie den Kontakt mit einer gültigen E-Mail-Adresse, bevor Sie eine Einladung senden.",
+        "contactInactive": "Dieser Kontakt ist inaktiv. Aktivieren Sie den Kontakt wieder, bevor Sie ihn zum Kundenportal einladen.",
         "userExistsForContact": "Für diesen Kontakt existiert bereits ein Benutzerkonto. Verwenden Sie die Passwort-Zurücksetzung anstatt eine Einladung zu senden.",
         "portalUserAlreadyExists": "Diese E-Mail-Adresse gehört bereits zu einem anderen Benutzerkonto in dieser Organisation.",
         "noDefaultClient": "Kein Standard-Client für diesen Mandanten konfiguriert. Bitte legen Sie in den allgemeinen Einstellungen einen Standard-Client fest.",
         "noDefaultLocation": "Der Standard-Client muss einen Standard-Standort konfiguriert haben, um Portaleinladungen zu senden.",
         "noLocationEmail": "Der Standort des Standard-Clients muss eine Kontakt-E-Mail-Adresse konfiguriert haben.",
         "noBaseUrl": "Die Basis-URL ist nicht für Portaleinladungen konfiguriert.",
-        "invitationNotFound": "Einladung nicht gefunden oder bereits verwendet."
+        "invitationNotFound": "Einladung nicht gefunden oder bereits verwendet.",
+        "rateLimited": "Zu viele Einladungsversuche für diesen Kontakt. Bitte versuchen Sie es später erneut."
       },
       "userNotFound": "Kundenportalbenutzer nicht gefunden",
       "validationErrorTitle": "Validierungsfehler"
@@ -637,7 +646,8 @@
       "phoneNumber": "Telefonnummer",
       "actions": "Aktionen",
       "role": "Rolle",
-      "location": "Standort"
+      "location": "Standort",
+      "portalInvitation": "Portal-Einladung"
     },
     "filter": {
       "show": "Anzeigen:",
@@ -646,7 +656,11 @@
       "all": "Alle Kontakte",
       "searchPlaceholder": "Kontakte suchen...",
       "allLocations": "Alle Standorte",
-      "noLocation": "Kein Standort"
+      "noLocation": "Kein Standort",
+      "allInvitationStates": "Beliebiger Einladungsstatus",
+      "invitationExpired": "Abgelaufene Einladungen",
+      "invitationPending": "Ausstehende Einladungen",
+      "invitationExpiredOrPending": "Abgelaufen oder ausstehend"
     },
     "actions": {
       "openMenu": "Menü öffnen",
@@ -655,12 +669,23 @@
       "selectAll": "Alle Kontakte auswählen",
       "selectContact": "{{name}} auswählen",
       "inviteSelected": "Zum Portal einladen ({{selected}})",
-      "inviteAllEligible": "Alle berechtigten einladen"
+      "inviteAllEligible": "Alle berechtigten einladen",
+      "resendExpired": "Abgelaufene erneut senden",
+      "resendPending": "Ausstehende erneut senden",
+      "resendOpen": "Abgelaufene oder ausstehende erneut senden"
     },
     "errors": {
       "loadFailed": "Kontakte konnten nicht geladen werden.",
       "loadingTitle": "Fehler beim Laden der Kontakte",
       "retryFailed": "Kontakte konnten nicht geladen werden. Bitte erneut versuchen."
+    },
+    "invitation": {
+      "none": "Nicht eingeladen",
+      "pendingUntil": "Ausstehend bis {{date}}",
+      "expired": "Einladung abgelaufen",
+      "activeUser": "Aktiver Portalbenutzer",
+      "inactiveUser": "Inaktiver Portalbenutzer",
+      "contactInactive": "Einladung nicht nutzbar (Kontakt inaktiv)"
     }
   },
   "bulkPortalInvitation": {
@@ -673,21 +698,51 @@
     "skipReasons": {
       "alreadyHasPortalAccess": "hat bereits Portalzugriff",
       "missingEmail": "keine verwendbare E-Mail-Adresse",
-      "sharedMailbox": "gemeinsames Postfach"
+      "sharedMailbox": "gemeinsames Postfach",
+      "emailInUse": "E-Mail-Adresse gehört bereits einem anderen Benutzer",
+      "inactiveContact": "inaktiver Kontakt"
     },
     "actions": {
       "send": "{{total}} Einladungen senden",
-      "sending": "Wird gesendet..."
+      "sending": "Wird gesendet...",
+      "resendExpired_one": "{{count}} abgelaufene Einladung erneut senden",
+      "resendExpired_other": "{{count}} abgelaufene Einladungen erneut senden",
+      "resendPending_one": "{{count}} ausstehende Einladung erneut senden",
+      "resendPending_other": "{{count}} ausstehende Einladungen erneut senden",
+      "resendOpen_one": "{{count}} abgelaufene oder ausstehende Einladung erneut senden",
+      "resendOpen_other": "{{count}} abgelaufene oder ausstehende Einladungen erneut senden"
     },
     "results": {
       "summary": "{{sent}} gesendet, {{skipped}} übersprungen, {{failed}} fehlgeschlagen.",
       "sent": "Gesendet",
       "skipped": "Übersprungen",
-      "failed": "Fehlgeschlagen"
+      "failed": "Fehlgeschlagen",
+      "reasons": {
+        "contactNotFound": "Kontakt nicht gefunden",
+        "missingEmail": "Keine E-Mail-Adresse beim Kontakt",
+        "invalidEmail": "Die E-Mail-Adresse des Kontakts ist ungültig",
+        "userExists": "Hat bereits ein Portalkonto",
+        "emailInUse": "Die E-Mail-Adresse gehört einem anderen Benutzer",
+        "permissionDenied": "Sie dürfen diesen Kontakt nicht einladen",
+        "stateMismatch": "Die Einladung befindet sich nicht mehr im ausgewählten Status",
+        "inactiveContact": "Der Kontakt ist inaktiv",
+        "rateLimited": "Zu viele Einladungsversuche für diesen Kontakt. Bitte versuchen Sie es später erneut.",
+        "invitationFailed": "Die Einladung konnte nicht gesendet werden"
+      }
     },
     "errors": {
       "loadFailed": "Es konnte nicht ermittelt werden, wer eingeladen werden kann. Bitte erneut versuchen.",
-      "sendFailed": "Die Einladungen konnten nicht gesendet werden. Bitte erneut versuchen."
+      "sendFailed": "Die Einladungen konnten nicht gesendet werden. Bitte erneut versuchen.",
+      "statesUnavailable": "Es konnte nicht ermittelt werden, welche Einladungen für diesen Kunden offen sind.",
+      "batchLimitExceeded": "Sie können höchstens 500 Kontakte auf einmal einladen.",
+      "noTargetsSelected": "Wählen Sie mindestens einen Kontakt aus, den Sie einladen möchten."
+    },
+    "resendTitle": "Einladungen zum Kundenportal erneut senden",
+    "resendCount_one": "{{count}} Kontakt erhält seine Einladung erneut, mit dem vollen Gültigkeitszeitraum.",
+    "resendCount_other": "{{count}} Kontakte erhalten ihre Einladung erneut, mit dem vollen Gültigkeitszeitraum.",
+    "states": {
+      "pending": "Ausstehend",
+      "expired": "Abgelaufen"
     }
   },
   "contactsLayout": {
@@ -808,6 +863,7 @@
       "signedIn": "Portal · angemeldet: {{when}}",
       "neverSignedIn": "Portal · noch nie angemeldet",
       "invited": "Portal · eingeladen",
+      "invitationExpired": "Portal · Einladung abgelaufen",
       "noAccess": "Kein Portalzugriff"
     },
     "portal": {
@@ -823,6 +879,7 @@
       "deactivated": "Deaktiviert",
       "activeAccount": "Aktives Konto",
       "invitationSent": "Einladung gesendet",
+      "invitationExpired": "Einladung abgelaufen",
       "noAccess": "Kein Zugriff"
     },
     "tickets": {

@@ -6,6 +6,7 @@ import { assertMspPermission } from '../../lib/authHelpers';
 import type { Knex } from 'knex';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { createTicketReadScope } from '@alga-psa/authorization/ticketScopeAuthorization';
+import { invitationRefusedAtUseTime } from '@alga-psa/portal-shared/lib/portalInvitationStateQuery';
 
 export interface ContactTicketSummaryRow {
   ticket_id: string;
@@ -45,7 +46,19 @@ export interface ContactPortalSummary {
   hasAccount: boolean;
   accountInactive: boolean;
   lastSignIn: string | null;
+  /**
+   * When the contact's latest invitation last went out — the resend date once it
+   * was chased up, not the day the row was first written.
+   */
   invitedAt: string | null;
+  /**
+   * The standing of that latest invitation. Lapsed invitations are retained, so
+   * "there is a row" no longer means "an invitation is outstanding"; `expired`
+   * also covers a link the setup page refuses (deactivated contact, or an
+   * address the contact no longer has), by the same rule the client's contact
+   * list classifies on.
+   */
+  invitationState: 'none' | 'pending' | 'expired';
 }
 
 export interface ContactRelatedWorkSummary {
@@ -233,7 +246,7 @@ export const getContactPortalSummary = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx) => {
-    const [portalUser, latestInvitation] = await Promise.all([
+    const [portalUser, latestInvitation, contactRow, additionalAddresses] = await Promise.all([
       scopedTable(trx, tenant, 'users')
         .where({ contact_id: contactId, user_type: 'client' })
         .select('is_inactive', 'last_login_at')
@@ -241,15 +254,54 @@ export const getContactPortalSummary = withAuth(async (
       scopedTable(trx, tenant, 'portal_invitations')
         .where({ contact_id: contactId })
         .orderBy('created_at', 'desc')
-        .select('created_at')
+        .orderBy('invitation_id', 'desc')
+        .select('created_at', 'expires_at', 'used_at', 'email', 'metadata')
         .first(),
+      scopedTable(trx, tenant, 'contacts')
+        .where({ contact_name_id: contactId })
+        .select('email', 'is_inactive')
+        .first(),
+      // An invitation mailed to an address the MSP later kept as an additional
+      // one still reaches this contact, so the tile judges the link against
+      // every address they can receive at — the rule verifyToken applies.
+      scopedTable(trx, tenant, 'contact_additional_email_addresses')
+        .where({ contact_name_id: contactId })
+        .select('email_address'),
     ]);
+
+    // Lapsed invitations are kept for the MSP's "who never used theirs?" view,
+    // so the tile has to say which of them is still outstanding instead of
+    // reading "Invitation sent" for ever. A used or revoked latest row means
+    // there is nothing outstanding (revoking stamps used_at).
+    const invitationState: ContactPortalSummary['invitationState'] = !latestInvitation
+      ? 'none'
+      : latestInvitation.used_at
+        ? 'none'
+        : new Date(latestInvitation.expires_at) < new Date()
+          ? 'expired'
+          : invitationRefusedAtUseTime({
+            contactInactive: contactRow?.is_inactive,
+            contactEmails: [
+              contactRow?.email,
+              ...(additionalAddresses ?? []).map((row: { email_address: string | null }) => row.email_address),
+            ],
+            invitationEmail: latestInvitation.email,
+          })
+            ? 'expired'
+            : 'pending';
+
+    // A resend renews the row it reuses, so created_at alone would keep
+    // reporting the first attempt long after the contact was chased up.
+    const lastSentAt = latestInvitation?.metadata?.last_sent_at;
+    const invitedAt = (typeof lastSentAt === 'string' ? lastSentAt : null)
+      ?? (latestInvitation?.created_at ? new Date(latestInvitation.created_at).toISOString() : null);
 
     return {
       hasAccount: Boolean(portalUser),
       accountInactive: Boolean(portalUser?.is_inactive),
       lastSignIn: portalUser?.last_login_at ? new Date(portalUser.last_login_at).toISOString() : null,
-      invitedAt: latestInvitation?.created_at ? new Date(latestInvitation.created_at).toISOString() : null,
+      invitedAt,
+      invitationState,
     };
   });
 });
