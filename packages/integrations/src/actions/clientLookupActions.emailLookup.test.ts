@@ -35,6 +35,13 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
+vi.mock('@alga-psa/authorization/clientScopeAuthorization', () => ({
+  createClientScopeContext: async () => ({
+    narrowing: async () => ({ narrowed: false, apply: (query: unknown) => query }),
+    permits: async () => true,
+  }),
+}));
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => async (...args: any[]) => fn({ user_id: 'user-1' }, { tenant: 'tenant-123' }, ...args),
 }));

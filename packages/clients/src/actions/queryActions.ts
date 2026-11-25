@@ -586,9 +586,13 @@ export const findContactByEmailAddress = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
-    const contact = await withTransaction(knex, async (trx: Knex.Transaction) =>
-      ContactModel.getContactByEmail(email, tenant, trx)
-    );
+    const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const found = await ContactModel.getContactByEmail(email, tenant, trx);
+      if (!found) return null;
+      // LEVERAGE: pattern scoped-email-lookup — find by email, then return null unless the contact is in the caller's read scope.
+      const scope = await createClientScopeContext(trx, tenant, user);
+      return (await scope.permits('contact', found.contact_name_id)) ? found : null;
+    });
 
     return contact || null;
   } catch (error) {
