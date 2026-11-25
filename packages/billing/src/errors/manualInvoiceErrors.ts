@@ -1,4 +1,5 @@
 export type ManualInvoiceErrorCode =
+  | 'BILLING_PROFILE_MISMATCH'
   | 'NO_BILLING_EMAIL'
   | 'TIME_APPROVAL_REQUIRED'
   | 'USAGE_RECORDS_MISSING'

@@ -50,6 +50,7 @@ describe('client portal feature settings actions', () => {
 
     await expect(getClientPortalFeatureSettings()).resolves.toEqual({
       appointmentsEnabled: true,
+      invitationValidityDays: 7,
     });
   });
 
@@ -66,6 +67,7 @@ describe('client portal feature settings actions', () => {
       appointmentsEnabled: false,
     })).resolves.toEqual({
       appointmentsEnabled: false,
+      invitationValidityDays: 7,
     });
 
     expect(storedSettings).toEqual({
@@ -76,6 +78,28 @@ describe('client portal feature settings actions', () => {
       },
     });
     expect(mergeMock).toHaveBeenCalledOnce();
+  });
+
+  it('stores the invitation validity clamped to the allowed range', async () => {
+    const { updateClientPortalFeatureSettings } = await import(
+      './clientPortalFeatureSettingsActions'
+    );
+
+    await expect(updateClientPortalFeatureSettings({
+      invitationValidityDays: 14,
+    })).resolves.toEqual({
+      appointmentsEnabled: true,
+      invitationValidityDays: 14,
+    });
+    expect(storedSettings).toEqual({ clientPortal: { invitationValidityDays: 14 } });
+
+    await expect(updateClientPortalFeatureSettings({
+      invitationValidityDays: 400,
+    })).resolves.toEqual({
+      appointmentsEnabled: true,
+      invitationValidityDays: 30,
+    });
+    expect(storedSettings).toEqual({ clientPortal: { invitationValidityDays: 30 } });
   });
 
   it('requires settings:update permission', async () => {

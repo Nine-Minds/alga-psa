@@ -121,6 +121,9 @@ jobs:
     needs: [images, artifact-drift]
     runs-on: ubuntu-latest
     timeout-minutes: 12
+    permissions:
+      contents: read
+      actions: read
     services:
       postgres:
         image: ${{ needs.images.outputs.pgvector }}
@@ -160,7 +163,7 @@ jobs:
       - run: npm ci
 
       - name: Structural N-1 assertion self-tests
-        run: node --test scripts/tests/n1-schema.test.mjs scripts/tests/smoke-failure.test.mjs
+        run: node --test scripts/tests/n1-schema.test.mjs scripts/tests/smoke-failure.test.mjs scripts/tests/resolve-upgrade-base.test.mjs scripts/tests/upgrade-schema-source.test.mjs
 
       - name: Install poppler-utils (pdftotext, used by smoke suites)
         run: sudo apt-get update && sudo apt-get install -y poppler-utils
@@ -170,13 +173,20 @@ jobs:
           base="$(node scripts/ci/resolve-base.mjs)"
           echo "BASE_SHA=$base" >> "$GITHUB_ENV"
 
-      - name: Baseline schema + seed, apply PR migrations, N-1 assertions, release-tree smoke
+      - name: Resolve verified upgrade baseline
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if [ -n "$BASE_SHA" ]; then
-            node scripts/ci/upgrade-order.mjs --base "$BASE_SHA" --main-ref origin/main
-          else
-            node scripts/ci/upgrade-order.mjs --main-ref origin/main
+          if [ -z "$BASE_SHA" ]; then
+            echo "BASE_SHA=$(git rev-parse origin/main)" >> "$GITHUB_ENV"
+            export BASE_SHA="$(git rev-parse origin/main)"
           fi
+          verified="$(node scripts/ci/resolve-upgrade-base.mjs)"
+          echo "UPGRADE_BASE_SHA=$verified" >> "$GITHUB_ENV"
+
+      - name: Candidate bootstrap, current-base schema, verified-base upgrade and release-tree smoke
+        run: |
+          node scripts/ci/upgrade-order.mjs --base "$UPGRADE_BASE_SHA" --schema-base "$BASE_SHA" --main-ref origin/main
 
   hot-path-budget:
     name: hot-path-budget

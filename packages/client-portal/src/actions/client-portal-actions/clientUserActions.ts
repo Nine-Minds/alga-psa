@@ -824,7 +824,7 @@ export const checkClientPortalPermissions = withAuth(async (
 ): Promise<{
   hasBillingAccess: boolean;
   hasUserManagementAccess: boolean;
-  hasClientSettingsAccess: boolean;
+  hasClientReadAccess: boolean;
   hasAccountAccess: boolean;
   hasVisibilityGroupAccess: boolean;
   hasProjectAccess: boolean;
@@ -870,7 +870,7 @@ export const checkClientPortalPermissions = withAuth(async (
     return {
       hasBillingAccess: hasBilling,
       hasUserManagementAccess: hasUser,
-      hasClientSettingsAccess: hasClient,
+      hasClientReadAccess: hasClient,
       // Account access requires both hosted tenant and settings permission
       hasAccountAccess: isHosted && hasSettings,
       hasVisibilityGroupAccess,
@@ -887,7 +887,7 @@ export const checkClientPortalPermissions = withAuth(async (
     return {
       hasBillingAccess: false,
       hasUserManagementAccess: false,
-      hasClientSettingsAccess: false,
+      hasClientReadAccess: false,
       hasAccountAccess: false,
       hasVisibilityGroupAccess: false,
       hasProjectAccess: false,

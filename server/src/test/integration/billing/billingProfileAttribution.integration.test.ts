@@ -248,6 +248,64 @@ async function chargesFor(invoiceId: string) {
 }
 
 describe('billing profiles S2 — charge attribution and snapshots (T004, T010, T014, T016, T017)', () => {
+  it.each([false, true])('keeps default-profile hourly work on its own cycle when a sibling cycle sorts first (explicit profile: %s)', async (explicitProfile) => {
+    const { clientId, cycleId } = await seedClient(`Default profile cycle regression ${explicitProfile}`);
+    const defaultProfileId = await ensureDefaultBillingProfile({ db, tenantId }, clientId);
+    const separateProfileId = await createBillingProfile({ db, tenantId }, clientId, 'Separate site');
+    await table('client_billing_profiles').where({ billing_profile_id: separateProfileId })
+      .update({ bills_separately: true });
+    const wrongCycleId = `00000000-0000-4000-8000-${uuidv4().slice(-12)}`;
+    expect(wrongCycleId < cycleId).toBe(true);
+    const originalCycle = await table('client_billing_cycles').where({ billing_cycle_id: cycleId }).first();
+    await table('client_billing_cycles').insert({
+      ...originalCycle, billing_cycle_id: wrongCycleId, billing_profile_id: separateProfileId,
+    });
+    const hourly = await createHourlyLine(clientId, `Default hourly work ${explicitProfile}`);
+    await assignServiceTaxRate({ db, tenantId, clientId } as any, '*', 'US-NY', { onlyUnset: true });
+    const ticketId = await createTicket({ db, tenantId }, {
+      clientId, title: 'Default profile work', ticketNumber: `PROFILE-CYCLE-${explicitProfile}`, billingProfileId: defaultProfileId,
+    });
+    const entryId = await createApprovedTimeEntry({ db, tenantId }, {
+      userId, ticketId, serviceId: hourly.serviceId, contractLineId: hourly.contractLineId,
+      workDate: '2024-12-15', minutes: 60,
+    });
+    const dueWork = await getAvailableRecurringDueWork({
+      dateRange: { from: '2024-12-01', to: JANUARY_START }, pageSize: 100,
+    } as any) as any;
+    const member = dueWork.invoiceCandidates.flatMap((candidate: any) => candidate.members)
+      .find((row: any) => row.clientId === clientId && row.invoiceWindowStart === JANUARY_START);
+    expect(member).toBeTruthy();
+    expect(member.invoiceBillingProfileId).toBe(defaultProfileId);
+    expect(member.billingCycleId).toBe(cycleId);
+    const preview = await previewGroupedInvoicesForSelectionInputs([
+      { previewGroupKey: 'default-work', selectorInputs: [member.selectorInput] },
+    ]) as any;
+    expect(preview).toMatchObject({ success: true, previews: [{ billingProfileId: defaultProfileId }] });
+
+    transactionControl.useRealTransactions = true;
+    const refusedPreview = await previewGroupedInvoicesForSelectionInputs([
+      { previewGroupKey: 'wrong-profile', selectorInputs: [member.selectorInput], billingProfileId: separateProfileId },
+    ]) as any;
+    expect(refusedPreview).toMatchObject({ success: false, code: 'BILLING_PROFILE_MISMATCH' });
+    const refused = await generateGroupedInvoicesAsRecurringBillingRun({ groupedTargets: [{
+      groupKey: 'wrong-profile', selectorInputs: [member.selectorInput], billingProfileId: separateProfileId,
+      billingCycleId: wrongCycleId,
+    }] });
+    expect(refused).toMatchObject({ invoicesCreated: 0, failures: [{ code: 'BILLING_PROFILE_MISMATCH' }] });
+    expect(await table('time_entries').where({ entry_id: entryId }).first()).toMatchObject({ invoiced: false });
+
+    // Even a stale browser that still submits the wrong bridge must be safe.
+    const result = await generateGroupedInvoicesAsRecurringBillingRun({ groupedTargets: [{
+      groupKey: 'default-work', selectorInputs: [member.selectorInput], billingCycleId: wrongCycleId,
+      ...(explicitProfile ? { billingProfileId: preview.previews[0].billingProfileId } : {}),
+    }] });
+    expect(result).toMatchObject({ invoicesCreated: 1, failedCount: 0 });
+    const invoice = await table('invoices').where({ client_id: clientId }).first();
+    expect(invoice).toMatchObject({ billing_profile_id: defaultProfileId, billing_cycle_id: cycleId, status: 'draft' });
+    expect((await chargesFor(invoice.invoice_id)).every((charge: any) => charge.billing_profile_id === defaultProfileId)).toBe(true);
+    expect(await table('time_entries').where({ entry_id: entryId }).first()).toMatchObject({ invoiced: true });
+  }, HOOK_TIMEOUT);
+
   beforeAll(async () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
     // Dedicated to this feature's recurring profile acceptance fixture. Never

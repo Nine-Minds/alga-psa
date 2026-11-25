@@ -65,7 +65,7 @@ vi.mock('google-auth-library', () => ({
     }
   },
 }));
-vi.mock('googleapis', () => ({ google: { gmail: () => ({}) } }));
+vi.mock('googleapis/build/src/apis/gmail/index.js', () => ({ gmail: () => ({}) }));
 
 vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueue', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/shared/services/email/unifiedInboundEmailQueue')>();

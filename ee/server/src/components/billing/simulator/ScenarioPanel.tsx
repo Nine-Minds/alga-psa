@@ -5,6 +5,7 @@ import { ChevronRight } from "lucide-react";
 import { Button } from "@alga-psa/ui/components/Button";
 import { DatePicker } from "@alga-psa/ui/components/DatePicker";
 import { UnitOfMeasureInput } from "@alga-psa/ui/components/UnitOfMeasureInput";
+import { currencyFractionDigits, toCalendarDateString } from "@alga-psa/core";
 import { labelForUnitCode } from "@alga-psa/core/unitOfMeasure";
 import { dateFromString, dateToString } from "@alga-psa/ui/lib/dateInput";
 import { cn } from "@alga-psa/ui/lib/utils";
@@ -316,6 +317,39 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
   onAdjustmentsChange,
 }) => {
   const { t } = useTranslation("msp/contracts");
+  const { money } = useCurrencyFormat();
+  const scheduleRateFactor = 10 ** currencyFractionDigits(currencyCode);
+  const eligibleScheduleLines = lines.filter((line) => {
+    if (line.contract_line_type !== "Fixed") return false;
+    const services = line.services.filter((service) =>
+      service.item_kind != null && service.item_kind !== "product",
+    );
+    const fixedServices = services.filter((service) =>
+      service.configuration.configuration_type === "Fixed",
+    );
+    // Match live billing and the action guard: a non-product fallback bills
+    // the fixed fee only when no Fixed services exist. Unit members suppress it.
+    return fixedServices.length === 0
+      ? services.length > 0
+      : fixedServices.some((service) =>
+          service.configuration.configuration_type === "Fixed" &&
+          service.configuration.pricing_basis !== "unit",
+        );
+  });
+  // Keep inactive lines available for historical bindings; only the warning
+  // counts active lines. Older snapshots and scenario-added lines omit status.
+  const activeScheduleLineCount = eligibleScheduleLines.filter((line) => line.is_active !== false).length;
+  const [newScheduleLineKey, setNewScheduleLineKey] = useState("");
+  const selectedScheduleLineKey = eligibleScheduleLines.some((line) => line.key === newScheduleLineKey)
+    ? newScheduleLineKey
+    : eligibleScheduleLines.length === 1 ? eligibleScheduleLines[0].key : "";
+  const hasUnitPricedLines = lines.some((line) =>
+    !eligibleScheduleLines.some((eligible) => eligible.key === line.key) &&
+    line.contract_line_type === "Fixed" && line.services.some((service) =>
+      service.item_kind !== "product" && service.configuration.configuration_type === "Fixed" &&
+      service.configuration.pricing_basis === "unit",
+    ),
+  );
   const [expandedLineKeys, setExpandedLineKeys] = useState<Set<string>>(
     new Set(),
   );
@@ -1498,14 +1532,25 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
               {t("contractSimulator.scenario.pricingSchedules", {
                 defaultValue: "Pricing schedules",
               })}
+              <select
+                aria-label={t("pricingSchedules.dialog.fields.appliesTo", { defaultValue: "Applies to" })}
+                className={fieldClass}
+                value={selectedScheduleLineKey}
+                onChange={(event) => setNewScheduleLineKey(event.target.value)}
+              >
+                <option value="" disabled>{t("pricingSchedules.dialog.fields.appliesToPlaceholder", { defaultValue: "Select a fixed-fee line" })}</option>
+                {eligibleScheduleLines.map((line) => <option key={line.key} value={line.key}>{line.contract_line_name}</option>)}
+              </select>
               <button
                 type="button"
-                className="text-[10px] text-[rgb(var(--color-primary-600))]"
-                onClick={() =>
+                disabled={!selectedScheduleLineKey}
+                className="text-[10px] text-[rgb(var(--color-primary-600))] disabled:opacity-50"
+                onClick={() => selectedScheduleLineKey &&
                   onPricingSchedulesChange([
                     ...pricingSchedules,
                     {
-                      effective_date: `${new Date().toISOString().slice(0, 10)}T00:00:00Z`,
+                      contract_line_key: selectedScheduleLineKey,
+                      effective_date: `${toCalendarDateString(new Date())}T00:00:00Z`,
                       end_date: null,
                       custom_rate: null,
                     },
@@ -1517,11 +1562,17 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                 })}
               </button>
             </div>
+            {eligibleScheduleLines.length === 0 && <p className="mt-2 text-xs">
+              {t("pricingSchedules.dialog.empty.noEligibleLines", { defaultValue: "This contract has no fixed-fee line, so a pricing schedule has nothing to reprice." })}
+            </p>}
+            {hasUnitPricedLines && <p className="mt-2 text-xs">
+              {t("pricingSchedules.dialog.notices.unitPricedExcluded", { defaultValue: "Lines that bill per unit are not listed: a pricing schedule never changes a per-unit price. Change the unit price on the line instead." })}
+            </p>}
             {pricingSchedules.length > 0 && (
               <div className="mt-2 grid grid-cols-[1fr_1fr_1fr_auto] gap-1 text-[9px] text-[rgb(var(--color-text-400))]">
-                <span>Starts</span>
-                <span>Ends</span>
-                <span>{t("contractSimulator.scenario.columns.rate", { defaultValue: "Rate" })}</span>
+                <span>{t("pricingSchedules.list.columns.effectiveDate", { defaultValue: "Effective Date" })}</span>
+                <span>{t("pricingSchedules.list.columns.endDate", { defaultValue: "End Date" })}</span>
+                <span>{t("pricingSchedules.dialog.fields.lineFee", { defaultValue: "Fee per billing period" })}</span>
                 <span className="w-3" />
               </div>
             )}
@@ -1530,6 +1581,34 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                 key={index}
                 className="mt-1 grid grid-cols-[1fr_1fr_1fr_auto] gap-1"
               >
+                <div className="col-span-4">
+                  <select
+                    aria-label={t("pricingSchedules.list.columns.appliesTo", { defaultValue: "Applies To" })}
+                    className={fieldClass}
+                    value={schedule.contract_line_key ?? ""}
+                    onChange={(event) => onPricingSchedulesChange(pricingSchedules.map((candidate, candidateIndex) =>
+                      candidateIndex === index ? { ...candidate, contract_line_key: event.target.value } : candidate,
+                    ))}
+                  >
+                    {!schedule.contract_line_key && <option value="" disabled>{t("pricingSchedules.list.values.wholeContract", { defaultValue: "Whole contract" })}</option>}
+                    {schedule.contract_line_key && !eligibleScheduleLines.some((line) => line.key === schedule.contract_line_key) && (
+                      <option value={schedule.contract_line_key} disabled>{lines.find((line) => line.key === schedule.contract_line_key)?.contract_line_name ?? schedule.contract_line_key}</option>
+                    )}
+                    {eligibleScheduleLines.map((line) => <option key={line.key} value={line.key}>{line.contract_line_name}</option>)}
+                  </select>
+                  {!schedule.contract_line_key && <p role="status" className="mt-1 text-xs text-warning">
+                    {activeScheduleLineCount > 1 && schedule.custom_rate != null
+                      ? t("pricingSchedules.dialog.notices.wholeContractEffect", {
+                          defaultValue: "Whole contract: fallback fee of {{amount}} per active fixed-fee line per billing period ({{count}} lines). Line-specific schedules take precedence.",
+                          count: activeScheduleLineCount,
+                          amount: money(schedule.custom_rate, currencyCode),
+                        })
+                      : t("pricingSchedules.dialog.notices.wholeContract", { defaultValue: "Whole contract: fallback schedule for active fixed-fee lines. Line-specific schedules take precedence." })}
+                  </p>}
+                  {schedule.contract_line_key && <p className="mt-1 text-xs">
+                    {t("pricingSchedules.dialog.fields.lineFeeHelpMixed", { defaultValue: "Replaces the bundle fee of this line in every billing period the schedule covers. Members priced per unit keep their own unit price." })}
+                  </p>}
+                </div>
                 <DatePicker
                   label={t(
                     "contractSimulator.scenario.fields.scheduleEffectiveDate",
@@ -1582,11 +1661,12 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                       },
                     )}
                     type="number"
+                    step={1 / scheduleRateFactor}
                     className={`${fieldClass} ${adornedFieldClass}`}
                     value={
                       schedule.custom_rate == null
                         ? ""
-                        : schedule.custom_rate / 100
+                        : schedule.custom_rate / scheduleRateFactor
                     }
                     onChange={(event) =>
                       onPricingSchedulesChange(
@@ -1598,7 +1678,7 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                                   event.target.value === ""
                                     ? null
                                     : Math.round(
-                                        Number(event.target.value) * 100,
+                                        Number(event.target.value) * scheduleRateFactor,
                                       ),
                               }
                             : candidate,

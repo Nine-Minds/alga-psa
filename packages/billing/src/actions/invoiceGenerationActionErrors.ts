@@ -96,6 +96,9 @@ export function manualInvoiceErrorMessageKey(
   code: HandledManualInvoiceErrorCode,
 ): string | undefined {
   switch (code) {
+    case 'BILLING_PROFILE_MISMATCH':
+    case 'BILLING_PROFILE_NOT_FOUND':
+      return `msp/invoicing:manualInvoices.errors.${code}`;
     case 'NO_BILLING_EMAIL':
       return NO_BILLING_EMAIL_MESSAGE_KEY;
     case 'TIME_APPROVAL_REQUIRED':

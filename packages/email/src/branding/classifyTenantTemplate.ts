@@ -7,6 +7,7 @@ import {
 import { removeBrandLogo, stripBrandAttribution } from './brandAssets';
 import { normalizeChangesBox } from './changesBox';
 import { stripGradientFallback } from './gradientFallback';
+import { stripOrphanedBrandFooter } from './orphanedSlogan';
 import { STOCK_EMAIL_PALETTE } from './stockPalette';
 import type {
   EmailPaletteTokens,
@@ -70,10 +71,33 @@ function equalsBrandedStock(
  * attribution back on and have the footer restored. The flat gradient fallback
  * is ours too: rows written before the layout carried it must still read as
  * branded against the corrected system templates. So is the stock "Changes Made"
- * box, which moved from pre-rendered HTML to a template loop (see changesBox.ts).
+ * box, which moved from pre-rendered HTML to a template loop (see changesBox.ts),
+ * and the orphaned slogan (or empty coloured band) an older attribution strip
+ * left in the footer of rows it wrote (see orphanedSlogan.ts), which must still
+ * read as ours so the next apply rewrites that footer rather than freezing it as
+ * a hand edit.
+ *
+ * Only the footers we have shipped are ours to normalize away, though: a footer
+ * row a tenant reworded around the attribution has to survive this pass, or it
+ * would collapse to the same nothing our own footer does and read as a row the
+ * tool wrote — free for an apply to overwrite and for "Remove branding" to
+ * delete. Hence `footerRow: 'shipped-slogan'`.
+ *
+ * A footer row that is simply gone, on the other hand, reads as ours, and
+ * deliberately: the row an apply writes with the attribution hidden is byte for
+ * byte the row a tenant leaves by deleting ours, so nothing in the HTML tells
+ * the two apart — and reading its absence as a hand edit would freeze every
+ * such copy as `customized`, leaving a tenant who hid the attribution no way to
+ * ever get the footer back. The stock row holds nothing but our own attribution
+ * and slogan, and the toggle that drops it is Enterprise-only, so an apply
+ * putting that row back is the licensing rule rather than a lost edit. A footer
+ * with the tenant's own words in it is a different thing, and the mode above is
+ * what keeps it.
  */
 const withoutBrandAssets = (html: string): string =>
-  normalizeChangesBox(stripGradientFallback(stripBrandAttribution(removeBrandLogo(html))));
+  normalizeChangesBox(stripGradientFallback(stripOrphanedBrandFooter(
+    stripBrandAttribution(removeBrandLogo(html), { footerRow: 'shipped-slogan' }),
+  )));
 
 /**
  * Decides whether a tenant row is untouched, something the branding tool wrote,
