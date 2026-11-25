@@ -151,8 +151,14 @@ test.describe('Co-managed seat: the operational surface resolves per principal (
         expect(response?.status(), `${route} opens for a seat technician`).toBe(200);
       }
 
-      // No API key can be issued: the issuance boundary refuses, whatever the caller. (The profile screen that
-      // issues keys is itself not found for a seat technician, so the boundary is exercised directly.)
+      // The technician's own profile opens (user administration stays in CLOSED_ROUTES above) and offers no API
+      // Keys tab: a saved ?tab=api-keys link lands on the personal profile.
+      const profile = await page.goto(`${baseUrl}/msp/profile?tab=api-keys`, { waitUntil: 'domcontentloaded' });
+      expect(profile?.status(), '/msp/profile opens for a seat technician').toBe(200);
+      await expect(page.getByRole('tab', { name: 'API Keys' })).toHaveCount(0);
+
+      // No API key can be issued: the issuance boundary refuses, whatever the caller. Hiding the tab is not the
+      // enforcement, so the boundary is exercised directly.
       const { ApiKeyService } = await import('@alga-psa/auth');
       await expect(ApiKeyService.createApiKey(seat.userId, 'attempt', undefined, { tenantId: tenant })).rejects.toMatchObject({
         code: 'API_CREDENTIALS_REFUSED',

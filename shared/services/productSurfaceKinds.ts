@@ -46,6 +46,13 @@ export interface SurfaceKind {
    */
   home?: string;
   /**
+   * The sections of the user's own profile page (`/msp/profile`) the kind reaches: tab ids, plus the page's
+   * separate controls (`PROFILE_ONBOARDING_PREFERENCE`). Closed like everything else: a section not listed is not
+   * offered, and a deep link to it resolves to the personal profile. Absent: the kind reaches only `profile`.
+   * An ordinary principal has no kind and reaches every section its permissions allow.
+   */
+  profileSections?: readonly string[];
+  /**
    * REST requests the kind's own API keys may make (`principalApiKeyPrefix`), first match wins; anything no rule
    * opens is closed. Absent: the kind has no API surface. Only open an endpoint whose reads and writes the
    * kind's authorization rules already narrow: RBAC alone does not scope a record to the kind.
@@ -70,6 +77,9 @@ export interface SurfaceApiRule {
 export const MSP_HOME_PATHS: readonly string[] = ['/msp', '/msp/dashboard'];
 
 export const CO_MANAGED_SEAT_SURFACE = 'co_managed_seat';
+
+/** The profile page's dashboard-onboarding restore control, which sits beside the tabs rather than in one. */
+export const PROFILE_ONBOARDING_PREFERENCE = 'onboarding-preference';
 
 /** What a principal kind that is not registered gets: nothing. Unknown means closed. */
 const CLOSED_SURFACE: SurfaceKind = Object.freeze({ routes: [], capabilities: [] });
@@ -106,7 +116,13 @@ export const SURFACE_KINDS: Readonly<Record<string, SurfaceKind>> = Object.freez
       { group: 'seat_devices', access: 'open', staticPrefixes: ['/msp/assets'] },
       { group: 'seat_documents', access: 'open', staticPrefixes: ['/msp/documents'] },
       { group: 'seat_time', access: 'open', staticPrefixes: ['/msp/time-entry'] },
+      // The technician's own account page only; user administration and the rest of /msp stay closed.
+      { group: 'seat_profile', access: 'open', staticPrefixes: ['/msp/profile'] },
     ],
+    // Personal details, own password/sessions, own notification and keyboard preferences. Not API keys (the
+    // credential policy refuses them), SSO or calendar connections (tenant integrations), or the dashboard
+    // onboarding control (the dashboard is closed to the kind).
+    profileSections: ['profile', 'security', 'notifications', 'keyboard-shortcuts'],
     capabilities: ['scheduling_time_actions'],
     home: '/msp/tickets',
     // The mobile app's operational screens. Each endpoint opened here was traced to the seat rules narrowing its
@@ -247,6 +263,12 @@ export function surfaceHomeRedirect(kind: string, pathname: string): string | nu
   const home = surfaceKindRules(kind).home;
   if (!home || !MSP_HOME_PATHS.includes(surfacePath(pathname))) return null;
   return surfaceAllowsRoute(kind, home) ? home : null;
+}
+
+/** Whether the principal kind (null: an ordinary principal) reaches a section of its own profile page. */
+export function surfaceAllowsProfileSection(kind: string | null | undefined, section: string): boolean {
+  if (!kind) return true;
+  return (surfaceKindRules(kind).profileSections ?? ['profile']).includes(section);
 }
 
 export function surfaceAllowsCapability(kind: string, capability: string): boolean {

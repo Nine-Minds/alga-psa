@@ -1,0 +1,20 @@
+[
+  {
+    "id": "T001",
+    "featureIds": ["F001", "F002"],
+    "description": "With a real seat assignment, select Profile from the header, verify the displayed identity, save a personal field and reload the URL to verify persistence. Confirm the same seat still receives a 404 on user administration.",
+    "implemented": false
+  },
+  {
+    "id": "T002",
+    "featureIds": ["F003"],
+    "description": "Verify the seat profile omits API Keys and a direct tab link selects Profile. Verify the same link opens API Keys for an eligible ordinary MSP user.",
+    "implemented": false
+  },
+  {
+    "id": "T003",
+    "featureIds": ["F003"],
+    "description": "Run the existing DB-backed seat credential check and confirm general key issuance is refused and creates no key.",
+    "implemented": false
+  }
+]
