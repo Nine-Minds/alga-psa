@@ -9,10 +9,38 @@ vi.mock('uuid', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
+  assertClientPortalContactAvailable: vi.fn(async () => undefined),
   tenantDb: (conn: any) => ({
     table: (table: string) => conn(table),
     tenantJoin: (query: any) => query.join?.() ?? query,
   }),
+  // The shared user_roles write from @alga-psa/db (alga-2026-0003347). It
+  // carries the linked contact's portal-admin flag, re-derived from the roles
+  // the user ends up holding, so onboarding with a non-admin role clears a
+  // contact that was only pre-seeded as an admin by its invitation. Mirrored
+  // here against the fake tables so this suite sees the end state production
+  // sees; the helper itself is covered by packages/db/src/lib/userRoleWrites.test.ts.
+  addUserRoles: async (trx: any, tenant: string, userId: string, roleIds: string[]) => {
+    const rows = roleIds.map((role_id: string) => ({ tenant, user_id: userId, role_id }));
+    for (const row of rows) {
+      await trx('user_roles').insert(row);
+    }
+
+    const user = await trx('users').where({ tenant, user_id: userId }).first();
+    if (user?.user_type === 'client' && user.contact_id) {
+      const assigned = await Promise.all(
+        rows.map((row) => trx('roles').where({ tenant, role_id: row.role_id }).first())
+      );
+      const isClientAdmin = assigned.some(
+        (role: any) => role?.client === true && String(role?.role_name).toLowerCase() === 'admin'
+      );
+      await trx('contacts')
+        .where({ tenant, contact_name_id: user.contact_id })
+        .update({ is_client_admin: isClientAdmin });
+    }
+
+    return rows;
+  },
 }));
 
 import { createPortalUserInDBWithTrx } from '../../../../shared/models/userModel';
@@ -84,6 +112,10 @@ function createUserModelTrx(state: UserModelState) {
             first: async (...columns: string[]) => pickFields(matches[0], columns),
             // Hierarchy edges: onboarding never sets a manager.
             whereNotNull: () => ({ select: async () => [] }),
+            update: async (patch: Record<string, any>) => {
+              matches.forEach((row) => Object.assign(row, patch));
+              return matches.length;
+            },
           };
         },
       };
@@ -204,6 +236,13 @@ describe('portal user creation preserves client portal visibility assignments', 
           msp: false,
           role_name: 'User',
         },
+        {
+          role_id: 'role-admin',
+          tenant: 'tenant-1',
+          client: true,
+          msp: false,
+          role_name: 'Admin',
+        },
       ],
       users: [],
       userRoles: [],
@@ -232,14 +271,18 @@ describe('portal user creation preserves client portal visibility assignments', 
     trx = createUserModelTrx(state);
   });
 
+  // The portal role onboarding assigns is what `contacts.is_client_admin`
+  // mirrors (alga-2026-0003347), so an admin contact onboards with the client
+  // 'Admin' role; the flag the fixture pre-seeds only picks that role.
   it.each([
-    { ticketScope: 'client', isClientAdmin: false, effectiveTicketScope: 'client' },
-    { ticketScope: 'client', isClientAdmin: true, effectiveTicketScope: 'client' },
-    { ticketScope: 'contact', isClientAdmin: false, effectiveTicketScope: 'contact' },
-    { ticketScope: 'contact', isClientAdmin: true, effectiveTicketScope: 'client' },
+    { ticketScope: 'client', isClientAdmin: false, roleId: 'role-user', effectiveTicketScope: 'client' },
+    { ticketScope: 'client', isClientAdmin: true, roleId: 'role-admin', effectiveTicketScope: 'client' },
+    { ticketScope: 'contact', isClientAdmin: false, roleId: 'role-user', effectiveTicketScope: 'contact' },
+    { ticketScope: 'contact', isClientAdmin: true, roleId: 'role-admin', effectiveTicketScope: 'client' },
   ] as const)('T028: onboarding preserves $ticketScope scope and boards (admin=$isClientAdmin)', async ({
     ticketScope,
     isClientAdmin,
+    roleId,
     effectiveTicketScope,
   }) => {
     state.groups[0].ticket_scope = ticketScope;
@@ -257,12 +300,12 @@ describe('portal user creation preserves client portal visibility assignments', 
       contactId: 'contact-1',
       clientId: 'client-a',
       tenantId: 'tenant-1',
-      roleId: 'role-user',
+      roleId,
     });
 
     expect(result).toMatchObject({
       success: true,
-      roleId: 'role-user',
+      roleId,
     });
     expect(result.userId).toEqual(expect.any(String));
     expect(state.users[0]).toMatchObject({
@@ -295,6 +338,37 @@ describe('portal user creation preserves client portal visibility assignments', 
         ? { visibleContactIds: ['contact-1'], watchGrant: true, workspaceTicketIds: [] }
         : {}),
     });
+  });
+
+  // alga-2026-0003347: the pre-seeded flag only survives onboarding if the
+  // assigned role agrees. Onboarded with the plain 'User' role, the contact
+  // stops being a portal admin and narrows back to its group's own scope —
+  // otherwise the user would keep reading the whole client's tickets.
+  it('onboarding with a non-admin role clears the contact pre-seeded as portal admin', async () => {
+    state.groups[0].ticket_scope = 'contact';
+    state.contacts.push({
+      tenant: 'tenant-1',
+      contact_name_id: 'contact-1',
+      client_id: 'client-a',
+      portal_visibility_group_id: 'group-1',
+      is_client_admin: true,
+    });
+
+    const result = await createPortalUserInDBWithTrx(trx, {
+      email: 'demoted@example.com',
+      password: 'Password123!',
+      contactId: 'contact-1',
+      clientId: 'client-a',
+      tenantId: 'tenant-1',
+      roleId: 'role-user',
+    });
+
+    expect(result).toMatchObject({ success: true, roleId: 'role-user' });
+    expect(state.contacts[0].is_client_admin).toBe(false);
+
+    const visibility = await getClientContactVisibilityContext(trx, 'tenant-1', 'contact-1');
+    expect(visibility.isClientAdmin).toBe(false);
+    expect(visibility.effectiveTicketScope).toBe('contact');
   });
 
   it('T038: unassigned contacts can still complete portal user onboarding with unrestricted ticket visibility', async () => {

@@ -15,8 +15,9 @@
  * - HATEOAS link generation
  */
 
+import { lockClientPortalMutations, syncContactClientAdminFlagsForRole } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { assertSeatTechnicianWrite, assertUserRoleFloor, BaseService, ServiceContext, ListResult, isUserRoleFloorRejected, tenantDb } from '@alga-psa/db';
+import { addUserRoles, assertSeatTechnicianWrite, assertUserRoleFloor, BaseService, ServiceContext, ListResult, isUserRoleFloorRejected, removeUserRoles, setUserRoles, tenantDb } from '@alga-psa/db';
 import type { UserRoleFloorChange } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
 import { withTransaction } from '@alga-psa/db';
@@ -668,6 +669,7 @@ export class PermissionRoleService extends BaseService<IRole> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
+      await lockClientPortalMutations(trx, context.tenant);
       // Check if role exists
       const existing = await tenantDb(trx, context.tenant).table('roles')
         .where('role_id', roleId)
@@ -695,6 +697,8 @@ export class PermissionRoleService extends BaseService<IRole> {
         .where('role_id', roleId)
         .update(updateData)
         .returning('*');
+
+      await syncContactClientAdminFlagsForRole(trx, context.tenant, roleId);
 
       // Handle permissions update
       if (data.permissions !== undefined) {
@@ -1116,14 +1120,9 @@ export class PermissionRoleService extends BaseService<IRole> {
         };
       }
 
-      // Insert new user-role relationships
-      const userRoles = newRoles.map(roleId => ({
-        user_id: userId,
-        role_id: roleId,
-        tenant: context.tenant
-      }));
-
-      await tenantDb(trx, context.tenant).table('user_roles').insert(userRoles);
+      // Add the new roles, re-deriving contacts.is_client_admin from the result.
+      // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+      await addUserRoles(trx, context.tenant, userId, newRoles);
 
       // Log audit event
       await this.logAuditEvent({
@@ -1169,11 +1168,9 @@ export class PermissionRoleService extends BaseService<IRole> {
       // with no active MSP admin, is not a warning but a rejection.
       await enforceUserRoleFloor(trx, context.tenant, { kind: 'remove_roles', userId, roleIds });
 
-      // Remove the roles
-      const deletedCount = await tenantDb(trx, context.tenant).table('user_roles')
-        .where('user_id', userId)
-        .whereIn('role_id', roleIds)
-        .delete();
+      // Remove the roles, re-deriving contacts.is_client_admin from what is left.
+      // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+      const deletedCount = await removeUserRoles(trx, context.tenant, userId, roleIds);
 
       // Log audit event
       await this.logAuditEvent({
@@ -1232,21 +1229,9 @@ export class PermissionRoleService extends BaseService<IRole> {
       // A live seat technician holds the seat role and no other.
       await assertSeatTechnicianWrite(trx, context.tenant, [userId], { roleIds });
 
-      // Remove all current roles
-      await tenantDb(trx, context.tenant).table('user_roles')
-        .where('user_id', userId)
-        .delete();
-
-      // Add new roles if any
-      if (roleIds.length > 0) {
-        const userRoles = roleIds.map(roleId => ({
-          user_id: userId,
-          role_id: roleId,
-          tenant: context.tenant
-        }));
-
-        await tenantDb(trx, context.tenant).table('user_roles').insert(userRoles);
-      }
+      // Replace the role set, re-deriving contacts.is_client_admin from it.
+      // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+      await setUserRoles(trx, context.tenant, userId, roleIds);
 
       // Log audit event
       await this.logAuditEvent({

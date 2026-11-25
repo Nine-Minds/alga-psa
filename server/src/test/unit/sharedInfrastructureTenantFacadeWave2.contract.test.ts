@@ -69,7 +69,9 @@ describe('shared infrastructure tenant facade wave 2', () => {
     const scheduleEntry = read('shared/models/scheduleEntry.ts');
     const numberingService = read('shared/services/numberingService.ts');
 
-    expect(userModel).toContain("import { tenantDb } from '@alga-psa/db'");
+    // Also imports the shared user_roles write (alga-2026-0003347), so the
+    // import list is matched rather than spelled out.
+    expect(userModel).toMatch(/import \{[^}]*\btenantDb\b[^}]*\} from '@alga-psa\/db'/);
     expect(userModel).not.toMatch(/\b(?:knex|trx)\s*(?:<[^>]+>)?\(\s*['`](?:contacts|roles|user_roles|users)['`]/);
 
     expect(tagModel).toContain("import { tenantDb } from '@alga-psa/db'");

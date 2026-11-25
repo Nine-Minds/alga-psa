@@ -1028,7 +1028,21 @@ export function ContactBentoLayout({
         className="max-w-3xl"
       >
         <DialogContent>
-          <ContactPortalTab contact={contact} currentUserPermissions={userPermissions} />
+          <ContactPortalTab
+            contact={contact}
+            currentUserPermissions={userPermissions}
+            // The portal tab is where the client 'Admin' role is added and
+            // removed, and the contact's portal-admin flag mirrors that role —
+            // so the "Role" line above follows it without a page reload
+            // (alga-2026-0003347).
+            onPortalAdminChanged={(isClientAdmin) => {
+              setContact((previous) => (
+                previous.is_client_admin === isClientAdmin
+                  ? previous
+                  : { ...previous, is_client_admin: isClientAdmin }
+              ));
+            }}
+          />
         </DialogContent>
       </Dialog>
     );

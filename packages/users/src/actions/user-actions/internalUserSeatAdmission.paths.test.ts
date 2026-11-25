@@ -143,6 +143,8 @@ vi.mock('@alga-psa/db', () => {
     withTransaction: (_db: unknown, cb: (trx: any) => Promise<any>) => runTransaction(cb),
     withAdminTransaction: vi.fn(),
     validateSystemContext: vi.fn(),
+    lockClientPortalMutations: vi.fn(async () => {}),
+    assertClientPortalContactAvailable: vi.fn(async () => {}),
     tenantDb: (conn: any, _tenant: string) => ({
       table: (t: string) => conn(t),
       // Only the global email-uniqueness lookup is unscoped: no existing user.
@@ -150,6 +152,15 @@ vi.mock('@alga-psa/db', () => {
         where: () => ({ whereNot: () => ({ first: async () => null }), first: async () => null }),
       }),
     }),
+    // The user_roles write lives in @alga-psa/db and carries the linked
+    // contact's portal-admin flag sync (alga-2026-0003347); these users are
+    // internal, so that sync is a no-op. Routed through the fake table so the
+    // failing-role-insert rollback case still exercises it.
+    addUserRoles: async (trx: any, tenant: string, userId: string, roleIds: string[]) => {
+      const rows = roleIds.map((role_id: string) => ({ tenant, user_id: userId, role_id }));
+      if (rows.length > 0) await trx('user_roles').insert(rows);
+      return rows;
+    },
   };
 });
 vi.mock('@alga-psa/db/admin', () => ({

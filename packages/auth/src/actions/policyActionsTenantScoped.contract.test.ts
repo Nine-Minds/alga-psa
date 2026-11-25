@@ -11,7 +11,12 @@ describe('policy actions tenant-scoped query contract', () => {
     expect(source).toContain("tenantScopedTable(trx, 'roles', tenant)");
     expect(source).toContain("tenantScopedTable(db, 'roles', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'role_permissions', tenant)");
-    expect(source).toContain("tenantScopedTable(trx, 'user_roles', tenant)");
+    // The user_roles reads keep the structural facade; the writes moved to
+    // @alga-psa/db, which carries the contact's portal-admin flag sync and has
+    // its own tenant-scoping contract (alga-2026-0003347).
+    expect(source).toContain("scopedDb.table('user_roles')");
+    expect(source).toContain('await addUserRoles(trx, tenant, userId, [roleId]);');
+    expect(source).toContain('await removeUserRoles(trx, tenant, userId, [roleId]);');
     expect(source).toContain("tenantScopedTable(trx, 'users', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'tickets', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'policies', tenant)");

@@ -36,7 +36,8 @@ const PORTAL_INVITE_ERROR_KEYS: Partial<Record<PortalInvitationErrorCode, string
   BASE_URL_NOT_CONFIGURED: 'users.messages.error.noBaseUrl',
   INVITATION_FAILED: 'users.messages.error.sendInvitation',
   PASSWORD_TOO_SHORT: 'users.messages.error.passwordTooShort',
-  CREATE_USER_FAILED: 'users.messages.error.createClientPortalUser'
+  CREATE_USER_FAILED: 'users.messages.error.createClientPortalUser',
+  PORTAL_ROLE_NOT_CONFIGURED: 'users.messages.error.portalRoleNotConfigured'
 };
 
 // Catch-all codes whose localized message is generic ("Failed to send

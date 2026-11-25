@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { syncContactClientAdminFlag, tenantDb } from '@alga-psa/db';
 import { isCoManagedUuid } from '../../../../../packages/co-managed/src/sharedWorkIdentity';
 import type { CoManagedPortableWorkspaceManifest } from '../../../../../packages/co-managed/src/portableWorkspaceManifest';
 import { portableRestoreGlobalCatalogs, type PortableDestinationCatalogMappings, type PortableRestoreProfile,
@@ -218,6 +218,15 @@ export async function insertCoManagedPortableWorkspaceDatabase(trx: Knex.Transac
       if (Object.values(update).every(value => value == null)) continue;
       const key = Object.fromEntries(primary.get(table)!.map(column => [column, row[column]]));
       if (Object.values(key).some(value => value == null) || await own.table(table).where(key).update(update) !== 1) fail('cycle repair lost native row');
+    }
+    // Archives can predate role/flag synchronization. Converge only after all
+    // memberships and deferred contact links exist, inside this savepoint, so
+    // no restored account can regain access with an archived admin flag.
+    // Unlinked contacts retain their invitation pre-seeds.
+    for (const user of records.users) {
+      if (user.user_type === 'client' && user.contact_id) {
+        await syncContactClientAdminFlag(retained, tenant, user.user_id);
+      }
     }
     const written = Object.fromEntries(tables.map(table => [table, records[table].length]));
     // Every archive table must be accounted for: written natively, projected from history, or matched to a destination global.

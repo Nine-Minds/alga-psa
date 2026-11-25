@@ -30477,7 +30477,9 @@ paths:
                 $ref: "#/components/schemas/AccessApiErrorV1"
     post:
       summary: Assign user roles
-      description: Assigns provided role_ids to user UUID.
+      description: Assigns provided role_ids to user UUID. For a client-portal user,
+        the linked contact's portal-admin flag (is_client_admin) follows the
+        client 'Admin' role and is re-derived with this change.
       tags:
         - Access Control & Users v1
       security:
@@ -30541,7 +30543,9 @@ paths:
                 $ref: "#/components/schemas/AccessApiErrorV1"
     delete:
       summary: Remove user roles
-      description: Removes provided role_ids from user UUID.
+      description: Removes provided role_ids from user UUID. For a client-portal user,
+        the linked contact's portal-admin flag (is_client_admin) follows the
+        client 'Admin' role and is re-derived with this change.
       tags:
         - Access Control & Users v1
       security:
@@ -30605,7 +30609,10 @@ paths:
                 $ref: "#/components/schemas/AccessApiErrorV1"
     put:
       summary: Replace user roles
-      description: Replaces all role links for user UUID using transaction over user_roles.
+      description: Replaces all role links for user UUID using transaction over
+        user_roles. For a client-portal user, the linked contact's portal-admin
+        flag (is_client_admin) follows the client 'Admin' role and is re-derived
+        with this change.
       tags:
         - Access Control & Users v1
       security:

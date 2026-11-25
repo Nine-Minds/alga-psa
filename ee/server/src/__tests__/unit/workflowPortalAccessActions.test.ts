@@ -6,6 +6,22 @@ const runWithTenantMock = vi.fn();
 const upsertOAuthAccountLinkMock = vi.fn();
 const handleEligibleClientPortalProvisioningMock = vi.fn();
 
+/**
+ * The role is assigned through addUserRoles (@alga-psa/db), which carries the
+ * linked contact's portal-admin flag sync with the write, so the role decides
+ * contacts.is_client_admin from the moment it lands (alga-2026-0003347). The
+ * derivation is pinned in packages/db/src/lib/userRoleWrites.test.ts; here the
+ * call is recorded so this suite keeps checking which role is assigned.
+ */
+const addUserRolesMock = vi.fn(async (_trx: unknown, tenant: string, userId: string, roleIds: string[]) =>
+  roleIds.map((roleId) => ({ tenant, user_id: userId, role_id: roleId }))
+);
+
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/db')>()),
+  addUserRoles: (...args: Parameters<typeof addUserRolesMock>) => addUserRolesMock(...args),
+}));
+
 vi.mock('@/lib/db', () => ({
   createTenantKnex: createTenantKnexMock,
   runWithTenant: runWithTenantMock,
@@ -67,7 +83,6 @@ describe('workflow portal access actions', () => {
   });
 
   it('T025/F073: idempotently assigns client role and upserts Microsoft OAuth link', async () => {
-    const userRoleInsertMock = vi.fn(async () => [1]);
     const trxMock: any = vi.fn((table: string) => {
       if (table === 'roles') {
         return {
@@ -79,11 +94,12 @@ describe('workflow portal access actions', () => {
       if (table === 'user_roles') {
         return {
           where: vi.fn(() => ({ first: vi.fn(async () => undefined) })),
-          insert: userRoleInsertMock,
         };
       }
       throw new Error(`Unexpected table ${table}`);
     });
+    // Stands in for knex.transaction(): the role write refuses to run outside one.
+    trxMock.isTransaction = true;
     trxMock.fn = { now: vi.fn(() => 'db-now') };
 
     createTenantKnexMock.mockResolvedValue({
@@ -99,11 +115,7 @@ describe('workflow portal access actions', () => {
     });
 
     expect(roleResult).toEqual({ assigned: true, roleId: 'role-402' });
-    expect(userRoleInsertMock).toHaveBeenCalledWith({
-      tenant: 'tenant-402',
-      user_id: 'user-402',
-      role_id: 'role-402',
-    });
+    expect(addUserRolesMock).toHaveBeenCalledWith(trxMock, 'tenant-402', 'user-402', ['role-402']);
 
     await workflowUpsertMicrosoftOAuthLink({
       tenantId: 'tenant-402',

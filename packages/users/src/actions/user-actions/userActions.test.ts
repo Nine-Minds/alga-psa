@@ -52,6 +52,8 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
+  assertClientPortalContactAvailable: vi.fn(async () => undefined),
+  lockClientPortalMutations: vi.fn(async () => undefined),
   createTenantKnex: createTenantKnexMock,
   withTransaction: withTransactionMock,
   withAdminTransaction: vi.fn(),
@@ -64,6 +66,15 @@ vi.mock('@alga-psa/db', () => ({
   assertUserRoleFloor: (...args: any[]) => assertUserRoleFloorMock(...args),
   isUserRoleFloorRejected: (result: any) => result?.ok === false,
   isUserRoleFloorError: (error: any) => error?.name === 'UserRoleFloorError',
+  // The user_roles write lives in @alga-psa/db and carries the linked contact's
+  // portal-admin flag sync (alga-2026-0003347), covered by
+  // packages/db/src/lib/userRoleWrites.test.ts. Routed through the fake table so
+  // the insert these tests observe still happens.
+  addUserRoles: async (trx: any, tenant: string, userId: string, roleIds: string[]) => {
+    const rows = roleIds.map((role_id: string) => ({ tenant, user_id: userId, role_id }));
+    if (rows.length > 0) await trx('user_roles').insert(rows);
+    return rows;
+  },
   UserRoleFloorError: class UserRoleFloorError extends Error {
     readonly name = 'UserRoleFloorError';
     constructor(message: string, readonly violation: string) {

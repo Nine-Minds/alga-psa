@@ -4,8 +4,9 @@
  * server actions and used by both server actions and workflow actions.
  */
 
+import { assertClientPortalContactAvailable } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { addUserRoles, tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { hashPassword } from '../utils/encryption';
@@ -111,6 +112,7 @@ async function _createPortalUserInDBWithTrx(
   input: CreatePortalUserInput
 ): Promise<CreatePortalUserResult> {
   try {
+      await assertClientPortalContactAvailable(trx, input.tenantId, 'client', input.contactId);
       const db = tenantDb(trx, input.tenantId);
       // Check if a client-portal user already exists for this email
       // Allow the same email to exist for other user types (e.g., internal MSP users)
@@ -176,13 +178,11 @@ async function _createPortalUserInDBWithTrx(
         .insert(userData)
         .returning('*');
 
-      // Assign the role
-      await db.table('user_roles')
-        .insert({
-          user_id: user.user_id,
-          role_id: roleToAssign.role_id,
-          tenant: input.tenantId
-        });
+      // Assign the role. The role decides contacts.is_client_admin from here
+      // on; the contact's flag was only the invitation pre-seed this function
+      // reads above to pick the role.
+      // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+      await addUserRoles(trx, input.tenantId, user.user_id, [roleToAssign.role_id]);
 
       return {
         success: true,

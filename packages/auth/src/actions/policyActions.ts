@@ -1,12 +1,13 @@
 'use server'
 
+import { lockClientPortalMutations, syncContactClientAdminFlagsForRole } from '@alga-psa/db';
 import { getRoleAssignmentViolation, isMspPrincipalUserType } from '@alga-psa/types';
 import { IPermission, IRole, IPolicy, IUserRole, IUserWithRoles, ICondition, DeletionValidationResult } from '@alga-psa/types';
 import { ITicket } from '@alga-psa/types';
 import { isClientUserType } from '@alga-psa/types';
 import { PolicyEngine } from '../lib/policy/PolicyEngine';
 import { USER_ATTRIBUTES, TICKET_ATTRIBUTES } from '../lib/attributes/EntityAttributes';
-import { assertSeatTechnicianWrite, assertUserRoleFloor, createTenantKnex, isSeatTechnicianGuardError, isUserRoleFloorRejected, syncContactClientAdminFlag, tenantDb, withTransaction, type UserRoleFloorViolation } from '@alga-psa/db';
+import { addUserRoles, assertSeatTechnicianWrite, assertUserRoleFloor, createTenantKnex, isSeatTechnicianGuardError, isUserRoleFloorRejected, removeUserRoles, tenantDb, withTransaction, type UserRoleFloorViolation } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '../lib/withAuth';
 import { filterPermissionsByServedCapabilities, filterRolesByServedCapabilities } from '../lib/permissionCapabilities';
@@ -237,6 +238,7 @@ export const updateRole = withAuth(async (
     const { knex: db } = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
         await assertSecuritySettingsPermission(user, 'update', trx);
+        await lockClientPortalMutations(trx, tenant);
         const existing = await tenantScopedTable(trx, 'roles', tenant)
             .where({ role_id: roleId })
             .first();
@@ -282,6 +284,7 @@ export const updateRole = withAuth(async (
             .where({ role_id: roleId })
             .update(update)
             .returning('*');
+        await syncContactClientAdminFlagsForRole(trx, tenant, roleId);
         return updatedRole;
     });
   } catch (error) {
@@ -487,13 +490,10 @@ export const assignRoleToUser = withAuth(async (currentUser, { tenant }, userId:
             throw error;
         }
 
-        const [userRole] = await tenantScopedTable(trx, 'user_roles', tenant)
-            .insert({ user_id: userId, role_id: roleId, tenant })
-            .returning('*');
-
-        // contacts.is_client_admin mirrors the portal 'Admin' role; re-derive it
-        // in the same transaction as the role write (client users only).
-        await syncContactClientAdminFlag(trx, tenant, userId);
+        // The shared write re-derives contacts.is_client_admin from the role set
+        // in this transaction (client users only).
+        // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+        const [userRole] = await addUserRoles(trx, tenant, userId, [roleId]);
 
         return userRole;
     });
@@ -540,11 +540,10 @@ export const removeRoleFromUser = withAuth(async (currentUser, { tenant }, userI
             return userRoleFloorActionError(currentUser, floor.violation, floor.message);
         }
 
-        await tenantScopedTable(trx, 'user_roles', tenant).where({ user_id: userId, role_id: roleId }).del();
-
-        // contacts.is_client_admin mirrors the portal 'Admin' role; re-derive it
-        // in the same transaction as the role write (client users only).
-        await syncContactClientAdminFlag(trx, tenant, userId);
+        // The shared write re-derives contacts.is_client_admin from what is left
+        // in this transaction (client users only).
+        // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+        await removeUserRoles(trx, tenant, userId, [roleId]);
     });
     } catch (error) {
         const expected = authActionErrorFrom(error);

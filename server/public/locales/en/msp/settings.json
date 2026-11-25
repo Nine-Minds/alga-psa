@@ -269,6 +269,7 @@
         "sendInvitation": "Failed to send invitation",
         "sendInvitationManual": "Failed to send invitation. You can send it manually from the user list.",
         "createClientPortalUser": "Failed to create client portal user",
+        "portalRoleNotConfigured": "No client portal role is configured for this organization. Configure a client portal role and try again.",
         "clipboardUnavailable": "Clipboard API is not available in this browser.",
         "copyPortalLink": "Failed to copy portal login link",
         "fillRequiredFields": "Please fill in all required fields",

@@ -5337,7 +5337,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/users/{id}/roles",
     "displayName": "Assign user roles",
     "summary": "Assign user roles",
-    "description": "Assigns provided role_ids to user UUID.",
+    "description": "Assigns provided role_ids to user UUID. For a client-portal user, the linked contact's portal-admin flag (is_client_admin) follows the client 'Admin' role and is re-derived with this change.",
     "tags": [
       "Access Control & Users v1"
     ],
@@ -5416,7 +5416,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/users/{id}/roles",
     "displayName": "Replace user roles",
     "summary": "Replace user roles",
-    "description": "Replaces all role links for user UUID using transaction over user_roles.",
+    "description": "Replaces all role links for user UUID using transaction over user_roles. For a client-portal user, the linked contact's portal-admin flag (is_client_admin) follows the client 'Admin' role and is re-derived with this change.",
     "tags": [
       "Access Control & Users v1"
     ],
@@ -5495,7 +5495,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/users/{id}/roles",
     "displayName": "Remove user roles",
     "summary": "Remove user roles",
-    "description": "Removes provided role_ids from user UUID.",
+    "description": "Removes provided role_ids from user UUID. For a client-portal user, the linked contact's portal-admin flag (is_client_admin) follows the client 'Admin' role and is re-derived with this change.",
     "tags": [
       "Access Control & Users v1"
     ],

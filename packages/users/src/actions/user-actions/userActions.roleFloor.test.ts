@@ -44,6 +44,7 @@ class UserRoleFloorErrorStub extends Error {
 }
 
 vi.mock('@alga-psa/db', () => ({
+  lockClientPortalMutations: vi.fn(async () => undefined),
   createTenantKnex: createTenantKnexMock,
   withTransaction: withTransactionMock,
   withAdminTransaction: vi.fn(),
@@ -56,6 +57,26 @@ vi.mock('@alga-psa/db', () => ({
   isUserRoleFloorError: (error: any) => error?.name === 'UserRoleFloorError',
   UserRoleFloorError: UserRoleFloorErrorStub,
   syncContactClientAdminFlag: (...args: any[]) => syncContactClientAdminFlagMock(...args),
+  // Stand-ins for the shared role writes: the same statements against the
+  // caller's transaction followed by the flag sync, so this suite keeps
+  // asserting the writer's own sequence (guard, then delete/insert, then the
+  // re-derived flag). The helpers themselves are covered by
+  // packages/db/src/lib/userRoleWrites.test.ts.
+  setUserRoles: async (trx: any, tenant: string, userId: string, roleIds: string[]) => {
+    await trx('user_roles').where({ user_id: userId }).del();
+    if (roleIds.length > 0) {
+      await trx('user_roles').insert(roleIds.map((role_id) => ({ tenant, user_id: userId, role_id })));
+    }
+    await syncContactClientAdminFlagMock(trx, tenant, userId);
+  },
+  addUserRoles: async (trx: any, tenant: string, userId: string, roleIds: string[]) => {
+    const rows = roleIds.map((role_id) => ({ tenant, user_id: userId, role_id }));
+    if (rows.length > 0) {
+      await trx('user_roles').insert(rows);
+    }
+    await syncContactClientAdminFlagMock(trx, tenant, userId);
+    return rows;
+  },
   // The seat-technician guard has its own suite; these tests pin the writer's own behaviour.
   assertSeatTechnicianWrite: async () => undefined,
   isSeatTechnicianGuardError: () => false,

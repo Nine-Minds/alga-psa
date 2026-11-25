@@ -199,6 +199,10 @@ function buildQuery(frame: Frame, tenant: string, table: string) {
       inserted = rows;
       return builder;
     },
+    // The shared user_roles write asks for ON CONFLICT DO NOTHING; the store
+    // already keys rows by their own identity, so both are pass-throughs.
+    onConflict: () => builder,
+    ignore: () => builder,
     returning: (fields: string | readonly string[]) => {
       const list = typeof fields === 'string' ? [fields] : fields;
       return { then: (resolve: any, reject: any) => run(list).then(resolve, reject) };

@@ -21,9 +21,17 @@ describe('portal invitation setup tenant-scoped query contract', () => {
 
     expect(section).toContain('const scopedDb = tenantDb(knex, tenant);');
     expect(section).toContain("scopedDb.table('users')");
-    expect(section).toContain("scopedDb.table('contacts')");
-    expect(section).toContain("scopedDb.table('roles')");
-    expect(section).toContain("await scopedDb.table('user_roles').insert({");
+    // The role of a new portal account is resolved from the contact's
+    // portal-admin pre-mark, and user_roles is written, through @alga-psa/db:
+    // both keep their own tenant-scoping contract and the write carries the
+    // flag sync (alga-2026-0003347).
+    expect(section).toContain('await resolveInitialPortalRoleId(trx, tenant, contact.contact_name_id);');
+    expect(section).toContain('await addUserRoles(trx, tenant, user.user_id, [roleId]);');
+    // Both run in the transaction that creates the account, so a role that
+    // cannot be resolved rolls the account back instead of leaving it with no
+    // role at all.
+    expect(section).not.toContain('await withTransaction(knex, async (trx: Knex.Transaction) => {');
+    expect(section).toMatch(/newUser = await knex\.transaction\(async \(trx\) => \{[\s\S]*resolveInitialPortalRoleId[\s\S]*addUserRoles[\s\S]*\}\);/);
 
     expect(section).not.toMatch(/knex\('users'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
     expect(section).not.toMatch(/knex\('users'\)\s*[\r\n]+\s*\.where\(\{\s*user_id: existingUser\.user_id,\s*tenant\s*\}\)/);

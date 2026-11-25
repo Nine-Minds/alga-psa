@@ -1,5 +1,6 @@
 'use server'
 
+import { checkClientPortalContactAvailability } from '@alga-psa/db';
 import { assertRecordCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
 import { queueContactCreated, queueContactUpdated } from '../../lib/contactEvents';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
@@ -1888,6 +1889,19 @@ export const updateContactPortalAdminStatus = withAuth(async (
 
       if (isPortalAdmin) {
         await assertContactIsNotSharedMailbox(trx, tenant, contactId, await contactText('errors.contact.sharedMailboxAdmin'));
+      }
+
+      // contacts.is_client_admin is only a switch while the contact has no
+      // portal user: it is the invitation pre-seed that decides which role the
+      // account is created with. Once the user exists the flag is a mirror of
+      // their client 'Admin' role (alga-2026-0003347), and writing it here
+      // would disagree with the roles until the next role change. The UI hides
+      // the toggle in that state (ContactPortalTab); this is the action saying
+      // the same thing to any other caller.
+      const availability = await checkClientPortalContactAvailability(trx, tenant, contactId);
+
+      if (availability === 'occupied') {
+        throw await contactError('errors.contact.portalAdminRoleManaged');
       }
 
       const updated = await tenantScopedTable(trx, 'contacts', tenant)

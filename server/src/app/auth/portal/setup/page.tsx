@@ -27,6 +27,7 @@ const PORTAL_ERROR_CODE_KEYS: Record<PortalInvitationErrorCode, string> = {
   TENANT_CONTEXT_REQUIRED: 'auth.portalSetup.errors.tenantContextRequired',
   RESET_PASSWORD_FAILED: 'auth.portalSetup.errors.resetPasswordFailed',
   CREATE_USER_FAILED: 'auth.portalSetup.errors.createUserFailed',
+  PORTAL_ROLE_NOT_CONFIGURED: 'auth.portalSetup.errors.createUserFailed',
   SETUP_FAILED: 'auth.portalSetup.errors.setupFailed',
   VERIFICATION_FAILED: 'auth.portalSetup.errors.verificationFailed',
   INVITATION_FAILED: 'auth.portalSetup.errors.invitationFailed',

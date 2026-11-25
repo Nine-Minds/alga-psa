@@ -32,13 +32,15 @@ describe('user service role floor contract', () => {
     expect(helper).toContain('throw new ValidationError(message)');
   });
 
-  it('guards role assignment on the final role set, before the delete', () => {
+  it('guards role assignment on the final role set, before the write', () => {
     const section = sectionBetween('async assignRoles', 'Remove roles from user');
     const guard = section.indexOf("enforceUserRoleFloor(trx, context.tenant, { kind: 'set_roles', userId, roleIds })");
-    const del = section.indexOf('.del()');
+    // The delete/insert pair (and the portal admin flag sync that travels with
+    // it) is setUserRoles in @alga-psa/db; alga-2026-0003347.
+    const write = section.indexOf('setUserRoles(trx, context.tenant, userId, roleIds)');
 
     expect(guard).toBeGreaterThan(0);
-    expect(del).toBeGreaterThan(guard);
+    expect(write).toBeGreaterThan(guard);
   });
 
   it('guards role removal, and checks the user exists first', () => {
@@ -46,10 +48,10 @@ describe('user service role floor contract', () => {
 
     expect(section).toContain("throw new NotFoundError('User not found')");
     const guard = section.indexOf("enforceUserRoleFloor(trx, context.tenant, { kind: 'remove_roles', userId, roleIds })");
-    const del = section.indexOf('.del()');
+    const write = section.indexOf('removeUserRoles(trx, context.tenant, userId, roleIds)');
 
     expect(guard).toBeGreaterThan(0);
-    expect(del).toBeGreaterThan(guard);
+    expect(write).toBeGreaterThan(guard);
   });
 
   it('guards the update that gives up an active internal seat', () => {
@@ -57,6 +59,23 @@ describe('user service role floor contract', () => {
 
     expect(section).toContain('occupiesSeatNow && !occupiesSeatAfter');
     expect(section).toContain("enforceUserRoleFloor(trx, context.tenant, { kind: 'deactivate_user', userId: id })");
+  });
+
+  it('orders portal, seat and user locks consistently with creation and profile updates', () => {
+    const section = sectionBetween('async update(id: string', 'Delete user with proper cleanup');
+    const portal = section.indexOf('await lockClientPortalMutations(trx, context.tenant)');
+    const seat = section.indexOf('await lockTenantSeatState(trx, context.tenant)');
+    const row = section.indexOf('.forUpdate()');
+    expect(portal).toBeGreaterThan(0);
+    expect(seat).toBeGreaterThan(portal);
+    expect(row).toBeGreaterThan(seat);
+
+    const actions = readFileSync(resolve(__dirname, '../actions/user-actions/userActions.ts'), 'utf8');
+    const update = actions.slice(actions.indexOf('export const updateUser ='));
+    const actionPortal = update.indexOf('await lockClientPortalMutations(trx, tenant)');
+    const actionSeat = update.indexOf('await lockInternalUserSeats(trx, tenant)');
+    expect(actionPortal).toBeGreaterThan(0);
+    expect(actionSeat).toBeGreaterThan(actionPortal);
   });
 
   it('guards deletion before any cleanup runs', () => {

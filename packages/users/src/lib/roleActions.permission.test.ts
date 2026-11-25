@@ -27,6 +27,16 @@ vi.mock('@alga-psa/db', () => ({
   isUserRoleFloorRejected: (result: any) => result?.ok === false,
   // Covered by packages/db clientPortalAdminFlag.test.ts and the policyActions wiring suite.
   syncContactClientAdminFlag: async () => undefined,
+  // Stand-ins for the shared role writes, which carry that sync with the
+  // statement (alga-2026-0003347); the helpers are covered by
+  // packages/db/src/lib/userRoleWrites.test.ts.
+  addUserRoles: async (trx: any, tenant: string, userId: string, roleIds: string[]) => {
+    const rows = roleIds.map((role_id: string) => ({ tenant, user_id: userId, role_id }));
+    if (rows.length > 0) await trx('user_roles').insert(rows);
+    return rows;
+  },
+  removeUserRoles: async (trx: any, _tenant: string, userId: string, roleIds: string[]) =>
+    await trx('user_roles').where({ user_id: userId }).whereIn('role_id', roleIds).del(),
   // The seat-technician guard has its own suite; these tests pin the writer's own behaviour.
   assertSeatTechnicianWrite: async () => undefined,
   isSeatTechnicianGuardError: () => false,
@@ -74,7 +84,7 @@ function buildAssignTrx(user: any, role: any, insertSpy: (...args: any[]) => any
 function buildRemoveTrx(role: any, delSpy: (...args: any[]) => any) {
   return (table: string) => {
     if (table === 'roles') return { where: () => ({ first: async () => role }) };
-    if (table === 'user_roles') return { where: () => ({ del: delSpy }) };
+    if (table === 'user_roles') return { where: () => ({ del: delSpy, whereIn: () => ({ del: delSpy }) }) };
     throw new Error(`Unexpected table: ${table}`);
   };
 }

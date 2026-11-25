@@ -381,7 +381,7 @@
     },
     "portalAdmin": {
       "label": "Administrador do Portal",
-      "helper": "Quando ativado, o usuário será criado com a função de administrador do cliente. Quando desativados, eles receberão a função de usuário cliente."
+      "helper": "Os convites usam a função administrador do cliente quando esta opção está ativada e usuário do cliente quando está desativada. O registro e o aprovisionamento usam a função atribuída."
     },
     "roles": {
       "label": "Funções do portal",
@@ -942,6 +942,7 @@
       "portalAdminUpdateFailed": "Não foi possível atualizar o status de administrador do portal. Atualize a página e tente novamente.",
       "userLoadFailed": "Falha ao obter usuário",
       "sharedMailboxAdmin": "Contatos de caixas de correio compartilhadas não podem ser administradores de clientes.",
+      "portalAdminRoleManaged": "Este contato tem um usuário do portal, portanto o acesso de administrador do portal é controlado pela função desse usuário.",
       "createFailed": "Ocorreu um erro inesperado ao criar o contato",
       "importDuplicateEmail": "Já existe um contato com este email: {{value}}",
       "importDuplicateName": "Já existe um contato com este nome: {{value}}",

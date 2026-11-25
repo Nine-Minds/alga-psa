@@ -1,4 +1,5 @@
 import { createTenantKnex, runWithTenant } from '@/lib/db';
+import { addUserRoles } from '@alga-psa/db';
 import { upsertOAuthAccountLink } from '@ee/lib/auth/oauthAccountLinks';
 import type { EntraSyncUser } from './types';
 import {
@@ -50,11 +51,9 @@ export async function workflowAssignClientPortalRole(params: {
         return { assigned: false, roleId };
       }
 
-      await trx('user_roles').insert({
-        tenant: params.tenantId,
-        user_id: params.userId,
-        role_id: roleId,
-      });
+      // Re-derives the linked contact's portal-admin flag from the role set.
+      // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+      await addUserRoles(trx, params.tenantId, params.userId, [roleId]);
       return { assigned: true, roleId };
     });
   });

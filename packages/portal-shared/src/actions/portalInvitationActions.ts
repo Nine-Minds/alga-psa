@@ -1,7 +1,17 @@
 'use server'
 
 import { randomBytes } from 'node:crypto';
-import { createTenantKnex, tenantDb, runWithTenant, withTransaction } from '@alga-psa/db';
+import {
+  addUserRoles,
+  createTenantKnex,
+  assertClientPortalContactAvailable,
+  lockClientPortalMutations,
+  resolveInitialPortalRoleId,
+  syncContactClientAdminFlagsForUserLinkChange,
+  tenantDb,
+  runWithTenant,
+  withTransaction,
+} from '@alga-psa/db';
 import { queueContactCreated } from '@alga-psa/shared/lib/contacts/contactEvents';
 import { PortalInvitationService } from '../services/PortalInvitationService';
 import { getTenantSlugForTenant } from '@alga-psa/db';
@@ -67,7 +77,7 @@ function normalizeCreateClientPortalUserError(
     if (message === 'Contact not found. Provide contact details to create a new contact.') {
       return { message, errorCode: 'CONTACT_NOT_FOUND' };
     }
-    if (message === 'A user account already exists for this contact') {
+    if (message === 'A user account already exists for this contact' || message === 'This contact already has a client portal user. Choose another contact.') {
       return { message, errorCode: 'USER_EXISTS_FOR_CONTACT' };
     }
     if (
@@ -281,16 +291,33 @@ async function findPortalEmailOwner(
   return owner ?? null;
 }
 
-/** Points an orphaned portal account back at a live contact. */
+/**
+ * Points an orphaned portal account back at a live contact.
+ *
+ * The link itself decides what the account's roles mean for that contact, so
+ * the flag is re-derived here: a relinked account that already holds a client
+ * role writes no user_roles row, and without this a plain 'User' account
+ * adopted by a contact pre-marked as portal admin would keep that contact's
+ * company-wide portal scope (alga-2026-0003347). Runs in the caller's
+ * transaction, which is where the link is written.
+ */
 async function relinkOrphanedPortalUser(
   db: DbConnection,
   tenant: string,
   userId: string,
   contactId: string
 ): Promise<void> {
+  await lockClientPortalMutations(db, tenant);
+  await assertClientPortalContactAvailable(db as Knex.Transaction, tenant, 'client', contactId, userId);
+  const previous = await tenantDb(db, tenant).table('users')
+    .where({ user_id: userId })
+    .first('contact_id');
+
   await tenantDb(db, tenant).table('users')
     .where({ user_id: userId })
     .update({ contact_id: contactId, updated_at: db.raw('now()') });
+
+  await syncContactClientAdminFlagsForUserLinkChange(db, tenant, userId, previous?.contact_id ?? null);
 }
 
 export const createClientPortalUser = withAuth(async (
@@ -341,6 +368,7 @@ export const createClientPortalUser = withAuth(async (
 
     // Create user and assign role
     const result = await withTransaction(knex, async (trx) => {
+      await lockClientPortalMutations(trx, tenant);
       const scopedDb = tenantDb(trx, tenant);
 
       // 1) Resolve or create contact
@@ -426,6 +454,7 @@ export const createClientPortalUser = withAuth(async (
         );
       }
 
+      await assertClientPortalContactAvailable(trx, tenant, 'client', contact.contact_name_id);
       // 2) Ensure no existing user for contact
       const existingUser = await scopedDb.table('users')
         .where({ contact_id: contact.contact_name_id })
@@ -528,19 +557,21 @@ export const createClientPortalUser = withAuth(async (
           }
         }
         if (!targetRoleId) {
-          // Use actual role names from seeds: "Admin" or "User"
-          const roleName = contact?.is_client_admin ? 'Admin' : 'User';
-          const fallbackRole = await scopedDb.table('roles')
-            .where({ role_name: roleName, client: true })
-            .first();
-          if (fallbackRole) {
-            targetRoleId = fallbackRole.role_id;
-          } else {
-            console.warn(`Failed to find client role with name '${roleName}' for tenant ${tenant}`);
+          // The contact's portal-admin pre-mark picks 'Admin', otherwise
+          // 'User' — invitation creation deliberately honors the pre-seed.
+          targetRoleId = (await resolveInitialPortalRoleId(trx, tenant, contact.contact_name_id)) ?? undefined;
+          if (!targetRoleId) {
+            throw new PortalInvitationError(
+              'No client portal role is configured for this organization. Configure a client portal role and try again.',
+              'PORTAL_ROLE_NOT_CONFIGURED'
+            );
           }
         }
         if (targetRoleId) {
-          await scopedDb.table('user_roles').insert({ user_id: created.user_id, role_id: targetRoleId, tenant });
+          // The role wins from here on: contacts.is_client_admin was the
+          // invitation pre-seed, and this write re-derives it from the role.
+          // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+          await addUserRoles(trx, tenant, created.user_id, [targetRoleId]);
         }
       }
 
@@ -1363,6 +1394,7 @@ export async function completePortalSetup(
       ): Promise<CompleteSetupResult> => {
         try {
           await knex.transaction(async (trx) => {
+            await lockClientPortalMutations(trx, tenant);
             await acquireMicrosoftOAuthLinkLock(trx);
             await assertMicrosoftOAuthLinkAvailable(existingUser.user_id, trx);
 
@@ -1454,13 +1486,32 @@ export async function completePortalSetup(
 
       let newUser;
       try {
-        // The Entra pre-link has to land in the same transaction as the user row:
-        // a portal user created without its provider link would be a passwordless
-        // account nobody can sign in to.
+        // The Entra pre-link and the role have to land in the same transaction
+        // as the user row: a portal user created without its provider link
+        // would be a passwordless account nobody can sign in to, and one
+        // created without a role is an account with no portal access at all —
+        // and, when the contact was pre-marked as a portal admin, a flagged
+        // contact whose user holds nothing. So a failed role assignment rolls
+        // the account back instead of being logged and shrugged off.
         newUser = await knex.transaction(async (trx) => {
+          await assertClientPortalContactAvailable(trx, tenant, 'client', contact.contact_name_id);
           await acquireMicrosoftOAuthLinkLock(trx);
           await assertMicrosoftOAuthLinkAvailable(undefined, trx);
           const user = await createPortalUserInTransaction(trx);
+
+          // The contact's portal-admin pre-mark picks 'Admin', otherwise
+          // 'User'; the shared write then re-derives the flag from the role
+          // that was actually assigned.
+          const roleId = await resolveInitialPortalRoleId(trx, tenant, contact.contact_name_id);
+          if (!roleId) {
+            throw new PortalInvitationError(
+              'No client portal role is configured for this organization. Ask your administrator to set one up, then use this link again.',
+              'CREATE_USER_FAILED'
+            );
+          }
+          // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+          await addUserRoles(trx, tenant, user.user_id, [roleId]);
+
           await upsertMicrosoftOAuthLink(user.user_id, trx);
           return user;
         });
@@ -1472,34 +1523,6 @@ export async function completePortalSetup(
           error: normalized.message,
           errorCode: normalized.errorCode
         } as CompleteSetupResult;
-      }
-
-      // Assign appropriate role based on contact's is_client_admin flag
-      try {
-        // Get the full contact details to check is_client_admin
-        const fullContact = await scopedDb.table('contacts')
-          .where({ contact_name_id: contact.contact_name_id })
-          .first();
-        
-        // Find the appropriate role - use actual role names from seeds: "Admin" or "User"
-        const roleName = fullContact?.is_client_admin ? 'Admin' : 'User';
-        const role = await scopedDb.table('roles')
-          .where({ role_name: roleName, client: true })
-          .first();
-        
-        if (role) {
-          // Assign the role to the user
-          await scopedDb.table('user_roles').insert({
-            user_id: newUser.user_id,
-            role_id: role.role_id,
-            tenant
-          });
-        } else {
-          console.warn(`Failed to find client role with name '${roleName}' for tenant ${tenant}`);
-        }
-      } catch (roleError) {
-        console.warn('Failed to assign role to user:', roleError);
-        // Continue even if role assignment fails - user can still login
       }
 
       // Mark that the user has set their password only when a real password was provided.

@@ -381,7 +381,7 @@
     },
     "portalAdmin": {
       "label": "Administrador del portal",
-      "helper": "Cuando está habilitado, el usuario se creará con el rol Administrador del cliente. Cuando está deshabilitado, obtendrá el rol Usuario del cliente."
+      "helper": "Las invitaciones utilizan el rol Administrador del cliente cuando esta opción está activada y Usuario del cliente cuando está desactivada. El registro y el aprovisionamiento utilizan el rol asignado."
     },
     "roles": {
       "label": "Roles del portal",
@@ -942,6 +942,7 @@
       "portalAdminUpdateFailed": "No se pudo actualizar el estado de administrador del portal. Actualice la página e intente de nuevo.",
       "userLoadFailed": "No se pudo obtener el usuario",
       "sharedMailboxAdmin": "Los contactos de buzones compartidos no pueden ser administradores de clientes.",
+      "portalAdminRoleManaged": "Este contacto tiene un usuario del portal, por lo que el rol de ese usuario controla el acceso de administrador del portal.",
       "createFailed": "Ocurrió un error inesperado al crear el contacto",
       "importDuplicateEmail": "Ya existe un contacto con este correo electrónico: {{value}}",
       "importDuplicateName": "Ya existe un contacto con este nombre: {{value}}",

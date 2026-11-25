@@ -4,14 +4,13 @@ import User from '@alga-psa/db/models/user';
 import {
   DeletionValidationResult,
   IUser,
-  IUserRole,
   isClientUserType,
   isInteractiveUserType,
   isLicensedUserType,
   isMspPrincipalUserType,
 } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
-import { assertSeatTechnicianWrite, assertUserRoleFloor, createTenantKnex, isSeatTechnicianGuardError, isUserRoleFloorError, isUserRoleFloorRejected, recordTicketAssigneeChange, syncContactClientAdminFlag, tenantDb, UserRoleFloorError, type UserRoleFloorViolation } from '@alga-psa/db';
+import { assertClientPortalContactAvailable, lockClientPortalMutations, addUserRoles, assertSeatTechnicianWrite, assertUserRoleFloor, createTenantKnex, isSeatTechnicianGuardError, isUserRoleFloorError, isUserRoleFloorRejected, recordTicketAssigneeChange, resolveInitialPortalRoleId, setUserRoles, tenantDb, UserRoleFloorError, type UserRoleFloorViolation } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { withAdminTransaction, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -558,6 +557,7 @@ export const addUser = withAuth(async (
         return { success: false, code: 'USER_CREATE_FAILED', error: 'Invalid user type' };
       }
       const newUserType: 'internal' | 'client' = requestedUserType;
+      await lockClientPortalMutations(trx, tenant);
 
       if (!userData.roleId) {
         return { success: false, code: 'ROLE_REQUIRED', error: 'Role is required' };
@@ -612,6 +612,7 @@ export const addUser = withAuth(async (
         }
       }
 
+      await assertClientPortalContactAvailable(trx, tenant, newUserType, userData.contactId);
       const [newUser] = await tenantDb(trx, tenant).table('users')
         .insert({
           first_name: userData.firstName,
@@ -630,11 +631,10 @@ export const addUser = withAuth(async (
         await assertInternalUserSeatsWithinLimit(trx, tenant, admission);
       }
 
-      await tenantDb(trx, tenant).table('user_roles').insert({
-        user_id: newUser.user_id,
-        role_id: userData.roleId,
-        tenant: tenant || undefined
-      });
+      // For a client-portal user the role decides contacts.is_client_admin from
+      // here on; the flag the contact carried was only the invitation pre-seed.
+      // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+      await addUserRoles(trx, tenant, newUser.user_id, [userData.roleId]);
 
       // Mark that the user hasn't reset their initial password
       await UserPreferences.upsert(trx, {
@@ -1035,9 +1035,6 @@ export const updateUser = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
     const result = await withTransaction(knex, async (trx): Promise<UpdateUserResult> => {
-      // Identity changes can affect reservation association; serialize them
-      // with invitation send/accept and allocation admission.
-      if (userData.email !== undefined) await lockInternalUserSeats(trx, tenant);
       // Permission Check: User can update their own profile OR have user:update permission
       const isOwnProfile = currentUser.user_id === userId;
 
@@ -1046,6 +1043,12 @@ export const updateUser = withAuth(async (
       } else if (!await hasPermission(currentUser, 'user', 'update', trx)) {
         throwPermissionError('update user');
       }
+
+      await lockClientPortalMutations(trx, tenant);
+      // Match API creation/update: role-floor lock before seat state, then rows.
+      // Identity changes can affect reservation association; serialize them
+      // with invitation send/accept and allocation admission.
+      if (userData.email !== undefined) await lockInternalUserSeats(trx, tenant);
 
       // Client-portal callers may only manage client users of their own
       // company (self-profile updates above are unaffected). Email changes by
@@ -1645,24 +1648,10 @@ export const updateUserRoles = withAuth(async (
       // A live seat technician holds the seat role and no other.
       await assertSeatTechnicianWrite(trx, tenant, [userId], { roleIds });
 
-      // Delete existing roles
-      await tenantDb(trx, tenant).table('user_roles')
-        .where({ user_id: userId })
-        .del();
-
-      // Insert new roles
-      if (roleIds.length > 0) {
-        const userRoles = roleIds.map((roleId):IUserRole => ({
-          user_id: userId,
-          role_id: roleId,
-          tenant: tenant || undefined
-        }));
-        await tenantDb(trx, tenant).table('user_roles').insert(userRoles);
-      }
-
-      // contacts.is_client_admin mirrors the portal 'Admin' role; re-derive it
-      // in the same transaction as the role write (client users only).
-      await syncContactClientAdminFlag(trx, tenant, userId);
+      // Replace the role set. The shared write re-derives
+      // contacts.is_client_admin from it in this transaction (client users only).
+      // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+      await setUserRoles(trx, tenant, userId, roleIds);
 
       return null;
     });
@@ -1818,6 +1807,7 @@ export const registerClientUser = withAuth(async (
       const hashedPassword = await hashPassword(password);
       logger.debug('Password hashed successfully');
 
+      await assertClientPortalContactAvailable(trx, contact.tenant, 'client', contact.contact_name_id);
       const [newUser] = await tenantDb(trx, contact.tenant).table('users')
         .insert({
           email: email.toLowerCase(),
@@ -1833,25 +1823,15 @@ export const registerClientUser = withAuth(async (
         })
         .returning(['user_id']);
 
-      // Get the default client portal user role (must exist via migrations)
-      const clientRole = await tenantDb(trx, contact.tenant).table('roles')
-        .where({
-          client: true,
-          msp: false
-        })
-        .whereRaw('LOWER(role_name) = ?', ['user'])
-        .first();
+      // Registration assigns User; the assigned role replaces the invitation pre-seed.
+      const roleId = await resolveInitialPortalRoleId(trx, contact.tenant, null);
 
-      if (!clientRole) {
+      if (!roleId) {
         throw new Error('Client portal User role not found for tenant');
       }
 
-      // Assign the role to the user
-      await tenantDb(trx, contact.tenant).table('user_roles').insert({
-        user_id: newUser.user_id,
-        role_id: clientRole.role_id,
-        tenant: contact.tenant
-      });
+      // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+      await addUserRoles(trx, contact.tenant, newUser.user_id, [roleId]);
 
       return { success: true };
     });

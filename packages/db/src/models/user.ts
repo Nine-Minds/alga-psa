@@ -1,9 +1,10 @@
+import { assertClientPortalContactAvailable, lockClientPortalMutations } from '../lib/clientPortalContactOwnership';
+import { syncContactClientAdminFlagsForUserLinkChange } from '../lib/clientPortalAdminFlag';
 import type { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import type {
   IUser,
   IRole,
-  IUserRole,
   IUserWithRoles,
   AllowlistedUserField,
   PublicUserWithRoles,
@@ -16,13 +17,8 @@ import { tenantDb } from '../lib/tenantDb';
 import { requireTenantId } from '../lib/tenantId';
 import { assertUserRoleFloor, isUserRoleFloorRejected, UserRoleFloorError } from '../lib/userRoleFloor';
 import { assertSeatTechnicianWrite } from '../lib/seatTechnicianGuard';
+import { addUserRoles, setUserRoles } from '../lib/userRoleWrites';
 import { verifyPassword } from '@alga-psa/core/encryption';
-
-interface IUserRoleWithOptionalTenant extends Omit<IUserRole, 'tenant'> {
-  user_id: string;
-  role_id: string;
-  tenant?: string | null;
-}
 
 const USER_MODEL_DISCOVERY_TENANT = '__user_model_discovery__';
 const USER_DISCOVERY_BY_EMAIL_REASON = 'user discovery by email before tenant context exists';
@@ -309,6 +305,7 @@ const User = {
       }
 
       return await knexOrTrx.transaction(async (trx) => {
+        await assertClientPortalContactAvailable(trx, tenant, userData.user_type, userData.contact_id);
         const [insertedUser] = await tenantDb(trx, tenant).table<IUser>('users')
           .insert({
             ...userData,
@@ -317,14 +314,17 @@ const User = {
           })
           .returning('user_id');
 
-        const userRoles = roles.map((role: IRole): IUserRoleWithOptionalTenant => {
+        const roleIds = roles.map((role: IRole): string => {
           if (!role.role_id) {
             throw new Error('Invalid role: role_id is missing');
           }
-          return { user_id: insertedUser.user_id, role_id: role.role_id, tenant };
+          return role.role_id;
         });
 
-        await tenantDb(trx, tenant).table('user_roles').insert(userRoles);
+        // Re-derives contacts.is_client_admin from the roles the account is
+        // created with (client users only).
+        // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+        await addUserRoles(trx, tenant, insertedUser.user_id, roleIds);
 
         return insertedUser;
       });
@@ -355,7 +355,21 @@ const User = {
   update: async (knexOrTrx: Knex | Knex.Transaction, user_id: string, user: Partial<IUser>): Promise<void> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      await tenantDb(knexOrTrx, tenant).table<IUser>('users').where('user_id', user_id).update(user);
+      if (!('contact_id' in user || 'user_type' in user)) {
+        await tenantDb(knexOrTrx, tenant).table<IUser>('users').where('user_id', user_id).update(user);
+        return;
+      }
+      await knexOrTrx.transaction(async (trx) => {
+        await lockClientPortalMutations(trx, tenant);
+        const previous = await tenantDb(trx, tenant).table<IUser>('users').where({ user_id }).first();
+        if (!previous) return;
+        await assertClientPortalContactAvailable(
+          trx, tenant, user.user_type ?? previous.user_type,
+          user.contact_id !== undefined ? user.contact_id : previous.contact_id, user_id,
+        );
+        await tenantDb(trx, tenant).table<IUser>('users').where({ user_id }).update(user);
+        await syncContactClientAdminFlagsForUserLinkChange(trx, tenant, user_id, previous.contact_id);
+      });
     } catch (error) {
       logger.error(`Error updating user with id ${user_id}:`, error);
       throw error;
@@ -651,14 +665,9 @@ const User = {
 
       await assertSeatTechnicianWrite(knexOrTrx, tenant, [user_id], { roleIds: roles.map((role) => role.role_id) });
 
-      const db = tenantDb(knexOrTrx, tenant);
-      await db.table('user_roles').where({ user_id }).del();
-      const userRoles = roles.map((role): IUserRoleWithOptionalTenant => ({
-        user_id,
-        role_id: role.role_id,
-        tenant,
-      }));
-      await db.table('user_roles').insert(userRoles);
+      // Replaces the role set and re-derives contacts.is_client_admin from it.
+      // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+      await setUserRoles(knexOrTrx, tenant, user_id, roles.map((role) => role.role_id));
     } catch (error) {
       logger.error(`Error updating roles for user with id ${user_id}:`, error);
       throw error;

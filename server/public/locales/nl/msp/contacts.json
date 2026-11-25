@@ -379,7 +379,7 @@
     },
     "portalAdmin": {
       "label": "Portaalbeheerder",
-      "helper": "Wanneer ingeschakeld, wordt de gebruiker aangemaakt met de rol Klantbeheerder. Wanneer uitgeschakeld, krijgt die de rol Klantgebruiker."
+      "helper": "Uitnodigingen gebruiken Klantbeheerder als deze optie is ingeschakeld en Klantgebruiker als deze is uitgeschakeld. Registratie en provisioning gebruiken de toegewezen rol."
     },
     "roles": {
       "label": "Portaalrollen",
@@ -938,6 +938,7 @@
       "portalAdminUpdateFailed": "De portaalbeheerdersstatus kon niet worden bijgewerkt. Vernieuw de pagina en probeer het opnieuw.",
       "userLoadFailed": "Gebruiker kon niet worden opgehaald",
       "sharedMailboxAdmin": "Contacten van gedeelde postvakken kunnen geen klantbeheerders zijn.",
+      "portalAdminRoleManaged": "Dit contact heeft een portaalgebruiker, dus portaalbeheerder wordt bepaald door de rol van die gebruiker.",
       "createFailed": "Er is een onverwachte fout opgetreden bij het aanmaken van het contact",
       "importDuplicateEmail": "Er bestaat al een contact met dit e-mailadres: {{value}}",
       "importDuplicateName": "Er bestaat al een contact met deze naam: {{value}}",

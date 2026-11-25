@@ -101,6 +101,14 @@ interface ContactPortalTabProps {
     canUpdateRoles: boolean;
     canRead: boolean;
   };
+  /**
+   * Called with the contact's portal-admin state whenever this tab changes it.
+   * `contacts.is_client_admin` mirrors the client portal 'Admin' role once a
+   * portal user exists, so adding or removing that role here moves the flag the
+   * surrounding screen prints ("Client admin" / "Standard") — without this it
+   * stayed wrong until a reload (alga-2026-0003347).
+   */
+  onPortalAdminChanged?: (isClientAdmin: boolean) => void;
 }
 
 interface ClientRole {
@@ -113,7 +121,7 @@ interface UserRole {
   role_name: string;
 }
 
-export function ContactPortalTab({ contact, currentUserPermissions }: ContactPortalTabProps) {
+export function ContactPortalTab({ contact, currentUserPermissions, onPortalAdminChanged }: ContactPortalTabProps) {
   const { t } = useTranslation(['msp/contacts', 'msp/settings']);
 
   const translatePortalInvitationError = (
@@ -191,11 +199,12 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
 
       // Check for existing user
       const { user, error } = await getUserByContactId(contact.contact_name_id);
-      if (!error && user) {
-        setExistingUser(user);
+      const portalUser = !error && user ? user : null;
+      if (portalUser) {
+        setExistingUser(portalUser);
         // Set user roles
-        if (user.roles && Array.isArray(user.roles)) {
-          setUserRoles(user.roles);
+        if (portalUser.roles && Array.isArray(portalUser.roles)) {
+          setUserRoles(portalUser.roles);
         }
       }
 
@@ -203,6 +212,23 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       const roles = await getRoles();
       const clientPortalRoles = roles.filter(role => role.client && !role.msp);
       setClientRoles(clientPortalRoles);
+
+      // Once a portal user exists the contact's portal-admin flag is a mirror
+      // of their client 'Admin' role, so this is where both this tab and the
+      // screen around it learn the state a role change just produced. Without
+      // a user the flag is still the pre-mark the toggle below owns, so it is
+      // left alone.
+      if (portalUser) {
+        const clientAdminRoleIds = new Set(
+          roles
+            .filter(role => role.client && (role.role_name || '').toLowerCase() === 'admin')
+            .map(role => role.role_id)
+        );
+        const holdsClientAdminRole = (Array.isArray(portalUser.roles) ? portalUser.roles : [])
+          .some((role: UserRole) => clientAdminRoleIds.has(role.role_id));
+        setIsPortalAdmin(holdsClientAdminRole);
+        onPortalAdminChanged?.(holdsClientAdminRole);
+      }
 
       const [groupRows, boardRows, assignment] = await Promise.all([
         getClientPortalVisibilityGroupsForContact(contact.contact_name_id),
@@ -614,6 +640,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       const result = await updateContactPortalAdminStatus(contact.contact_name_id, checked);
       if (result.success) {
         setIsPortalAdmin(checked);
+        onPortalAdminChanged?.(checked);
         toast({
           title: t('contactPortalTab.toast.successTitle', { defaultValue: 'Success' }),
           description: checked
@@ -785,7 +812,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                     {t('contactPortalTab.portalAdmin.label', { defaultValue: 'Portal Administrator' })}
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    {t('contactPortalTab.portalAdmin.helper', { defaultValue: 'When enabled, the user will be created with Client Admin role. When disabled, they\'ll get Client User role.' })}
+                    {t('contactPortalTab.portalAdmin.helper', { defaultValue: 'Invitations use Client Admin when enabled and Client User when disabled. Registration and provisioning use their assigned role.' })}
                   </p>
                 </div>
                 <Switch

@@ -379,7 +379,7 @@
     },
     "portalAdmin": {
       "label": "Portaladministrator",
-      "helper": "Wenn aktiviert, wird der Benutzer mit der Rolle Kundenadministrator erstellt. Wenn deaktiviert, erhält er die Rolle Kundenbenutzer."
+      "helper": "Einladungen verwenden bei aktivierter Einstellung die Rolle Kundenadministrator und bei deaktivierter Einstellung Kundenbenutzer. Registrierung und Bereitstellung verwenden die jeweils zugewiesene Rolle."
     },
     "roles": {
       "label": "Portalrollen",
@@ -938,6 +938,7 @@
       "portalAdminUpdateFailed": "Der Portaladministratorstatus konnte nicht aktualisiert werden. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "userLoadFailed": "Benutzer konnte nicht abgerufen werden",
       "sharedMailboxAdmin": "Kontakte freigegebener Postfächer können keine Kundenadministratoren sein.",
+      "portalAdminRoleManaged": "Dieser Kontakt hat einen Portalbenutzer, daher wird der Portal-Administratorzugriff über die Rolle dieses Benutzers gesteuert.",
       "createFailed": "Beim Erstellen des Kontakts ist ein unerwarteter Fehler aufgetreten",
       "importDuplicateEmail": "Ein Kontakt mit dieser E-Mail-Adresse existiert bereits: {{value}}",
       "importDuplicateName": "Ein Kontakt mit diesem Namen existiert bereits: {{value}}",

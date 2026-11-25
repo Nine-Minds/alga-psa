@@ -25,12 +25,14 @@ describe('registration actions tenant-scoped query contract', () => {
     expect(section).toContain('tenantDb(trx, ');
     expect(section).toContain("discoveryDb.tenantJoin(contactQuery, 'clients', 'contacts.client_id', 'clients.client_id')");
     expect(section).toContain(".table('users");
-    expect(section).toContain(".table('roles");
     expect(section).toContain('tenant: contact.tenant');
     expect(section).toContain("contact_kind: 'contacts.contact_kind'");
     expect(section).toContain("contact.contact_kind === 'shared_mailbox'");
     expect(section).toContain("const [user] = await tenantDb(trx, contact.tenant).table('users')");
-    expect(section).toContain("await tenantDb(trx, contact.tenant).table('user_roles').insert({");
+    // Registration uses the User role, irrespective of the invitation pre-seed.
+    // Shared role lookup and writes carry tenant scoping and flag synchronization.
+    expect(section).toContain('await resolveInitialPortalRoleId(trx, contact.tenant, null);');
+    expect(section).toContain('await addUserRoles(trx, contact.tenant, user.user_id, [roleId]);');
 
     expect(section).not.toMatch(/trx\('users'\)\s*[\r\n]+\s*\.where/);
     expect(section).not.toMatch(/trx\('roles'\)\.where\(\{\s*tenant: contact\.tenant\s*\}\)/);

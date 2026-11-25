@@ -269,6 +269,7 @@
         "sendInvitation": "Kan uitnodiging niet verzenden",
         "sendInvitationManual": "Kan uitnodiging niet verzenden. U kunt deze handmatig verzenden vanuit de gebruikerslijst.",
         "createClientPortalUser": "Kan klantenportaalgebruiker niet aanmaken",
+        "portalRoleNotConfigured": "Er is geen klantportaalrol ingesteld voor deze organisatie. Stel een klantportaalrol in en probeer het opnieuw.",
         "clipboardUnavailable": "Klembord-API is niet beschikbaar in deze browser.",
         "copyPortalLink": "Kan portaalinloglink niet kopiëren",
         "fillRequiredFields": "Vul alle verplichte velden in",

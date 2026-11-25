@@ -7,7 +7,7 @@
  */
 
 import { Knex } from 'knex';
-import { assertSeatTechnicianWrite, assertUserRoleFloor, BaseService, ServiceContext, ListResult, isUserRoleFloorRejected, tenantDb, withSavepoint, withTransaction } from '@alga-psa/db';
+import { addUserRoles, assertSeatTechnicianWrite, assertUserRoleFloor, BaseService, lockClientPortalMutations, checkClientPortalContactAvailability, ServiceContext, ListResult, isUserRoleFloorRejected, removeUserRoles, setUserRoles, syncContactClientAdminFlagsForUserLinkChange, tenantDb, withSavepoint, withTransaction } from '@alga-psa/db';
 import type { UserRoleFloorChange, UserRoleFloorViolation } from '@alga-psa/db';
 import {
   IUser, IUserWithRoles, IRole, IRoleWithPermissions, ITeam,
@@ -82,6 +82,21 @@ class ConflictError extends Error {
   readonly name = 'ConflictError';
   readonly statusCode = 409;
   readonly code = 'CONFLICT';
+}
+
+async function enforceClientPortalContactOwnership(
+  trx: Knex.Transaction,
+  tenant: string,
+  userType: string,
+  contactId: string | null | undefined,
+  currentUserId?: string,
+): Promise<void> {
+  if (userType !== 'client' || !contactId) return;
+  const availability = await checkClientPortalContactAvailability(trx, tenant, contactId, currentUserId);
+  if (availability === 'not_found') throw new NotFoundError('Contact not found');
+  if (availability === 'occupied') {
+    throw new ConflictError('This contact already has a client portal user. Choose another contact.');
+  }
 }
 
 /**
@@ -327,6 +342,8 @@ export class UserService extends BaseService<IUser> {
         throw new ValidationError('user_type must be "internal" or "client"');
       }
       const targetUserType: 'internal' | 'client' = requestedUserType;
+      // Membership sync takes the role-floor lock; take it before seat admission too.
+      await lockClientPortalMutations(trx, context.tenant);
 
       // Seat admission for licensed (internal) users, in the same transaction as the insert.
       let admission: InternalUserLicenseLimitResult | null = null;
@@ -419,6 +436,8 @@ export class UserService extends BaseService<IUser> {
         updated_at: knex.raw('now()')
       };
 
+      await enforceClientPortalContactOwnership(trx, context.tenant, targetUserType, userData.contact_id);
+
       // Insert user
       const [createdUser] = await tenantDb(trx, context.tenant).table('users')
         .insert(userData)
@@ -429,14 +448,12 @@ export class UserService extends BaseService<IUser> {
         await assertInternalUserSeatsWithinLimit(trx, context.tenant, admission);
       }
 
-      // Assign roles
+      // Assign roles. For a client-portal user the roles decide
+      // contacts.is_client_admin from here on: the flag the contact carried was
+      // only the invitation pre-seed.
+      // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
       if (data.role_ids && data.role_ids.length > 0) {
-        const userRoles = data.role_ids.map((roleId: string) => ({
-          user_id: createdUser.user_id,
-          role_id: roleId,
-          tenant: context.tenant
-        }));
-        await tenantDb(trx, context.tenant).table('user_roles').insert(userRoles);
+        await addUserRoles(trx, context.tenant, createdUser.user_id, data.role_ids);
       }
 
       // Create default user preferences
@@ -488,6 +505,10 @@ export class UserService extends BaseService<IUser> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      // Match creation: portal/role-floor lock, then seat lock, then user row.
+      // Taking the seat lock first would deadlock with a creator holding the
+      // role-floor lock while waiting for seat admission.
+      await lockClientPortalMutations(trx, context.tenant);
       // Every update that can change seat occupancy joins the shared tenant
       // seat lock before taking the target user's row lock. This makes partial
       // updates compose against the latest committed state. Email changes also
@@ -497,7 +518,7 @@ export class UserService extends BaseService<IUser> {
       // Verify user exists and belongs to tenant
       const existingUser = await this.buildTenantScopedQuery(trx, context)
         .where({ user_id: id })
-        .select('user_id', 'email', 'user_type', 'is_inactive')
+        .select('user_id', 'email', 'user_type', 'is_inactive', 'contact_id')
         .forUpdate()
         .first();
 
@@ -567,11 +588,28 @@ export class UserService extends BaseService<IUser> {
         }
       }
 
+      await enforceClientPortalContactOwnership(
+        trx,
+        context.tenant,
+        data.user_type ?? existingUser.user_type,
+        data.contact_id !== undefined ? data.contact_id : existingUser.contact_id,
+        id
+      );
+
+      // Compare the pre-image too: concurrent updates of this same account
+      // must not combine a user_type from one request with an unchecked link
+      // from another. A conflict rolls back without moving roles or flags.
+      // The shared mutation lock also serializes role writes with this link change.
       // Update user
       const [updatedUser] = await this.buildTenantScopedQuery(trx, context)
         .where({ user_id: id })
+        .where({ user_type: existingUser.user_type, contact_id: existingUser.contact_id ?? null })
         .update(updateData)
         .returning(USER_RESPONSE_FIELD_NAMES);
+
+      if (!updatedUser) {
+        throw new ConflictError('The user contact or type changed during this update. Please retry.');
+      }
 
       if (takesNewSeat) {
         await assertInternalUserSeatsWithinLimit(trx, context.tenant, licenseCheck);
@@ -579,6 +617,21 @@ export class UserService extends BaseService<IUser> {
       if (existingUser.user_type === 'internal' && existingUser.is_inactive === false &&
           data.email !== undefined && data.email.toLowerCase() !== existingUser.email) {
         await assertCoManagedSeatCapacity(trx, context.tenant);
+      }
+
+      // PUT /api/v1/users/{id} accepts contact_id and user_type, and neither
+      // writes a role — but both change what the user's existing roles mean for
+      // a contact. Re-derive the flag of the contact the user now points at and
+      // of the one it left, in this transaction, so a 'User'-role account
+      // pointed at a pre-marked contact cannot keep that contact's
+      // company-wide portal scope (alga-2026-0003347).
+      if ('contact_id' in updateData || 'user_type' in updateData) {
+        await syncContactClientAdminFlagsForUserLinkChange(
+          trx,
+          context.tenant,
+          id,
+          existingUser.contact_id ?? null
+        );
       }
 
       // Log user update activity
@@ -880,20 +933,9 @@ export class UserService extends BaseService<IUser> {
       // A live seat technician holds the seat role and no other.
       await assertSeatTechnicianWrite(trx, context.tenant, [userId], { roleIds });
 
-      // Remove existing roles
-      await tenantDb(trx, context.tenant).table('user_roles')
-        .where({ user_id: userId })
-        .del();
-
-      // Add new roles
-      if (roleIds.length > 0) {
-        const userRoles = roleIds.map(roleId => ({
-          user_id: userId,
-          role_id: roleId,
-          tenant: context.tenant
-        }));
-        await tenantDb(trx, context.tenant).table('user_roles').insert(userRoles);
-      }
+      // Replace the role set, re-deriving contacts.is_client_admin from it.
+      // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+      await setUserRoles(trx, context.tenant, userId, roleIds);
 
       // Log role change activity
       await this.logUserActivity({
@@ -935,11 +977,9 @@ export class UserService extends BaseService<IUser> {
 
       await enforceUserRoleFloor(trx, context.tenant, { kind: 'remove_roles', userId, roleIds });
 
-      // Remove specified roles
-      await tenantDb(trx, context.tenant).table('user_roles')
-        .where({ user_id: userId })
-        .whereIn('role_id', roleIds)
-        .del();
+      // Remove specified roles, re-deriving contacts.is_client_admin from what is left.
+      // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+      await removeUserRoles(trx, context.tenant, userId, roleIds);
 
       // Log role removal activity
       await this.logUserActivity({

@@ -29,7 +29,10 @@ describe('user actions add-user tenant-scoped query contract', () => {
     expect(addUserSection).toContain(".table('roles");
     expect(addUserSection).toContain(".table('users");
     expect(addUserSection).toContain("const [newUser] = await tenantDb(trx, tenant).table('users')");
-    expect(addUserSection).toContain("await tenantDb(trx, tenant).table('user_roles').insert({");
+    // user_roles is written through @alga-psa/db, which carries the contact's
+    // portal-admin flag sync and keeps its own tenant-scoping contract
+    // (userRoleWritesTenantScoped.contract.test.ts); alga-2026-0003347.
+    expect(addUserSection).toContain('await addUserRoles(trx, tenant, newUser.user_id, [userData.roleId]);');
 
     expect(helperSection).not.toMatch(/trx\('users'\)\s*[\r\n]+\s*\.where/);
     expect(addUserSection).not.toContain('checkInternalUserLicenseLimit');

@@ -33,10 +33,11 @@ describe('user actions register client user tenant-scoped query contract', () =>
     expect(section).toContain("contact_kind: 'contacts.contact_kind'");
     expect(section).toContain("contact.contact_kind === 'shared_mailbox'");
     expect(section).toContain("await tenantDb(trx, contact.tenant).table('users')");
-    expect(section).toContain("await tenantDb(trx, contact.tenant).table('user_roles').insert");
-    expect(section).toContain(".table('roles");
+    // Registration uses the User role, irrespective of the invitation pre-seed.
+    // Shared role lookup and writes carry tenant scoping and flag synchronization.
+    expect(section).toContain('await resolveInitialPortalRoleId(trx, contact.tenant, null);');
+    expect(section).toContain('await addUserRoles(trx, contact.tenant, newUser.user_id, [roleId]);');
     expect(section).toContain('tenant: contact.tenant');
-    expect(section).toContain("whereRaw('LOWER(role_name) = ?', ['user'])");
 
     expect(section).not.toMatch(/trx\('roles'\)\s*[\r\n]+\s*\.where\(\{\s*tenant: contact\.tenant,/);
     expect(section).not.toContain(".andOn('clients.tenant', '=', 'contacts.tenant')");

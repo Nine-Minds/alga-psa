@@ -110,8 +110,22 @@ export {
 export type { UserRoleFloorChange, UserRoleFloorResult, UserRoleFloorViolation } from './lib/userRoleFloor';
 
 // contacts.is_client_admin mirrors the client portal 'Admin' role; every
-// user_roles writer re-derives it in the same transaction as its write.
-export { syncContactClientAdminFlag } from './lib/clientPortalAdminFlag';
+// user_roles writer re-derives it in the same transaction as its write, every
+// writer that moves the user's contact link re-derives both contacts, and every
+// account-creation path reads the pre-mark with resolveInitialPortalRoleId.
+export {
+  resolveInitialPortalRoleId,
+  syncContactClientAdminFlag,
+  syncContactClientAdminFlagForContact,
+  syncContactClientAdminFlagsForUserLinkChange,
+  syncContactClientAdminFlagsForRole,
+} from './lib/clientPortalAdminFlag';
+
+// The role-set writes themselves, so the flag sync travels with every one of
+// them instead of being a line each writer has to remember.
+export { addUserRoles, removeUserRoles, setUserRoles } from './lib/userRoleWrites';
+export type { UserRoleWriteRow } from './lib/userRoleWrites';
+export { checkClientPortalContactAvailability, assertClientPortalContactAvailable, lockClientPortalMutations } from './lib/clientPortalContactOwnership';
 
 // A live co-managed seat technician holds only the seat role and joins no MSP team; every
 // user_roles / team_members writer runs this first.

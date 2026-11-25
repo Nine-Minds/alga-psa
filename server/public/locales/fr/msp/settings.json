@@ -269,6 +269,7 @@
         "sendInvitation": "Échec de l'envoi de l'invitation",
         "sendInvitationManual": "Échec de l'envoi de l'invitation. Vous pouvez l'envoyer manuellement depuis la liste des utilisateurs.",
         "createClientPortalUser": "Échec de la création de l'utilisateur du portail client",
+        "portalRoleNotConfigured": "Aucun rôle du portail client n’est configuré pour cette organisation. Configurez un rôle du portail client et réessayez.",
         "clipboardUnavailable": "L'API du presse-papiers n'est pas disponible dans ce navigateur.",
         "copyPortalLink": "Échec de la copie du lien de connexion au portail",
         "fillRequiredFields": "Veuillez remplir tous les champs obligatoires",

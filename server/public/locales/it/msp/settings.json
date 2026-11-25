@@ -269,6 +269,7 @@
         "sendInvitation": "Impossibile inviare l'invito",
         "sendInvitationManual": "Impossibile inviare l'invito. Puo inviarlo manualmente dall'elenco utenti.",
         "createClientPortalUser": "Impossibile creare l'utente del portale clienti",
+        "portalRoleNotConfigured": "Nessun ruolo del portale clienti è configurato per questa organizzazione. Configuri un ruolo del portale clienti e riprovi.",
         "clipboardUnavailable": "L'API degli appunti non e disponibile in questo browser.",
         "copyPortalLink": "Impossibile copiare il link di accesso al portale",
         "fillRequiredFields": "Compila tutti i campi obbligatori",

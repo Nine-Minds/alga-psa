@@ -1,7 +1,7 @@
 'use server'
 
 import { getAdminConnection } from '@alga-psa/db/admin';
-import { tenantDb, withTransaction } from '@alga-psa/db';
+import { assertClientPortalContactAvailable, addUserRoles, resolveInitialPortalRoleId, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { hashPassword } from '@alga-psa/core/encryption';
 import { verifyContactEmail } from './userActions';
@@ -171,6 +171,7 @@ async function registerContactUser(
 
       // Create user
       const hashedPassword = await hashPassword(password);
+      await assertClientPortalContactAvailable(trx, contact.tenant, 'client', contact.contact_name_id);
       const [user] = await tenantDb(trx, contact.tenant).table('users')
         .insert({
           email: email.toLowerCase(),
@@ -186,22 +187,15 @@ async function registerContactUser(
         })
         .returning('*');
 
-      // Get User role
-      const roles = await tenantDb(trx, contact.tenant).table('roles') as Array<{ role_id: string; role_name?: string | null }>;
-      const userRole = roles.find(r => 
-        r.role_name && r.role_name.toLowerCase() === 'user'
-      );
+      // Registration assigns User; the assigned role replaces the invitation pre-seed.
+      const roleId = await resolveInitialPortalRoleId(trx, contact.tenant, null);
 
-      if (!userRole) {
+      if (!roleId) {
         throw new Error('User role not found');
       }
 
-      // Assign role
-      await tenantDb(trx, contact.tenant).table('user_roles').insert({
-        tenant: contact.tenant,
-        user_id: user.user_id,
-        role_id: userRole.role_id
-      });
+      // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+      await addUserRoles(trx, contact.tenant, user.user_id, [roleId]);
 
       return { success: true };
     });
