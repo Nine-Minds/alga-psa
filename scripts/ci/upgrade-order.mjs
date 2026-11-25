@@ -5,9 +5,9 @@
 //   node scripts/ci/upgrade-order.mjs [--base <sha>] [--main-ref <ref>] [--work <dir>]
 //                                     [--db-name <name>] [--skip-smoke] [--keep]
 //
-// 1. Baseline = the PR's merge base (default: merge-base of HEAD and --main-ref, in CI
-//    pull_request.base.sha). It must be an ancestor of --main-ref so a stacked PR can
-//    not compare against another stacked branch.
+// 1. CI pins the latest successful main safety-workflow ancestor as --base and
+//    passes the current PR base as --schema-base. Both must be main ancestors.
+//    Never retry progressively older baselines after a failure.
 // 2. Build the baseline schema with prepareUpgradeSchema (CE+EE combined, baseline's own
 //    migration helpers), apply it to a fresh database, run the baseline's dev seeds.
 // 3. Snapshot, apply the PR's combined migrations with `migrate.latest`, snapshot again.
@@ -15,6 +15,8 @@
 //    column dropped, no type narrowed, no primary/unique constraint lost.
 // 5. Behavioural smoke: the baseline release tree's own vitest suites listed in
 //    scripts/ci/upgrade-order-smoke.json run against the PR schema.
+// 6. Also require fresh candidate migrations + seeds, and structural compatibility
+//    from the current main schema when it differs from the verified baseline.
 //
 // Needs: DB_HOST, DB_PORT, DB_USER_ADMIN, DB_PASSWORD_ADMIN (superuser on a pgvector Postgres).
 // Exit 0 compatible, 1 incompatible, 2 the gate could not run (including a smoke suite that
@@ -40,10 +42,11 @@ class GateError extends Error {}
 const git = (args, cwd = root) => execFileSync('git', args, { cwd, encoding: 'utf8', maxBuffer: 1 << 28 }).trim();
 
 function parseArgs(argv) {
-  const o = { base: null, mainRef: 'origin/main', work: null, dbName: null, skipSmoke: false, keep: false };
+  const o = { base: null, schemaBase: null, mainRef: 'origin/main', work: null, dbName: null, skipSmoke: false, keep: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--base') o.base = argv[++i];
+    else if (a === '--schema-base') o.schemaBase = argv[++i];
     else if (a === '--main-ref') o.mainRef = argv[++i];
     else if (a === '--work') o.work = path.resolve(argv[++i]);
     else if (a === '--db-name') o.dbName = argv[++i];
@@ -92,6 +95,8 @@ async function main(argv) {
   const o = parseArgs(argv);
   if (!process.env.DB_PASSWORD_ADMIN) throw new GateError('DB_PASSWORD_ADMIN is required');
   const baseSha = resolveBaseline(o);
+  const schemaBaseSha = o.schemaBase ? resolveBaseline({ ...o, base: o.schemaBase }) : baseSha;
+  git(['merge-base', '--is-ancestor', baseSha, schemaBaseSha]);
   const headSha = git(['rev-parse', 'HEAD']);
   if (git(['status', '--porcelain', '--', 'server/migrations', 'ee/server/migrations'])) {
     log('warning: uncommitted migration changes are ignored; the PR side is built from HEAD');
@@ -101,7 +106,7 @@ async function main(argv) {
   const work = o.work ?? fs.mkdtempSync(path.join(os.tmpdir(), 'alga-upgrade-order-'));
   if (o.work) fs.mkdirSync(work, { recursive: true });
   const database = o.dbName ?? `upgrade_order_${Date.now().toString(36)}`;
-  if (!/^upgrade_[a-z0-9_]{1,50}$/.test(database)) throw new GateError('--db-name must match upgrade_[a-z0-9_]+');
+  if (!/^upgrade_[a-z0-9_]{1,44}$/.test(database)) throw new GateError('--db-name must match upgrade_[a-z0-9_]{1,44} (room for isolated database suffixes)');
 
   let admin;
   let db;
@@ -113,8 +118,7 @@ async function main(argv) {
     const pr = prepareUpgradeSchema({ repository: root, commit: headSha, destination: prDir, edition: 'ee' });
     const base = prepareUpgradeSchema({ repository: root, commit: baseSha, destination: baseDir, edition: 'ee' });
     for (const d of [prDir, baseDir]) fs.symlinkSync(path.join(root, 'node_modules'), path.join(d, 'node_modules'));
-    // prepareUpgradeSchema does not extract seeds and the gate needs "schema + seed".
-    execFileSync('sh', ['-c', `git archive ${baseSha} server/seeds ee/server/seeds | tar -x -C ${JSON.stringify(baseDir)}`], { cwd: root });
+    // prepareUpgradeSchema extracts the complete pinned tree, including its own seeds/helpers.
 
     admin = knex({ client: 'pg', connection: connection('postgres'), pool: { min: 0, max: 1 } });
     // CREATE DATABASE fails on an existing database: never adopt or reset one.
@@ -124,6 +128,13 @@ async function main(argv) {
     const hasRole = await admin.raw('SELECT 1 FROM pg_roles WHERE rolname = ?', [appRole]);
     if (!hasRole.rows.length) {
       await admin.raw(`CREATE ROLE ?? WITH LOGIN PASSWORD '${(process.env.DB_PASSWORD_SERVER || process.env.DB_PASSWORD_ADMIN).replace(/'/g, "''")}'`, [appRole]);
+    }
+    await checkFreshCandidate({ admin, pr, prDir, database: `${database}_fresh` });
+    if (schemaBaseSha !== baseSha) {
+      const tipDir = path.join(work, 'schema-base');
+      const tip = prepareUpgradeSchema({ repository: root, commit: schemaBaseSha, destination: tipDir, edition: 'ee' });
+      fs.symlinkSync(path.join(root, 'node_modules'), path.join(tipDir, 'node_modules'));
+      await checkCurrentBase({ admin, tip, tipDir, pr, prDir, database: `${database}_tip` });
     }
     log(`created database ${database}`);
     process.env.DB_NAME_SERVER = database;
@@ -181,6 +192,47 @@ async function main(argv) {
     if (!o.work && !o.keep) fs.rmSync(work, { recursive: true, force: true });
     else log(`kept ${work}`);
   }
+}
+
+async function withFreshDatabase(admin, database, check) {
+  // Exclusive CREATE: cleanup is only armed after creation succeeds.
+  await admin.raw('CREATE DATABASE ??', [database]);
+  const previousDatabase = process.env.DB_NAME_SERVER;
+  const previousCwd = process.cwd();
+  const db = knex({ client: 'pg', connection: connection(database), pool: { min: 0, max: 5 } });
+  try {
+    process.env.DB_NAME_SERVER = database;
+    await check(db);
+  } finally {
+    process.chdir(previousCwd);
+    if (previousDatabase === undefined) delete process.env.DB_NAME_SERVER;
+    else process.env.DB_NAME_SERVER = previousDatabase;
+    await db.destroy();
+    await admin.raw('DROP DATABASE ?? WITH (FORCE)', [database]);
+  }
+}
+
+async function checkFreshCandidate({ admin, pr, prDir, database }) {
+  await withFreshDatabase(admin, database, async db => {
+    process.chdir(path.join(prDir, 'server'));
+    await db.migrate.latest({ directory: pr.directory, loadExtensions: ['.cjs'] });
+    await db.seed.run({ directory: path.join(prDir, 'server/seeds/dev'), loadExtensions: ['.cjs'] });
+    log('fresh candidate schema + dev seeds: ok');
+  });
+}
+
+async function checkCurrentBase({ admin, tip, tipDir, pr, prDir, database }) {
+  await withFreshDatabase(admin, database, async db => {
+    process.chdir(path.join(tipDir, 'server'));
+    await db.migrate.latest({ directory: tip.directory, loadExtensions: ['.cjs'] });
+    const before = await snapshotSchema(db);
+    process.chdir(path.join(prDir, 'server'));
+    await db.migrate.latest({ directory: pr.directory, loadExtensions: ['.cjs'] });
+    const findings = assertN1(before, await snapshotSchema(db));
+    for (const finding of findings) log(`FAIL current main [${finding.assertion}] ${finding.message}`);
+    if (findings.length) throw new GateError('candidate is incompatible with the current main schema');
+    log(`current main schema ${tip.manifest.commit} -> candidate: N-1 assertions ok`);
+  });
 }
 
 async function runSmoke({ work, baseSha, pr, database }) {
