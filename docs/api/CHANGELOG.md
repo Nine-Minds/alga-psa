@@ -18,6 +18,19 @@ Invitations used to live for a fixed 24 hours, which made a rollout a manual cha
 - A token is also refused at use time when the contact was deactivated or when the address the invitation was sent to is none of the contact's addresses any more — its primary one or any of its additional ones, the same set that decides whose address an incoming email is. A link sitting in an address the MSP kept on the contact therefore still works; resending repairs the rest. Lapsed invitations are now retained for 90 days instead of being deleted on the next completed setup, so they stay visible as expired.
 - `POST /api/v1/portal-invitations/bulk` also accepts optional `invitation_states` alongside required `contact_ids`, with the same validation, narrowing and per-contact mismatch result.
 
+## 2026-11-21 — Board team default, Admin team creation and category trees
+
+**Affected endpoints:** `PUT /api/v1/boards/{id}`, `GET /api/v1/boards/{id}`, `POST /api/v1/teams`, `GET /api/v1/categories/ticket/tree`, `GET /api/v1/categories/ticket/tree/{boardId}`, and the role, permission, team and metadata routes
+
+Three REST calls failed for administrator API keys even though the same actions worked in the app.
+
+**Changes:**
+
+- Board update accepts `default_assigned_team_id` (a team id, or `null` to clear it), and board responses return it. The update schema did not accept the field before.
+- An API key belonging to an Admin can now create teams. The REST permissions behind the team, role, permission and metadata routes (`team:create`, `role:*`, `permission:*`, `metadata:read`) are now in the permission catalog, and a migration adds them to every tenant's Admin role. Existing custom role grants are left as they are. Keys whose user lacks the permission still get `403`.
+- Both category tree routes return `200` with the category hierarchy. The unscoped route returns the tenant's ticket categories, and the `{boardId}` route returns only that board's categories. Both used to fail with `500`.
+- If a request hits a database column the server expects but does not have, the response is `500` with `error.code` `INTERNAL_CONFIGURATION` and a fixed message instead of `INTERNAL_ERROR`. Outside production, `error.details` names the table and column.
+
 ## 2026-11-20 — Attaching a non-template contract line returns `400`, not `500`
 
 **Affected endpoints:** `POST /api/v1/contracts/{contractId}/contract-lines`, and contract creation that passes lines in the same call
