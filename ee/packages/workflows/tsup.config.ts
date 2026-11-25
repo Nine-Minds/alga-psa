@@ -18,6 +18,10 @@ export default defineConfig({
   sourcemap: false,
   clean: true,
   external: [
+    // Reply parsing reaches Mailparser through forwarded-message detection.
+    // Let Node load its CommonJS dependencies instead of bundling their require
+    // calls into the native ESM runtime used by the authored-workflow probe.
+    'mailparser',
     'react',
     'react-dom',
     'next',
