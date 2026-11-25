@@ -100,8 +100,46 @@ describe('POST /api/v1/clients/{id}/portal-invitations', () => {
     expect(state.calls[0]).toEqual({ clientId: CLIENT, contactIds: [CONTACT_A], allEligible: false });
   });
 
-  it('rejects a body that names neither contacts nor all_eligible', async () => {
+  it('passes an invitation-state resend through to the same action', async () => {
+    await postForClient(request(clientUrl, { invitation_states: ['expired'] }));
+    expect(state.calls[0]).toEqual({
+      clientId: CLIENT,
+      contactIds: undefined,
+      allEligible: false,
+      invitationStates: ['expired'],
+    });
+  });
+
+  it('passes a named subset together with the states it was chosen by', async () => {
+    await postForClient(request(clientUrl, {
+      contact_ids: [CONTACT_A],
+      invitation_states: ['expired'],
+    }));
+
+    // Both travel to the action, which re-checks each contact's state before
+    // mailing it: the API selects no wider than the caller was shown.
+    expect(state.calls[0]).toEqual({
+      clientId: CLIENT,
+      contactIds: [CONTACT_A],
+      allEligible: false,
+      invitationStates: ['expired'],
+    });
+  });
+
+  it('rejects a body that names neither contacts, all_eligible nor invitation states', async () => {
     const res = await postForClient(request(clientUrl, {}));
+    expect(res.status).toBe(400);
+    expect(state.calls).toHaveLength(0);
+  });
+
+  it('rejects an invitation state the batch does not understand', async () => {
+    const res = await postForClient(request(clientUrl, { invitation_states: ['whenever'] }));
+    expect(res.status).toBe(400);
+    expect(state.calls).toHaveLength(0);
+  });
+
+  it('rejects an empty invitation-state list rather than inviting everyone', async () => {
+    const res = await postForClient(request(clientUrl, { invitation_states: [] }));
     expect(res.status).toBe(400);
     expect(state.calls).toHaveLength(0);
   });
@@ -130,6 +168,24 @@ describe('POST /api/v1/portal-invitations/bulk', () => {
     const res = await postBulk(request(bulkUrl, { contact_ids: [CONTACT_A, CONTACT_B] }));
     expect(res.status).toBe(200);
     expect(state.calls[0]).toEqual({ contactIds: [CONTACT_A, CONTACT_B] });
+  });
+
+  it('preserves the invitation-state restriction for cross-client batches', async () => {
+    const res = await postBulk(request(bulkUrl, {
+      contact_ids: [CONTACT_A, CONTACT_B], invitation_states: ['expired'],
+    }));
+    expect(res.status).toBe(200);
+    expect(state.calls[0]).toEqual({
+      contactIds: [CONTACT_A, CONTACT_B], invitationStates: ['expired'],
+    });
+  });
+
+  it.each([{ states: [] }, { states: ['unknown'] }, { states: 'expired' }])('rejects invalid state selection $states', async ({ states }) => {
+    const res = await postBulk(request(bulkUrl, {
+      contact_ids: [CONTACT_A], invitation_states: states,
+    }));
+    expect(res.status).toBe(400);
+    expect(state.calls).toHaveLength(0);
   });
 
   it('requires at least one contact id', async () => {

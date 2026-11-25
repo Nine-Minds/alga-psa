@@ -4,6 +4,7 @@ import {
   sendPortalInvitation as sendPortalInvitationAction,
   sendBulkPortalInvitations as sendBulkPortalInvitationsAction,
   getPortalInvitations as getPortalInvitationsAction,
+  getPortalInvitationStatesForClient as getPortalInvitationStatesForClientAction,
   revokePortalInvitation as revokePortalInvitationAction,
   updateClientUser as updateClientUserAction
 } from '@alga-psa/portal-shared/actions/portalInvitationActions';
@@ -13,6 +14,7 @@ import type {
   BulkSendInvitationResult,
   SendBulkPortalInvitationsParams,
   InvitationHistoryItem,
+  PortalInvitationContactState,
   PortalInvitationErrorCode,
   SendPortalInvitationOptions,
   ClientUserActionError
@@ -33,6 +35,12 @@ export async function sendBulkPortalInvitations(
 
 export async function getPortalInvitations(contactId: string): Promise<InvitationHistoryItem[]> {
   return getPortalInvitationsAction(contactId);
+}
+
+export async function getPortalInvitationStatesForClient(
+  clientId: string
+): Promise<PortalInvitationContactState[] | null> {
+  return getPortalInvitationStatesForClientAction(clientId);
 }
 
 export async function revokePortalInvitation(
