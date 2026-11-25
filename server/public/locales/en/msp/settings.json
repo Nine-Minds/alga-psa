@@ -286,6 +286,8 @@
         "contactNotFound": "Contact not found.",
         "contactMissingEmailGeneric": "Contact does not have an email address. Please add an email address to the contact before sending an invitation.",
         "contactInvalidEmail": "Contact has an invalid email address. Please update the contact with a valid email address before sending an invitation.",
+        "contactInactive": "This contact is inactive. Reactivate the contact before inviting it to the client portal.",
+        "invitationRateLimited": "Too many invitation attempts for this contact. Try again later.",
         "invalidEmail": "Please enter a valid email address",
         "noDefaultClient": "No default client configured for this tenant. Please set a default client in General Settings.",
         "noDefaultLocation": "Default client must have a default location configured to send portal invitations.",
@@ -1433,7 +1435,13 @@
       "appointmentsHelp": "Allow clients to view and request appointments from the client portal.",
       "appointmentsEnabled": "Appointments are now available in the client portal",
       "appointmentsDisabled": "Appointments are now hidden from the client portal",
-      "updateFailed": "Failed to update client portal features"
+      "updateFailed": "Failed to update client portal features",
+      "invitationValidityLabel": "Invitation validity",
+      "invitationValidityHelp": "How long a client portal invitation link stays usable. Applies to invitations sent from now on; invitations already sent keep the period they were sent with. Resending an invitation gives it the full period again.",
+      "invitationValidityOption_one": "{{count}} day",
+      "invitationValidityOption_other": "{{count}} days",
+      "invitationValidityUpdated_one": "New invitations will stay valid for {{count}} day",
+      "invitationValidityUpdated_other": "New invitations will stay valid for {{count}} days"
     },
     "branding": {
       "title": "Branding & Appearance",
