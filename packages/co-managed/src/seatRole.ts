@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import type { CapabilityKey } from '@alga-psa/core/capability';
-import { CO_MANAGED_SEAT_ROLE_OWNER_KEY } from '@alga-psa/types';
-import { registerManagedRoleIdentity, runAsRoleOwner, tenantDb } from '@alga-psa/db';
+import { CO_MANAGED_SEAT_ROLE_OWNER_KEY, ManagedRoleOwnershipError } from '@alga-psa/types';
+import { registerManagedRoleIdentity, registerManagedRoleRefusal, runAsRoleOwner, tenantDb } from '@alga-psa/db';
 
 /**
  * The seat role: what a client's technician holds while working inside the sponsoring MSP's
@@ -34,6 +34,8 @@ export const CO_MANAGED_SEAT_ROLE_DESCRIPTION = 'Client technician working this 
 
 // Reserves the identity in every host that loads the seat domain (server, Temporal worker).
 registerManagedRoleIdentity({ owner: CO_MANAGED_SEAT_ROLE_OWNER, ...CO_MANAGED_SEAT_ROLE });
+// The guard in @alga-psa/db never imports the error type; it throws what this factory builds.
+registerManagedRoleRefusal((code, owner, roleIds) => new ManagedRoleOwnershipError(code, owner, roleIds));
 
 /** Runs a seat lifecycle command: its writes to the seat role are the only ones the shared guard admits. */
 export function runAsCoManagedSeatLifecycle<T>(fn: () => PromiseLike<T>): Promise<T> {

@@ -167,6 +167,7 @@ vi.mock('@alga-psa/db', () => ({
   registerWriteAdmissionProvider: vi.fn(),
   // Loaded transitively by the co-managed seat domain, which reserves its role identity at import.
   registerManagedRoleIdentity: vi.fn(),
+  registerManagedRoleRefusal: vi.fn(),
   runAsRoleOwner: (_owner: string, fn: () => unknown) => fn(),
   tenantDb: vi.fn()
 }));

@@ -1,6 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { Knex } from 'knex';
-import { ManagedRoleOwnershipError, type ManagedRoleOwnershipCode } from '@alga-psa/types';
 import { tenantDb } from './tenantDb';
 
 /**
@@ -39,6 +38,16 @@ import { tenantDb } from './tenantDb';
  * visible or served.
  */
 
+/** What a refused write would have changed. Mirrors `ManagedRoleOwnershipCode` in `@alga-psa/types`. */
+export type ManagedRoleOwnershipCode =
+  | 'MANAGED_ROLE_DEFINITION'
+  | 'MANAGED_ROLE_GRANTS'
+  | 'MANAGED_ROLE_MEMBERSHIP'
+  | 'MANAGED_ROLE_IDENTITY_RESERVED';
+
+/** Builds the refusal the guard throws. Registered by the package that owns the error type. */
+export type ManagedRoleRefusalFactory = (code: ManagedRoleOwnershipCode, owner: string, roleIds: readonly string[]) => Error;
+
 export interface ManagedRoleIdentity {
   /** The capability key stored in `roles.managed_by`. */
   owner: string;
@@ -51,6 +60,7 @@ interface ManagedRoleState {
   identities: Map<string, ManagedRoleIdentity>;
   lifecycle: AsyncLocalStorage<{ owner: string }>;
   teardown: AsyncLocalStorage<{ tenant: string }>;
+  refusal?: ManagedRoleRefusalFactory;
 }
 
 declare global {
@@ -64,6 +74,27 @@ function state(): ManagedRoleState {
     identities: new Map(),
     lifecycle: new AsyncLocalStorage(),
     teardown: new AsyncLocalStorage(),
+  });
+}
+
+/**
+ * The refusal is built by the registering package: this file sits in `tenantDb`'s import chain,
+ * which the e2e harness and raw Node ESM consumers load without workspace-package resolution, so
+ * it never imports the package that owns `ManagedRoleOwnershipError` (same rule as `writeAdmission`).
+ * Idempotent; the last registration wins.
+ */
+export function registerManagedRoleRefusal(factory: ManagedRoleRefusalFactory): void {
+  state().refusal = factory;
+}
+
+/**
+ * The refusal used when nothing is registered. It still refuses, and carries the same `name`,
+ * `statusCode`, `code`, `owner` and `roleIds`, so `isManagedRoleOwnershipError` recognises it
+ * by name. A missing registration must never let a write through.
+ */
+function fallbackRefusal(code: ManagedRoleOwnershipCode, owner: string, roleIds: readonly string[]): Error {
+  return Object.assign(new Error('This role is managed by the system and cannot be changed here.'), {
+    name: 'ManagedRoleOwnershipError', statusCode: 409, code, owner, roleIds,
   });
 }
 
@@ -162,7 +193,7 @@ export async function admitManagedRoleWrite(write: ManagedRoleWrite): Promise<vo
   const managed = new Map((await listManagedRoles(conn, tenant)).map((role) => [role.role_id, role]));
 
   const refuse = (code: ManagedRoleOwnershipCode, owner: string, roleIds: string[] = []): never => {
-    throw new ManagedRoleOwnershipError(code, owner, roleIds);
+    throw (state().refusal ?? fallbackRefusal)(code, owner, roleIds);
   };
   const ownedBy = (roleId: string): string | undefined => managed.get(roleId)?.managed_by;
   const assertMayWrite = (roleIds: Iterable<string>, code: ManagedRoleOwnershipCode): void => {

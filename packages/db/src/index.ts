@@ -129,12 +129,13 @@ export {
   isManagedRoleTable,
   listManagedRoles,
   registerManagedRoleIdentity,
+  registerManagedRoleRefusal,
   registeredManagedRoleIdentities,
   runAsRoleOwner,
   runAsTenantTeardown,
   currentTeardownTenant,
 } from './lib/managedRoleOwnership';
-export type { ManagedRoleIdentity, ManagedRoleTable, ManagedRoleWrite } from './lib/managedRoleOwnership';
+export type { ManagedRoleIdentity, ManagedRoleOwnershipCode, ManagedRoleRefusalFactory, ManagedRoleTable, ManagedRoleWrite } from './lib/managedRoleOwnership';
 
 // QBO item-target advisory lock (shared by integrations mapping CRUD and billing item import)
 export { lockQboItemTarget, lockQboItemTargets, qboItemTargetLockKey } from './lib/qboItemTargetLock';

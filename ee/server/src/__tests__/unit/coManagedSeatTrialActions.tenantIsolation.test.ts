@@ -16,6 +16,7 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: (...args: any[]) => mocks.tenantDb(...args),
   // Loaded transitively by the co-managed seat domain, which reserves its role identity at import.
   registerManagedRoleIdentity: vi.fn(),
+  registerManagedRoleRefusal: vi.fn(),
   runAsRoleOwner: (_owner: string, fn: () => unknown) => fn(),
 }));
 vi.mock('@alga-psa/authorization/clientScopeAuthorization', () => ({

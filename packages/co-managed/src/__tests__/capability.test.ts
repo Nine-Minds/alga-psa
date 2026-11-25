@@ -47,7 +47,7 @@ vi.mock('@alga-psa/db', () => {
   };
   return {
     // The seat role module registers its owned identity at import; nothing here writes a role.
-    registerManagedRoleIdentity: () => undefined,
+    registerManagedRoleIdentity: () => undefined, registerManagedRoleRefusal: () => undefined,
     runAsRoleOwner: (_owner: string, fn: () => unknown) => fn(),
     getAdminConnection: async () => ({}),
     registerWriteAdmissionProvider: () => undefined,

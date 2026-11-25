@@ -15,7 +15,7 @@ vi.mock('@alga-psa/db', async () => {
   const fake = await import('./fakeCoManagedDb');
   return { tenantDb: (db: any, tenant: string) => fake.fakeTenantDb(db, tenant), withTransaction: async (db: any, work: any) => db.transaction(work),
     // The seat SLA registration (loaded with ticketSlaRegistration) registers into these; this path uses none of them.
-    registerManagedRoleIdentity: () => undefined, runAsRoleOwner: (_o: string, fn: any) => fn(), registerSeatResponsibilityObserver: () => undefined, registerAfterCommit: () => undefined, runWithTenant: (_t: string, fn: any) => fn() };
+    registerManagedRoleIdentity: () => undefined, registerManagedRoleRefusal: () => undefined, runAsRoleOwner: (_o: string, fn: any) => fn(), registerSeatResponsibilityObserver: () => undefined, registerAfterCommit: () => undefined, runWithTenant: (_t: string, fn: any) => fn() };
 });
 vi.mock('@alga-psa/core/capability', () => ({ serves: async () => ({ served: true }) }));
 vi.mock('@alga-psa/licensing/lifecycle', () => ({
