@@ -24,7 +24,7 @@ import type {
   ScenarioPoolRef,
   ScenarioPrepaidBlockConfig,
 } from "@alga-psa/types";
-import { toISODate, toPlainDate } from "@alga-psa/core";
+import { toCalendarDateString, toISODate, toPlainDate } from "@alga-psa/core";
 import { tenantDb } from "@alga-psa/db";
 import { resolveCadenceOwner } from "@alga-psa/shared/billingClients/recurringTiming";
 import { resolveEffectiveBillingTiming } from "@alga-psa/shared/billingClients/contractLineTimingRule";
@@ -58,6 +58,7 @@ interface ContractRow {
 
 interface ContractLineRow {
   contract_line_id: string;
+  is_active: boolean;
   contract_line_name: string;
   contract_line_type: string;
   billing_frequency: string | null;
@@ -277,6 +278,7 @@ export async function snapshotContractToScenario(
       );
     lineRows = rows.map((row) => ({
       contract_line_id: row.template_line_id,
+      is_active: true,
       contract_line_name: row.template_line_name,
       contract_line_type: row.line_type || "Fixed",
       billing_frequency: row.billing_frequency,
@@ -297,6 +299,7 @@ export async function snapshotContractToScenario(
       .orderBy("contract_line_name", "asc")
       .select(
         "contract_line_id",
+        "is_active",
         "contract_line_name",
         "contract_line_type",
         "billing_frequency",
@@ -694,6 +697,7 @@ async function buildScenarioLine(
   return {
     key: lineRow.contract_line_id,
     origin_contract_line_id: lineRow.contract_line_id,
+    is_active: lineRow.is_active,
     contract_line_name: lineRow.contract_line_name,
     contract_line_type: contractLineType,
     billing_frequency: lineRow.billing_frequency || contract.billing_frequency,
@@ -889,6 +893,7 @@ function buildTemplateScenarioLine(
   return {
     key: lineRow.contract_line_id,
     origin_contract_line_id: lineRow.contract_line_id,
+    is_active: lineRow.is_active,
     contract_line_name: lineRow.contract_line_name,
     contract_line_type: lineType,
     billing_frequency: lineRow.billing_frequency || contract.billing_frequency,
@@ -1147,7 +1152,7 @@ function resolveScenarioPoolRef(
   };
 }
 
-async function loadPricingSchedules(
+export async function loadPricingSchedules(
   db: ReturnType<typeof tenantDb>,
   contractId: string,
   isTemplate = false,
@@ -1160,17 +1165,30 @@ async function loadPricingSchedules(
     )
     .where({ [isTemplate ? "template_id" : "contract_id"]: contractId })
     .orderBy("effective_date", "asc")
-    .select("effective_date", "end_date", "custom_rate");
+    // A live schedule carries its line scope; the template table has no
+    // contract_line_id column, so a template schedule is whole-contract.
+    .select(
+      "effective_date",
+      "end_date",
+      "custom_rate",
+      ...(isTemplate ? [] : ["contract_line_id"]),
+    );
 
   return rows.map(
     (row: {
       effective_date: unknown;
       end_date: unknown;
       custom_rate: number | string | null;
+      contract_line_id?: string | null;
     }) => ({
-      effective_date: toMidnightIso(row.effective_date),
-      end_date: row.end_date ? toMidnightIso(row.end_date) : null,
+      // pg DATE values are local-midnight Dates, not instants. Preserve their
+      // calendar day before constructing the simulator's UTC timestamps.
+      effective_date: toMidnightIso(toCalendarDateString(row.effective_date as string | Date)),
+      end_date: row.end_date ? toMidnightIso(toCalendarDateString(row.end_date as string | Date)) : null,
       custom_rate: toCents(row.custom_rate),
+      // Scenario line keys are the contract_line_id for a snapshot, so the
+      // stored scope carries over unchanged.
+      contract_line_key: row.contract_line_id ?? null,
     }),
   );
 }

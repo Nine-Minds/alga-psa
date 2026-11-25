@@ -6,6 +6,7 @@
 
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { toCalendarDateString } from '@alga-psa/core';
 // The schedule-selection semantics live in one place now (plan §0.5 / §2.3):
 // the deferred-revenue report and the billing engine cannot disagree about
 // which pricing schedule is active, including the null-rate-latest case.
@@ -423,8 +424,8 @@ export async function loadPricingScheduleRates(
   return rows.map((row) => ({
     contractId: row.contract_id,
     contractLineId: row.contract_line_id ?? null,
-    effectiveDate: toStringValue(row.effective_date).slice(0, 10),
-    endDate: row.end_date ? toStringValue(row.end_date).slice(0, 10) : null,
+    effectiveDate: toCalendarDateString(row.effective_date)!,
+    endDate: toCalendarDateString(row.end_date),
     customRate: row.custom_rate !== null && row.custom_rate !== undefined ? toNumber(row.custom_rate) : null,
   }));
 }

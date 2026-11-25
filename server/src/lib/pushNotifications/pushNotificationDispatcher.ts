@@ -9,6 +9,7 @@ const TICKET_PUSH_TEMPLATES = new Set([
   'ticket-team-assigned',
   'ticket-board-created',
   'ticket-board-status-entered',
+  'ticket-board-client-reply-unassigned',
   'ticket-additional-agent-assigned',
   'ticket-additional-agent-added',
   'ticket-comment-added',

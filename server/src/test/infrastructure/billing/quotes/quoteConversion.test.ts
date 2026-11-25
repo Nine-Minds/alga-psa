@@ -46,6 +46,9 @@ import {
   buildQuoteConversionPreview as runtimeBuildQuoteConversionPreview,
 } from '../../../../../../shared/workflow/runtime/actions/businessOperations/crmWorkerDal';
 import { registerTenantUnit } from '../../../../../../shared/billingClients/tenantUnitsOfMeasure';
+import { resolveFixedLineRate } from '../../../../../../shared/billingClients/resolveFixedLineRate';
+import { dbDateObjectToDateOnly } from '../../../../../../shared/billingClients/dbDateOnly';
+import { resolveFixedPlanLevelBaseRate } from '../../../../../../packages/billing/src/lib/billing/compute/computeFixedCharges';
 
 const {
   beforeAll: setupContext,
@@ -1923,6 +1926,252 @@ describe('Quote conversion infrastructure', () => {
         const subtotal = async (invoiceId: string) => Number((await context.db('invoices').where({ tenant: context.tenantId, invoice_id: invoiceId }).first()).subtotal);
         expect(await subtotal(runtimeResult.invoice.invoice_id)).toBe(await subtotal(serviceResult.invoice.invoice_id));
       });
+
+      const numeric = (value: unknown): number | null =>
+        value === null || value === undefined ? null : Number(value);
+      const dateOnly = (value: unknown): string | null => (
+        value === null || value === undefined
+          ? null
+          : dbDateObjectToDateOnly(value instanceof Date ? value : new Date(String(value)))
+      );
+
+      /**
+       * Every row a contract conversion writes, reduced to the columns that
+       * decide what the contract bills. Identities (tenant, ids, timestamps) and
+       * the per-quote catalog service ids are dropped so the two paths' output
+       * can be compared row for row.
+       */
+      async function readConvertedRows(contractId: string) {
+        const tenant = context.tenantId;
+        const lines = await context.db('contract_lines')
+          .where({ tenant, contract_id: contractId })
+          .orderBy('display_order');
+        const lineIds = lines.map((line: any) => line.contract_line_id);
+        const services = await context.db('contract_line_services').where({ tenant }).whereIn('contract_line_id', lineIds);
+        const configs = await context.db('contract_line_service_configuration').where({ tenant }).whereIn('contract_line_id', lineIds);
+        const configIds = configs.map((config: any) => config.config_id);
+        const fixedConfigs = await context.db('contract_line_service_fixed_config').where({ tenant }).whereIn('config_id', configIds);
+        const hourlyConfigs = await context.db('contract_line_service_hourly_config').where({ tenant }).whereIn('config_id', configIds);
+        const hourlyRateConfigs = await context.db('contract_line_service_hourly_configs').where({ tenant }).whereIn('config_id', configIds);
+        const usageConfigs = await context.db('contract_line_service_usage_config').where({ tenant }).whereIn('config_id', configIds);
+        const assignment = await context.db('client_contracts').where({ tenant, contract_id: contractId }).first();
+        const discountRows = await context.db('contract_line_discounts as ld')
+          .join('discounts as d', function () {
+            this.on('d.discount_id', 'ld.discount_id').andOn('d.tenant', 'ld.tenant');
+          })
+          .whereIn('ld.contract_line_id', lineIds)
+          .where({ 'ld.tenant': tenant })
+          .select('d.discount_name', 'd.discount_type', 'd.value', 'd.scope', 'd.start_date', 'd.is_active', 'ld.contract_line_id', 'ld.client_contract_id');
+
+        return {
+          assignment: {
+            startDate: dateOnly(assignment?.start_date),
+            endDate: dateOnly(assignment?.end_date),
+            isActive: assignment?.is_active ?? null,
+          },
+          lines: lines.map((line: any) => {
+            const lineConfigs = configs.filter((config: any) => config.contract_line_id === line.contract_line_id);
+            const lineConfigIds = new Set(lineConfigs.map((config: any) => config.config_id));
+            const forLine = <T extends { config_id: string }>(rows: T[]) => rows.filter((row) => lineConfigIds.has(row.config_id));
+            return {
+              name: line.contract_line_name,
+              description: line.description,
+              type: line.contract_line_type,
+              timing: line.billing_timing,
+              frequency: line.billing_frequency,
+              displayOrder: Number(line.display_order),
+              // Service ids differ per quote; what matters is that both paths
+              // carry the catalog category (here: none) the same way.
+              category: line.service_category,
+              customRate: numeric(line.custom_rate),
+              isCustom: line.is_custom,
+              enableProration: line.enable_proration,
+              alignment: line.billing_cycle_alignment,
+              minimumBillableTime: numeric(line.minimum_billable_time),
+              roundUpToNearest: numeric(line.round_up_to_nearest),
+              isActive: line.is_active,
+              locationId: line.location_id,
+              services: services
+                .filter((row: any) => row.contract_line_id === line.contract_line_id)
+                .map((row: any) => ({ quantity: numeric(row.quantity), customRate: numeric(row.custom_rate) })),
+              configurations: lineConfigs.map((config: any) => ({
+                type: config.configuration_type,
+                quantity: numeric(config.quantity),
+                customRate: numeric(config.custom_rate),
+              })),
+              fixed: forLine(fixedConfigs as any[]).map((row: any) => ({
+                baseRate: numeric(row.base_rate),
+                baseRateBasis: row.base_rate_basis,
+                pricingBasis: row.pricing_basis,
+                rateProvenance: row.rate_provenance,
+              })),
+              hourly: forLine(hourlyConfigs as any[]).map((row: any) => ({
+                minimumBillableTime: numeric(row.minimum_billable_time),
+                roundUpToNearest: numeric(row.round_up_to_nearest),
+                enableOvertime: row.enable_overtime,
+                overtimeRate: numeric(row.overtime_rate),
+                overtimeThreshold: numeric(row.overtime_threshold),
+                enableAfterHoursRate: row.enable_after_hours_rate,
+                afterHoursMultiplier: numeric(row.after_hours_multiplier),
+              })),
+              hourlyRates: forLine(hourlyRateConfigs as any[]).map((row: any) => ({
+                hourlyRate: numeric(row.hourly_rate),
+                minimumBillableTime: numeric(row.minimum_billable_time),
+                roundUpToNearest: numeric(row.round_up_to_nearest),
+              })),
+              usage: forLine(usageConfigs as any[]).map((row: any) => ({
+                unitOfMeasure: row.unit_of_measure,
+                unitCode: row.unit_code,
+                enableTieredPricing: row.enable_tiered_pricing,
+                minimumUsage: numeric(row.minimum_usage),
+                baseRate: numeric(row.base_rate),
+              })),
+              discounts: discountRows
+                .filter((row: any) => row.contract_line_id === line.contract_line_id)
+                .map((row: any) => ({
+                  name: row.discount_name,
+                  type: row.discount_type,
+                  value: Number(row.value),
+                  scope: row.scope,
+                  startDate: dateOnly(row.start_date),
+                  isActive: row.is_active,
+                  hasClientContract: Boolean(row.client_contract_id),
+                }))
+                .sort((a: any, b: any) => a.name.localeCompare(b.name)),
+            };
+          }),
+        };
+      }
+
+      /** Every recurring line shape conversion must handle, on one quote. */
+      async function buildParityQuote(title: string) {
+        const created = await createAcceptedQuote([
+          { description: 'Managed seats', quantity: 10, unit_price: 5000, is_recurring: true, billing_frequency: 'monthly', billing_method: 'fixed' },
+          { description: 'Backup appliance', quantity: 3, unit_price: 40000, is_recurring: true, billing_frequency: 'monthly', billing_method: 'fixed', service_item_kind: 'product' },
+          { description: 'Support retainer', quantity: 1, unit_price: 15000, is_recurring: true, billing_frequency: 'monthly', billing_method: 'hourly' },
+          { description: 'Metered storage', quantity: 1, unit_price: 250, is_recurring: true, billing_frequency: 'monthly', billing_method: 'usage', unit_of_measure: 'Gigabyte' },
+        ], { title });
+        await addDiscount(created.quote.quote_id, {
+          description: 'Seat credit', discount_type: 'fixed', amount: 7500,
+          applies_to_item_id: created.items[0].quote_item_id,
+        });
+        return created;
+      }
+
+      it('writes the same billing-relevant rows as the service for every line shape', async () => {
+        const serviceQuote = await buildParityQuote('Service parity');
+        const runtimeQuote = await buildParityQuote('Runtime parity');
+
+        const serviceContract = await convert(serviceQuote.quote.quote_id);
+        const runtimeContract = await context.db.transaction((trx) =>
+          runtimeConvertQuoteToDraftContract(trx, context.tenantId, runtimeQuote.quote.quote_id, context.userId));
+
+        const serviceRows = await readConvertedRows(serviceContract.contract.contract_id);
+        const runtimeRows = await readConvertedRows(runtimeContract.contract.contract_id);
+        expect(runtimeRows).toEqual(serviceRows);
+
+        // The quantity is billed, not dropped: 10 x $50 is a per-unit line with
+        // no line rate, $50 on the member and the quantity on the configuration.
+        const seats = runtimeRows.lines.find((line: any) => line.description === 'Managed seats');
+        expect(seats).toMatchObject({
+          type: 'Fixed',
+          timing: 'advance',
+          customRate: null,
+          services: [{ quantity: 10, customRate: null }],
+          configurations: [{ type: 'Fixed', quantity: 10, customRate: null }],
+          fixed: [{ baseRate: 5000, baseRateBasis: 'per_unit', pricingBasis: 'unit', rateProvenance: 'custom' }],
+        });
+        // A product keeps its unit price with the quantity on the configuration.
+        expect(runtimeRows.lines.find((line: any) => line.description === 'Backup appliance')).toMatchObject({
+          type: 'Fixed',
+          customRate: 40000,
+          configurations: [{ type: 'Fixed', quantity: 3, customRate: 40000 }],
+          fixed: [{ baseRate: 40000, baseRateBasis: 'per_unit' }],
+        });
+        expect(runtimeRows.lines.find((line: any) => line.description === 'Support retainer')).toMatchObject({
+          type: 'Hourly', timing: 'arrears', customRate: null, hourlyRates: [{ hourlyRate: 15000 }],
+        });
+        expect(runtimeRows.lines.find((line: any) => line.description === 'Metered storage')).toMatchObject({
+          type: 'Usage', timing: 'arrears', customRate: null,
+          usage: [{ unitOfMeasure: 'Gigabyte', unitCode: 'E34', baseRate: 250, minimumUsage: 0 }],
+        });
+        // The acceptance instant read as a tenant calendar date, not a timestamp.
+        expect(runtimeRows.assignment.startDate).toBe('2026-03-14');
+      }, 60000);
+
+      it('the 10 x $50 seat line resolves to 50000c for the billing engine', async () => {
+        const runtimeQuote = await buildParityQuote('Runtime resolved rate');
+        const runtimeContract = await context.db.transaction((trx) =>
+          runtimeConvertQuoteToDraftContract(trx, context.tenantId, runtimeQuote.quote.quote_id, context.userId));
+
+        const line = await context.db('contract_lines')
+          .where({ tenant: context.tenantId, contract_id: runtimeContract.contract.contract_id, description: 'Managed seats' })
+          .first();
+        const service = await context.db('contract_line_services')
+          .where({ tenant: context.tenantId, contract_line_id: line.contract_line_id }).first();
+        const config = await context.db('contract_line_service_configuration')
+          .where({ tenant: context.tenantId, contract_line_id: line.contract_line_id }).first();
+        const fixed = await context.db('contract_line_service_fixed_config')
+          .where({ tenant: context.tenantId, config_id: config.config_id }).first();
+
+        const planService = {
+          service_id: config.service_id,
+          service_name: 'Managed seats Service',
+          config_id: config.config_id,
+          tax_rate_id: null,
+          configuration_quantity: config.quantity,
+          configuration_custom_rate: config.custom_rate,
+          service_line_custom_rate: service.custom_rate,
+          service_base_rate: fixed.base_rate,
+          base_rate_basis: fixed.base_rate_basis,
+          base_rate_provenance: fixed.rate_provenance,
+          pricing_basis: fixed.pricing_basis,
+          default_rate: null,
+        };
+
+        const resolved = resolveFixedLineRate({
+          line: { contract_line_id: line.contract_line_id, custom_rate: line.custom_rate, rate_provenance: line.rate_provenance ?? null },
+          planServices: [planService],
+          schedules: [],
+          revisions: [],
+          catalogPrices: [],
+          period: { start: '2026-04-01', end: '2026-05-01' },
+          currency: 'USD',
+        });
+        expect(resolved.line.rateCents).toBe(50000);
+
+        const planLevel = resolveFixedPlanLevelBaseRate({
+          clientContractLine: { custom_rate: null } as any,
+          contractLineDetails: { contract_line_type: 'Fixed', custom_rate: line.custom_rate } as never,
+          planServices: [planService as any],
+        });
+        // Compute works in major units; 500.00 is the $500 the quote priced.
+        expect(planLevel).toBe(500);
+      }, 60000);
+
+      it('both paths refuse a recurring item with no catalog service, with the same message', async () => {
+        const message = 'Recurring item "Ad-hoc retainer" must reference a catalog service before contract conversion';
+        const serviceLess = (title: string) => createAcceptedQuote([
+          { description: 'Managed seats', quantity: 10, unit_price: 5000, is_recurring: true, billing_frequency: 'monthly', billing_method: 'fixed' },
+          {
+            description: 'Ad-hoc retainer', quantity: 3, unit_price: 5000, is_recurring: true,
+            billing_frequency: 'monthly', billing_method: 'fixed', rawUpdates: { service_id: null },
+          },
+        ], { title });
+
+        const serviceQuote = await serviceLess('Service refusal');
+        const runtimeQuote = await serviceLess('Runtime refusal');
+
+        await expect(convert(serviceQuote.quote.quote_id)).rejects.toThrow(message);
+        await expect(context.db.transaction((trx) =>
+          runtimeConvertQuoteToDraftContract(trx, context.tenantId, runtimeQuote.quote.quote_id, context.userId)))
+          .rejects.toThrow(message);
+        // Nothing was created by either refusal.
+        const contracts = await context.db('contracts')
+          .where({ tenant: context.tenantId })
+          .whereIn('contract_name', ['Service refusal', 'Runtime refusal']);
+        expect(contracts).toEqual([]);
+      }, 60000);
     });
   });
 });

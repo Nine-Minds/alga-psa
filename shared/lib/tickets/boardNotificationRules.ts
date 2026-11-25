@@ -7,10 +7,11 @@ import { normalizeEmailAddress } from '../email/addressUtils';
 /**
  * Board notification rules: matching, recipient expansion and exclusion.
  *
- * A rule fires on ticket creation (`notify_on_create`) or when a ticket enters
- * one of the rule's statuses. Recipients are internal users and teams; teams
- * are expanded from `team_members` at send time, never copied into the rule.
- * Rule recipients are never written to the ticket watch list.
+ * A rule fires on ticket creation (`notify_on_create`), when a ticket enters one
+ * of the rule's statuses, or when a client replies to a ticket that has no
+ * assignee (`notify_on_unassigned_client_reply`). Recipients are internal users
+ * and teams; teams are expanded from `team_members` at send time, never copied
+ * into the rule. Rule recipients are never written to the ticket watch list.
  *
  * See docs/plans/2026-10-06-board-notification-rules-plan.md.
  */
@@ -19,12 +20,14 @@ type Conn = Knex | Knex.Transaction;
 
 export type BoardNotificationTrigger =
   | { kind: 'created'; boardId: string }
-  | { kind: 'status_entered'; statusId: string };
+  | { kind: 'status_entered'; statusId: string }
+  | { kind: 'client_reply_unassigned'; boardId: string };
 
 export interface BoardNotificationRule {
   rule_id: string;
   board_id: string;
   notify_on_create: boolean;
+  notify_on_unassigned_client_reply: boolean;
   is_enabled: boolean;
   status_ids: string[];
   user_ids: string[];
@@ -74,10 +77,25 @@ export interface BoardNotificationAudience {
   addresses: AddressRecipient[];
 }
 
+/** Columns every rule-row read selects; hydrateRules expects all of them. */
+const RULE_COLUMNS = [
+  'rule_id',
+  'board_id',
+  'notify_on_create',
+  'notify_on_unassigned_client_reply',
+  'is_enabled',
+] as const;
+
 async function hydrateRules(
   conn: Conn,
   tenant: string,
-  ruleRows: Array<{ rule_id: string; board_id: string; notify_on_create: boolean; is_enabled: boolean }>
+  ruleRows: Array<{
+    rule_id: string;
+    board_id: string;
+    notify_on_create: boolean;
+    notify_on_unassigned_client_reply: boolean;
+    is_enabled: boolean;
+  }>
 ): Promise<BoardNotificationRule[]> {
   if (ruleRows.length === 0) {
     return [];
@@ -96,6 +114,7 @@ async function hydrateRules(
     rule_id: row.rule_id,
     board_id: row.board_id,
     notify_on_create: Boolean(row.notify_on_create),
+    notify_on_unassigned_client_reply: Boolean(row.notify_on_unassigned_client_reply),
     is_enabled: Boolean(row.is_enabled),
     status_ids: statusRows.filter((s: any) => s.rule_id === row.rule_id).map((s: any) => s.status_id as string),
     user_ids: recipientRows
@@ -118,7 +137,7 @@ export async function loadBoardNotificationRules(
 ): Promise<BoardNotificationRule[]> {
   const rows = await tenantDb(conn, tenant)
     .table('board_notification_rules')
-    .select('rule_id', 'board_id', 'notify_on_create', 'is_enabled')
+    .select(...RULE_COLUMNS)
     .where({ board_id: boardId })
     .orderBy('created_at', 'asc')
     .orderBy('rule_id', 'asc');
@@ -130,6 +149,9 @@ export async function loadBoardNotificationRules(
  * - created: rules on the board with `notify_on_create`.
  * - status_entered: rules naming the status, whose board is the status's board
  *   (statuses are board-owned, so the status alone identifies the board).
+ * - client_reply_unassigned: rules on the board with
+ *   `notify_on_unassigned_client_reply`. Whether the reply is a client one and
+ *   the ticket is unassigned is decided by the caller, not here.
  */
 export async function loadMatchingRules(
   conn: Conn,
@@ -141,8 +163,16 @@ export async function loadMatchingRules(
   if (trigger.kind === 'created') {
     const rows = await db
       .table('board_notification_rules')
-      .select('rule_id', 'board_id', 'notify_on_create', 'is_enabled')
+      .select(...RULE_COLUMNS)
       .where({ board_id: trigger.boardId, notify_on_create: true, is_enabled: true });
+    return hydrateRules(conn, tenant, rows);
+  }
+
+  if (trigger.kind === 'client_reply_unassigned') {
+    const rows = await db
+      .table('board_notification_rules')
+      .select(...RULE_COLUMNS)
+      .where({ board_id: trigger.boardId, notify_on_unassigned_client_reply: true, is_enabled: true });
     return hydrateRules(conn, tenant, rows);
   }
 
@@ -159,7 +189,7 @@ export async function loadMatchingRules(
   }
   const rows = await db
     .table('board_notification_rules')
-    .select('rule_id', 'board_id', 'notify_on_create', 'is_enabled')
+    .select(...RULE_COLUMNS)
     .whereIn('rule_id', ruleIds)
     .where({ board_id: status.board_id, is_enabled: true });
   return hydrateRules(conn, tenant, rows);
