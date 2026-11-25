@@ -9,6 +9,7 @@
 
 import type { Knex } from "knex";
 import { tenantDb } from "@alga-psa/db";
+import { toCalendarDateString } from "@alga-psa/core";
 import type {
   ContractLineRateRow,
   PlanServiceRateRow,
@@ -203,7 +204,13 @@ export async function loadFixedLineRateInputs(
   for (const row of scheduleRows as any[]) {
     const key = String(row.contract_id);
     const list = schedulesByContract.get(key) ?? [];
-    list.push(row);
+    // pg DATE values are local-midnight Dates; preserve their stored day
+    // before the shared selector interprets them as instants.
+    list.push({
+      ...row,
+      effective_date: toCalendarDateString(row.effective_date)!,
+      end_date: toCalendarDateString(row.end_date),
+    });
     schedulesByContract.set(key, list);
   }
 

@@ -11,13 +11,11 @@ import type {
   QuoteConversionPreviewDiscount,
   QuoteConversionPreviewItem,
 } from '@alga-psa/types';
-import { Temporal } from '@js-temporal/polyfill';
-import { tenantDb, withTransaction, resolveEffectiveTimeZone } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { isPendingOptional, isQuoteItemIncluded } from '../lib/quoteItemInclusion';
-import { resolveFixedMemberRatePair } from '@alga-psa/shared/billingClients/fixedMemberRate';
 import { getEffectiveTaxSourceForClient } from '@alga-psa/shared/billingClients/taxSettings';
 import { resolveInvoiceBillingTerms } from '../lib/billing/invoiceDueDate';
 import {
@@ -31,44 +29,18 @@ import {
   summarizeContractSide,
   type QuoteDiscountConversionShare,
 } from '@alga-psa/shared/billingClients/quoteConversionDiscounts';
+import {
+  assertRecurringItemsConvertible,
+  insertQuoteContractLines,
+  insertRowsUsingExistingColumns,
+  isProductQuoteItem,
+  resolveProductServiceIds,
+  resolveQuoteContractStartDate,
+  serviceLessRecurringMessage,
+} from '@alga-psa/shared/billingClients/quoteToContractLines';
 import Contract from '../models/contract';
 import Quote from '../models/quote';
 import QuoteActivity from '../models/quoteActivity';
-
-const tableColumnCache = new Map<string, Set<string>>();
-
-async function getTableColumns(
-  knexOrTrx: Knex | Knex.Transaction,
-  tableName: string
-): Promise<Set<string>> {
-  const cached = tableColumnCache.get(tableName);
-  if (cached) {
-    return cached;
-  }
-
-  const columnInfo = await knexOrTrx(tableName).columnInfo();
-  const columns = new Set(Object.keys(columnInfo));
-  tableColumnCache.set(tableName, columns);
-  return columns;
-}
-
-async function insertRowsUsingExistingColumns(
-  knexOrTrx: Knex | Knex.Transaction,
-  tenant: string,
-  tableName: string,
-  rows: Record<string, unknown>[]
-): Promise<void> {
-  if (rows.length === 0) {
-    return;
-  }
-
-  const columns = await getTableColumns(knexOrTrx, tableName);
-  const filteredRows = rows.map((row) => Object.fromEntries(
-    Object.entries(row).filter(([key, value]) => columns.has(key) && value !== undefined)
-  ));
-
-  await tenantDb(knexOrTrx, tenant).table(tableName).insert(filteredRows);
-}
 
 export interface QuoteToContractConversionResult {
   quote: IQuote;
@@ -149,66 +121,6 @@ async function resolveLocationNames(
   return map;
 }
 
-interface ContractLineMapping {
-  item: IQuoteItem;
-  contractLineId: string;
-  contractLineType: 'Fixed' | 'Hourly' | 'Usage';
-  isUnitPriced: boolean;
-}
-
-function mapQuoteItemToContractLineType(item: IQuoteItem): 'Fixed' | 'Hourly' | 'Usage' {
-  if (item.billing_method === 'hourly') {
-    return 'Hourly';
-  }
-
-  if (item.billing_method === 'usage') {
-    return 'Usage';
-  }
-
-  return 'Fixed';
-}
-
-/**
- * A recurring catalog service on a Fixed line converts to a per-unit service:
- * the quoted quantity is the seat count and the quoted unit price is the rate
- * per unit (contract_line_service_fixed_config.pricing_basis = 'unit'), so a
- * later quantity change reprices through the normal revision path. Products are
- * never units, custom items without a catalog service have nothing to attach a
- * per-unit configuration to, and a fractional quantity is not a seat count;
- * those keep the bundle pricing they always had.
- */
-/**
- * The quoted recurring amount of a bundle-priced Fixed row: quantity x unit price in integer
- * cents. Product rows keep their unit price (their per-unit rate lives on the member).
- */
-function bundleLineTotal(item: IQuoteItem, productServiceIds: Set<string>): number {
-  if (isProductQuoteItem(item, productServiceIds)) {
-    return item.unit_price;
-  }
-  return Math.round(Number(item.quantity) * Number(item.unit_price));
-}
-
-function isUnitPricedRecurringItem(
-  item: IQuoteItem,
-  contractLineType: 'Fixed' | 'Hourly' | 'Usage',
-  productServiceIds: Set<string>
-): boolean {
-  if (contractLineType !== 'Fixed' || !item.service_id) {
-    return false;
-  }
-  if (isProductQuoteItem(item, productServiceIds)) {
-    return false;
-  }
-  const quantity = Number(item.quantity);
-  return Number.isInteger(quantity) && quantity >= 0;
-}
-
-function getContractLineBillingTiming(item: IQuoteItem): 'arrears' | 'advance' {
-  return item.billing_method === 'hourly' || item.billing_method === 'usage'
-    ? 'arrears'
-    : 'advance';
-}
-
 function toIntegerCents(value: unknown): number | null {
   if (value === undefined || value === null || value === '') {
     return null;
@@ -220,15 +132,6 @@ function toIntegerCents(value: unknown): number | null {
   }
 
   return Math.round(numberValue);
-}
-
-/**
- * A recurring item with no catalog service becomes a Fixed line with a recurring amount and
- * nothing to bill it on; the billing engine refuses such a line (FIXED_LINE_NO_SERVICES), and
- * the contract wizard cannot finish it. Conversion therefore refuses it up front.
- */
-function serviceLessRecurringMessage(item: IQuoteItem): string {
-  return `Recurring item "${item.description}" must reference a catalog service before contract conversion`;
 }
 
 type ProductPriceRow = { quantity: number; unit_price: number };
@@ -286,78 +189,6 @@ function existingSalesOrderDiscountError(
     return stored?.quantity === value.quantity && stored.amount === value.amount;
   });
   return matches ? null : `Sales order ${salesOrder.so_number || salesOrder.so_id} does not match the quote's discounted product quantities and amounts. Reconcile the sales order with the quote before creating the remaining invoice.`;
-}
-
-/**
- * Date-only value of an instant (or date) in the tenant's effective time zone.
- * `client_contracts.start_date` is a date column; handing the database a
- * timestamp would let the session time zone pick the day.
- */
-function toDateOnlyInTimeZone(value: string | Date, timeZone: string): string {
-  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return value;
-  }
-  const iso = value instanceof Date ? value.toISOString() : new Date(value).toISOString();
-  return Temporal.Instant.from(iso).toZonedDateTimeISO(timeZone).toPlainDate().toString();
-}
-
-async function resolveProductServiceIds(
-  knexOrTrx: Knex | Knex.Transaction,
-  tenant: string,
-  items: IQuoteItem[]
-): Promise<Set<string>> {
-  const serviceIds = Array.from(
-    new Set(
-      items
-        .map((item) => item.service_id)
-        .filter((id): id is string => typeof id === 'string' && id.length > 0)
-    )
-  );
-
-  if (serviceIds.length === 0) {
-    return new Set();
-  }
-
-  const rows = await knexOrTrx('service_catalog')
-    .where({ tenant, item_kind: 'product' })
-    .whereIn('service_id', serviceIds)
-    .select('service_id');
-
-  return new Set(rows.map((row) => row.service_id as string));
-}
-
-/**
- * Service category per quoted service. Converted contract lines must carry the
- * catalog category so category-based billing splits see them like any other line.
- */
-async function resolveServiceCategoryIds(
-  knexOrTrx: Knex | Knex.Transaction,
-  tenant: string,
-  items: IQuoteItem[]
-): Promise<Map<string, string | null>> {
-  const serviceIds = Array.from(
-    new Set(
-      items
-        .map((item) => item.service_id)
-        .filter((id): id is string => typeof id === 'string' && id.length > 0)
-    )
-  );
-
-  if (serviceIds.length === 0) {
-    return new Map();
-  }
-
-  const rows = await knexOrTrx('service_catalog')
-    .where({ tenant })
-    .whereIn('service_id', serviceIds)
-    .select('service_id', 'category_id');
-
-  return new Map(rows.map((row) => [row.service_id as string, (row.category_id as string | null) ?? null]));
-}
-
-function isProductQuoteItem(item: IQuoteItem, productServiceIds: Set<string>): boolean {
-  return item.service_item_kind === 'product'
-    || (typeof item.service_id === 'string' && productServiceIds.has(item.service_id));
 }
 
 function getSelectedProductOneTimeItems(
@@ -674,10 +505,7 @@ async function convertQuoteToDraftContractRecords(
     throw new Error('Quote does not contain any recurring items selected for contract conversion');
   }
 
-  const serviceLessItem = recurringItems.find((item) => !item.service_id);
-  if (serviceLessItem) {
-    throw new Error(serviceLessRecurringMessage(serviceLessItem));
-  }
+  assertRecurringItemsConvertible(recurringItems);
 
   const billingFrequency = recurringItems[0]?.billing_frequency || 'monthly';
 
@@ -702,163 +530,18 @@ async function convertQuoteToDraftContractRecords(
   });
 
   const nowIso = new Date().toISOString();
-  const productServiceIds = await resolveProductServiceIds(knexOrTrx, tenant, recurringItems);
-  const categoryByServiceId = await resolveServiceCategoryIds(knexOrTrx, tenant, recurringItems);
-  const contractLineMappings: ContractLineMapping[] = recurringItems.map((item) => {
-    const contractLineType = mapQuoteItemToContractLineType(item);
-    return {
-      item,
-      contractLineId: uuidv4(),
-      contractLineType,
-      isUnitPriced: isUnitPricedRecurringItem(item, contractLineType, productServiceIds),
-    };
+  // Lines, services, configuration and the typed fixed/hourly/usage rows come
+  // from the one shared builder the workflow runtime also calls.
+  const { contractLineIdByBaseQuoteItemId } = await insertQuoteContractLines(knexOrTrx, tenant, {
+    recurringItems,
+    contractId: contract.contract_id,
+    billingFrequency,
+    nowIso,
   });
 
   const db = tenantDb(knexOrTrx, tenant);
-  await db.table('contract_lines').insert(
-    contractLineMappings.map(({ item, contractLineId, contractLineType, isUnitPriced }, index) => ({
-      tenant,
-      contract_line_id: contractLineId,
-      contract_id: contract.contract_id,
-      contract_line_name: item.service_name || item.description,
-      description: item.description,
-      billing_frequency: item.billing_frequency || billingFrequency,
-      is_custom: true,
-      contract_line_type: contractLineType,
-      billing_timing: getContractLineBillingTiming(item),
-      display_order: index,
-      service_category: item.service_id ? (categoryByServiceId.get(item.service_id) ?? null) : null,
-      // A per-unit line has no bundle total: quantity x unit rate is the charge.
-      // A bundle-priced row bills the line rate once, so the line carries the quoted recurring
-      // amount (quantity x unit price), not the unit price alone.
-      custom_rate: contractLineType === 'Fixed' && !isUnitPriced ? bundleLineTotal(item, productServiceIds) : null,
-      enable_proration: false,
-      billing_cycle_alignment: 'start',
-      minimum_billable_time: contractLineType === 'Hourly' ? 15 : null,
-      round_up_to_nearest: contractLineType === 'Hourly' ? 15 : null,
-      is_active: true,
-      location_id: item.location_id ?? null,
-      created_at: nowIso,
-      updated_at: nowIso,
-    }))
-  );
-
-  const configRows = contractLineMappings
-    .filter(({ item }) => Boolean(item.service_id))
-    .map(({ item, contractLineId, contractLineType, isUnitPriced }) => ({
-      item,
-      contractLineId,
-      contractLineType,
-      isUnitPriced,
-      configId: uuidv4(),
-      serviceId: item.service_id as string,
-    }));
-
-  await insertRowsUsingExistingColumns(
-    knexOrTrx,
-    tenant,
-    'contract_line_services',
-    configRows.map(({ contractLineId, serviceId, item, isUnitPriced }) => ({
-      tenant,
-      contract_line_id: contractLineId,
-      service_id: serviceId,
-      quantity: item.quantity,
-      custom_rate: isUnitPriced ? null : item.unit_price,
-      created_at: nowIso,
-      updated_at: nowIso,
-    }))
-  );
-
-  if (configRows.length > 0) {
-    await db.table('contract_line_service_configuration').insert(
-      configRows.map(({ configId, contractLineId, contractLineType, serviceId, item, isUnitPriced }) => ({
-        tenant,
-        config_id: configId,
-        contract_line_id: contractLineId,
-        service_id: serviceId,
-        configuration_type: contractLineType,
-        custom_rate: isUnitPriced ? null : item.unit_price,
-        quantity: item.quantity,
-        created_at: nowIso,
-        updated_at: nowIso,
-      }))
-    );
-  }
-
-  const fixedConfigRows = configRows.filter((row) => row.contractLineType === 'Fixed');
-  if (fixedConfigRows.length > 0) {
-    await db.table('contract_line_service_fixed_config').insert(
-      fixedConfigRows.map(({ configId, item, isUnitPriced }) => ({
-        tenant,
-        config_id: configId,
-        ...resolveFixedMemberRatePair({
-          // Unit rows: base_rate is the rate per unit; the quantity is on the configuration row.
-          // Bundle rows: the member's share of the line total (the whole of it, one member per line).
-          base_rate: isUnitPriced ? item.unit_price : bundleLineTotal(item, productServiceIds),
-          // Unit rows and products are per unit; a bundle row is the whole line total (its share).
-          base_rate_basis:
-            isUnitPriced || isProductQuoteItem(item, productServiceIds) ? 'per_unit' : 'share',
-          pricing_basis: isUnitPriced ? 'unit' : 'bundle',
-        }),
-        // Bundle rows are written exactly as before (column defaults).
-        ...(isUnitPriced ? { pricing_basis: 'unit', rate_provenance: 'custom' } : {}),
-        created_at: nowIso,
-        updated_at: nowIso,
-      }))
-    );
-  }
-
-  const hourlyConfigRows = configRows.filter((row) => row.contractLineType === 'Hourly');
-  if (hourlyConfigRows.length > 0) {
-    await db.table('contract_line_service_hourly_config').insert(
-      hourlyConfigRows.map(({ configId }) => ({
-        tenant,
-        config_id: configId,
-        minimum_billable_time: 15,
-        round_up_to_nearest: 15,
-        enable_overtime: false,
-        overtime_rate: null,
-        overtime_threshold: null,
-        enable_after_hours_rate: false,
-        after_hours_multiplier: null,
-        created_at: nowIso,
-        updated_at: nowIso,
-      }))
-    );
-
-    await db.table('contract_line_service_hourly_configs').insert(
-      hourlyConfigRows.map(({ configId, item }) => ({
-        tenant,
-        config_id: configId,
-        hourly_rate: item.unit_price,
-        minimum_billable_time: 15,
-        round_up_to_nearest: 15,
-        created_at: nowIso,
-        updated_at: nowIso,
-      }))
-    );
-  }
-
-  const usageConfigRows = configRows.filter((row) => row.contractLineType === 'Usage');
-  if (usageConfigRows.length > 0) {
-    await db.table('contract_line_service_usage_config').insert(
-      usageConfigRows.map(({ configId, item }) => ({
-        tenant,
-        config_id: configId,
-        unit_of_measure: item.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
-        unit_code: item.unit_code || resolveUnitOfMeasure({ fallback: 'C62' }).code,
-        enable_tiered_pricing: false,
-        minimum_usage: 0,
-        base_rate: item.unit_price,
-        created_at: nowIso,
-        updated_at: nowIso,
-      }))
-    );
-  }
-
   const clientContractId = uuidv4();
-  const effectiveTimeZone = await resolveEffectiveTimeZone(knexOrTrx, tenant);
-  const clientContractStartDate = toDateOnlyInTimeZone(quote.accepted_at || quote.quote_date || nowIso, effectiveTimeZone);
+  const clientContractStartDate = await resolveQuoteContractStartDate(knexOrTrx, tenant, quote, nowIso);
   await db.table('client_contracts').insert({
     tenant,
     client_contract_id: clientContractId,
@@ -876,9 +559,7 @@ async function convertQuoteToDraftContractRecords(
   await insertContractLineDiscounts(knexOrTrx, tenant, {
     clientContractId,
     startDate: clientContractStartDate,
-    contractLineIdByBaseQuoteItemId: new Map(
-      contractLineMappings.map(({ item, contractLineId }) => [item.quote_item_id, contractLineId] as const),
-    ),
+    contractLineIdByBaseQuoteItemId,
     planned: planContractLineDiscounts(quote.quote_items ?? [], billingFrequency),
     nowIso,
   });

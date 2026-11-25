@@ -2,7 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import { BaseEmailAdapter, type AdapterConnectionTestResult } from './base/BaseEmailAdapter';
 import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/inbound-email.interfaces';
 import { resolveGoogleMailboxOAuthClient, toActionableGoogleRefreshError } from './googleMailboxOAuthClient';
-import { google } from 'googleapis';
+import * as google from 'googleapis/build/src/apis/gmail/index.js';
 import { OAuth2Client } from 'google-auth-library';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { tenantDb } from '@alga-psa/db';

@@ -510,6 +510,14 @@ export class ScenarioChargeSource implements ContractChargeSource {
     if (fixedServices.length === 0 && line.contract_line_type !== "Fixed") {
       return null;
     }
+    // Match live billing: without Fixed members, attach the line fee to the
+    // first non-product service by ID, regardless of its configuration type.
+    // Fixed unit-priced members suppress this fallback just like bundle members.
+    const fallbackService = fixedServices.length === 0
+      ? line.services
+          .filter((service) => !isProductService(service))
+          .sort((a, b) => a.service_id.localeCompare(b.service_id))[0]
+      : null;
 
     const planServices = fixedServices.map((service) => {
       const config = service.configuration;
@@ -566,9 +574,14 @@ export class ScenarioChargeSource implements ContractChargeSource {
           baseRateBasis: service.base_rate_basis,
           pricingBasis: service.pricing_basis,
         })),
-        // The scenario carries the full service list; there is no separate
-        // catalog fallback row to load for a hypothetical line.
-        fallbackService: null,
+        fallbackService: fallbackService
+          ? {
+              serviceId: fallbackService.service_id,
+              serviceName: fallbackService.service_name,
+              taxRateId: fallbackService.tax_rate_id,
+              configurationId: syntheticConfigId(line.key, fallbackService.service_id),
+            }
+          : null,
       },
       taxContext: this.input.taxPorts,
       metadata: { lineCycle, quantityLabel: cadenceQuantityLabel(lineCycle) },
@@ -803,7 +816,8 @@ export class ScenarioChargeSource implements ContractChargeSource {
 /**
  * Mirrors the engine's load-phase pricing-schedule selection: among schedules
  * overlapping the due service period (effective_date < servicePeriodEndExclusive
- * AND (end_date null OR end_date > servicePeriodStartExclusive)) the latest
+ * AND (end_date null OR end_date > servicePeriodStartExclusive)) that apply to
+ * this line — its own scope first, then the whole-contract rows — the latest
  * effective_date wins; its custom_rate applies only when non-null (a null-rate
  * latest schedule does NOT fall back to earlier schedules, matching the
  * engine's `.first()` + null check). Otherwise the assignment custom rate.
@@ -822,7 +836,10 @@ function resolveEffectiveCustomRate(
   const latest = selectActivePricingSchedule(
     schedules.map((schedule) => ({
       schedule_id: null,
-      contract_line_id: null,
+      // The stored line scope, so the simulator reprices the same lines the
+      // engine does: a line-scoped schedule applies to its line only (and wins
+      // there), a null scope to every fixed-fee line.
+      contract_line_id: schedule.contract_line_key ?? null,
       effective_date: schedule.effective_date,
       end_date: schedule.end_date,
       custom_rate: schedule.custom_rate,

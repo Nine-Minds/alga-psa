@@ -45,8 +45,8 @@ const KNOWN_UNDECLARED = [
  * has no catalog entry, so the base checkPermission denies every caller. Found
  * when the contract test started scanning controller options; tracked as
  * follow-up and deliberately NOT provisioned alongside the API admin fix.
- * `permission` (GET/POST /api/v1/rbac/permissions) is the closest neighbour of
- * `role` and the most important of the four. Never extend this list: a new
+ * `permission` (the /api/v1/permissions endpoints) was the fourth entry and is
+ * now provisioned in the catalog for msp:Admin, like `role`. Never extend this list: a new
  * resource goes in the catalog. board, status, email_template, quote, stopwatch,
  * service_category and ticket_category are not here: the first two override
  * checkPermission onto `ticket`, the next three set permissionResource, and the

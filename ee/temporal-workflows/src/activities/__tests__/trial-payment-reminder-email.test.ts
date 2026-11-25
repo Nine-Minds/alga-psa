@@ -1,15 +1,11 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createTrialPaymentReminderEmailContent } from '../trial-payment-reminder-email.js';
 
-const WELCOME_TEMPLATE_SOURCE = fs.readFileSync(
-  path.resolve(__dirname, '../email-activities.ts'),
-  'utf8'
-);
-
-// Scaffolding the reminder must keep in step with the welcome email.
-const SHARED_MARKERS = [
+// The reminder's own lifecycle-email scaffolding. It used to be asserted
+// against the welcome email's source too; the welcome email was redesigned
+// (ee/docs/plans/2026-11-22-welcome-email-redesign) and the reminder was
+// deliberately left as it is, so the two no longer share markup.
+const REMINDER_SCAFFOLDING = [
   "family=Inter:wght@400;500;600&family=Poppins:wght@600;700",
   'background: linear-gradient(135deg, #8a4dea 0%, #a366f0 100%)',
   'class="email-container shadow"',
@@ -35,15 +31,14 @@ describe('createTrialPaymentReminderEmailContent', () => {
     }
   });
 
-  it('shares the welcome email scaffolding', () => {
+  it('keeps its lifecycle email scaffolding', () => {
     const { htmlBody } = createTrialPaymentReminderEmailContent({
       tenantName: 'Acme MSP',
       trialEndIso: '2026-03-14T12:00:00.000Z',
     });
 
-    for (const marker of SHARED_MARKERS) {
+    for (const marker of REMINDER_SCAFFOLDING) {
       expect(htmlBody, `reminder template is missing: ${marker}`).toContain(marker);
-      expect(WELCOME_TEMPLATE_SOURCE, `welcome template no longer has: ${marker}`).toContain(marker);
     }
   });
 

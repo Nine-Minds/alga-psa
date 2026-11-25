@@ -3,7 +3,14 @@ import { computeWorkDateFields, resolveUserTimeZone, tenantDb } from '@alga-psa/
 import type { IUser } from '@alga-psa/types';
 import { persistTimeEntry, type PersistedTimeEntry } from '../timeEntryWriteCore';
 import { resolveTimeSheetForWorkDate } from '../timeSheetResolution';
-import { saveTimeEntryParamsSchema, type SaveTimeEntryParams } from '../../actions/timeEntrySchemas';
+import {
+  saveOperationalTimeEntryParamsSchema,
+  saveTimeEntryParamsSchema,
+  type SaveTimeEntryParams,
+} from '../../actions/timeEntrySchemas';
+import { resolveTimeEntryMode } from '../timeEntryMode';
+import { assertSeatOwnOperationalEntry } from '../seatTimeAccess';
+import { RequestLocalAuthorizationCache } from '@alga-psa/authorization/kernel';
 import { StopwatchConflictError, StopwatchError } from './stopwatchErrors';
 import { zonedWorkDayCalendar } from '../timeEntryPeriodSelection';
 import { activeMs, toEntryPlan, toEntrySpan } from './stopwatchMath';
@@ -394,6 +401,14 @@ export interface LogSessionResult {
  *
  * Callers publish events AFTER commit: publishPersistedTimeEntryEvents for every result.persisted.
  * `actor` is the acting user and must own the session. Permission checks are the caller's job.
+ *
+ * Billing mode: resolved HERE, from the actor, with the same `resolveTimeEntryMode` every time-entry
+ * write uses. It is deliberately not a parameter, so no caller (server action, REST service) can log a
+ * seat technician's session as commercial or ask for a mode. A seat (operational) session is written
+ * through the operational schema and persistTimeEntry({ mode: 'operational' }): actual duration, zero
+ * billable minutes, no service/contract line/tax. A service is not required and `session.service_id` is
+ * not applied; a commercial field in the input is refused by the write core rather than dropped, and the
+ * entry subject must be the actor. Ticket scope is enforced by persistTimeEntry as for manual entries.
  */
 export async function logSession(
   trx: Knex.Transaction,
@@ -414,6 +429,17 @@ export async function logSession(
 
   const { entries: explicitEntries, ...defaults } = input;
   const entryUserId = defaults.user_id ?? actor.user_id;
+  const mode = await resolveTimeEntryMode(trx, tenant, actor.user_id, new RequestLocalAuthorizationCache());
+  const isOperational = mode === 'operational';
+  if (isOperational) {
+    // A seat technician logs only their own effort, as for a manual operational entry.
+    assertSeatOwnOperationalEntry({ billing_mode: 'operational', user_id: entryUserId }, actor.user_id);
+    for (const item of [defaults, ...(explicitEntries ?? [])]) {
+      if (item.user_id && item.user_id !== actor.user_id) {
+        assertSeatOwnOperationalEntry({ billing_mode: 'operational', user_id: item.user_id }, actor.user_id);
+      }
+    }
+  }
   const timeZone = await resolveUserTimeZone(trx, tenant, entryUserId);
 
   let inputs: LogSessionEntryFields[];
@@ -436,7 +462,8 @@ export async function logSession(
     }));
   }
 
-  const serviceId = defaults.service_id ?? session.service_id ?? undefined;
+  // An operational session never takes a service from the draft: the entry carries none.
+  const serviceId = isOperational ? undefined : (defaults.service_id ?? session.service_id ?? undefined);
   const nowIso = now.toISOString();
   const persisted: PersistedTimeEntry[] = [];
 
@@ -453,12 +480,12 @@ export async function logSession(
       timeSheetId = (await resolveTimeSheetForWorkDate(trx, tenant, entryUserId, work_date)).timeSheetId;
     }
 
-    const entryServiceId = item.service_id ?? serviceId;
-    if (!entryServiceId?.trim()) {
+    const entryServiceId = isOperational ? item.service_id : (item.service_id ?? serviceId);
+    if (!isOperational && !entryServiceId?.trim()) {
       throw new StopwatchError('serviceRequired');
     }
 
-    const entry = saveTimeEntryParamsSchema.parse({
+    const entry = (isOperational ? saveOperationalTimeEntryParamsSchema : saveTimeEntryParamsSchema).parse({
       entry_id: null,
       work_item_id: item.work_item_id ?? session.work_item_id,
       work_item_type: item.work_item_type ?? session.work_item_type,
@@ -477,7 +504,7 @@ export async function logSession(
       tax_rate_id: item.tax_rate_id ?? undefined,
     }) as SaveTimeEntryParams;
 
-    persisted.push(await persistTimeEntry(trx, { tenant, actor, entry }));
+    persisted.push(await persistTimeEntry(trx, { tenant, actor, entry, ...(isOperational ? { mode } : {}) }));
   }
 
   await tenantDb(trx, tenant).table('time_tracking_session_entries').insert(
@@ -492,7 +519,7 @@ export async function logSession(
       time_entry_id: first.entry.entry_id,
       closed_at: now,
       updated_at: now,
-      service_id: inputs[0].service_id ?? serviceId ?? null,
+      service_id: isOperational ? null : (inputs[0].service_id ?? serviceId ?? null),
       notes: inputs[0].notes ?? session.notes ?? '',
     })
     .returning('*');

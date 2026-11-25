@@ -11,8 +11,10 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { IContractPricingSchedule } from '@alga-psa/types';
 import {
   createPricingSchedule,
-  updatePricingSchedule
+  updatePricingSchedule,
+  type PricingScheduleLineScope
 } from '@alga-psa/billing/actions/contractPricingScheduleActions';
+import { toCalendarDateString, toCalendarDisplayDate } from '@alga-psa/core';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -23,11 +25,31 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 
+/** New schedules name one line; legacy rows retain their stored scope. */
+function initialScope(
+  schedule: IContractPricingSchedule | null | undefined,
+  eligibleLines: PricingScheduleLineScope[],
+): string {
+  if (schedule?.schedule_id) return schedule.contract_line_id ?? '';
+  return eligibleLines.length === 1 ? eligibleLines[0].contract_line_id : '';
+}
+
 interface PricingScheduleDialogProps {
   contractId: string;
   schedule?: IContractPricingSchedule | null;
   /** Currency the owning contract is denominated in; custom_rate is stored in its minor units. */
   currencyCode?: string;
+  /**
+   * Fixed-fee lines a schedule rate actually reprices — the lines offered in the
+   * picker and the ones a whole-contract schedule applies to. Unit-priced lines
+   * are not in here: the engine prices their members from their own unit rates,
+   * so a schedule would change nothing on them.
+   */
+  eligibleLines: PricingScheduleLineScope[];
+  /** Stored binding's name, including lines no longer eligible for new schedules. */
+  currentLineName?: string;
+  /** Fixed lines left out because every member bills per unit. */
+  unitPricedLineCount?: number;
   onClose: () => void;
   onSave: () => void;
 }
@@ -36,18 +58,21 @@ export function PricingScheduleDialog({
   contractId,
   schedule,
   currencyCode,
+  eligibleLines,
+  currentLineName,
+  unitPricedLineCount = 0,
   onClose,
   onSave
 }: PricingScheduleDialogProps) {
   const { t } = useTranslation('msp/contracts');
-  const { symbol, fractionDigits } = useCurrencyFormat();
+  const { symbol, fractionDigits, money } = useCurrencyFormat();
   const rateFractionDigits = fractionDigits(currencyCode);
   const rateMinorUnitFactor = 10 ** rateFractionDigits;
   const [effectiveDate, setEffectiveDate] = useState<Date | undefined>(
-    schedule?.effective_date ? new Date(schedule.effective_date) : undefined
+    toCalendarDisplayDate(schedule?.effective_date) ?? undefined
   );
   const [endDate, setEndDate] = useState<Date | undefined>(
-    schedule?.end_date ? new Date(schedule.end_date) : undefined
+    toCalendarDisplayDate(schedule?.end_date) ?? undefined
   );
   const [hasEndDate, setHasEndDate] = useState(!!schedule?.end_date);
   const [useDuration, setUseDuration] = useState(!!schedule?.duration_value);
@@ -72,13 +97,22 @@ export function PricingScheduleDialog({
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  // A stored row opens on the scope it already has — a whole-contract row
+  // provides a fallback for active fixed-fee lines and is kept as stored unless
+  // the user re-scopes it.
+  const [scope, setScope] = useState<string>(() => initialScope(schedule, eligibleLines));
+  const activeBundleFeeLineCount = eligibleLines.filter((line) => line.is_active).length;
+  const isWholeContract = Boolean(schedule?.schedule_id && !schedule.contract_line_id && !scope);
+  const selectedLine = eligibleLines.find((line) => line.contract_line_id === scope) ?? null;
+
   useEffect(() => {
     if (schedule) {
-      setEffectiveDate(schedule.effective_date ? new Date(schedule.effective_date) : undefined);
-      setEndDate(schedule.end_date ? new Date(schedule.end_date) : undefined);
+      setEffectiveDate(toCalendarDisplayDate(schedule.effective_date) ?? undefined);
+      setEndDate(toCalendarDisplayDate(schedule.end_date) ?? undefined);
       setHasEndDate(!!schedule.end_date);
       setUseDefaultRate(schedule.custom_rate === undefined || schedule.custom_rate === null);
       setNotes(schedule.notes || '');
+      setScope(initialScope(schedule, eligibleLines));
       userEditedRateRef.current = false;
     }
   }, [schedule]);
@@ -102,6 +136,14 @@ export function PricingScheduleDialog({
 
     if (!effectiveDate) {
       setError(t('pricingSchedules.dialog.validation.effectiveDateRequired', { defaultValue: 'Effective date is required' }));
+      return;
+    }
+
+    // Only a stored contract-wide row may retain its legacy NULL scope.
+    if (!scope && !isWholeContract) {
+      setError(t('pricingSchedules.dialog.validation.scopeRequired', {
+        defaultValue: 'Choose a fixed-fee line for this schedule',
+      }));
       return;
     }
 
@@ -152,8 +194,14 @@ export function PricingScheduleDialog({
     try {
       const scheduleData = {
         contract_id: contractId,
-        effective_date: effectiveDate.toISOString(),
-        end_date: !useDuration && hasEndDate && endDate ? endDate.toISOString() : null,
+        // NULL is the whole-contract scope the engine already honours; a line id
+        // reprices that line only and wins over a whole-contract schedule.
+        contract_line_id: isWholeContract ? null : scope,
+        // Calendar dates, never instants: effective_date/end_date are DATE
+        // columns, and an instant built from a local-midnight pick lands on the
+        // previous day east of UTC.
+        effective_date: toCalendarDateString(effectiveDate) as string,
+        end_date: !useDuration && hasEndDate && endDate ? toCalendarDateString(endDate) : null,
         duration_value: useDuration ? parseInt(durationValue) : undefined,
         duration_unit: useDuration ? durationUnit : undefined,
         // Explicit null — undefined is dropped by Knex on update, silently keeping the old rate.
@@ -185,6 +233,36 @@ export function PricingScheduleDialog({
     }
   };
 
+  const scopeOptions = [
+    // Keep the saved binding visible without making it available for authoring.
+    ...(schedule?.schedule_id && schedule.contract_line_id
+      && !eligibleLines.some((line) => line.contract_line_id === schedule.contract_line_id)
+      ? [{
+        value: schedule.contract_line_id,
+        label: currentLineName
+          || t('pricingSchedules.dialog.values.unnamedLine', { defaultValue: 'Unnamed line' }),
+        disabled: true,
+      }]
+      : []),
+    ...eligibleLines.map((line) => ({
+      value: line.contract_line_id,
+      label: line.contract_line_name
+        || t('pricingSchedules.dialog.values.unnamedLine', { defaultValue: 'Unnamed line' }),
+    })),
+  ];
+  // With no fixed-fee line there is nothing for a new schedule's scope to apply
+  // to. A row that already exists stays editable either way, so its dates can
+  // still be corrected after the contract's lines changed under it.
+  const canSave = eligibleLines.length > 0 || Boolean(schedule?.schedule_id);
+  // The fallback rate currently in the form, so the
+  // whole-contract notice can state the effect in numbers while it is picked.
+  const enteredRate = !useDefaultRate && customRate.trim() !== ''
+    ? Number.parseFloat(customRate)
+    : Number.NaN;
+  const wholeContractRate = Number.isFinite(enteredRate)
+    ? money(Math.round(enteredRate * rateMinorUnitFactor), currencyCode)
+    : null;
+
   return (
     <Dialog
       isOpen={true}
@@ -208,7 +286,7 @@ export function PricingScheduleDialog({
             id="save-pricing-schedule-btn"
             type="button"
             onClick={() => (document.getElementById('pricing-schedule-form') as HTMLFormElement | null)?.requestSubmit()}
-            disabled={isSaving}
+            disabled={isSaving || !canSave}
           >
             {isSaving
               ? t('pricingSchedules.dialog.actions.saving', { defaultValue: 'Saving...' })
@@ -227,11 +305,66 @@ export function PricingScheduleDialog({
             </Alert>
           )}
 
+          {eligibleLines.length === 0 && (
+            <Alert variant="warning">
+              <AlertDescription>
+                {unitPricedLineCount > 0
+                  ? t('pricingSchedules.dialog.notices.unitPricedExcluded', {
+                    defaultValue: 'Lines that bill per unit are not listed: a pricing schedule never changes a per-unit price. Change the unit price on the line instead.',
+                  })
+                  : t('pricingSchedules.dialog.empty.noEligibleLines', {
+                    defaultValue: 'This contract has no fixed-fee line, so a pricing schedule has nothing to reprice.',
+                  })}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {canSave && (
+            <div>
+              <Label htmlFor="pricing-schedule-contract-line">
+                {t('pricingSchedules.dialog.fields.appliesTo', { defaultValue: 'Applies to' })} *
+              </Label>
+              <CustomSelect
+                id="pricing-schedule-contract-line"
+                value={scope}
+                onValueChange={setScope}
+                options={scopeOptions}
+                placeholder={isWholeContract
+                  ? t('pricingSchedules.dialog.values.wholeContract', { defaultValue: 'Whole contract' })
+                  : t('pricingSchedules.dialog.fields.appliesToPlaceholder', {
+                    defaultValue: 'Select a fixed-fee line',
+                  })}
+                className="mt-1 w-full"
+              />
+              {isWholeContract && (
+                <Alert variant="warning" className="mt-1">
+                  <AlertDescription>{wholeContractRate && activeBundleFeeLineCount > 1
+                    ? t('pricingSchedules.dialog.notices.wholeContractEffect', {
+                      count: activeBundleFeeLineCount,
+                      amount: wholeContractRate,
+                      defaultValue: 'Whole contract: fallback fee of {{amount}} per active fixed-fee line per billing period ({{count}} lines). Line-specific schedules take precedence.',
+                    })
+                    : t('pricingSchedules.dialog.notices.wholeContract', {
+                      defaultValue: 'Whole contract: fallback schedule for active fixed-fee lines. Line-specific schedules take precedence.',
+                    })}</AlertDescription>
+                </Alert>
+              )}
+              {unitPricedLineCount > 0 && (
+                <p className="mt-1 text-xs text-[rgb(var(--color-text-600))]">
+                  {t('pricingSchedules.dialog.notices.unitPricedExcluded', {
+                    defaultValue: 'Lines that bill per unit are not listed: a pricing schedule never changes a per-unit price. Change the unit price on the line instead.',
+                  })}
+                </p>
+              )}
+            </div>
+          )}
+
           <div>
             <Label htmlFor="effective-date">
               {t('pricingSchedules.dialog.fields.effectiveDate', { defaultValue: 'Effective Date' })} *
             </Label>
             <DatePicker
+              id="effective-date"
               value={effectiveDate}
               onChange={setEffectiveDate}
               className="mt-1 w-full"
@@ -318,6 +451,7 @@ export function PricingScheduleDialog({
                 <div>
                   <Label htmlFor="end-date">{t('pricingSchedules.dialog.fields.endDate', { defaultValue: 'End Date' })}</Label>
                   <DatePicker
+                    id="end-date"
                     value={endDate}
                     onChange={setEndDate}
                     className="mt-1 w-full"
@@ -344,9 +478,24 @@ export function PricingScheduleDialog({
           {!useDefaultRate && (
             <div>
               <Label htmlFor="custom-rate">
-                {t('pricingSchedules.dialog.fields.customRate', { defaultValue: 'Custom Rate' })} *
+                {t('pricingSchedules.dialog.fields.lineFee', {
+                  defaultValue: 'Fee per billing period',
+                })} *
               </Label>
-              <div className="relative">
+              <p className="text-xs text-[rgb(var(--color-text-600))]">
+                {isWholeContract
+                  ? t('pricingSchedules.dialog.fields.lineFeeHelpWholeContract', {
+                    defaultValue: 'Fallback fee for each active fixed-fee line in the billing periods covered. Line-specific schedules take precedence.',
+                  })
+                  : selectedLine?.has_unit_priced_members
+                    ? t('pricingSchedules.dialog.fields.lineFeeHelpMixed', {
+                      defaultValue: 'Replaces the bundle fee of this line in every billing period the schedule covers. Members priced per unit keep their own unit price.',
+                    })
+                    : t('pricingSchedules.dialog.fields.lineFeeHelp', {
+                      defaultValue: 'What this line bills in every billing period the schedule covers, replacing its usual fee.',
+                    })}
+              </p>
+              <div className="relative mt-1">
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
                   {symbol(currencyCode)}
                 </span>
