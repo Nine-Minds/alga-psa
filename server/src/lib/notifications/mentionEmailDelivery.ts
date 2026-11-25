@@ -2,7 +2,6 @@ import type { Knex } from 'knex';
 import type { OutboundMailClass } from '@alga-psa/types';
 import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
-import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { sendEventEmail, resolveEventEmailLocale } from './sendEventEmail';
 import { resolveEmailNotificationPreference } from './emailNotificationPreferences';
 import {
@@ -19,6 +18,8 @@ export interface MentionEmailContext {
   authorName: string;
   entityType: string;
   entityName: string;
+  /** Ticket title for a ticket, project name for a task; omitted for documents. */
+  contextName?: string;
   commentPreview?: string;
   url: string;
   mailClass: OutboundMailClass;
@@ -62,32 +63,11 @@ export async function deliverUserMentionEmail(
 
     const isTask = input.entityType === 'task comment' || input.entityType === 'project_task';
     const isTicket = input.entityType === 'ticket';
-    const isDocument = input.entityType === 'document';
-    const ticketNumber = isTicket
-      ? input.entityName.replace(/^#/, '')
-      : '';
     const recipientLocale = await resolveEventEmailLocale({
       tenantId,
       to: user.email,
       recipientUserId: userId,
     });
-    const { t } = await getServerTranslation(recipientLocale, 'common');
-    const interpolation = {
-      authorName: input.authorName,
-      taskName: isTask ? input.entityName : '',
-      ticketNumber,
-      documentName: isDocument ? input.entityName : '',
-    };
-    const introKey = isTask
-      ? 'notifications.mentions.taskIntro'
-      : isTicket
-        ? 'notifications.mentions.ticketIntro'
-        : 'notifications.mentions.documentIntro';
-    const textIntroKey = isTask
-      ? 'notifications.mentions.textTaskIntro'
-      : isTicket
-        ? 'notifications.mentions.textTicketIntro'
-        : 'notifications.mentions.textDocumentIntro';
 
     await sendEventEmail({
       mailClass: input.mailClass,
@@ -95,23 +75,20 @@ export async function deliverUserMentionEmail(
       tenantId,
       to: user.email,
       locale: recipientLocale,
-      subject: t('notifications.mentions.subject', interpolation),
+      // Fallback only: the stored template's localized subject takes precedence.
+      subject: `${input.authorName} mentioned you in ${input.entityName}`,
       template: USER_MENTION_TEMPLATE,
       context: {
-        authorName: input.authorName,
-        entityType: input.entityType,
-        entityName: input.entityName,
-        commentPreview: input.commentPreview ?? '',
-        url: input.url,
-        mentionSubject: t('notifications.mentions.subject', interpolation),
-        mentionHeaderLabel: t('notifications.mentions.headerLabel'),
-        mentionIntro: t(introKey, interpolation),
-        mentionClosingNote: t('notifications.mentions.closingNote'),
-        mentionViewButton: t('notifications.mentions.viewButton'),
-        mentionFooter: t('notifications.mentions.footer'),
-        mentionTextIntro: t(textIntroKey, interpolation),
-        mentionTextClosingNote: t('notifications.mentions.textClosingNote'),
-        mentionTextView: t('notifications.mentions.textView'),
+        mention: {
+          author: input.authorName,
+          entityName: input.entityName,
+          contextName: input.contextName ?? '',
+          isTicket,
+          isTask,
+          isDocument: input.entityType === 'document',
+          commentPreview: input.commentPreview ?? '',
+          url: input.url,
+        },
       },
       entityType: input.entityType,
       entityId: input.entityId,

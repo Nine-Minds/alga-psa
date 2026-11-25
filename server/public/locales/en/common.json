@@ -1782,21 +1782,6 @@
       "commentBy": "Comment by {{author}}:",
       "readAt": "Read {{time}}"
     },
-    "mentions": {
-      "subject": "{{authorName}} mentioned you",
-      "headerLabel": "You were mentioned",
-      "taskIntro": "{{authorName}} mentioned you in a comment on task {{taskName}}",
-      "ticketIntro": "{{authorName}} mentioned you in ticket #{{ticketNumber}}",
-      "documentIntro": "{{authorName}} mentioned you in document {{documentName}}",
-      "closingNote": "Open the link to see the mention in context and reply.",
-      "viewButton": "View in AlgaPSA",
-      "footer": "Powered by AlgaPSA &middot; Keeping teams aligned",
-      "textTaskIntro": "{{authorName}} mentioned you in a comment on task {{taskName}}",
-      "textTicketIntro": "{{authorName}} mentioned you in ticket #{{ticketNumber}}",
-      "textDocumentIntro": "{{authorName}} mentioned you in document {{documentName}}",
-      "textClosingNote": "Open the link to see the mention in context and reply.",
-      "textView": "View in AlgaPSA"
-    },
     "item": {
       "unknown": "Unknown",
       "justNow": "Just now",

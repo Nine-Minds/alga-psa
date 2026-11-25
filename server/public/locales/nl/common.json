@@ -1782,21 +1782,6 @@
       "commentBy": "Reactie van {{author}}:",
       "readAt": "Gelezen {{time}}"
     },
-    "mentions": {
-      "subject": "{{authorName}} heeft u genoemd",
-      "headerLabel": "U bent genoemd",
-      "taskIntro": "{{authorName}} heeft u genoemd in een reactie op taak {{taskName}}",
-      "ticketIntro": "{{authorName}} heeft u genoemd in ticket #{{ticketNumber}}",
-      "documentIntro": "{{authorName}} heeft u genoemd in document {{documentName}}",
-      "closingNote": "Open de link om de vermelding in context te bekijken en te reageren.",
-      "viewButton": "Bekijk in AlgaPSA",
-      "footer": "Mogelijk gemaakt door AlgaPSA &middot; Teams op één lijn houden",
-      "textTaskIntro": "{{authorName}} heeft u genoemd in een reactie op taak {{taskName}}",
-      "textTicketIntro": "{{authorName}} heeft u genoemd in ticket #{{ticketNumber}}",
-      "textDocumentIntro": "{{authorName}} heeft u genoemd in document {{documentName}}",
-      "textClosingNote": "Open de link om de vermelding in context te bekijken en te reageren.",
-      "textView": "Bekijk in AlgaPSA"
-    },
     "item": {
       "unknown": "Onbekend",
       "justNow": "Zojuist",

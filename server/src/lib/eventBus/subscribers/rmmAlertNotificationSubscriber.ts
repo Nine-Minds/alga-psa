@@ -17,7 +17,6 @@ import type { Knex } from 'knex';
 import { getConnection } from '../../db/db';
 import { getEventBus } from '../index';
 import { sendEventEmail } from '../../notifications/sendEventEmail';
-import { resolveEmailNotificationPreference } from '../../notifications/emailNotificationPreferences';
 
 const SUBTYPE_NAME = 'RMM Alert Triggered';
 const TEMPLATE_NAME = 'rmm-alert-triggered';
@@ -131,15 +130,19 @@ async function deliverEmail(
   boardId?: string
 ): Promise<void> {
   try {
-    const preference = await resolveEmailNotificationPreference(
-      knex,
-      tenantId,
-      SUBTYPE_NAME,
-      userId,
-    );
-    if (!preference.enabled || !preference.subtypeId) return;
-
     const db = tenantDb(knex, tenantId);
+
+    const settings = await db.table('notification_settings').first();
+    if (settings && !settings.is_enabled) return;
+
+    const subtype = await db.table('notification_subtypes').where({ name: SUBTYPE_NAME }).first();
+    if (!subtype || !subtype.is_enabled) return;
+
+    const preference = await db.table('user_notification_preferences')
+      .where({ user_id: userId, subtype_id: subtype.id })
+      .first();
+    if (preference && !preference.is_enabled) return;
+
     const user = await db.table('users').where({ user_id: userId }).first('email');
     if (!user?.email) return;
 
@@ -153,7 +156,7 @@ async function deliverEmail(
       context,
       entityType: 'ticket',
       recipientUserId: userId,
-      notificationSubtypeId: preference.subtypeId,
+      notificationSubtypeId: subtype.id,
     });
   } catch (error) {
     logger.warn('[RmmAlertNotificationSubscriber] Email notification failed', {

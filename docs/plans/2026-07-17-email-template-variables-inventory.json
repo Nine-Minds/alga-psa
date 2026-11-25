@@ -6263,6 +6263,94 @@
     "Confirmed packages/notifications/src/lib/templateSampleData.ts exists but has NO entries for time-entry-approved, time-entry-rejected, or time-entry-submitted.",
     "No availability labels were wrong; no descriptions/examples were factually incorrect against the code (examples remain inferred since no data-assembly call site exists). Inventory returned unchanged except for a clarifying note on rejectionReason's label mapping."
    ]
+  },
+  {
+   "category": "system",
+   "callSiteFiles": [
+    "server/src/lib/notifications/mentionEmailDelivery.ts",
+    "server/src/lib/eventBus/subscribers/internalNotificationSubscriber.ts"
+   ],
+   "templates": [
+    {
+     "templateName": "user-mentioned",
+     "sourceFile": "server/migrations/utils/templates/email/system/userMentioned.cjs",
+     "subject": "{{mention.author}} mentioned you in {{mention.entityName}}",
+     "variables": [
+      {
+       "path": "mention.author",
+       "type": "string",
+       "description": "Name of the person who @-mentioned the recipient.",
+       "example": "Jordan Lee",
+       "availability": "used"
+      },
+      {
+       "path": "mention.entityName",
+       "type": "string",
+       "description": "What the mention is on: the ticket number with a leading #, the task name, or the document name.",
+       "example": "#TIC-1042",
+       "availability": "used"
+      },
+      {
+       "path": "mention.contextName",
+       "type": "string",
+       "description": "Ticket title for a ticket mention, project name for a task mention; empty for a document.",
+       "example": "Email not syncing on front desk PC",
+       "availability": "used",
+       "notes": "Optional. Used inside {{#if mention.contextName}}."
+      },
+      {
+       "path": "mention.isTicket",
+       "type": "boolean",
+       "description": "True when the mention is in a ticket comment.",
+       "example": "true",
+       "availability": "used",
+       "notes": "Branch on it with {{#if mention.isTicket}}\u2026{{else}}\u2026{{/if}}."
+      },
+      {
+       "path": "mention.isTask",
+       "type": "boolean",
+       "description": "True when the mention is in a project task comment.",
+       "example": "false",
+       "availability": "used",
+       "notes": "A mention that is neither a ticket nor a task is in a document."
+      },
+      {
+       "path": "mention.isDocument",
+       "type": "boolean",
+       "description": "True when the mention is in a document.",
+       "example": "false",
+       "availability": "used"
+      },
+      {
+       "path": "mention.commentPreview",
+       "type": "string",
+       "description": "Plain-text excerpt of the comment containing the mention; empty for documents.",
+       "example": "@Sam can you check the mailbox quota on this one before we call the client back?",
+       "availability": "used",
+       "notes": "Optional. Used inside {{#if mention.commentPreview}}."
+      },
+      {
+       "path": "mention.url",
+       "type": "url",
+       "description": "Deep link that opens the ticket, task, or document where the mention was made.",
+       "example": "https://app.example.com/msp/tickets/sample-ticket-id",
+       "availability": "used"
+      }
+     ],
+     "conditionals": [
+      "mention.isTicket",
+      "mention.isTask",
+      "mention.contextName",
+      "mention.commentPreview"
+     ],
+     "uncertainties": [
+      "Sent by deliverUserMentionEmail to each newly mentioned internal user; ticket mentions are gated by the seat audience and skipped for ticket assignees, who already get the comment email."
+     ]
+    }
+   ],
+   "verificationNotes": [
+    "Context built in mentionEmailDelivery.ts; every variable is supplied on every send."
+   ]
   }
  ],
  "synthesis": {

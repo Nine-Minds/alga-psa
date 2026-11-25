@@ -57,7 +57,6 @@ import {
   managerAlertLink,
   resolveAlertBaseUrl,
 } from '../../notifications/prepaidBalanceAlertTemplates';
-import { resolveEmailNotificationPreference } from '../../notifications/emailNotificationPreferences';
 
 const CLAIM_BATCH_SIZE = 50;
 const LEASE_DURATION_MS = 15 * 60 * 1000;
@@ -691,7 +690,42 @@ async function emailPreferencesEnabled(
   subtypeName: string,
   userId?: string | null
 ): Promise<{ enabled: boolean; subtypeId?: number }> {
-  return resolveEmailNotificationPreference(knex, tenantId, subtypeName, userId);
+  const db = tenantDb(knex, tenantId);
+
+  const settingsRow = await db.table('notification_settings').first('is_enabled');
+  if (settingsRow && settingsRow.is_enabled === false) {
+    return { enabled: false };
+  }
+
+  const subtype = await db.table('notification_subtypes').where({ name: subtypeName }).first('id', 'category_id');
+  if (!subtype) {
+    return { enabled: false };
+  }
+
+  const subtypeSetting = await db.table('tenant_notification_subtype_settings')
+    .where({ subtype_id: subtype.id })
+    .first('is_enabled');
+  if (subtypeSetting && subtypeSetting.is_enabled === false) {
+    return { enabled: false };
+  }
+
+  const categorySetting = await db.table('tenant_notification_category_settings')
+    .where({ category_id: subtype.category_id })
+    .first('is_enabled');
+  if (categorySetting && categorySetting.is_enabled === false) {
+    return { enabled: false };
+  }
+
+  if (userId) {
+    const preference = await db.table('user_notification_preferences')
+      .where({ user_id: userId, subtype_id: subtype.id })
+      .first('is_enabled');
+    if (preference && preference.is_enabled === false) {
+      return { enabled: false };
+    }
+  }
+
+  return { enabled: true, subtypeId: subtype.id };
 }
 
 interface EmailRoleResolution {

@@ -1,31 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
+import Handlebars from 'handlebars';
 
 const state = vi.hoisted(() => ({
   sendEventEmail: vi.fn(async () => undefined),
   resolveEventEmailLocale: vi.fn(async () => 'en'),
-  translate: vi.fn((key: string, values?: Record<string, unknown>) => {
-    const translations: Record<string, string> = {
-      'notifications.mentions.subject': '{{authorName}} mentioned you',
-      'notifications.mentions.headerLabel': 'You were mentioned',
-      'notifications.mentions.ticketIntro': '{{authorName}} mentioned you in ticket #{{ticketNumber}}',
-      'notifications.mentions.textTicketIntro': '{{authorName}} mentioned you in ticket #{{ticketNumber}}',
-      'notifications.mentions.taskIntro': '{{authorName}} mentioned you in a comment on task {{taskName}}',
-      'notifications.mentions.textTaskIntro': '{{authorName}} mentioned you in a comment on task {{taskName}}',
-      'notifications.mentions.documentIntro': '{{authorName}} mentioned you in document {{documentName}}',
-      'notifications.mentions.textDocumentIntro': '{{authorName}} mentioned you in document {{documentName}}',
-      'notifications.mentions.closingNote': 'Open the link to see the mention in context and reply.',
-      'notifications.mentions.viewButton': 'View in AlgaPSA',
-      'notifications.mentions.footer': 'Powered by AlgaPSA &middot; Keeping teams aligned',
-      'notifications.mentions.textClosingNote': 'Open the link to see the mention in context and reply.',
-      'notifications.mentions.textView': 'View in AlgaPSA',
-    };
-    let translated = translations[key] ?? key;
-    for (const [name, value] of Object.entries(values ?? {})) {
-      translated = translated.replaceAll(`{{${name}}}`, String(value));
-    }
-    return translated;
-  }),
   settings: { is_enabled: true } as { is_enabled: boolean } | undefined,
   subtype: { id: 42, category_id: 7, is_enabled: true } as
     | { id: number; category_id: number; is_enabled: boolean }
@@ -74,10 +53,6 @@ vi.mock('../../../lib/notifications/sendEventEmail', () => ({
   resolveEventEmailLocale: state.resolveEventEmailLocale,
 }));
 
-vi.mock('@alga-psa/ui/lib/i18n/serverOnly', () => ({
-  getServerTranslation: vi.fn(async () => ({ t: state.translate })),
-}));
-
 function fakeDb() {
   type FakeQueryBuilder = {
     where: (criteria?: unknown) => FakeQueryBuilder;
@@ -109,7 +84,6 @@ describe('deliverUserMentionEmail', () => {
   beforeEach(() => {
     state.sendEventEmail.mockClear();
     state.resolveEventEmailLocale.mockClear();
-    state.translate.mockClear();
     state.settings = { is_enabled: true };
     state.subtype = { id: 42, category_id: 7, is_enabled: true };
     state.category = { is_enabled: true };
@@ -148,6 +122,7 @@ describe('deliverUserMentionEmail', () => {
       authorName: 'Alice Author',
       entityType: 'ticket',
       entityName: '#T-42',
+      contextName: 'Printer offline',
       commentPreview: 'Can you help?',
       url: '/msp/tickets/ticket-1',
       mailClass: 'ticket',
@@ -164,20 +139,18 @@ describe('deliverUserMentionEmail', () => {
       template: 'user-mentioned',
       recipientUserId: 'user-1',
       notificationSubtypeId: 42,
-      context: expect.objectContaining({
-        authorName: 'Alice Author',
-        entityType: 'ticket',
-        entityName: '#T-42',
-        commentPreview: 'Can you help?',
-        url: '/msp/tickets/ticket-1',
-        mentionSubject: 'Alice Author mentioned you',
-        mentionHeaderLabel: 'You were mentioned',
-        mentionIntro: 'Alice Author mentioned you in ticket #T-42',
-        mentionTextIntro: 'Alice Author mentioned you in ticket #T-42',
-        mentionClosingNote: 'Open the link to see the mention in context and reply.',
-        mentionViewButton: 'View in AlgaPSA',
-        mentionFooter: 'Powered by AlgaPSA &middot; Keeping teams aligned',
-      }),
+      context: {
+        mention: {
+          author: 'Alice Author',
+          entityName: '#T-42',
+          contextName: 'Printer offline',
+          isTicket: true,
+          isTask: false,
+          isDocument: false,
+          commentPreview: 'Can you help?',
+          url: '/msp/tickets/ticket-1',
+        },
+      },
     }));
   });
 
@@ -224,5 +197,30 @@ describe('deliverUserMentionEmail', () => {
 
     expect(delivered).toBe(false);
     expect(state.sendEventEmail).not.toHaveBeenCalled();
+  });
+});
+
+describe('user-mentioned template', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { getTemplate } = require('../../../../migrations/utils/templates/email/system/userMentioned.cjs');
+  const en = getTemplate().translations.find((t: { language: string }) => t.language === 'en');
+  const render = (source: string, mention: Record<string, unknown>) =>
+    Handlebars.compile(source)({ mention: { author: 'Alice Author', url: '/x', ...mention } });
+
+  it.each([
+    [{ isTicket: true, entityName: '#T-42', contextName: 'Printer offline' }, 'comment on ticket', 'Title', 'View Ticket'],
+    [{ isTask: true, entityName: 'Migrate DNS', contextName: 'Office move' }, 'comment on task', 'Project', 'View Task'],
+    [{ isDocument: true, entityName: 'Runbook' }, 'in document', 'Document', 'View Document'],
+  ])('describes the mentioned item for %o', (mention, intro, label, button) => {
+    const html = render(en.htmlContent, mention);
+    expect(html).toContain(intro);
+    expect(html).toContain(label);
+    expect(html).toContain(button);
+    expect(render(en.textContent, mention)).toContain(intro);
+  });
+
+  it('ships the stock layout footer that branding recognizes', () => {
+    expect(en.htmlContent).toContain('Powered by AlgaPSA &middot; Keeping teams aligned');
+    expect(en.htmlContent).not.toMatch(/\{\{mention(Footer|Intro|HeaderLabel)\}\}/);
   });
 });

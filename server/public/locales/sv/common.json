@@ -1782,21 +1782,6 @@
       "commentBy": "Kommentar av {{author}}:",
       "readAt": "Läst {{time}}"
     },
-    "mentions": {
-      "subject": "{{authorName}} nämnde dig",
-      "headerLabel": "Du har nämnts",
-      "taskIntro": "{{authorName}} nämnde dig i en kommentar till uppgiften {{taskName}}",
-      "ticketIntro": "{{authorName}} nämnde dig i ärendet #{{ticketNumber}}",
-      "documentIntro": "{{authorName}} nämnde dig i dokumentet {{documentName}}",
-      "closingNote": "Öppna länken för att se omnämnandet i sitt sammanhang och svara.",
-      "viewButton": "Visa i AlgaPSA",
-      "footer": "Drivs av AlgaPSA &middot; För samspelta team",
-      "textTaskIntro": "{{authorName}} nämnde dig i en kommentar till uppgiften {{taskName}}",
-      "textTicketIntro": "{{authorName}} nämnde dig i ärendet #{{ticketNumber}}",
-      "textDocumentIntro": "{{authorName}} nämnde dig i dokumentet {{documentName}}",
-      "textClosingNote": "Öppna länken för att se omnämnandet i sitt sammanhang och svara.",
-      "textView": "Visa i AlgaPSA"
-    },
     "item": {
       "unknown": "Okänd",
       "justNow": "Just nu",

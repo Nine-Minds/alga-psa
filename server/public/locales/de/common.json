@@ -1782,21 +1782,6 @@
       "commentBy": "Kommentar von {{author}}:",
       "readAt": "Gelesen {{time}}"
     },
-    "mentions": {
-      "subject": "{{authorName}} hat Sie erwähnt",
-      "headerLabel": "Sie wurden erwähnt",
-      "taskIntro": "{{authorName}} hat Sie in einem Kommentar zur Aufgabe {{taskName}} erwähnt",
-      "ticketIntro": "{{authorName}} hat Sie im Ticket #{{ticketNumber}} erwähnt",
-      "documentIntro": "{{authorName}} hat Sie im Dokument {{documentName}} erwähnt",
-      "closingNote": "Öffnen Sie den Link, um die Erwähnung im Kontext zu sehen und zu antworten.",
-      "viewButton": "In AlgaPSA ansehen",
-      "footer": "Bereitgestellt von AlgaPSA &middot; Teams im Takt halten",
-      "textTaskIntro": "{{authorName}} hat Sie in einem Kommentar zur Aufgabe {{taskName}} erwähnt",
-      "textTicketIntro": "{{authorName}} hat Sie im Ticket #{{ticketNumber}} erwähnt",
-      "textDocumentIntro": "{{authorName}} hat Sie im Dokument {{documentName}} erwähnt",
-      "textClosingNote": "Öffnen Sie den Link, um die Erwähnung im Kontext zu sehen und zu antworten.",
-      "textView": "In AlgaPSA ansehen"
-    },
     "item": {
       "unknown": "Unbekannt",
       "justNow": "Gerade eben",
