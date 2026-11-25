@@ -1,0 +1,5 @@
+[
+  {"id":"T001","featureIds":["F001","F003"],"description":"Against a migrated database, exercise seat apply and remove on an editable ticket and project task, including removing the last MSP-applied mapping. Reload and verify the mapping changes and the definition survives.","implemented":true},
+  {"id":"T002","featureIds":["F003"],"description":"Exercise the server actions with a non-editable target, an out-of-scope or wrong-type tag, and attempted definition management. Verify denied writes leave mappings and definitions intact.","implemented":true},
+  {"id":"T003","featureIds":["F001","F002"],"description":"Exercise the task dialog with an eligible tag, no eligible tags, all choices already applied, and a read-only task. Verify picker behavior, removable applied tags, and the empty-state message.","implemented":true}
+]

@@ -61,7 +61,8 @@ const ALLOWED: AuthorizationMutationDecision = Object.freeze({ allowed: true, re
 
 export async function authorizeRecordCreate(
   conn: Knex | Knex.Transaction,
-  input: AuthorizeRecordCreateInput
+  input: AuthorizeRecordCreateInput,
+  action: string = 'create'
 ): Promise<AuthorizationMutationDecision> {
   // Client-portal principals create inside their own client through the portal's own paths; this check is for
   // internal (MSP) principals, whose scope bundles and portfolios narrow.
@@ -79,7 +80,7 @@ export async function authorizeRecordCreate(
   const subject = await resolveAuthorizationSubject(conn, { tenant: input.tenant, user: input.user, requestCache });
   const evaluation = {
     subject,
-    resource: { type: input.resourceType, action: 'create' },
+    resource: { type: input.resourceType, action },
     record,
     requestCache,
     knex: conn,
@@ -108,10 +109,22 @@ export async function isResolverGovernedCreateAllowed(
   conn: Knex | Knex.Transaction,
   input: { tenant: string; user: SubjectUserInput; resourceType: string; requestCache?: AuthorizationRequestCache },
 ): Promise<boolean> {
+  return isResolverGovernedActionAllowed(conn, { ...input, action: 'create' });
+}
+
+/**
+ * Whether a subject a built-in rule resolver governs may take `action` on a resource type at all, asked of the
+ * resolver's closed baseline rather than of one record (tag definitions: a seat technician reads them and may not
+ * update or delete them). Neutral for everyone else, exactly like `isResolverGovernedCreateAllowed`.
+ */
+export async function isResolverGovernedActionAllowed(
+  conn: Knex | Knex.Transaction,
+  input: { tenant: string; user: SubjectUserInput; resourceType: string; action: string; requestCache?: AuthorizationRequestCache },
+): Promise<boolean> {
   const requestCache = input.requestCache ?? new RequestLocalAuthorizationCache();
-  const governed = await resolverGovernedEvaluation(conn, { ...input, action: 'create', record: {}, requestCache });
+  const governed = await resolverGovernedEvaluation(conn, { ...input, record: {}, requestCache });
   if (!governed) return true;
-  return (await authorizeRecordCreate(conn, { ...input, record: {}, requestCache })).allowed;
+  return (await authorizeRecordCreate(conn, { ...input, record: {}, requestCache }, input.action)).allowed;
 }
 
 /** The subject's rules refuse the candidate record. The message is the permission-denied text callers already surface. */

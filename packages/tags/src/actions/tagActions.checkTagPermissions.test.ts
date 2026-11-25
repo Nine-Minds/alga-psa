@@ -25,6 +25,11 @@ vi.mock('@alga-psa/authorization/recordCreateAuthorization', () => ({
     expect(input.resourceType).toBe('tag');
     return !governed.restricted;
   }),
+  // The closed baseline grants a seat tag:read only: every other tag action is closed to it.
+  isResolverGovernedActionAllowed: vi.fn(async (_db: unknown, input: { resourceType: string }) => {
+    expect(input.resourceType).toBe('tag');
+    return !governed.restricted;
+  }),
 }));
 
 import { checkTagPermissions } from './tagActions';
@@ -46,9 +51,23 @@ describe('checkTagPermissions for a seat technician', () => {
     expect(governed.asked).toEqual([{ tenant: 'tenant-1', userId: 'user-1' }]);
   });
 
+  it('applies and removes tags on a record it may update, but manages no definition', async () => {
+    governed.restricted = true;
+    expect(await check('project_task')).toEqual({
+      canAddExisting: false, canCreateNew: false, canEditColors: false, canEditText: false, canDelete: false,
+      canDeleteAll: false, canDeleteDefinition: false,
+    });
+    permissions.granted = new Set(['project_task:update', 'tag:create', 'tag:update', 'tag:delete']);
+    expect(await check('project_task')).toEqual({
+      canAddExisting: true, canCreateNew: false, canEditColors: false, canEditText: false, canDelete: true,
+      canDeleteAll: false, canDeleteDefinition: false,
+    });
+  });
+
   it('leaves everyone else exactly as before: create is offered when the role grants it', async () => {
     expect(await check('ticket')).toEqual({
       canAddExisting: true, canCreateNew: true, canEditColors: true, canEditText: true, canDelete: true, canDeleteAll: true,
+      canDeleteDefinition: true,
     });
   });
 

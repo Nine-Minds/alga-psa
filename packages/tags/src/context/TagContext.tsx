@@ -12,6 +12,7 @@ interface TagPermissions {
   canEditText: boolean;
   canDelete: boolean;
   canDeleteAll: boolean;
+  canDeleteDefinition?: boolean;
 }
 
 interface TagContextType {

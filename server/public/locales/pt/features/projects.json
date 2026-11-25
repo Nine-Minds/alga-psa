@@ -405,6 +405,7 @@
     "editChecklistItem": "Editar item da lista de verificação",
     "removeChecklistItem": "Remover item da lista de verificação",
     "tagsTitle": "Etiquetas",
+    "noTagsAvailable": "Nenhuma etiqueta de tarefa de projeto disponível",
     "checklistTitle": "Lista de verificação",
     "createFromTicket": "Criar a partir do ticket",
     "deletingTitle": "Excluir tarefa",

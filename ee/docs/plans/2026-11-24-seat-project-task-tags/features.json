@@ -1,0 +1,5 @@
+[
+  {"id":"F001","description":"Allow a seat to apply and remove eligible existing tags on editable tickets and project tasks, preserving MSP definitions even on last use.","implemented":true},
+  {"id":"F002","description":"Make the project activity dialog reflect tag editing authority, show applied tags, and explain when no eligible project-task tags are available.","implemented":true},
+  {"id":"F003","description":"Enforce record scope, tag visibility and matching type on the server and reserve tag-definition management for authorized MSP users.","implemented":true}
+]
