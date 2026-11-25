@@ -1596,7 +1596,7 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                     )}
                     {eligibleScheduleLines.map((line) => <option key={line.key} value={line.key}>{line.contract_line_name}</option>)}
                   </select>
-                  {!schedule.contract_line_key && <p role="status" className="mt-1 text-xs text-warning">
+                  {!schedule.contract_line_key && <p role="status" className="mt-1 rounded-sm border-l-2 border-warning bg-[rgb(var(--color-alert-warning-bg))] p-2 text-xs text-[rgb(var(--color-text-800))]">
                     {activeScheduleLineCount > 1 && schedule.custom_rate != null
                       ? t("pricingSchedules.dialog.notices.wholeContractEffect", {
                           defaultValue: "Whole contract: fallback fee of {{amount}} per active fixed-fee line per billing period ({{count}} lines). Line-specific schedules take precedence.",

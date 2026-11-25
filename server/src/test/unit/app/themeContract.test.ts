@@ -767,6 +767,31 @@ const over = (fg: number[], bg: number[], a: number) =>
 const ELEMENT_CONTRAST_BASELINE = new Set<string>([]);
 
 describe('element colour contrast', () => {
+  it('keeps the simulator legacy schedule warning readable in every theme-mode', () => {
+    const source = fs.readFileSync(path.join(REPO,
+      'ee/server/src/components/billing/simulator/ScenarioPanel.tsx'), 'utf8');
+    const classes = /<p role="status" className="([^"]+)"/.exec(source)?.[1];
+    expect(classes, 'legacy schedule warning must remain measurable').toBeDefined();
+    // Include the former status-colour text so reverting to it fails on
+    // contrast, even though the generic explicit-token scan cannot see it.
+    const foreground = /text-\[rgb\(var\((--color-[a-z0-9-]+)\)\)\]/.exec(classes!)?.[1]
+      ?? (classes!.split(/\s+/).includes('text-warning') ? '--color-status-warning' : null);
+    const background = /bg-\[rgb\(var\((--color-[a-z0-9-]+)\)\)\]/.exec(classes!)?.[1]
+      ?? '--color-card';
+    expect(foreground).not.toBeNull();
+    for (const pair of MEASURED_PAIRS) {
+      for (const mode of ['light', 'dark'] as const) {
+        const tokens = themeTokens(mode, pair);
+        const fg = resolveTriple(tokens, foreground!);
+        const bg = resolveTriple(tokens, background);
+        expect(fg).not.toBeNull();
+        expect(bg).not.toBeNull();
+        expect(contrast(fg!, bg!), `${pair}/${mode} legacy schedule warning`)
+          .toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
   const CLASS = new RegExp(
     String.raw`(?:(dark|hover|focus|group-hover|disabled|aria-selected|data-\[[^\]]+\]):)?` +
     String.raw`(bg|text)-\[rgb\(var\((--color-[a-z0-9-]+)\)(?:\s*/\s*([0-9.]+))?\)\]`,
