@@ -16,13 +16,21 @@ const loggerMock = vi.hoisted(() => ({
   debug: vi.fn()
 }));
 
+const deliverUserMentionEmailMock = vi.hoisted(() => vi.fn<typeof import(
+  '../../../lib/notifications/mentionEmailDelivery'
+)['deliverUserMentionEmail']>().mockResolvedValue(true));
+
+vi.mock('../../../lib/notifications/mentionEmailDelivery', () => ({
+  deliverUserMentionEmail: deliverUserMentionEmailMock,
+}));
+
 vi.mock('@alga-psa/core/logger', () => ({
   __esModule: true,
   default: loggerMock,
   ...loggerMock
 }));
 
-vi.mock('server/src/lib/eventBus', () => {
+vi.mock('../../../lib/eventBus', () => {
   const subscribe = vi.fn(async (eventType: string, handler: (event: any) => Promise<void>, options?: { channel?: string }) => {
     const channel = options?.channel ?? 'default';
     const handlers = eventHandlers.get(eventType) ?? [];
@@ -84,15 +92,15 @@ vi.mock('@alga-psa/notifications/actions', () => ({
 const getConnectionMock = vi.fn();
 const createTenantKnexMock = vi.fn();
 
-vi.mock('server/src/lib/db/db', () => ({
+vi.mock('../../../lib/db/db', () => ({
   getConnection: getConnectionMock
 }));
 
-vi.mock('server/src/lib/db', () => ({
+vi.mock('../../../lib/db', () => ({
   createTenantKnex: createTenantKnexMock
 }));
 
-vi.mock('server/src/lib/utils/notificationLinkResolver', () => ({
+vi.mock('../../../lib/utils/notificationLinkResolver', () => ({
   resolveNotificationLinks: vi.fn(async () => ({
     internalUrl: '/internal/ticket/123',
     portalUrl: '/portal/ticket/123'
@@ -130,6 +138,7 @@ function createQueryBuilder(queue: QueryQueue) {
     return builder;
   });
   builder.whereIn = vi.fn(() => builder);
+  builder.whereNotNull = vi.fn(() => builder);
   builder.limit = vi.fn(() => builder);
   builder.offset = vi.fn(() => builder);
   builder.first = vi.fn(async () => queue.shift());
@@ -160,31 +169,35 @@ function createConnectionStub(responses: Record<string, any | any[]>) {
   return knexStub;
 }
 
-let registerInternalNotificationSubscriber: typeof import('server/src/lib/eventBus/subscribers/internalNotificationSubscriber').registerInternalNotificationSubscriber;
-let unregisterInternalNotificationSubscriber: typeof import('server/src/lib/eventBus/subscribers/internalNotificationSubscriber').unregisterInternalNotificationSubscriber;
+let registerInternalNotificationSubscriber: typeof import('../../../lib/eventBus/subscribers/internalNotificationSubscriber').registerInternalNotificationSubscriber;
+let unregisterInternalNotificationSubscriber: typeof import('../../../lib/eventBus/subscribers/internalNotificationSubscriber').unregisterInternalNotificationSubscriber;
 
-let eventBus: ReturnType<typeof import('server/src/lib/eventBus').getEventBus> & {
+let eventBus: ReturnType<typeof import('../../../lib/eventBus').getEventBus> & {
   __reset: () => void;
   __handlers: typeof eventHandlers;
 };
 
 beforeAll(async () => {
-  const subscriberModule = await import('server/src/lib/eventBus/subscribers/internalNotificationSubscriber');
+  const subscriberModule = await import('../../../lib/eventBus/subscribers/internalNotificationSubscriber');
   registerInternalNotificationSubscriber = subscriberModule.registerInternalNotificationSubscriber;
   unregisterInternalNotificationSubscriber = subscriberModule.unregisterInternalNotificationSubscriber;
 
-  const eventBusModule = await import('server/src/lib/eventBus');
+  const eventBusModule = await import('../../../lib/eventBus');
   eventBus = eventBusModule.getEventBus() as typeof eventBus;
 });
 
 beforeEach(() => {
   eventBus.__reset();
   createNotificationFromTemplateInternalMock.mockClear();
+  deliverUserMentionEmailMock.mockClear();
   getConnectionMock.mockReset();
 });
 
 describe('Mention notifications via TICKET_COMMENT_ADDED', () => {
-  it('creates notifications for mentioned users and excludes the author', async () => {
+  it.each([
+    { recipient: 'an unassigned user', isAdditionalAgent: false },
+    { recipient: 'an additional agent', isAdditionalAgent: true },
+  ])('creates an in-app mention for $recipient and excludes the author', async ({ isAdditionalAgent }) => {
     await registerInternalNotificationSubscriber();
 
     const tenantId = uuidv4();
@@ -204,6 +217,12 @@ describe('Mention notifications via TICKET_COMMENT_ADDED', () => {
             }
           },
           {
+            type: 'mention',
+            props: {
+              userId: authorId
+            }
+          },
+          {
             type: 'text',
             text: ' can you help?'
           }
@@ -211,6 +230,7 @@ describe('Mention notifications via TICKET_COMMENT_ADDED', () => {
       }
     ]);
 
+    const additionalAgents = isAdditionalAgent ? [{ additional_user_id: mentionedUserId }] : [];
     const knexStub = createConnectionStub({
       tickets: [
         {
@@ -221,6 +241,7 @@ describe('Mention notifications via TICKET_COMMENT_ADDED', () => {
           contact_name_id: null
         }
       ],
+      ticket_resources: [additionalAgents, additionalAgents],
       users: [
         {
           user_id: authorId,
@@ -231,7 +252,8 @@ describe('Mention notifications via TICKET_COMMENT_ADDED', () => {
           {
             user_id: mentionedUserId,
             username: 'bob.mentioned',
-            display_name: 'Bob Mentioned'
+            display_name: 'Bob Mentioned',
+            user_type: 'internal'
           }
         ]
       ]
@@ -268,6 +290,15 @@ describe('Mention notifications via TICKET_COMMENT_ADDED', () => {
 
     const authorCall = calls.find(([_db, args]) => args.user_id === authorId);
     expect(authorCall).toBeUndefined();
+
+    if (isAdditionalAgent) {
+      expect(deliverUserMentionEmailMock).not.toHaveBeenCalled();
+    } else {
+      expect(deliverUserMentionEmailMock).toHaveBeenCalledExactlyOnceWith(
+        knexStub, tenantId, mentionedUserId,
+        expect.objectContaining({ ticketAudience: expect.objectContaining({ ticketId }) }),
+      );
+    }
 
     await unregisterInternalNotificationSubscriber();
   });
@@ -315,7 +346,8 @@ describe('Mention notifications via TICKET_COMMENT_ADDED', () => {
           {
             user_id: contactUserId,
             username: 'client.user',
-            display_name: 'Client User'
+            display_name: 'Client User',
+            user_type: 'client'
           }
         ],
         null // Contact lookup should resolve to null because comment is internal
