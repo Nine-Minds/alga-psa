@@ -286,9 +286,9 @@ describe('Gmail reply to the contact’s own reply (alga-2026-0003353)', () => {
     }
   });
 
-  it.each(['-----Original Message-----', 'Begin forwarded message:', 'Forwarded message'])(
-    'preserves a pasted report and subsequent instructions after %s above the boundary', (header) => {
-      const text = readFixture('authored-forwarded-report.txt').replace('-----Original Message-----', header);
+  it.each(['-----Original Message-----', 'Begin forwarded message:', 'Forwarded message', ''])(
+    'preserves a pasted report and subsequent instructions with separator %j above the boundary', (header) => {
+      const text = readFixture('authored-forwarded-report.txt').replace('-----Original Message-----\n', header ? `${header}\n` : '');
       const result = parseEmailReply({ text });
 
       expect(result.sanitizedText).toBe(text.split('\n\n--- Please reply above this line ---')[0]);

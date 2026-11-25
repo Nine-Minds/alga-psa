@@ -593,12 +593,16 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
       { fixture: 'authored-trailing-quotation.txt', introduction: 'Le 17 novembre le script a écrit :' },
       { fixture: 'authored-trailing-quotation.txt', introduction: 'Am 17. November schrieb das Skript:' },
       { fixture: 'authored-forwarded-report.txt', introduction: undefined },
-    ])('stores authored evidence from $fixture ($introduction)', async ({ fixture, introduction }) => {
+      { fixture: 'authored-forwarded-report.txt', introduction: undefined, removeSeparator: true },
+    ])('stores authored evidence from $fixture ($introduction, removeSeparator: $removeSeparator)', async ({ fixture, introduction, removeSeparator }) => {
       const { parseEmailReply } = await import('../../../../lib/email/replyParser');
       const fixturePath = new URL(`../../../../lib/email/__fixtures__/${fixture}`, import.meta.url);
       let text = fs.readFileSync(fixturePath, 'utf8');
       if (introduction) {
         text = text.replace('The deployment failed with this error:', `Deployment details:\n${introduction}`);
+      }
+      if (removeSeparator) {
+        text = text.replace('-----Original Message-----\n', '');
       }
       const authored = text.split('\n\n--- Please reply above this line ---')[0];
       const body = { text };

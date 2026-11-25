@@ -707,6 +707,13 @@ function stripProviderHeaders(text: string, config: ReplyParserConfig, preserveU
           kept.push(rawLine);
           continue;
         }
+        if (preserveUnattributedQuotes) {
+          // Above our boundary, an unquoted envelope can be pasted evidence even
+          // without a forwarding separator. It does not establish where the report
+          // ends or the customer's instructions resume, so preserve the remainder.
+          kept.push(...lines.slice(i));
+          break;
+        }
       } else if (introducesInlineQuote(lines, i + 1, config)) {
         // An `On … wrote:` line with the author still writing below its quote introduces an
         // inline quote. Keep the line, drop its quoted run below, and keep reading: the words

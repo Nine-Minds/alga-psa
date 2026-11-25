@@ -1743,18 +1743,21 @@ describe('processInboundEmailInApp', () => {
         expect(content).not.toContain('[ALGA-REPLY-TOKEN');
       },
     );
-    it('stores pasted forwarded evidence and the instructions below it', async () => {
-      parseEmailReplyBodyMock.mockImplementation(async (body: any) => parseEmailReply(body));
-      const content = await storedCommentContent('email-forwarded-report', {
-        text: readEmailFixture('authored-forwarded-report.txt') + '\n[ALGA-REPLY-TOKEN OWNREPLY-TOKEN-11]',
-        html: '',
-      });
+    it.each(['-----Original Message-----', ''])(
+      'stores pasted report evidence and subsequent instructions with separator %j', async (separator) => {
+        parseEmailReplyBodyMock.mockImplementation(async (body: any) => parseEmailReply(body));
+        const content = await storedCommentContent('email-forwarded-report', {
+          text: readEmailFixture('authored-forwarded-report.txt').replace('-----Original Message-----\n', separator ? `${separator}\n` : '')
+            + '\n[ALGA-REPLY-TOKEN OWNREPLY-TOKEN-11]',
+          html: '',
+        });
 
-      expect(content).toContain('Delivery failed: 550 5.1.1 Recipient address rejected.');
-      expect(content).toContain('Recipient: operations@example.test');
-      expect(content).toContain('This is the recipient we need you to restore. Please call me before making changes.');
-      expect(content).not.toContain('Old notification');
-      expect(content).not.toContain('[ALGA-REPLY-TOKEN');
-    });
+        expect(content).toContain('Delivery failed: 550 5.1.1 Recipient address rejected.');
+        expect(content).toContain('Recipient: operations@example.test');
+        expect(content).toContain('This is the recipient we need you to restore. Please call me before making changes.');
+        expect(content).not.toContain('Old notification');
+        expect(content).not.toContain('[ALGA-REPLY-TOKEN');
+      },
+    );
   });
 });
