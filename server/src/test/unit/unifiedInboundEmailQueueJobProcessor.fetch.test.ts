@@ -20,9 +20,16 @@ const imapLogoutMock = vi.fn();
 const imapCloseMock = vi.fn();
 const imapOnMock = vi.fn();
 const getTenantSecretMock = vi.fn();
+const dnsLookupMock = vi.fn();
+const imapOptionsMock = vi.fn();
 
 vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: (...args: any[]) => getAdminConnectionMock(...args),
+}));
+
+vi.mock('node:dns/promises', () => ({
+  default: { lookup: (...args: any[]) => dnsLookupMock(...args) },
+  lookup: (...args: any[]) => dnsLookupMock(...args),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -81,6 +88,9 @@ vi.mock('mailparser', () => ({
 
 vi.mock('imapflow', () => ({
   ImapFlow: class ImapFlow {
+    constructor(options: unknown) {
+      imapOptionsMock(options);
+    }
     connect(...args: any[]) {
       return imapConnectMock(...args);
     }
@@ -239,12 +249,15 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
     gmailGetMessageDetailsMock.mockReset();
     simpleParserMock.mockReset();
     imapConnectMock.mockReset();
+    imapOptionsMock.mockReset();
     imapGetMailboxLockMock.mockReset();
     imapFetchMock.mockReset();
     imapLogoutMock.mockReset();
     imapCloseMock.mockReset();
     imapOnMock.mockReset();
     getTenantSecretMock.mockReset();
+    dnsLookupMock.mockReset();
+    dnsLookupMock.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
 
     processInboundEmailInAppMock.mockResolvedValue({
       outcome: 'created',
@@ -793,6 +806,12 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
       dedupedCount: 0,
     });
     expect(imapConnectMock).toHaveBeenCalledTimes(1);
+    const [imapOptions] = imapOptionsMock.mock.calls[0];
+    const pinnedAddress = await new Promise((resolve, reject) =>
+      (imapOptions as any).tls.lookup('imap.example.com', { all: true },
+        (error: Error | null, addresses: unknown) => error ? reject(error) : resolve(addresses))
+    );
+    expect(pinnedAddress).toEqual([{ address: '93.184.216.34', family: 4 }]);
     expect(simpleParserMock).toHaveBeenCalledTimes(1);
     expect(processInboundEmailInAppMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -806,6 +825,30 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
       }),
       { collectDiagnostics: true }
     );
+  });
+
+  it('rejects a prohibited IMAP host before the worker constructs a socket', async () => {
+    const { db } = createDbMock({
+      imapRow: {
+        id: 'provider-imap-private', tenant: 'tenant-1', mailbox: 'support@example.com',
+        host: '127.0.0.1', port: 993, secure: true, allow_starttls: false,
+        auth_type: 'password', username: 'imap-user', access_token: null,
+      },
+    });
+    getAdminConnectionMock.mockResolvedValue(db);
+    const { fetchImapMessageForPointer } = await import(
+      '../../services/email/unifiedInboundEmailQueueJobProcessor'
+    );
+
+    await expect(fetchImapMessageForPointer({
+      jobId: 'job-imap-private', schemaVersion: 1, tenantId: 'tenant-1',
+      providerId: 'provider-imap-private', provider: 'imap',
+      pointer: { mailbox: 'INBOX', uid: '77', messageId: 'msg-private' },
+      enqueuedAt: new Date().toISOString(), attempt: 0, maxAttempts: 5,
+    } as UnifiedInboundEmailQueueJob)).rejects.toThrow(/blocked private address/);
+
+    expect(imapConnectMock).not.toHaveBeenCalled();
+    expect(getTenantSecretMock).not.toHaveBeenCalled();
   });
 
   it('T015: first consume processes and persists consume-time idempotency marker', async () => {

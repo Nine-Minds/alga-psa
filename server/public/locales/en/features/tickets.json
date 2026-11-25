@@ -578,6 +578,7 @@
     "deleteCommentOnly": "Delete Comment Only",
     "cancelScheduledComment": "Cancel scheduled comment",
     "cancelScheduledCommentConfirm": "Cancel this scheduled comment?",
+    "scheduledCommentChangeFailed": "Unable to change this scheduled comment. Refresh and try again.",
     "invalidScheduleTime": "Choose an unambiguous future time in this time zone.",
     "publishAt": "Publish at",
     "publishes": "Publishes",
@@ -616,6 +617,13 @@
       },
       "unavailable": "This ticket is not available.",
       "back": "Back to Customer Tickets"
+    },
+    "opener": {
+      "openedBy": "Opened by email from {{sender}}",
+      "attachments_one": "{{count}} attachment",
+      "attachments_other": "{{count}} attachments",
+      "show": "Show original email",
+      "hide": "Hide original email"
     }
   },
   "responseState": {

@@ -18,15 +18,16 @@ import {
   isServerActionErrorResult,
   NotFoundError,
 } from 'server/src/lib/api/middleware/apiMiddleware';
+import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
-    const webhook = await getInboundWebhook(id);
+    const webhook = await runWithApiKeyOrSession(request, () => getInboundWebhook(id));
     if (isServerActionErrorResult(webhook)) {
       return createServerActionErrorResponse(webhook);
     }
@@ -45,10 +46,12 @@ export async function PUT(request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
     const input = await request.json();
-    const result = await upsertInboundWebhook({
-      ...input,
-      inbound_webhook_id: id,
-    });
+    const result = await runWithApiKeyOrSession(request, () =>
+      upsertInboundWebhook({
+        ...input,
+        inbound_webhook_id: id,
+      }),
+    );
     if (isServerActionErrorResult(result)) {
       return createServerActionErrorResponse(result);
     }
@@ -59,10 +62,10 @@ export async function PUT(request: Request, context: RouteContext) {
   }
 }
 
-export async function DELETE(_request: Request, context: RouteContext) {
+export async function DELETE(request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
-    const result = await deleteInboundWebhook(id);
+    const result = await runWithApiKeyOrSession(request, () => deleteInboundWebhook(id));
     if (isServerActionErrorResult(result)) {
       return createServerActionErrorResponse(result);
     }

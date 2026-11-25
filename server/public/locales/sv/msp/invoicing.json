@@ -263,7 +263,8 @@
       "titleDelete": "Fel uppstod när fakturorna raderades:",
       "titleReverse": "Fel uppstod när fakturorna återfördes:",
       "loadReady": "Det gick inte att läsa in faktureringsperioderna. Försök igen.",
-      "loadHistory": "Det gick inte att läsa in historiken för återkommande fakturor. Försök igen."
+      "loadHistory": "Det gick inte att läsa in historiken för återkommande fakturor. Försök igen.",
+      "noInvoicesCreated": "Ingen faktura skapades. Uppdatera listan och kontrollera om perioden redan har fakturerats eller saknar debiterbara poster."
     },
     "loading": {
       "billingData": "Läser in faktureringsdata",
@@ -339,6 +340,10 @@
       },
       "nextInvoice": "Faktureras på nästa faktura",
       "outsideLookback": "Utanför tillbakablicksperioden — faktureras inte"
+    },
+    "billingProfile": {
+      "label": "Faktureringsprofil — {{client}}, faktura {{index}}",
+      "automatic": "Använd profilen som tilldelats det valda arbetet"
     }
   },
   "manualInvoices": {
@@ -435,7 +440,8 @@
       "SERVICE_REQUIRED": "Tilldela en tjänst till avgiften innan du sparar.",
       "BILLING_PROFILE_NOT_FOUND": "Den valda faktureringsprofilen är inte tillgänglig för kunden. Ladda om sidan och försök igen.",
       "sessionExpired": "Din session har gått ut. Dina ändringar finns kvar här men har inte sparats. Logga in igen på en ny flik och försök sedan spara igen.",
-      "saveRefreshFailed": "Dina ändringar sparades, men fakturasidan kunde inte uppdateras helt. Läs in sidan igen för att visa den sparade fakturan."
+      "saveRefreshFailed": "Dina ändringar sparades, men fakturasidan kunde inte uppdateras helt. Läs in sidan igen för att visa den sparade fakturan.",
+      "BILLING_PROFILE_MISMATCH": "Den valda faktureringsprofilen skulle utelämna debiteringar. Antal: {{count}}. Välj faktureringsprofilen som tilldelats detta arbete eller välj raderna för varje profil separat."
     },
     "warnings": {
       "noBillingEmail": "Den här kunden saknar faktura-e-post. Fakturan kan skapas, men den kan inte skickas via e-post eller betalas online förrän du anger en fakturakontakt, en faktura-e-postadress för kunden eller en e-postadress på fakturerings- eller standardplatsen."
@@ -1167,7 +1173,9 @@
       "send_one": "Skicka {{count}} e-postmeddelande",
       "send_other": "Skicka {{count}} e-postmeddelanden",
       "sending_one": "Skickar {{count}} faktura…",
-      "sending_other": "Skickar {{count}} fakturor…"
+      "sending_other": "Skickar {{count}} fakturor…",
+      "schedule": "Schemalägg",
+      "scheduling": "Schemalägger..."
     },
     "toasts": {
       "noValidRecipients": "Inga giltiga mottagare hittades",
@@ -1175,11 +1183,13 @@
       "sentSuccess_other": "{{count}} fakturor har skickats",
       "sentFailure_one": "Det gick inte att skicka {{count}} faktura",
       "sentFailure_other": "Det gick inte att skicka {{count}} fakturor",
-      "sentPartial": "{{successCount}} skickade, {{failureCount}} misslyckades"
+      "sentPartial": "{{successCount}} skickade, {{failureCount}} misslyckades",
+      "scheduled": "Fakturamejl schemalagt"
     },
     "errors": {
       "loadRecipients": "Det gick inte att läsa in mottagaruppgifterna",
-      "sendFailed": "Det gick inte att skicka e-postmeddelandena"
+      "sendFailed": "Det gick inte att skicka e-postmeddelandena",
+      "scheduleFailed": "Det gick inte att schemalägga fakturamejlet"
     }
   },
   "generateTab": {
@@ -1789,7 +1799,9 @@
           "actual": "100 %",
           "label": "Förhandsgranskningszoom",
           "fitWithScale": "Anpassa ({{percent}} %)"
-        }
+        },
+        "pageCaption": "Sida {{page}} av {{total}}",
+        "frameTitle": "Förhandsgranskning av faktura"
       },
       "tabs": {
         "design": "Design",
@@ -1885,6 +1897,10 @@
       "spacer": {
         "label": "Avståndselement",
         "description": "Tomt utrymme för layoutjustering."
+      },
+      "page-break": {
+        "label": "Sidbrytning",
+        "description": "Startar nästa block på en ny sida."
       },
       "container": {
         "label": "Rutbehållare",
@@ -2208,6 +2224,17 @@
               "label": "Färg"
             }
           }
+        },
+        "pagination": {
+          "title": "Sidbrytning",
+          "fields": {
+            "breakBefore": {
+              "label": "Börja på en ny sida"
+            },
+            "breakInside": {
+              "label": "Håll ihop på en sida"
+            }
+          }
         }
       }
     },
@@ -2321,6 +2348,8 @@
       "signatureLabel": "Underskrift",
       "attachmentsLabel": "Bilagor",
       "spacerLabel": "Avståndselement",
+      "pageBreakLabel": "Sidbrytning",
+      "pageBreakBefore": "Börjar på en ny sida",
       "companyLogo": "Företagslogotyp",
       "insertionMarker": "Nästa block du lägger till hamnar här",
       "emptyContainer": "Tom – markera den och lägg till block från den vänstra panelen",
@@ -2677,6 +2706,15 @@
         "clearLines": "En rad",
         "stackedLinesHint": "Varje ifylld rad visas på en egen rad. När alla rader är tomma visas kolumnens bindningsnyckel ovan.",
         "removeLine": "Ta bort rad {{index}}",
+        "valueLabels": "Ordalydelse för värden",
+        "addKnownValues": "+ Kända värden",
+        "addValueLabel": "+ Värde",
+        "valueLabelsHint": "Välj vilka ord som skrivs ut för ett värde, till exempel true → Ingår. En tom etikett skriver inte ut något.",
+        "valueLabelKey": "Värde",
+        "valueLabelKeyPlaceholder": "true",
+        "valueLabelText": "Utskriven text",
+        "valueLabelTextPlaceholder": "Tom",
+        "removeValueLabel": "Ta bort ordalydelse",
         "align": "Justering",
         "widthPlaceholder": "auto | 50% | 120px"
       },
@@ -2803,29 +2841,24 @@
     "editor": {
       "titles": {
         "create": "Ny layout ({{type}})",
-        "edit": "Redigera layout ({{type}})"
-      },
-      "description": "Utforma layouten för dokumenttypen {{type}} i den visuella redigeraren och förhandsgranska sedan med exempeldata.",
-      "errorTitle": "Layoutredigerare ({{type}})",
-      "sections": {
-        "details": "Layoutdetaljer"
+        "edit": "Redigera layout: {{name}}"
       },
       "fields": {
-        "version": "Version",
+        "created": "Skapad {{time}}",
         "labelClass": "Etikettklass",
         "labelFields": "Fält som visas på etiketten",
-        "labelFieldsHint": "Postlänken (QR-kod) och identifieraren visas alltid."
+        "labelFieldsHint": "Postlänken (QR-kod) och identifieraren visas alltid.",
+        "notSaved": "Inte sparad än",
+        "savedAt": "Sparad {{time}}",
+        "version": "Version"
       },
       "placeholders": {
         "templateName": "Mall – {{type}}"
       },
       "actions": {
-        "back": "Tillbaka till layouter",
+        "back": "Tillbaka till layouter ({{type}})",
+        "labelSettings": "Etikettinställningar",
         "save": "Spara layout"
-      },
-      "labels": {
-        "created": "Skapad: {{date}}",
-        "lastUpdated": "Senast uppdaterad: {{date}}"
       },
       "preview": {
         "sampleNote": "Renderad med representativa exempeldata för dokumenttypen {{type}}.",
@@ -2860,10 +2893,12 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "Åtkomst nekad: Du saknar behörighet att uppdatera fakturor",
+      "invoiceFinalize": "Åtkomst nekad: behörighet att fastställa fakturor krävs",
       "invoiceDelete": "Åtkomst nekad: Du saknar behörighet att radera fakturor",
       "invoiceAccess": "Åtkomst nekad: Du saknar behörighet att komma åt fakturor",
       "otherClientInvoices": "Åtkomst nekad: Du saknar behörighet att komma åt en annan kunds fakturor",
-      "invoiceRead": "Åtkomst nekad: behörighet att läsa fakturor krävs"
+      "invoiceRead": "Åtkomst nekad: behörighet att läsa fakturor krävs",
+      "invoiceSend": "Åtkomst nekad: behörighet att skicka fakturor krävs"
     },
     "invoice": {
       "notFound": "Fakturan hittades inte",

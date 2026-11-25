@@ -300,7 +300,8 @@
       "titleDelete": "Se produjeron errores al eliminar las facturas:",
       "titleReverse": "Se produjeron errores al revertir las facturas:",
       "loadReady": "No se pudieron cargar los períodos de facturación. Por favor inténtelo de nuevo.",
-      "loadHistory": "No se pudo cargar el historial de facturas recurrentes. Por favor inténtelo de nuevo."
+      "loadHistory": "No se pudo cargar el historial de facturas recurrentes. Por favor inténtelo de nuevo.",
+      "noInvoicesCreated": "No se creó ninguna factura. Actualice la lista y compruebe si este período ya se facturó o no tiene conceptos por facturar."
     },
     "loading": {
       "billingData": "Cargando datos de facturación",
@@ -376,6 +377,10 @@
       },
       "nextInvoice": "Se factura en la próxima factura",
       "outsideLookback": "Fuera del período de revisión — no se factura"
+    },
+    "billingProfile": {
+      "label": "Perfil de facturación — {{client}}, factura {{index}}",
+      "automatic": "Usar el perfil asignado al trabajo seleccionado"
     }
   },
   "manualInvoices": {
@@ -472,7 +477,8 @@
       "SERVICE_REQUIRED": "Asigne un servicio a este cargo antes de guardar.",
       "BILLING_PROFILE_NOT_FOUND": "El perfil de facturación seleccionado no está disponible para este cliente. Actualice la página e inténtelo de nuevo.",
       "sessionExpired": "Su sesión ha caducado. Sus cambios siguen aquí, pero no se guardaron. Inicie sesión de nuevo en otra pestaña y luego vuelva a intentar guardar.",
-      "saveRefreshFailed": "Sus cambios se guardaron, pero la página de la factura no pudo actualizarse por completo. Recargue la página para ver la factura guardada."
+      "saveRefreshFailed": "Sus cambios se guardaron, pero la página de la factura no pudo actualizarse por completo. Recargue la página para ver la factura guardada.",
+      "BILLING_PROFILE_MISMATCH": "El perfil de facturación seleccionado excluiría cargos. Cantidad: {{count}}. Seleccione el perfil de facturación asignado a este trabajo o seleccione las líneas de cada perfil por separado."
     },
     "warnings": {
       "noBillingEmail": "Este cliente no tiene correo electrónico de facturación. La factura se puede generar, pero no se podrá enviar por correo electrónico ni pagar en línea hasta que configure un contacto de facturación, un correo electrónico de facturación del cliente o un correo electrónico en la ubicación de facturación o predeterminada."
@@ -1204,7 +1210,9 @@
       "send_one": "Enviar correo electrónico {{count}}",
       "send_other": "Enviar correos electrónicos {{count}}",
       "sending_one": "Enviando factura {{count}}...",
-      "sending_other": "Enviando facturas {{count}}..."
+      "sending_other": "Enviando facturas {{count}}...",
+      "schedule": "Programar",
+      "scheduling": "Programando..."
     },
     "toasts": {
       "noValidRecipients": "No se encontraron destinatarios válidos",
@@ -1212,11 +1220,13 @@
       "sentSuccess_other": "Facturas {{count}} enviadas exitosamente",
       "sentFailure_one": "No se pudo enviar la factura {{count}}",
       "sentFailure_other": "No se pudieron enviar facturas {{count}}",
-      "sentPartial": "{{successCount}} enviado, {{failureCount}} falló"
+      "sentPartial": "{{successCount}} enviado, {{failureCount}} falló",
+      "scheduled": "Correo de factura programado"
     },
     "errors": {
       "loadRecipients": "No se pudo cargar la información del destinatario",
-      "sendFailed": "No se pudieron enviar correos electrónicos"
+      "sendFailed": "No se pudieron enviar correos electrónicos",
+      "scheduleFailed": "No se pudo programar el correo de la factura"
     }
   },
   "generateTab": {
@@ -1826,7 +1836,9 @@
           "actual": "100 %",
           "label": "Zoom de la vista previa",
           "fitWithScale": "Ajustar ({{percent}} %)"
-        }
+        },
+        "pageCaption": "Página {{page}} de {{total}}",
+        "frameTitle": "Vista previa de la factura"
       },
       "tabs": {
         "design": "Diseño",
@@ -1922,6 +1934,10 @@
       "spacer": {
         "label": "Espaciador",
         "description": "Espacio vacío para ajustar el diseño."
+      },
+      "page-break": {
+        "label": "Salto de página",
+        "description": "Inicia el siguiente bloque en una página nueva."
       },
       "container": {
         "label": "Contenedor caja",
@@ -2245,6 +2261,17 @@
               "label": "Color"
             }
           }
+        },
+        "pagination": {
+          "title": "Paginación",
+          "fields": {
+            "breakBefore": {
+              "label": "Comenzar en una página nueva"
+            },
+            "breakInside": {
+              "label": "Mantener junto en una sola página"
+            }
+          }
         }
       }
     },
@@ -2358,6 +2385,8 @@
       "signatureLabel": "Firma",
       "attachmentsLabel": "Adjuntos",
       "spacerLabel": "Espaciador",
+      "pageBreakLabel": "Salto de página",
+      "pageBreakBefore": "Comienza en una página nueva",
       "companyLogo": "Logotipo de la empresa",
       "insertionMarker": "El siguiente bloque que añada irá aquí",
       "emptyContainer": "Vacío: selecciónelo y añada bloques desde el panel izquierdo",
@@ -2714,6 +2743,15 @@
         "clearLines": "Línea única",
         "stackedLinesHint": "Cada línea no vacía se muestra en su propia fila. Cuando todas las líneas están vacías, se muestra la clave de vinculación de la columna indicada arriba.",
         "removeLine": "Quitar la línea {{index}}",
+        "valueLabels": "Texto de los valores",
+        "addKnownValues": "+ Valores conocidos",
+        "addValueLabel": "+ Valor",
+        "valueLabelsHint": "Elija las palabras que se imprimen para un valor, por ejemplo true → Incluido. Una etiqueta vacía no imprime nada.",
+        "valueLabelKey": "Valor",
+        "valueLabelKeyPlaceholder": "true",
+        "valueLabelText": "Texto impreso",
+        "valueLabelTextPlaceholder": "En blanco",
+        "removeValueLabel": "Quitar texto",
         "align": "Alineación",
         "widthPlaceholder": "auto | 50% | 120px"
       },
@@ -2840,29 +2878,24 @@
     "editor": {
       "titles": {
         "create": "Nuevo diseño de {{type}}",
-        "edit": "Editar diseño de {{type}}"
-      },
-      "description": "Diseñe el formato de {{type}} con el editor visual y luego obtenga una vista previa con datos de ejemplo.",
-      "errorTitle": "Editor de diseños de {{type}}",
-      "sections": {
-        "details": "Detalles del diseño"
+        "edit": "Editar diseño: {{name}}"
       },
       "fields": {
-        "version": "Versión",
+        "created": "Creado {{time}}",
         "labelClass": "Clase de etiqueta",
         "labelFields": "Campos que se muestran en la etiqueta",
-        "labelFieldsHint": "El enlace del registro (código QR) y el identificador siempre se muestran."
+        "labelFieldsHint": "El enlace del registro (código QR) y el identificador siempre se muestran.",
+        "notSaved": "Aún no guardado",
+        "savedAt": "Guardado {{time}}",
+        "version": "Versión"
       },
       "placeholders": {
         "templateName": "Plantilla de {{type}}"
       },
       "actions": {
-        "back": "Volver a los diseños",
+        "back": "Volver a diseños de {{type}}",
+        "labelSettings": "Ajustes de etiqueta",
         "save": "Guardar diseño"
-      },
-      "labels": {
-        "created": "Creado: {{date}}",
-        "lastUpdated": "Última actualización: {{date}}"
       },
       "preview": {
         "sampleNote": "Generado con datos de ejemplo representativos de {{type}}.",
@@ -2927,10 +2960,12 @@
     },
     "permissions": {
       "invoiceUpdate": "Permiso denegado: se requiere permiso de actualización de facturas",
+      "invoiceFinalize": "Permiso denegado: se requiere permiso para finalizar facturas",
       "invoiceDelete": "Permiso denegado: se requiere permiso de eliminación de facturas",
       "invoiceAccess": "Permiso denegado: acceso a la factura denegado",
       "otherClientInvoices": "Permiso denegado: no se puede acceder a las facturas de otro cliente",
-      "invoiceRead": "Permiso denegado: se requiere permiso de lectura de facturas"
+      "invoiceRead": "Permiso denegado: se requiere permiso de lectura de facturas",
+      "invoiceSend": "Permiso denegado: se requiere permiso para enviar facturas"
     },
     "invoice": {
       "notFound": "Factura no encontrada",

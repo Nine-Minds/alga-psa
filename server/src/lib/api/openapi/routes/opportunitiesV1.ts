@@ -2,6 +2,7 @@ import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 import type { ZodTypeAny } from 'zod';
 import {
   completeOpportunityActionApiSchema,
+  amendOpportunityDeclarationApiSchema,
   completeOpportunityStepApiSchema,
   correctOpportunityEvidenceApiSchema,
   createOpportunityApiSchema,
@@ -28,6 +29,13 @@ export function registerOpportunitiesV1Routes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       id: zOpenApi.string().guid().describe('Opportunity UUID from opportunities.opportunity_id.'),
       evidenceId: zOpenApi.string().guid().describe('Evidence UUID from opportunity_evidence.evidence_id.'),
+    }),
+  );
+  const OpportunityDeclarationParams = registry.registerSchema(
+    'OpportunityDeclarationParamsV1',
+    zOpenApi.object({
+      id: zOpenApi.string().guid().describe('Opportunity UUID from opportunities.opportunity_id.'),
+      checkpoint: zOpenApi.enum(['qualified', 'assessment', 'proposed', 'verbal', 'won']).describe('The stage checkpoint whose declaration is edited. won is refused.'),
     }),
   );
   const OpportunityStepParams = registry.registerSchema(
@@ -75,6 +83,7 @@ export function registerOpportunitiesV1Routes(registry: ApiOpenApiRegistry) {
   const CompleteActionBody = registry.registerSchema('CompleteOpportunityActionBodyV1', completeOpportunityActionApiSchema);
   const CompleteStepBody = registry.registerSchema('CompleteOpportunityStepBodyV1', completeOpportunityStepApiSchema);
   const EvidenceBody = registry.registerSchema('DeclaredOpportunityEvidenceBodyV1', declaredOpportunityEvidenceApiSchema);
+  const AmendDeclarationBody = registry.registerSchema('AmendOpportunityDeclarationBodyV1', amendOpportunityDeclarationApiSchema);
   const CorrectEvidenceBody = registry.registerSchema('CorrectOpportunityEvidenceBodyV1', correctOpportunityEvidenceApiSchema);
   const SuggestionListQuery = registry.registerSchema('OpportunitySuggestionListQueryV1', opportunitySuggestionListQuerySchema);
   const AcceptSuggestionBody = registry.registerSchema('AcceptOpportunitySuggestionBodyV1', acceptOpportunitySuggestionApiSchema);
@@ -200,12 +209,13 @@ export function registerOpportunitiesV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'put', path: '/api/v1/opportunities/{id}', summary: 'Update opportunity', description: 'Updates editable opportunity fields. status, stage, client_id, and the next-action mirror columns may be echoed back unchanged but never reassigned here: changing them answers 400 naming the dedicated endpoint.', body: UpdateBody, params: OpportunityIdParam },
     { method: 'patch', path: '/api/v1/opportunities/{id}', summary: 'Partially update opportunity', description: 'Applies a partial update using the same contract as PUT; every field is optional.', body: UpdateBody, params: OpportunityIdParam },
     { method: 'delete', path: '/api/v1/opportunities/{id}', summary: 'Delete opportunity', description: 'Deletes an open opportunity after linked quotes are removed.', successStatus: 204, params: OpportunityIdParam },
-    { method: 'post', path: '/api/v1/opportunities/{id}/stage', summary: 'Set opportunity stage', description: 'Sets an open-pipeline stage through the declared-evidence flow the board drag uses; won and lost answer 400 pointing at /win and /lose.', body: SetStageBody, params: OpportunityIdParam },
+    { method: 'post', path: '/api/v1/opportunities/{id}/stage', summary: 'Set opportunity stage', description: 'Sets an open-pipeline stage through the declared-evidence flow the board drag uses; won and lost answer 400 pointing at /win and /lose. detail and citations (interaction or document sources of this opportunity) set the declaration note and sources; omitted fields keep an existing declaration. refType and refId are shorthand for one citation and are refused with 400 beside citations.', body: SetStageBody, params: OpportunityIdParam },
     { method: 'post', path: '/api/v1/opportunities/{id}/win', summary: 'Win opportunity', description: 'Marks an open opportunity won, optionally converting an accepted linked quote to a draft agreement.', body: WinBody, params: OpportunityIdParam },
     { method: 'post', path: '/api/v1/opportunities/{id}/lose', summary: 'Lose opportunity', description: 'Marks an open opportunity lost with a required loss reason.', body: LoseBody, params: OpportunityIdParam },
     { method: 'post', path: '/api/v1/opportunities/{id}/complete-action', summary: 'Complete next action', description: 'Records the completed action as an interaction and installs the replacement action.', body: CompleteActionBody, params: OpportunityIdParam },
-    { method: 'post', path: '/api/v1/opportunities/{id}/evidence', summary: 'Record declared evidence', description: 'Records the declared qualified checkpoint only.', body: EvidenceBody, successStatus: 201, params: OpportunityIdParam },
-    { method: 'get', path: '/api/v1/opportunities/{id}/evidence', summary: 'List opportunity evidence', description: 'Lists append-only evidence and corrected records in recorded order.', params: OpportunityIdParam },
+    { method: 'post', path: '/api/v1/opportunities/{id}/evidence', summary: 'Record declared evidence', description: 'Declares a stage (identified through verbal) with an optional note (detail) and citations of interactions or documents attached to this opportunity. Omitted fields keep an existing declaration. refType and refId are shorthand for one citation and are refused with 400 beside citations.', body: EvidenceBody, successStatus: 201, params: OpportunityIdParam },
+    { method: 'get', path: '/api/v1/opportunities/{id}/evidence', summary: 'List opportunity evidence', description: 'Lists append-only evidence and corrected records in recorded order, with the sources each declaration cites.', params: OpportunityIdParam },
+    { method: 'put', path: '/api/v1/opportunities/{id}/declarations/{checkpoint}', summary: 'Edit stage declaration', description: 'Replaces the note (detail) and sources (citations) of the declaration for a reached checkpoint (qualified, assessment, proposed or verbal) without moving the deal and without publishing a stage-changed event. Omitted fields keep their current value; null detail or an empty citations array clears it. Works on closed opportunities. An unreached checkpoint answers 409; won answers 400.', body: AmendDeclarationBody, params: OpportunityDeclarationParams },
     { method: 'post', path: '/api/v1/opportunities/{id}/evidence/{evidenceId}/correct', summary: 'Correct evidence', description: 'Corrects active evidence with an append-only audit note.', body: CorrectEvidenceBody, params: OpportunityEvidenceParams },
     { method: 'post', path: '/api/v1/opportunities/{id}/quotes/{quoteId}/link', summary: 'Link quote', description: 'Links a same-client quote and applies quote lifecycle evidence.', params: OpportunityQuoteParams },
     { method: 'post', path: '/api/v1/opportunities/{id}/quotes/{quoteId}/unlink', summary: 'Unlink quote', description: 'Unlinks a quote, corrects its evidence, and recomputes opportunity values.', successStatus: 204, params: OpportunityQuoteParams },

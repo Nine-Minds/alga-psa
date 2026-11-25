@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import type { IFixedPriceCharge } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -36,7 +36,7 @@ const { authRef, authWrapper } = vi.hoisted(() => {
     authWrapper:
       (fn: (...args: any[]) => any) =>
       (...args: any[]) =>
-        fn({ user_id: ref.userId, tenant: ref.tenantId, roles: [], ...ref.extra }, { tenant: ref.tenantId }, ...args),
+        fn({ user_id: ref.userId, tenant: ref.tenantId, user_type: 'internal', roles: [], ...ref.extra }, { tenant: ref.tenantId }, ...args),
   };
 });
 
@@ -215,6 +215,11 @@ describe('invoice bundle component rows (DB)', () => {
   }, HOOK_TIMEOUT);
 
   afterAll(async () => { await db?.destroy(); }, HOOK_TIMEOUT);
+
+  // Test order is shuffled, so a test that switches to a client principal must
+  // not leave one behind: every fixture here authors contracts, and that path
+  // is gated on an MSP principal.
+  beforeEach(() => { authRef.extra = {}; });
 
   it('T001: snapshot carries subtitle, names, raw quantities, basis and order; amounts equal persisted rows', async () => {
     setupCommonMocks({ tenantId, userId: authRef.userId, permissionCheck: () => true });
@@ -515,7 +520,6 @@ describe('invoice bundle component rows (DB)', () => {
       expect(componentsOf(msp).every((c: any) => typeof c.total === 'number')).toBe(true);
       const mspDialog: any = await getInvoiceForRendering(invoiceId);
       expect(mspDialog.invoice_charges.find((ch: any) => ch.bundle_component_amounts)).toBeTruthy();
-      authRef.extra = {};
     }, HOOK_TIMEOUT);
   });
 });

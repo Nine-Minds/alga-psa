@@ -2,6 +2,19 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-21 — Board team default, Admin team creation and category trees
+
+**Affected endpoints:** `PUT /api/v1/boards/{id}`, `GET /api/v1/boards/{id}`, `POST /api/v1/teams`, `GET /api/v1/categories/ticket/tree`, `GET /api/v1/categories/ticket/tree/{boardId}`, and the role, permission, team and metadata routes
+
+Three REST calls failed for administrator API keys even though the same actions worked in the app.
+
+**Changes:**
+
+- Board update accepts `default_assigned_team_id` (a team id, or `null` to clear it), and board responses return it. The update schema did not accept the field before.
+- An API key belonging to an Admin can now create teams. The REST permissions behind the team, role, permission and metadata routes (`team:create`, `role:*`, `permission:*`, `metadata:read`) are now in the permission catalog, and a migration adds them to every tenant's Admin role. Existing custom role grants are left as they are. Keys whose user lacks the permission still get `403`.
+- Both category tree routes return `200` with the category hierarchy. The unscoped route returns the tenant's ticket categories, and the `{boardId}` route returns only that board's categories. Both used to fail with `500`.
+- If a request hits a database column the server expects but does not have, the response is `500` with `error.code` `INTERNAL_CONFIGURATION` and a fixed message instead of `INTERNAL_ERROR`. Outside production, `error.details` names the table and column.
+
 ## 2026-11-20 — Attaching a non-template contract line returns `400`, not `500`
 
 **Affected endpoints:** `POST /api/v1/contracts/{contractId}/contract-lines`, and contract creation that passes lines in the same call

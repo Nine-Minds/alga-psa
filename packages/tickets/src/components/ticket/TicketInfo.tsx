@@ -86,6 +86,8 @@ interface TicketInfoProps {
   isSubmitting?: boolean;
   users?: IUserWithRoles[];
   tags?: ITag[];
+  /** Server answer for the "My group" chip; see ActivityGroupControlRenderProps.initialOnMyList. */
+  initialOnMyActivityList?: boolean | null;
   allTagTexts?: string[];
   onTagsChange?: (tags: ITag[]) => void;
   isInDrawer?: boolean;
@@ -148,6 +150,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   isSubmitting = false,
   users = [],
   tags = [],
+  initialOnMyActivityList,
   onTagsChange,
   isInDrawer = false,
   onItilFieldChange,
@@ -1367,6 +1370,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 activityId: ticket.ticket_id,
                 // Built from SAVED state (props), not unsaved form edits.
                 assignmentKey: buildTicketAssignmentKey(ticket.assigned_to, additionalAgents?.map((a) => a.user_id)),
+                initialOnMyList: initialOnMyActivityList,
               })
             : null}
 

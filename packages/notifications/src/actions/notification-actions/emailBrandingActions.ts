@@ -5,7 +5,8 @@ import { withTransaction, createTenantKnex, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { isEnterprise } from '@alga-psa/core/features';
-import { updateTenantSettings } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
+import { mergeTenantSettingsJson } from '@alga-psa/tenancy/server/tenantSettingsStore';
+import { isLicensedUserType } from '@alga-psa/types';
 import {
   classifyTenantTemplate,
   copiedFromSystemRowFor,
@@ -17,6 +18,7 @@ import {
   previewEmailBrandingApply,
   resolveEmailPalette,
   suggestEmailPalette,
+  type BrandAttributionStripOptions,
   type EmailBrandingApplyScope,
   type EmailBrandingLogoVariant,
   type EmailBrandingPalette,
@@ -51,7 +53,7 @@ async function readTenantSettings(trx: Knex.Transaction, tenant: string): Promis
 }
 
 async function requireSettingsUpdate(user: any, trx: Knex.Transaction): Promise<void> {
-  if (!(await hasPermission(user, 'settings', 'update', trx))) {
+  if (!isLicensedUserType(user.user_type) || !(await hasPermission(user, 'settings', 'update', trx))) {
     throw new Error('Permission denied: Cannot update settings');
   }
 }
@@ -81,7 +83,7 @@ export const saveEmailBrandingAction = withAuth(async (
     ...(existing?.appliedPalette ? { appliedPalette: existing.appliedPalette } : {}),
   };
 
-  await updateTenantSettings({ emailBranding: palette });
+  await mergeTenantSettingsJson(tenant, { emailBranding: palette });
   revalidatePath(SETTINGS_PATH);
 
   return palette;
@@ -227,7 +229,7 @@ async function persistAppliedPalette(
   palette: EmailBrandingPalette,
   applied: { appliedAt: string; appliedPalette: EmailPaletteTokens } | null,
 ): Promise<void> {
-  await updateTenantSettings({
+  await mergeTenantSettingsJson(tenant, {
     emailBranding: applied ? { ...palette, ...applied } : { ...palette, appliedAt: undefined, appliedPalette: undefined },
   });
 }
@@ -243,7 +245,7 @@ function buildBrandDecorator(
   branding: Record<string, any> | null | undefined,
   enterprise: boolean,
   target: EmailPaletteTokens,
-): ((html: string) => string) | undefined {
+): ((html: string, options?: BrandAttributionStripOptions) => string) | undefined {
   if (!enterprise) return undefined;
 
   // The written row references the logo by content-id, never by URL: the bytes
@@ -262,7 +264,11 @@ function buildBrandDecorator(
   const logo = variant ? { variant, alt: branding?.clientName ?? '' } : undefined;
   const hideAttribution = palette.hideAttribution === true;
 
-  return (html: string) => decorateBrandedHtml(html, { logo, hideAttribution });
+  // The planner decides which footer row the strip may take: the default for a
+  // row it rebuilds from the standard template, `shipped-slogan` for a ticked
+  // customized row it recolors in place.
+  return (html: string, options?: BrandAttributionStripOptions) =>
+    decorateBrandedHtml(html, { logo, hideAttribution, ...options });
 }
 
 /**

@@ -288,7 +288,8 @@
     },
     "primary": {
       "title": "E-mail principal",
-      "description": "Cette adresse reste l'adresse par défaut enregistrée sur la fiche du contact"
+      "description": "Cette adresse reste l'adresse par défaut enregistrée sur la fiche du contact",
+      "keepOldEmail": "Conserver {{email}} comme e-mail supplémentaire"
     },
     "row": {
       "title": "E-mail supplémentaire {{number}}",

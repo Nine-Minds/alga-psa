@@ -6,9 +6,12 @@ import type {
   IUser,
   IRole,
   IUserWithRoles,
+  AllowlistedUserField,
+  PublicUserWithRoles,
+  PublicUser,
   IRoleWithPermissions,
 } from '@alga-psa/types';
-import { INTERACTIVE_USER_TYPES } from '@alga-psa/types';
+import { INTERACTIVE_USER_TYPES, USER_RESPONSE_FIELD_NAMES } from '@alga-psa/types';
 import { getAdminConnection } from '../lib/admin';
 import { tenantDb } from '../lib/tenantDb';
 import { requireTenantId } from '../lib/tenantId';
@@ -78,10 +81,10 @@ const User = {
     knexOrTrx: Knex | Knex.Transaction,
     includeInactive = false,
     options: { includeNonInteractive?: boolean } = {}
-  ): Promise<IUser[]> => {
+  ): Promise<Pick<IUser, AllowlistedUserField>[]> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      let query = tenantDb(knexOrTrx, tenant).table<IUser>('users').select('*');
+      let query = tenantDb(knexOrTrx, tenant).table<IUser>('users').select(...USER_RESPONSE_FIELD_NAMES);
       // Non-interactive principals (e.g. service) are never part of the default user list.
       if (!options.includeNonInteractive) {
         query = query.whereIn('user_type', [...INTERACTIVE_USER_TYPES]);
@@ -178,19 +181,51 @@ const User = {
     // A setup's administrator invitation is created by its worker, so a queued
     // or failed setup without one still claims the email; once the invitation
     // exists, it claims it until used (signing up makes a user, seen above).
+    // Citus refuses a join between the setup (distributed on the sponsor `tenant`) and its
+    // invitation (distributed on the customer tenant): they are not joined on the distribution
+    // column. So read the setups alone, then each customer tenant's invitations through that
+    // tenant's own co-located scope, and apply the claim predicate here.
     const setups = discovery.unscoped('co_managed_provisioning_operations as o', INTERNAL_EMAIL_CLAIM_REASON)
-      .leftJoin('user_invitations as i', function () {
-        this.on('i.tenant', 'o.customer_tenant').andOn('i.invitation_id', 'o.administrator_invitation_id');
-      })
-      .whereRaw("lower(trim(o.request->'administrator'->>'email')) = ?", [normalized])
-      .where(function () {
-        this.where(function () { this.whereNull('i.invitation_id').whereIn('o.state', ['queued', 'provisioning', 'failed']); })
-          .orWhere(function () { this.whereNotNull('i.invitation_id').whereNull('i.used_at'); });
-      });
+      .whereRaw("lower(trim(o.request->'administrator'->>'email')) = ?", [normalized]);
     if (options.excludeTenant) setups.whereNot('o.customer_tenant', options.excludeTenant);
     if (options.excludeOperationId) setups.whereNot('o.operation_id', options.excludeOperationId);
-    const setup = await setups.first('o.customer_tenant');
-    return setup ? { kind: 'pending_administrator', tenant: setup.customer_tenant } : null;
+    const candidates: Array<{
+      operation_id: string; customer_tenant: string; administrator_invitation_id: string | null; state: string; created_at: Date | string;
+    }> = await setups.select('o.operation_id', 'o.customer_tenant', 'o.administrator_invitation_id', 'o.state', 'o.created_at');
+    if (candidates.length === 0) return null;
+
+    const idsByTenant = new Map<string, Set<string>>();
+    for (const row of candidates) {
+      if (!row.administrator_invitation_id) continue;
+      const ids = idsByTenant.get(row.customer_tenant) ?? new Set<string>();
+      ids.add(row.administrator_invitation_id);
+      idsByTenant.set(row.customer_tenant, ids);
+    }
+    // invitation_id -> used_at, keyed per tenant; a missing key means the invitation row does not exist.
+    const invitations = new Map<string, Map<string, unknown>>();
+    for (const [customerTenant, ids] of idsByTenant) {
+      // Scoped to the customer tenant: one shard, by its (tenant, invitation_id) key, not every shard.
+      const rows: Array<{ invitation_id: string; used_at: unknown }> = await tenantDb(db, customerTenant)
+        .table('user_invitations')
+        .whereIn('invitation_id', [...ids])
+        .select('invitation_id', 'used_at');
+      invitations.set(customerTenant, new Map(rows.map(row => [row.invitation_id, row.used_at])));
+    }
+
+    const time = (value: Date | string) => new Date(value).getTime();
+    const ordered = [...candidates].sort((a, b) =>
+      time(a.created_at) - time(b.created_at) || (a.operation_id < b.operation_id ? -1 : a.operation_id > b.operation_id ? 1 : 0));
+    const claim = ordered.find(row => {
+      const used = row.administrator_invitation_id
+        ? invitations.get(row.customer_tenant)?.get(row.administrator_invitation_id)
+        : undefined;
+      const exists = row.administrator_invitation_id
+        ? invitations.get(row.customer_tenant)?.has(row.administrator_invitation_id) === true
+        : false;
+      if (!exists) return ['queued', 'provisioning', 'failed'].includes(row.state);
+      return used === null || used === undefined;
+    });
+    return claim ? { kind: 'pending_administrator', tenant: claim.customer_tenant } : null;
   },
 
   findUserByEmailTenantAndType: async (
@@ -299,11 +334,11 @@ const User = {
     }
   },
 
-  getUserWithRoles: async (knexOrTrx: Knex | Knex.Transaction, user_id: string): Promise<IUserWithRoles | undefined> => {
+  getUserWithRoles: async (knexOrTrx: Knex | Knex.Transaction, user_id: string): Promise<PublicUserWithRoles | undefined> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      const user = await tenantDb(knexOrTrx, tenant).table<IUser>('users')
-        .select('*')
+      const user = await tenantDb(knexOrTrx, tenant).table<PublicUser>('users')
+        .select(...USER_RESPONSE_FIELD_NAMES)
         .where('user_id', user_id)
         .first();
       if (user) {

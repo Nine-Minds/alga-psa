@@ -510,8 +510,6 @@
     "po": {
       "amountLabel": "Importe de OC (opcional)",
       "amountPlaceholder": "0.00",
-      "comingSoon": "Integración de facturas próximamente. La configuración se guardará, pero la aplicación de OC no estará activa hasta una futura versión.",
-      "noteLabel": "Nota:",
       "numberLabel": "Número de OC *",
       "numberPlaceholder": "p. ej., OC-2024-12345",
       "requirePurchaseOrder": "Requerir orden de compra",

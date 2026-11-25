@@ -418,6 +418,7 @@
         "oauthStatus": "Statut OAuth",
         "connected": "Connecté",
         "notConnected": "Non connecté",
+        "reauthorizationRequired": "Nouvelle autorisation requise",
         "reconnectOauth": "Reconnecter OAuth",
         "authorizeUrl": "Autoriser l'URL",
         "tokenUrl": "URL du jeton",
@@ -574,6 +575,7 @@
       "statusLabel": "Statut OAuth",
       "connected": "Connecté",
       "notConnected": "Non connecté",
+      "reauthorizationRequired": "Nouvelle autorisation requise",
       "authorizing": "Autorisation...",
       "reconnect": "Reconnecter OAuth"
     },
@@ -1130,7 +1132,8 @@
       "ticketingFromDomainMismatch": "L’adresse d’expéditeur des tickets doit utiliser le domaine d’envoi configuré",
       "refreshFailed": "Échec de la récupération des paramètres mis à jour",
       "updateFailed": "Échec de la mise à jour des paramètres d’e-mail",
-      "mailboxesLoadFailed": "Échec du chargement des boîtes aux lettres Microsoft 365"
+      "mailboxesLoadFailed": "Échec du chargement des boîtes aux lettres Microsoft 365",
+      "secretRequiredAfterConnectionChange": "Saisissez à nouveau le mot de passe de {{provider}} : l’adresse du serveur ou les identifiants de connexion ont changé."
     },
     "inboundRules": {
       "notFound": "Règle d’e-mail entrant introuvable",

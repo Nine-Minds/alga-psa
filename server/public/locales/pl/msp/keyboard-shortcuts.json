@@ -396,6 +396,12 @@
         "label": "Pokaż podpowiedzi do odnośników w nowej karcie",
         "description": "Pokaż podpowiedzi klawiaturowe i, jeśli to możliwe, otwieraj odnośniki w nowej karcie."
       }
+    },
+    "designer": {
+      "toggleFocusMode": {
+        "label": "Przełącz tryb skupienia",
+        "description": "Rozszerz edytor układu na całe okno lub wróć do zwykłego układu."
+      }
     }
   },
   "platform": {

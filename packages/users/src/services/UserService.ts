@@ -43,7 +43,8 @@ import { getAdminConnection } from '@alga-psa/db/admin';
 import Team from '@alga-psa/teams/models/team';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
 import { logger } from '@alga-psa/core';
-import { admitInternalUserSeat, assertInternalUserSeatsWithinLimit, isInternalUserLicenseLimitRejected } from '../lib/internalUserLicenseGuard';
+import { admitInternalUserSeat, assertInternalUserSeatsWithinLimit, isInternalUserLicenseLimitRejected, lockTenantSeatState } from '../lib/internalUserLicenseGuard';
+import { assertCoManagedSeatCapacity } from '@alga-psa/licensing';
 import type { InternalUserLicenseLimitResult } from '../lib/internalUserLicenseGuard';
 import { sanitizeUserForResponse, USER_RESPONSE_COLUMNS, USER_RESPONSE_FIELD_NAMES } from './userResponseSanitizer';
 
@@ -315,6 +316,10 @@ export class UserService extends BaseService<IUser> {
       if (!admission.invitation || admission.invitation.role_id !== data.role_ids?.[0]) {
         throw new Error('Invalid or changed invitation');
       }
+      await tenantDb(trx, context.tenant).table('user_invitations')
+        .where({ email_normalized: admission.invitation.email_normalized, used_at: null })
+        .whereNull('invited_user_id')
+        .update({ invited_user_id: user.user_id });
       const updated = await tenantDb(trx, context.tenant).table('user_invitations')
         .where({ invitation_id: admission.invitation.invitation_id, token, used_at: null }).update({ used_at: trx.fn.now() });
       if (updated !== 1) throw new Error('Invitation already consumed');
@@ -500,11 +505,21 @@ export class UserService extends BaseService<IUser> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      // Match creation: portal/role-floor lock, then seat lock, then user row.
+      // Taking the seat lock first would deadlock with a creator holding the
+      // role-floor lock while waiting for seat admission.
       await lockClientPortalMutations(trx, context.tenant);
+      // Every update that can change seat occupancy joins the shared tenant
+      // seat lock before taking the target user's row lock. This makes partial
+      // updates compose against the latest committed state. Email changes also
+      // join the lock because co-managed seat identity is bound to email.
+      const patchesSeatState = data.user_type !== undefined || data.is_inactive !== undefined;
+      if (patchesSeatState || data.email !== undefined) await lockTenantSeatState(trx, context.tenant);
       // Verify user exists and belongs to tenant
       const existingUser = await this.buildTenantScopedQuery(trx, context)
         .where({ user_id: id })
         .select('user_id', 'email', 'user_type', 'is_inactive', 'contact_id')
+        .forUpdate()
         .first();
 
       // Non-interactive principals are not managed through user management;
@@ -598,6 +613,10 @@ export class UserService extends BaseService<IUser> {
 
       if (takesNewSeat) {
         await assertInternalUserSeatsWithinLimit(trx, context.tenant, licenseCheck);
+      }
+      if (existingUser.user_type === 'internal' && existingUser.is_inactive === false &&
+          data.email !== undefined && data.email.toLowerCase() !== existingUser.email) {
+        await assertCoManagedSeatCapacity(trx, context.tenant);
       }
 
       // PUT /api/v1/users/{id} accepts contact_id and user_type, and neither

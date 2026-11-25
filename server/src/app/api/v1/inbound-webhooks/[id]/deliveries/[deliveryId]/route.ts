@@ -12,15 +12,16 @@ import {
   isServerActionErrorResult,
   NotFoundError,
 } from 'server/src/lib/api/middleware/apiMiddleware';
+import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
 
 type RouteContext = {
   params: Promise<{ id: string; deliveryId: string }>;
 };
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   try {
     const { id, deliveryId } = await context.params;
-    const delivery = await getInboundDelivery(deliveryId);
+    const delivery = await runWithApiKeyOrSession(request, () => getInboundDelivery(deliveryId));
     if (isServerActionErrorResult(delivery)) {
       return createServerActionErrorResponse(delivery);
     }

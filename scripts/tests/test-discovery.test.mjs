@@ -317,3 +317,12 @@ test('worker boot under a failing capability gate must execute in Temporal readi
   const readinessConfig = readFileSync(new URL('../../ee/temporal-workflows/vitest.readiness.config.ts', import.meta.url), 'utf8');
   assert.ok(readinessConfig.includes("'src/__tests__/worker.capabilityBoot.test.ts'"));
 });
+
+test('worker billing catalog loader registration must execute in Temporal readiness', () => {
+  const file = 'ee/temporal-workflows/src/__tests__/worker.billingCatalogLoader.test.ts';
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-readiness'), true);
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-engine'), false);
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-database'), false);
+  const readinessConfig = readFileSync(new URL('../../ee/temporal-workflows/vitest.readiness.config.ts', import.meta.url), 'utf8');
+  assert.ok(readinessConfig.includes("'src/__tests__/worker.billingCatalogLoader.test.ts'"));
+});

@@ -1,7 +1,9 @@
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import { SYSTEM_DATE_FORMAT, type CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
-import type { TemplateFieldDisplayFormat, TemplateValueFormat } from '@alga-psa/types';
+import type { TemplateFieldDisplayFormat, TemplateI18nText, TemplateValueFormat } from '@alga-psa/types';
 import { formatDateValue } from '@alga-psa/ui/lib/i18n/formatDateValue';
+import type { TemplateLabelTranslator } from './i18nText';
+import { formatTemplateValue } from './valueFormatting';
 
 type AddressRecord = Record<string, unknown>;
 
@@ -165,12 +167,18 @@ const formatAddressValue = (
   return { text: parts.join(', '), multiline: false };
 };
 
+type FieldValueLabels = {
+  valueLabels?: Record<string, TemplateI18nText>;
+  t?: TemplateLabelTranslator;
+};
+
 const formatPrimitiveValue = (
   value: unknown,
   format: TemplateValueFormat,
   currencyCode: string,
   locale?: string,
-  dateFormat?: CountryDateFormat
+  dateFormat?: CountryDateFormat,
+  labels: FieldValueLabels = {}
 ): ResolvedFieldDisplayValue => {
   if (isNullish(value)) {
     return { text: null, multiline: false };
@@ -179,7 +187,33 @@ const formatPrimitiveValue = (
     if (Number.isNaN(value.getTime())) {
       return { text: null, multiline: false };
     }
-    return formatPrimitiveValue(value.toISOString(), format, currencyCode, locale, dateFormat);
+    return formatPrimitiveValue(value.toISOString(), format, currencyCode, locale, dateFormat, labels);
+  }
+  // Value wording (author labels, localized Yes/No) is shared with the table
+  // renderer; number, date and currency formatting below stays this path's own.
+  let unlabeled: ResolvedFieldDisplayValue | undefined;
+  const text = formatTemplateValue({
+    value,
+    valueLabels: labels.valueLabels,
+    t: labels.t,
+    fallback: (rest) => {
+      unlabeled = formatUnlabeledPrimitive(rest, format, currencyCode, locale, dateFormat);
+      return unlabeled.text ?? '';
+    },
+  });
+  return unlabeled ?? { text: text === '' ? null : text, multiline: text.includes('\n') };
+};
+
+// LEVERAGE: pattern value-format-paths — mirrors formatUnlabeledValue in react-renderer.tsx (currency via formatCurrencyFromMinorUnits, number, date); the two coerce differently so they were not merged.
+const formatUnlabeledPrimitive = (
+  value: unknown,
+  format: TemplateValueFormat,
+  currencyCode: string,
+  locale?: string,
+  dateFormat?: CountryDateFormat
+): ResolvedFieldDisplayValue => {
+  if (isNullish(value)) {
+    return { text: null, multiline: false };
   }
   if (typeof value === 'string') {
     if (value.length === 0) {
@@ -212,9 +246,6 @@ const formatPrimitiveValue = (
     }
     return { text: String(value), multiline: false };
   }
-  if (typeof value === 'boolean') {
-    return { text: value ? 'Yes' : 'No', multiline: false };
-  }
   return { text: null, multiline: false };
 };
 
@@ -226,6 +257,10 @@ export const formatTemplateFieldValue = (params: {
   /** The recipient country's date shape; the fixed system default when omitted. */
   dateFormat?: CountryDateFormat;
   displayFormat?: TemplateFieldDisplayFormat | null;
+  /** Author wording keyed by `String(value)`; see `TemplateFieldNode.valueLabels`. */
+  valueLabels?: Record<string, TemplateI18nText>;
+  /** The `documents` label translator; English Yes/No defaults apply without one. */
+  t?: TemplateLabelTranslator;
 }): ResolvedFieldDisplayValue => {
   const normalizedFormat = normalizeFieldFormat(params.format);
   const displayFormat = params.displayFormat;
@@ -237,6 +272,7 @@ export const formatTemplateFieldValue = (params: {
     normalizedFormat,
     params.currencyCode,
     params.locale,
-    params.dateFormat
+    params.dateFormat,
+    { valueLabels: params.valueLabels, t: params.t }
   );
 };

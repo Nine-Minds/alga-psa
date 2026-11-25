@@ -165,7 +165,7 @@ async function readCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionAc
     // Native tickets in the home tenant are never part of this relation (the
     // customer tickets page lists shared work only); every projection is a
     // shared record read through its qualified relationship.
-    function projection(ownerTenant: string, name: string, relationship: any, effectiveRedactions: readonly string[], boardIds: string[] = [], handBack: { relationshipWritable: boolean; collaborateBoardIds: string[] } = { relationshipWritable: false, collaborateBoardIds: [] }) {
+    async function projection(ownerTenant: string, name: string, relationship: any, effectiveRedactions: readonly string[], boardIds: string[] = [], handBack: { relationshipWritable: boolean; collaborateBoardIds: string[] } = { relationshipWritable: false, collaborateBoardIds: [] }) {
       // Visibility is decided per relationship branch, before the union, so search, state, sort, counts and
       // export only ever see already-masked values.
       const branchVisible: Record<string, boolean> = Object.fromEntries(Object.entries(sources).map(([field, aliases]) => [field, !isCoManagedReadFieldHidden(effectiveRedactions, aliases)]));
@@ -187,11 +187,16 @@ async function readCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionAc
       owner.tenantJoin(base, 'priorities as p', 't.priority_id', 'p.priority_id', { type: 'left' });
       owner.tenantJoin(base, 'co_management_ticket_work as w', 't.ticket_id', 'w.ticket_id', { type: 'left',
         on: join => join.andOn('w.relationship_id', '=', trx.raw('?', [relationship.relationship_id])) });
-      // Explicitly join the HOME facade's tenant literal, never the ticket owner's tenant.
-      home.tenantJoin(base, 'co_managed_ticket_references as r', 't.ticket_id', 'r.ticket_id', { type: 'left', tenantPredicate: 'literal',
-        on: join => join.andOn('r.customer_tenant', '=', trx.raw('?', [ownerTenant]))
-          .andOn('r.relationship_id', '=', trx.raw('?', [relationship.relationship_id]))
-          .andOn('r.client_id', '=', trx.raw('?', [relationship.sponsor_client_id])).andOn('r.work_id', '=', 'w.work_id') });
+      // The references live in the HOME tenant and the tickets in the OWNER tenant: different distribution
+      // values, so no SQL join may span them (Citus 0A000). The home references are read on their own, scoped
+      // to the home tenant, and enter the owner query as an inline relation (one bound JSON parameter), joined
+      // exactly as the table was: by ticket and work id, left, so `r.*` stays NULL for an unreferenced ticket.
+      // LEVERAGE: friction literal-tenant-join — a home-literal tenantJoin onto owner rows is a cross-tenant join; Citus needs the read split.
+      const references = await home.table('co_managed_ticket_references')
+        .where({ customer_tenant: ownerTenant, relationship_id: relationship.relationship_id, client_id: relationship.sponsor_client_id })
+        .select('reference_id', 'ticket_id', 'work_id', 'board_id', 'assigned_to', 'assigned_team_id');
+      base.joinRaw(`LEFT JOIN jsonb_to_recordset(?::jsonb) AS r(reference_id uuid, ticket_id uuid, work_id uuid, board_id uuid, assigned_to uuid, assigned_team_id uuid)
+        ON r.ticket_id = t.ticket_id AND r.work_id = w.work_id`, [JSON.stringify(references)]);
       base.where(function () {
         this.where(function () { this.whereNotNull('w.work_id').whereNull('w.grant_revoked_at'); }).orWhereIn('t.board_id', boardIds);
       });
@@ -251,7 +256,7 @@ async function readCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionAc
       const relationshipWritable = Boolean(lifecycle && homeFacts && !isCoManagedReadFieldHidden(
         [...homeFacts.redactedFields, ...(lifecycle.relationship.redacted_fields ?? [])], CO_MANAGED_HANDBACK_FIELD_ALIASES) &&
         coManagedRelationshipAllowsWrite({ lifecycle: lifecycle.lifecycle, staff: { roles }, home: homeFacts.facts, visibilityMode: relationship.visibility_mode }));
-      projection(target.customer_tenant, customer.client_name, relationship, effectiveRedactions, boards.map(row => row.board_id), {
+      await projection(target.customer_tenant, customer.client_name, relationship, effectiveRedactions, boards.map(row => row.board_id), {
         relationshipWritable, collaborateBoardIds: boards.filter(row => row.can_collaborate).map(row => row.board_id) });
     }
     await assertCoManagedSessionUnexpired(trx, actor);

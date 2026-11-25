@@ -286,7 +286,8 @@
     },
     "primary": {
       "title": "Primair e-mailadres",
-      "description": "Dit blijft het standaardadres dat bij het contact is opgeslagen"
+      "description": "Dit blijft het standaardadres dat bij het contact is opgeslagen",
+      "keepOldEmail": "{{email}} als extra e-mailadres behouden"
     },
     "row": {
       "title": "Extra e-mailadres {{number}}",

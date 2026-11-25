@@ -12,6 +12,9 @@ const featureFlagIsEnabledMock = vi.fn();
 
 const getCurrentUserMock = vi.fn();
 const getCurrentUserPermissionsMock = vi.fn();
+const hasPermissionMock = vi.fn();
+const getConnectionMock = vi.fn();
+const tenantConnectionMock = Object.assign(vi.fn(), { tenant: 'tenant-test' });
 
 const tenantKnexTableMock = vi.fn();
 const knexInsertMock = vi.fn();
@@ -22,14 +25,18 @@ vi.mock('next/headers.js', () => ({
   headers: async () => new Headers(),
 }));
 
+vi.mock('server-only', () => ({}));
+
 vi.mock('@alga-psa/auth', () => ({
+  hasPermission: hasPermissionMock,
   withAuth: (fn: any) => async (...args: any[]) =>
-    fn({ user_id: 'user-test', tenant: 'tenant-test', roles: [] }, { tenant: 'tenant-test' }, ...args),
+    fn({ user_id: 'user-test', tenant: 'tenant-test', user_type: 'internal', roles: [] }, { tenant: 'tenant-test' }, ...args),
   withOptionalAuth: (fn: any) => async (...args: any[]) =>
-    fn({ user_id: 'user-test', tenant: 'tenant-test', roles: [] }, { tenant: 'tenant-test' }, ...args),
+    fn({ user_id: 'user-test', tenant: 'tenant-test', user_type: 'internal', roles: [] }, { tenant: 'tenant-test' }, ...args),
 }));
 
 vi.mock('@alga-psa/db', () => ({
+  getConnection: getConnectionMock,
   getTenantContext: () => mockTenantContext,
   createTenantKnex: createTenantKnexMock,
   withTransaction: (knex: any, fn: any) => fn(knex),
@@ -93,6 +100,8 @@ describe('tenantSettingsActions.getExperimentalFeatures', () => {
 
     getCurrentUserMock.mockReset();
     getCurrentUserPermissionsMock.mockReset();
+    hasPermissionMock.mockReset();
+    getConnectionMock.mockReset();
 
     tenantKnexTableMock.mockReset();
     knexInsertMock.mockReset();
@@ -105,6 +114,8 @@ describe('tenantSettingsActions.getExperimentalFeatures', () => {
     createTenantKnexMock.mockReset();
     featureFlagIsEnabledMock.mockReset();
     featureFlagIsEnabledMock.mockResolvedValue(true);
+    getConnectionMock.mockResolvedValue(tenantConnectionMock);
+    hasPermissionMock.mockResolvedValue(false);
 
     wireTenantSettingsChain();
 
@@ -177,6 +188,8 @@ describe('tenantSettingsActions.updateExperimentalFeatures', () => {
 
     getCurrentUserMock.mockReset();
     getCurrentUserPermissionsMock.mockReset();
+    hasPermissionMock.mockReset();
+    getConnectionMock.mockReset();
 
     tenantKnexTableMock.mockReset();
     knexInsertMock.mockReset();
@@ -189,6 +202,8 @@ describe('tenantSettingsActions.updateExperimentalFeatures', () => {
     createTenantKnexMock.mockReset();
     featureFlagIsEnabledMock.mockReset();
     featureFlagIsEnabledMock.mockResolvedValue(true);
+    getConnectionMock.mockResolvedValue(tenantConnectionMock);
+    hasPermissionMock.mockResolvedValue(false);
 
     getCurrentUserMock.mockResolvedValue({
       id: 'user-test',
@@ -217,6 +232,7 @@ describe('tenantSettingsActions.updateExperimentalFeatures', () => {
   });
 
   it('creates settings entry when none exists', async () => {
+    hasPermissionMock.mockResolvedValue(true);
     const { updateExperimentalFeatures } = await import(
       '../../../../packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions'
     );
@@ -244,9 +260,17 @@ describe('tenantSettingsActions.updateExperimentalFeatures', () => {
 
     expect(knexOnConflictMock).toHaveBeenCalledWith('tenant');
     expect(knexMergeMock).toHaveBeenCalledTimes(1);
+    expect(getConnectionMock).toHaveBeenCalledWith('tenant-test');
+    expect(hasPermissionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ tenant: 'tenant-test' }),
+      'settings',
+      'update',
+      tenantConnectionMock,
+    );
   });
 
   it('merges with existing settings without overwriting other keys', async () => {
+    hasPermissionMock.mockResolvedValue(true);
     tenantSettingsRow = {
       settings: {
         analytics: {
@@ -280,6 +304,47 @@ describe('tenantSettingsActions.updateExperimentalFeatures', () => {
         aiAssistant: true,
       },
     });
+    expect(getConnectionMock).toHaveBeenCalledWith('tenant-test');
+    expect(hasPermissionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ tenant: 'tenant-test' }),
+      'settings',
+      'update',
+      tenantConnectionMock,
+    );
+  });
+
+  it('does not create or modify settings when the tenant-scoped permission check denies the save', async () => {
+    getCurrentUserPermissionsMock.mockResolvedValue(['settings:update']);
+    hasPermissionMock.mockResolvedValue(false);
+    tenantSettingsRow = {
+      settings: {
+        analytics: { enabled: true },
+        experimentalFeatures: { aiAssistant: false },
+      },
+    };
+    const originalSettings = structuredClone(tenantSettingsRow.settings);
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const { updateExperimentalFeatures } = await import(
+      '../../../../packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions'
+    );
+
+    await expect(updateExperimentalFeatures({ aiAssistant: true })).resolves.toMatchObject({
+      permissionError: 'Permission denied: Cannot update settings',
+    });
+
+    expect(getConnectionMock).toHaveBeenCalledWith('tenant-test');
+    expect(hasPermissionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ tenant: 'tenant-test' }),
+      'settings',
+      'update',
+      tenantConnectionMock,
+    );
+    expect(knexInsertMock).not.toHaveBeenCalled();
+    expect(knexOnConflictMock).not.toHaveBeenCalled();
+    expect(knexMergeMock).not.toHaveBeenCalled();
+    expect(tenantSettingsRow.settings).toEqual(originalSettings);
+    consoleErrorSpy.mockRestore();
   });
 
   it('requires settings:update permission', async () => {
@@ -302,6 +367,7 @@ describe('tenantSettingsActions.updateExperimentalFeatures', () => {
   });
 
   it('rejects enabling aiAssistant when tenant is not whitelisted by the feature flag', async () => {
+    hasPermissionMock.mockResolvedValue(true);
     featureFlagIsEnabledMock.mockResolvedValue(false);
     allowTenantKnex = false;
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});

@@ -1,3 +1,4 @@
+import { serverOnlyAlias } from '../scripts/lib/vitest-server-runtime.mjs';
 import { coverageConfigDefaults, defineConfig } from 'vitest/config';
 import fs from 'node:fs';
 import path from 'path';
@@ -195,6 +196,8 @@ export default defineConfig({
   },
   resolve: {
     alias: [
+      // Server tests run outside Next's react-server module condition.
+      serverOnlyAlias,
       { find: '@/empty', replacement: path.resolve(__dirname, '../packages/ee/src') },
       { find: '@', replacement: path.resolve(__dirname, './src') },
       // shared/services/email/inboundEmailRules/aiClassifier.ts dynamically imports this
@@ -221,6 +224,7 @@ export default defineConfig({
       { find: /^@alga-psa\/core\/capability\/testing$/, replacement: path.resolve(__dirname, '../packages/core/src/capability/testing.ts') },
       { find: /^@alga-psa\/core\/formatters$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/formatters.ts') },
       { find: /^@alga-psa\/core\/lib\/(.*)$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/$1') },
+      { find: /^@alga-psa\/core\/redirectToAppPath$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/redirectToAppPath.ts') },
       { find: /^@alga-psa\/core\/logger$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/logger.ts') },
       { find: /^@alga-psa\/core\/features$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/features.ts') },
       { find: /^@alga-psa\/core\/secrets$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/secrets/index.ts') },

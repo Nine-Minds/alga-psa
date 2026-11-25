@@ -279,6 +279,10 @@ export function registerDocumentRoutes(registry: ApiOpenApiRegistry) {
         .string()
         .optional()
         .describe('Declared MIME type. The server sniffs the bytes and a recognised type overrides this; the storage allowlist is applied to the resolved type.'),
+      is_client_visible: zOpenApi
+        .boolean()
+        .optional()
+        .describe('Whether the client portal can show the document. Default false (internal only). Only ticket, project_task and client support true; contact and asset get 400. true also needs the document:update permission. The created document in the response carries the resulting is_client_visible.'),
     }),
   );
 
@@ -307,7 +311,7 @@ export function registerDocumentRoutes(registry: ApiOpenApiRegistry) {
     description:
       'Creates a document from an https URL or from base64 and associates it with one entity. One file per call. ' +
       'The server downloads URL sources itself, only from hosts on the workspace\'s allowed download hosts list (and only public addresses); the list applies to every caller of this endpoint, not only MCP. Validation (size, MIME type allowlist), storage, the document row, the association, previews and DOCUMENT_ASSOCIATED events run in one shared upload core; ' +
-      'ticket attachments also write a ticket activity entry. Requires document:create and <entity>:update. ' +
+      'ticket attachments also write a ticket activity entry. Requires document:create and <entity>:update, plus document:update when is_client_visible is true. ' +
       'Errors: 400 invalid source, host not allowed (code FETCH_HOST_NOT_ALLOWED; nothing is fetched and no document is created), unsafe or unreachable URL (a remote error status is reported in the message, never as our status), oversize, or disallowed type; 403 permission denied; 404 entity not found.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],

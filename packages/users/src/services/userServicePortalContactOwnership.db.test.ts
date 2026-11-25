@@ -10,7 +10,8 @@ import knex, { type Knex } from 'knex';
 import { afterAll, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import { describeWithDb } from '../../../../server/test-utils/requireDb';
 import { USER_RESPONSE_FIELD_NAMES } from '@alga-psa/types';
-import { checkClientPortalContactAvailability, assertClientPortalContactAvailable, addUserRoles, runWithTenant } from '@alga-psa/db';
+import { checkClientPortalContactAvailability, assertClientPortalContactAvailable, addUserRoles, lockClientPortalMutations, runWithTenant } from '@alga-psa/db';
+import { lockTenantSeatState } from '../lib/internalUserLicenseGuard';
 import User from '@alga-psa/db/models/user';
 import { PermissionRoleService } from '../../../../server/src/lib/api/services/PermissionRoleService';
 
@@ -41,7 +42,8 @@ vi.mock('@alga-psa/db/models/userPreferences', () => ({ default: { upsert: async
 vi.mock('next/cache', () => ({ revalidatePath: () => undefined }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishNonCatalogWorkflowEvent: async () => undefined }));
 vi.mock('@alga-psa/core/encryption', () => ({ hashPassword: async () => 'test-hash', verifyPassword: () => true }));
-vi.mock('../lib/internalUserLicenseGuard', () => ({
+vi.mock('../lib/internalUserLicenseGuard', async (original) => ({
+  ...await original<typeof import('../lib/internalUserLicenseGuard')>(),
   admitInternalUserSeat: async () => ({ ok: true }),
   assertInternalUserSeatsWithinLimit: async () => undefined,
   isInternalUserLicenseLimitRejected: () => false,
@@ -187,6 +189,34 @@ describeDb('API portal contact ownership', () => {
     await service.update(owner.user_id, { last_name: 'Liddell' }, context());
     expect(await db('users').where({ tenant, user_id: owner.user_id }).first()).toMatchObject({ contact_id: 'contact-a', first_name: 'Alice', last_name: 'Liddell' });
     expect(await db('contacts').where({ tenant, contact_name_id: 'contact-a' }).first()).toMatchObject({ is_client_admin: false });
+  });
+
+  it('takes the portal lock before seat state so an update cannot deadlock with creation', async () => {
+    const owner = await create('owner', 'contact-a');
+    const creator = await db.transaction();
+    await lockClientPortalMutations(creator, tenant);
+    const updating = service.update(owner.user_id, { email: 'changed@ownership.test' }, context());
+    // Attach the rejection handler before waiting for the blocked backend.
+    const settled = Promise.allSettled([updating]);
+    try {
+      await vi.waitFor(async () => {
+        const { rows } = await admin.raw(
+          "SELECT pid FROM pg_stat_activity WHERE application_name = ? AND wait_event_type = 'Lock' AND query LIKE ?",
+          [schema, '%pg_advisory_xact_lock%'],
+        );
+        expect(rows.length).toBeGreaterThan(0);
+      }, { timeout: 3000, interval: 10 });
+      // Creation already owns the portal lock. The waiting update must not
+      // own the seat lock, or these transactions form a cycle.
+      await creator.raw("SET LOCAL lock_timeout = '1s'");
+      await lockTenantSeatState(creator, tenant);
+    } finally {
+      await creator.rollback();
+      await settled;
+    }
+    expect(await settled).toMatchObject([{ status: 'fulfilled' }]);
+    expect(await db('users').where({ tenant, user_id: owner.user_id }).first())
+      .toMatchObject({ email: 'changed@ownership.test', contact_id: 'contact-a' });
   });
 
   it('keeps ownership and locks tenant-scoped, even for identical contact IDs', async () => {

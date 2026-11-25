@@ -349,6 +349,17 @@ describe('BentoHero "My group" host', () => {
     expect(control.closest('.grid')).toBeNull();
   });
 
+  it('hands the control the server answer so the chip is on the first paint, not popped in above the form', () => {
+    const renderActivityGroupControl = vi.fn(() => <span data-testid="group-control" />);
+    crossFeatureRef.value = { renderActivityGroupControl };
+    renderHero({ initialOnMyActivityList: true });
+    expect(renderActivityGroupControl).toHaveBeenCalledWith(expect.objectContaining({
+      activityId: 'ticket-1',
+      assignmentKey: 'user-1|',
+      initialOnMyList: true,
+    }));
+  });
+
   it('does not render the control when the ticket has no id', () => {
     const renderActivityGroupControl = vi.fn(() => <span data-testid="group-control" />);
     crossFeatureRef.value = { renderActivityGroupControl };

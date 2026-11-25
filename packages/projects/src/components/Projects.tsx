@@ -170,6 +170,8 @@ interface ProjectsProps {
   initialFilters?: Partial<ProjectListFilters>;
   initialProjectTags?: Record<string, ITag[]>;
   initialAllUniqueTags?: ITag[];
+  /** The host page hides project creation for seat technicians. */
+  canCreateProjects?: boolean;
   /** Decided by the page's server component: every smart search gate passed for this caller. */
   smartSearchAvailable?: boolean;
 }
@@ -189,7 +191,7 @@ export const DEFAULT_PROJECT_FILTERS: ProjectListFilters = {
   pageSize: 10,
 };
 
-export default function Projects({ initialProjects, initialFilters, initialProjectTags, initialAllUniqueTags, smartSearchAvailable = false }: ProjectsProps) {
+export default function Projects({ initialProjects, initialFilters, initialProjectTags, initialAllUniqueTags, canCreateProjects = true, smartSearchAvailable = false }: ProjectsProps) {
   const { t } = useTranslation(['features/projects', 'common']);
   // toLocaleDateString() with no locale follows the browser, not the app.
   const { formatDate } = useFormatters();
@@ -234,8 +236,10 @@ export default function Projects({ initialProjects, initialFilters, initialProje
   }, [initialProjects]);
 
   const [showQuickAdd, setShowQuickAdd] = useState(false);
-  const openProjectQuickAdd = useCallback(() => setShowQuickAdd(true), []);
-  usePageCreateShortcut(openProjectQuickAdd);
+  const openProjectQuickAdd = useCallback(() => {
+    if (canCreateProjects) setShowQuickAdd(true);
+  }, [canCreateProjects]);
+  usePageCreateShortcut(openProjectQuickAdd, { enabled: canCreateProjects });
   const [showApplyTemplate, setShowApplyTemplate] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<IProject | null>(null);
   const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
@@ -1103,7 +1107,7 @@ export default function Projects({ initialProjects, initialFilters, initialProje
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">{t('title', 'Projects')}</h1>
-        <div className="flex items-center gap-3">
+        {canCreateProjects && <div className="flex items-center gap-3">
           <Button
             id='create-from-template-button'
             onClick={() => setShowApplyTemplate(true)}
@@ -1115,7 +1119,7 @@ export default function Projects({ initialProjects, initialFilters, initialProje
           <Button id='add-project-button' onClick={openProjectQuickAdd}>
             {projectListT('addProject', 'Add Project')}
           </Button>
-        </div>
+        </div>}
       </div>
 
       {/* Filter section */}
@@ -1343,14 +1347,14 @@ export default function Projects({ initialProjects, initialFilters, initialProje
         </ShortcutActiveRegion>
       </div>
 
-      {showQuickAdd && (
+      {canCreateProjects && showQuickAdd && (
         <ProjectQuickAdd
           onClose={() => setShowQuickAdd(false)}
           onProjectAdded={handleProjectAdded}
         />
       )}
 
-      {showApplyTemplate && (
+      {canCreateProjects && showApplyTemplate && (
         <ApplyTemplateDialog
           open={showApplyTemplate}
           onClose={() => setShowApplyTemplate(false)}

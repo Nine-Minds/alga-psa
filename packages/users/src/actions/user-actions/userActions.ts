@@ -25,8 +25,8 @@ import { hasPermission, throwPermissionError } from '@alga-psa/user-composition/
 import { getUserRoles } from '@alga-psa/user-composition/actions/userQueryActions';
 import logger from '@alga-psa/core/logger';
 import { validateStorableTimeZone } from '@alga-psa/core/timeZones';
-import { CoManagedAdmissionError } from '@alga-psa/licensing';
-import { admitInternalUserSeat, assertInternalUserSeatsWithinLimit, isInternalUserLicenseLimitRejected, type InternalUserLicenseLimitResult, type InternalUserLicenseLimitCode } from '../../lib/internalUserLicenseGuard';
+import { assertCoManagedSeatCapacity, CoManagedAdmissionError } from '@alga-psa/licensing';
+import { admitInternalUserSeat, assertInternalUserSeatsWithinLimit, isInternalUserLicenseLimitRejected, lockInternalUserSeats, type InternalUserLicenseLimitResult, type InternalUserLicenseLimitCode } from '../../lib/internalUserLicenseGuard';
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
 import type { ActionResultMessageKey } from '@alga-psa/ui/lib/errorHandling';
 import { publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -1045,6 +1045,10 @@ export const updateUser = withAuth(async (
       }
 
       await lockClientPortalMutations(trx, tenant);
+      // Match API creation/update: role-floor lock before seat state, then rows.
+      // Identity changes can affect reservation association; serialize them
+      // with invitation send/accept and allocation admission.
+      if (userData.email !== undefined) await lockInternalUserSeats(trx, tenant);
 
       // Client-portal callers may only manage client users of their own
       // company (self-profile updates above are unaffected). Email changes by
@@ -1141,7 +1145,7 @@ export const updateUser = withAuth(async (
       const existing = (userData.email || timezoneProvided || 'is_inactive' in userData)
         ? await tenantDb(trx, tenant).table('users')
             .where({ user_id: userId })
-            .select('email', 'user_type', 'timezone', 'is_inactive')
+            .select('email', 'user_type', 'timezone', 'is_inactive', 'user_id')
             .first()
         : undefined;
 
@@ -1215,6 +1219,10 @@ export const updateUser = withAuth(async (
       }
 
       await User.update(trx, userId, normalizedUserData);
+      if (existing?.user_type === 'internal' && existing.is_inactive === false &&
+          normalizedUserData.email !== undefined && normalizedUserData.email !== existing.email) {
+        await assertCoManagedSeatCapacity(trx, tenant);
+      }
       if (
         existing?.user_type === 'internal'
         && existing.is_inactive === true
@@ -2046,16 +2054,14 @@ export const uploadUserAvatar = withAuth(async (
 
     // Permission Check: User can update their own avatar OR have user update permission
     const isOwnAvatar = currentUser.user_id === userId;
-    const isAdmin = currentUser.roles.some(role => role.role_name.toLowerCase() === 'admin');
-
     // Always allow users to update their own avatar, regardless of permissions
     if (isOwnAvatar) {
         console.log(`[uploadUserAvatar] User ${currentUser.user_id} updating their own avatar`);
-    } else if (isAdmin) {
-        console.log(`[uploadUserAvatar] Admin user ${currentUser.user_id} updating avatar for user ${userId}`);
     } else {
-        // Check permission within tenant context
-        const hasUpdatePermission = await hasPermission(currentUser, 'user', 'update', knex);
+        // Portal and MSP roles may share display names such as "Admin". Only
+        // MSP principals may use the MSP user:update permission here.
+        const hasUpdatePermission = isMspPrincipalUserType(currentUser.user_type)
+          && await hasPermission(currentUser, 'user', 'update', knex);
         if (hasUpdatePermission) {
             console.log(`[uploadUserAvatar] User ${currentUser.user_id} with update permission updating avatar for user ${userId}`);
         } else {
@@ -2143,16 +2149,17 @@ export const deleteUserAvatar = withAuth(async (
 
     // Permission Check: User can delete their own avatar OR have user update permission
     const isOwnAvatar = currentUser.user_id === userId;
-    const isAdmin = currentUser.roles.some(role => role.role_name.toLowerCase() === 'admin');
-
     // Always allow users to delete their own avatar, regardless of permissions
     if (isOwnAvatar) {
         console.log(`[deleteUserAvatar] User ${currentUser.user_id} deleting their own avatar`);
-    } else if (isAdmin || await hasPermission(currentUser, 'user', 'update', knex)) {
-        console.log(`[deleteUserAvatar] User ${currentUser.user_id} with admin/update permission deleting avatar for user ${userId}`);
     } else {
-        console.log(`[deleteUserAvatar] Permission denied: User ${currentUser.user_id} trying to delete avatar for user ${userId}`);
-        return { success: false, error: 'Permission denied: You can only delete your own avatar.' };
+        const hasUpdatePermission = isMspPrincipalUserType(currentUser.user_type)
+          && await hasPermission(currentUser, 'user', 'update', knex);
+        if (!hasUpdatePermission) {
+          console.log(`[deleteUserAvatar] Permission denied: User ${currentUser.user_id} trying to delete avatar for user ${userId}`);
+          return { success: false, error: 'Permission denied: You can only delete your own avatar.' };
+        }
+        console.log(`[deleteUserAvatar] User ${currentUser.user_id} with update permission deleting avatar for user ${userId}`);
     }
 
     // Call the generic service function - tenant context already set by withAuth

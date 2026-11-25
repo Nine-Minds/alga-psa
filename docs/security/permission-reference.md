@@ -726,7 +726,9 @@ Every user sees every settings tab. Each tab checks permissions only when it loa
 | --- | --- |
 | Create, edit or delete boards | `ticket_settings:create`, `update` or `delete` |
 | Edit board statuses and display settings | `ticket_settings:update` |
-| Edit close rules and external systems | `ticket:update` |
+| View a board's close rules and auto-close rules | `ticket_settings:read` |
+| Change close rules, or create, edit or delete auto-close rules | `ticket_settings:update` to change close rules and edit auto-close rules, `ticket_settings:create` to add one, `ticket_settings:delete` to remove one |
+| Edit external systems | `ticket:update` |
 | Change ticket numbering | `settings:update` |
 | Edit checklist templates | `ticket_settings:update` |
 | Manage SLA policies | `sla_policy:read`, `create`, `update`, `delete` |
@@ -738,7 +740,8 @@ Every user sees every settings tab. Each tab checks permissions only when it loa
 | Task | Permissions required |
 | --- | --- |
 | See email settings | `settings:read` |
-| Save outbound email settings and email providers | `ticket_settings:update` |
+| List email providers | `ticket_settings:read` |
+| Save outbound email settings and email providers, or connect, reconnect or resync an IMAP mailbox | `ticket_settings:update` |
 | Manage sender addresses | `settings:update` |
 | Notifications and email templates | `settings:read` to view, `settings:update` to change |
 | RMM, Entra, Microsoft, Google, Teams and Hudu integrations | `system_settings:read` to view, `system_settings:update` to change |
@@ -766,6 +769,7 @@ Four things to know:
 - **Some admin features need the role named Admin, not a permission.** Resetting another user's password, managing everyone's API keys and webhooks check for a role called Admin. Granting `user:reset_password` or the `webhook` permissions to another role does not unlock them.
 - **The Role permissions do nothing on screen.** They apply only to the REST API. Managing roles uses `security_settings`.
 - **Saving email settings needs `ticket_settings:update`, not `settings:update`.**
+- **Board close rules are a settings permission, not a ticket permission.** Viewing or changing close rules and auto-close rules checks `ticket_settings`, so `ticket:update` alone no longer opens them. Client portal users are always refused. Closing a ticket still needs `ticket:update`, plus `ticket:read` for the close-rule check that runs first.
 - **Your profile needs no permission.** Every user can edit their own name, avatar, password and API keys.
 
 ## Client portal

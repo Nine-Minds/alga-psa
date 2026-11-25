@@ -2,12 +2,6 @@
   "page": {
     "title": "Rapporter"
   },
-  "actions": {
-    "refresh": "Uppdatera"
-  },
-  "placeholders": {
-    "selectContract": "Välj avtal…"
-  },
   "units": {
     "hoursShort": "h",
     "days": "dagar",
@@ -433,64 +427,6 @@
       "label": "Kolumner",
       "title": "Kolumner",
       "reset": "Återställ standardkolumner"
-    }
-  },
-  "contractPerformance": {
-    "title": "Nyckeltal för avtalsresultat",
-    "errors": {
-      "loadData": "Det gick inte att läsa in avtalsdata"
-    },
-    "metrics": {
-      "totalClients": "Totalt antal kunder",
-      "activeClients": "Aktiva kunder",
-      "totalPlans": "Totalt antal avtalsrader",
-      "averagePlansPerClient": "Genomsnittligt antal avtalsrader per kund",
-      "totalRevenue": "Totala intäkter",
-      "averageRevenuePerClient": "Genomsnittlig intäkt per kund"
-    },
-    "empty": {
-      "selectContract": "Välj ett avtal för att visa nyckeltal för avtalsresultat",
-      "noContracts": "Inga avtal tillgängliga"
-    },
-    "comparison": {
-      "title": "Avtalsjämförelse",
-      "table": {
-        "contract": "Avtal",
-        "clients": "Kunder",
-        "plans": "Avtalsrader",
-        "revenue": "Intäkter"
-      }
-    }
-  },
-  "contractUsage": {
-    "title": "Rapport över avtalsanvändning",
-    "errors": {
-      "loadInitialData": "Det gick inte att läsa in grunddata",
-      "loadUsageData": "Det gick inte att läsa in data om avtalsanvändning"
-    },
-    "empty": {
-      "noClientsUsingContract": "Inga kunder använder det här avtalet",
-      "selectContract": "Välj ett avtal för att visa användningsdata"
-    },
-    "table": {
-      "client": "Kund",
-      "startDate": "Startdatum",
-      "endDate": "Slutdatum",
-      "contractLines": "Avtalsrader",
-      "totalBilled": "Totalt fakturerat",
-      "status": "Status"
-    },
-    "statusValues": {
-      "active": "Aktiv",
-      "inactive": "Inaktiv",
-      "ongoing": "Pågående",
-      "unknownClient": "Okänd kund"
-    },
-    "summary": {
-      "title": "Sammanfattning",
-      "totalClients": "Totalt antal kunder",
-      "activeAssignments": "Aktiva tilldelningar",
-      "totalBilled": "Totalt fakturerat"
     }
   },
   "deferredRevenue": {

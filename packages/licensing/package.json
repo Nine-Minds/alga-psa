@@ -17,6 +17,11 @@
       "import": "./src/lifecycle.ts",
       "require": "./src/lifecycle.ts"
     },
+    "./billing-catalog-scope": {
+      "types": "./src/billing-catalog-scope.ts",
+      "import": "./src/billing-catalog-scope.ts",
+      "require": "./src/billing-catalog-scope.ts"
+    },
     "./entitlement-operational": {
       "types": "./src/entitlement-operational.ts",
       "import": "./src/entitlement-operational.ts",
@@ -31,6 +36,11 @@
       "types": "./src/co-managed-write-admission.ts",
       "import": "./src/co-managed-write-admission.ts",
       "require": "./src/co-managed-write-admission.ts"
+    },
+    "./server": {
+      "types": "./src/server.ts",
+      "import": "./src/server.ts",
+      "require": "./src/server.ts"
     },
     "./co-managed-seat-write-admission": {
       "types": "./src/co-managed-seat-write-admission.ts",
@@ -53,7 +63,8 @@
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/types": "*",
-    "@alga-psa/validation": "*"
+    "@alga-psa/validation": "*",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

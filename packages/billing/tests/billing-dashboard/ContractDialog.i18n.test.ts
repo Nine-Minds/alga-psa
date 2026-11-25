@@ -92,8 +92,6 @@ describe('ContractDialog i18n wiring contract', () => {
     const keyChecks = [
       'contractDialog.po.requirePurchaseOrder',
       'contractDialog.po.requirePurchaseOrderTooltip',
-      'contractDialog.po.noteLabel',
-      'contractDialog.po.comingSoon',
       'contractDialog.po.numberLabel',
       'contractDialog.po.numberPlaceholder',
       'contractDialog.po.amountLabel',

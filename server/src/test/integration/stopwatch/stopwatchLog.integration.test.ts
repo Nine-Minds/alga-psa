@@ -133,6 +133,7 @@ vi.mock('@alga-psa/user-composition/actions', async () => ({
 let db: Knex;
 let tenantId: string;
 let periodId: string;
+let novPeriodId: string;
 let bucket: BucketSeed;
 let saveTimeEntry: any;
 let actor: any;
@@ -164,6 +165,26 @@ async function seedPausedSession(user: string, ticketId = bucket.ticketId, servi
   return started.session_id;
 }
 
+/** A paused session with one closed segment per [start, end] pair (ISO instants). */
+async function seedSessionSegments(user: string, segments: Array<[string, string]>) {
+  let sessionId = '';
+  for (const [index, [startIso, endIso]] of segments.entries()) {
+    if (index === 0) {
+      const started = await inTrx((trx) =>
+        startSession(trx, tenantId, user, { workItemType: 'ticket', workItemId: bucket.ticketId, serviceId: bucket.serviceId, notes: 'across midnight' }, { now: new Date(startIso) }));
+      sessionId = started.session_id;
+    } else {
+      await inTrx((trx) => resumeSession(trx, tenantId, user, sessionId, { now: new Date(startIso) }));
+    }
+    await inTrx((trx) => pauseSession(trx, tenantId, user, sessionId, { now: new Date(endIso) }));
+  }
+  return sessionId;
+}
+
+async function linkRows(sessionId: string) {
+  return tenantDb(db, tenantId).table('time_tracking_session_entries').where({ session_id: sessionId });
+}
+
 async function freshUser(label: string) {
   const user = await createStopwatchUser(db, tenantId, label);
   const sheet = await createSheet(db, tenantId, periodId, user);
@@ -175,6 +196,7 @@ describe('stopwatch log (real DB)', () => {
     db = await createTestDbConnection();
     tenantId = await createTenant(db, 'Stopwatch log tenant');
     periodId = await createPeriod(db, tenantId, '2026-10-01T00:00:00Z', '2026-11-01T00:00:00Z');
+    novPeriodId = await createPeriod(db, tenantId, '2026-11-01T00:00:00Z', '2026-12-01T00:00:00Z');
     bucket = await seedBucketClient(db, tenantId);
     actor = { tenant: tenantId, user_type: 'internal' };
     ({ saveTimeEntry } = await import('@alga-psa/scheduling/actions/timeEntryActions'));
@@ -206,10 +228,96 @@ describe('stopwatch log (real DB)', () => {
     expect(entry.work_item_id).toBe(bucket.ticketId);
     expect((await bucketMinutes()) - bucketBefore).toBe(60);
 
-    expect(persisted.entry.entry_id).toBe(entry.entry_id);
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0].entry.entry_id).toBe(entry.entry_id);
     expect(session.status).toBe('logged');
     expect(session.time_entry_id).toBe(entry.entry_id);
+    expect(session.time_entry_ids).toEqual([entry.entry_id]);
     expect(session.closed_at).toBe(at(121).toISOString());
+  });
+
+  it('a session across midnight is logged as one entry per work day, linked to the session', async () => {
+    const fx = await freshUser('sw-log-midnight');
+    // 22:30 -> 01:30 UTC (the user's zone), 3h active, then a day-long pause and 30m more on the 7th.
+    const sessionId = await seedSessionSegments(fx.user, [
+      ['2026-10-05T22:30:00.000Z', '2026-10-06T01:30:00.000Z'],
+      ['2026-10-07T09:00:30.000Z', '2026-10-07T09:30:30.000Z'],
+    ]);
+
+    const { session, persisted } = await inTrx((trx) =>
+      logSession(trx, tenantId, fx.actor, sessionId, {}, { now: new Date('2026-10-07T10:00:00.000Z') }));
+
+    const rows = (await entriesFor(fx.user)).sort((a: any, b: any) => +new Date(a.start_time) - +new Date(b.start_time));
+    expect(rows).toHaveLength(3);
+    expect(rows.map((r: any) => new Date(r.work_date).toISOString().slice(0, 10))).toEqual(['2026-10-05', '2026-10-06', '2026-10-07']);
+    expect(rows.map((r: any) => [new Date(r.start_time).toISOString(), new Date(r.end_time).toISOString()])).toEqual([
+      ['2026-10-05T22:30:00.000Z', '2026-10-05T23:59:00.000Z'],
+      ['2026-10-06T00:00:00.000Z', '2026-10-06T01:30:00.000Z'],
+      ['2026-10-07T09:00:00.000Z', '2026-10-07T09:30:00.000Z'],
+    ]);
+    expect(rows.map((r: any) => Number(r.billable_duration))).toEqual([89, 90, 30]);
+    expect(rows.every((r: any) => r.time_sheet_id === fx.sheet)).toBe(true);
+
+    expect(persisted).toHaveLength(3);
+    expect(persisted.map((p) => p.entry.entry_id)).toEqual(rows.map((r: any) => r.entry_id));
+    expect((await linkRows(sessionId)).map((r: any) => r.entry_id).sort()).toEqual(rows.map((r: any) => r.entry_id).sort());
+    expect(session.status).toBe('logged');
+    expect(session.time_entry_id).toBe(rows[0].entry_id);
+    expect(session.time_entry_ids).toEqual(rows.map((r: any) => r.entry_id));
+  });
+
+  it('an explicit entry list persists every entry, each resolved to its own sheet', async () => {
+    const fx = await freshUser('sw-log-explicit');
+    const novSheet = await createSheet(db, tenantId, novPeriodId, fx.user);
+    const sessionId = await seedSessionSegments(fx.user, [['2026-10-31T23:00:00.000Z', '2026-11-01T01:00:00.000Z']]);
+
+    const { session, persisted } = await inTrx((trx) =>
+      logSession(trx, tenantId, fx.actor, sessionId, {
+        entries: [
+          { start_time: '2026-10-31T23:00:00.000Z', end_time: '2026-10-31T23:59:00.000Z', notes: 'day one' },
+          { start_time: '2026-11-01T00:00:00.000Z', end_time: '2026-11-01T01:00:00.000Z', notes: 'day two' },
+        ],
+      }, { now: new Date('2026-11-01T02:00:00.000Z') }));
+
+    expect(persisted).toHaveLength(2);
+    const byNote = Object.fromEntries((await entriesFor(fx.user)).map((r: any) => [r.notes, r]));
+    expect(byNote['day one'].time_sheet_id).toBe(fx.sheet);
+    expect(byNote['day two'].time_sheet_id).toBe(novSheet);
+    expect(Number(byNote['day one'].billable_duration)).toBe(59);
+    expect(Number(byNote['day two'].billable_duration)).toBe(60);
+    expect(session.status).toBe('logged');
+    expect(session.time_entry_ids).toHaveLength(2);
+    expect(await linkRows(sessionId)).toHaveLength(2);
+  });
+
+  it('a failure on the second entry (locked sheet) writes nothing and leaves the session paused', async () => {
+    const fx = await freshUser('sw-log-partial');
+    await createSheet(db, tenantId, novPeriodId, fx.user, 'SUBMITTED');
+    const sessionId = await seedSessionSegments(fx.user, [['2026-10-31T23:00:00.000Z', '2026-11-01T01:00:00.000Z']]);
+
+    const error = await inTrx((trx) =>
+      logSession(trx, tenantId, fx.actor, sessionId, {
+        entries: [
+          { start_time: '2026-10-31T23:00:00.000Z', end_time: '2026-10-31T23:59:00.000Z' },
+          { start_time: '2026-11-01T00:00:00.000Z', end_time: '2026-11-01T01:00:00.000Z' },
+        ],
+      }, { now: new Date('2026-11-01T02:00:00.000Z') })).then(() => null, (e) => e);
+
+    expect(error).toBeInstanceOf(TimeSheetResolutionError);
+    expect(await entriesFor(fx.user)).toHaveLength(0);
+    expect(await linkRows(sessionId)).toHaveLength(0);
+    const after = await inTrx((trx) => getSession(trx, tenantId, fx.user, sessionId));
+    expect(after?.status).toBe('paused');
+    expect(after?.time_entry_ids).toEqual([]);
+  });
+
+  it('an explicit start/end override still produces exactly one entry, even across midnight', async () => {
+    const fx = await freshUser('sw-log-single-span');
+    const sessionId = await seedSessionSegments(fx.user, [['2026-10-05T22:30:00.000Z', '2026-10-06T01:30:00.000Z']]);
+    const { persisted } = await inTrx((trx) =>
+      logSession(trx, tenantId, fx.actor, sessionId, { end_time: '2026-10-06T01:30:00.000Z' }, { now: new Date('2026-10-06T02:00:00.000Z') }));
+    expect(persisted).toHaveLength(1);
+    expect(await entriesFor(fx.user)).toHaveLength(1);
   });
 
   it('pauses a running session as part of logging it', async () => {

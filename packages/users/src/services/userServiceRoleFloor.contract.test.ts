@@ -61,6 +61,23 @@ describe('user service role floor contract', () => {
     expect(section).toContain("enforceUserRoleFloor(trx, context.tenant, { kind: 'deactivate_user', userId: id })");
   });
 
+  it('orders portal, seat and user locks consistently with creation and profile updates', () => {
+    const section = sectionBetween('async update(id: string', 'Delete user with proper cleanup');
+    const portal = section.indexOf('await lockClientPortalMutations(trx, context.tenant)');
+    const seat = section.indexOf('await lockTenantSeatState(trx, context.tenant)');
+    const row = section.indexOf('.forUpdate()');
+    expect(portal).toBeGreaterThan(0);
+    expect(seat).toBeGreaterThan(portal);
+    expect(row).toBeGreaterThan(seat);
+
+    const actions = readFileSync(resolve(__dirname, '../actions/user-actions/userActions.ts'), 'utf8');
+    const update = actions.slice(actions.indexOf('export const updateUser ='));
+    const actionPortal = update.indexOf('await lockClientPortalMutations(trx, tenant)');
+    const actionSeat = update.indexOf('await lockInternalUserSeats(trx, tenant)');
+    expect(actionPortal).toBeGreaterThan(0);
+    expect(actionSeat).toBeGreaterThan(actionPortal);
+  });
+
   it('guards deletion before any cleanup runs', () => {
     const section = sectionBetween('async delete(id: string', 'Delete related data');
 

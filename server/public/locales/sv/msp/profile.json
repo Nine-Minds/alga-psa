@@ -187,7 +187,7 @@
     "sso": {
       "advanced": {
         "title": "Avancerat: anpassad routning till identitetsleverantör",
-        "description": "Styr SSO för MSP-inloggning till din egen identitetsleverantör med verifierade inloggningsdomäner. Behövs endast för anpassade eller lokala installationer.",
+        "description": "Styr SSO för MSP-inloggning till din egen identitetsleverantör med verifierade inloggningsdomäner. Krävs när personalen loggar in via din egen Keycloak-realm eller din egen Google- eller Microsoft-applikation.",
         "inertNotice": "Ingen identitetsleverantör har konfigurerats för organisationen, så domänanspråk har för närvarande ingen effekt. Konfigurera Keycloak ovan eller, i Enterprise Edition, autentiseringsuppgifterna för din Google- eller Microsoft-app. Gör sedan anspråk på personalens inloggningsdomän här."
       }
     },
@@ -803,10 +803,11 @@
     "providers": {
       "title": "Anslut en identitetsleverantör",
       "description": "Välj en identitetsleverantör för att slutföra SSO-kopplingen. Du omdirigeras till identitetsleverantörens inloggningsflöde.",
-      "noneConfigured": "Inga SSO-leverantörer har konfigurerats för denna miljö. Be din administratör konfigurera autentiseringsuppgifter för Google eller Microsoft.",
-      "noneConfiguredAdmin": "Inga SSO-leverantörer har konfigurerats ännu. Konfigurera först din organisations Google- eller Microsoft-applikation.",
-      "openProviderSetup": "Konfigurera en SSO-leverantör",
+      "noneConfigured": "Inga SSO-leverantörer har konfigurerats för din organisation. Be din administratör att konfigurera en.",
+      "noneConfiguredAdmin": "Inga SSO-leverantörer har konfigurerats ännu. Använd konfigurationslänken hos någon av leverantörerna nedan för att komma igång.",
       "notConfigured": "Inte konfigurerad",
+      "setUpProvider": "Konfigurera {{provider}}",
+      "askAdministrator": "Be din administratör att konfigurera den.",
       "branding": {
         "google": "Fortsätt med Google",
         "microsoft": "Fortsätt med Microsoft",

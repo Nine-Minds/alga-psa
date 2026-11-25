@@ -283,7 +283,8 @@
       "titleDelete": "Wystąpiły błędy podczas usuwania faktur:",
       "titleReverse": "Wystąpiły błędy podczas cofania faktur:",
       "loadReady": "Nie udało się wczytać okresów rozliczeniowych. Spróbuj ponownie.",
-      "loadHistory": "Nie udało się wczytać historii faktur cyklicznych. Spróbuj ponownie."
+      "loadHistory": "Nie udało się wczytać historii faktur cyklicznych. Spróbuj ponownie.",
+      "noInvoicesCreated": "Nie utworzono faktury. Odśwież listę i sprawdź, czy ten okres został już zafakturowany lub nie zawiera pozycji do zafakturowania."
     },
     "loading": {
       "billingData": "Ładowanie danych rozliczeniowych",
@@ -359,6 +360,10 @@
       },
       "nextInvoice": "Zostanie rozliczony na następnej fakturze",
       "outsideLookback": "Poza okresem wstecznym — nie rozliczono"
+    },
+    "billingProfile": {
+      "label": "Profil rozliczeniowy — {{client}}, faktura {{index}}",
+      "automatic": "Użyj profilu przypisanego do wybranych prac"
     }
   },
   "manualInvoices": {
@@ -455,7 +460,8 @@
       "SERVICE_REQUIRED": "Przypisz usługę do tej pozycji przed zapisaniem.",
       "BILLING_PROFILE_NOT_FOUND": "Wybrany profil rozliczeniowy nie jest dostępny dla tego klienta. Odśwież stronę i spróbuj ponownie.",
       "sessionExpired": "Sesja wygasła. Twoje zmiany nadal są tutaj, ale nie zostały zapisane. Zaloguj się ponownie w nowej karcie, a następnie ponów zapis.",
-      "saveRefreshFailed": "Zmiany zostały zapisane, ale strona faktury nie odświeżyła się w pełni. Odśwież stronę, aby wyświetlić zapisaną fakturę."
+      "saveRefreshFailed": "Zmiany zostały zapisane, ale strona faktury nie odświeżyła się w pełni. Odśwież stronę, aby wyświetlić zapisaną fakturę.",
+      "BILLING_PROFILE_MISMATCH": "Wybrany profil rozliczeniowy spowodowałby pominięcie opłat. Liczba opłat: {{count}}. Wybierz profil rozliczeniowy przypisany do tych prac lub wybierz pozycje każdego profilu osobno."
     },
     "warnings": {
       "noBillingEmail": "Ten klient nie ma adresu e-mail do rozliczeń. Fakturę można wygenerować, ale nie będzie można jej wysłać e-mailem ani opłacić online, dopóki nie ustawisz kontaktu rozliczeniowego, adresu e-mail do rozliczeń klienta lub adresu e-mail w lokalizacji rozliczeniowej lub domyślnej."
@@ -1215,7 +1221,9 @@
       "send_few": "Wyślij {{count}} e-maile",
       "send_many": "Wyślij {{count}} e-maili",
       "sending_few": "Wysyłanie {{count}} faktur...",
-      "sending_many": "Wysyłanie {{count}} faktur..."
+      "sending_many": "Wysyłanie {{count}} faktur...",
+      "schedule": "Zaplanuj",
+      "scheduling": "Planowanie..."
     },
     "toasts": {
       "noValidRecipients": "Nie znaleziono prawidłowych odbiorców",
@@ -1227,11 +1235,13 @@
       "sentFailure_few": "Nie udało się wysłać {{count}} faktur",
       "sentFailure_many": "Nie udało się wysłać {{count}} faktur",
       "sentSuccess_few": "{{count}} faktury zostały wysłane pomyślnie",
-      "sentSuccess_many": "{{count}} faktur zostało wysłanych pomyślnie"
+      "sentSuccess_many": "{{count}} faktur zostało wysłanych pomyślnie",
+      "scheduled": "Zaplanowano wiadomość e-mail z fakturą"
     },
     "errors": {
       "loadRecipients": "Nie udało się załadować informacji o odbiorcy",
-      "sendFailed": "Nie udało się wysłać e-maili"
+      "sendFailed": "Nie udało się wysłać e-maili",
+      "scheduleFailed": "Nie udało się zaplanować wiadomości e-mail z fakturą"
     }
   },
   "generateTab": {
@@ -1841,7 +1851,9 @@
           "actual": "100%",
           "label": "Powiększenie podglądu",
           "fitWithScale": "Dopasuj ({{percent}}%)"
-        }
+        },
+        "pageCaption": "Strona {{page}} z {{total}}",
+        "frameTitle": "Podgląd faktury"
       },
       "tabs": {
         "design": "Projektowanie",
@@ -1937,6 +1949,10 @@
       "spacer": {
         "label": "Odstęp",
         "description": "Puste miejsce do regulacji układu."
+      },
+      "page-break": {
+        "label": "Podział strony",
+        "description": "Rozpoczyna następny blok na nowej stronie."
       },
       "container": {
         "label": "Kontener",
@@ -2260,6 +2276,17 @@
               "label": "Kolor"
             }
           }
+        },
+        "pagination": {
+          "title": "Podział na strony",
+          "fields": {
+            "breakBefore": {
+              "label": "Rozpocznij na nowej stronie"
+            },
+            "breakInside": {
+              "label": "Utrzymaj razem na jednej stronie"
+            }
+          }
         }
       }
     },
@@ -2373,6 +2400,8 @@
       "signatureLabel": "Podpis",
       "attachmentsLabel": "Załączniki",
       "spacerLabel": "Odstęp",
+      "pageBreakLabel": "Podział strony",
+      "pageBreakBefore": "Rozpoczyna się na nowej stronie",
       "companyLogo": "Logotyp firmy",
       "insertionMarker": "Następny dodany blok trafi tutaj",
       "emptyContainer": "Pusty — zaznacz go i dodaj bloki z lewego panelu",
@@ -2729,6 +2758,15 @@
         "clearLines": "Pojedynczy wiersz",
         "stackedLinesHint": "Każdy niepusty wiersz jest wyświetlany w osobnym wierszu. Gdy wszystkie wiersze są puste, wyświetlany jest klucz powiązania kolumny podany powyżej.",
         "removeLine": "Usuń wiersz {{index}}",
+        "valueLabels": "Brzmienie wartości",
+        "addKnownValues": "+ Znane wartości",
+        "addValueLabel": "+ Wartość",
+        "valueLabelsHint": "Wybierz słowa drukowane dla wartości, np. true → Wliczone. Pusta etykieta nic nie drukuje.",
+        "valueLabelKey": "Wartość",
+        "valueLabelKeyPlaceholder": "true",
+        "valueLabelText": "Drukowany tekst",
+        "valueLabelTextPlaceholder": "Puste",
+        "removeValueLabel": "Usuń brzmienie",
         "align": "Wyrównanie",
         "widthPlaceholder": "auto | 50% | 120px"
       },
@@ -2855,29 +2893,24 @@
     "editor": {
       "titles": {
         "create": "Nowy układ dokumentu typu „{{type}}”",
-        "edit": "Edytuj układ dokumentu typu „{{type}}”"
-      },
-      "description": "Zaprojektuj układ dokumentu typu „{{type}}” w edytorze wizualnym, a następnie wyświetl podgląd z danymi przykładowymi.",
-      "errorTitle": "Edytor układu dokumentu typu „{{type}}”",
-      "sections": {
-        "details": "Szczegóły układu"
+        "edit": "Edytuj układ: {{name}}"
       },
       "fields": {
-        "version": "Wersja",
+        "created": "Utworzono {{time}}",
         "labelClass": "Klasa etykiety",
         "labelFields": "Pola wyświetlane na etykiecie",
-        "labelFieldsHint": "Link do rekordu (kod QR) i identyfikator są zawsze wyświetlane."
+        "labelFieldsHint": "Link do rekordu (kod QR) i identyfikator są zawsze wyświetlane.",
+        "notSaved": "Jeszcze nie zapisano",
+        "savedAt": "Zapisano {{time}}",
+        "version": "Wersja"
       },
       "placeholders": {
         "templateName": "Szablon dokumentu typu „{{type}}”"
       },
       "actions": {
-        "back": "Wróć do układów",
+        "back": "Powrót do układów: {{type}}",
+        "labelSettings": "Ustawienia etykiety",
         "save": "Zapisz układ"
-      },
-      "labels": {
-        "created": "Utworzono: {{date}}",
-        "lastUpdated": "Ostatnia aktualizacja: {{date}}"
       },
       "preview": {
         "sampleNote": "Wygenerowano przy użyciu reprezentatywnych danych przykładowych dla dokumentu typu „{{type}}”.",
@@ -2912,10 +2945,12 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "Odmowa uprawnień: wymagane uprawnienie aktualizacji faktur",
+      "invoiceFinalize": "Odmowa uprawnień: wymagane uprawnienie finalizowania faktur",
       "invoiceDelete": "Odmowa uprawnień: wymagane uprawnienie usuwania faktur",
       "invoiceAccess": "Odmowa uprawnień: odmowa dostępu do faktury",
       "otherClientInvoices": "Odmowa uprawnień: brak dostępu do faktur innego klienta",
-      "invoiceRead": "Odmowa dostępu: wymagane uprawnienie do odczytu faktur"
+      "invoiceRead": "Odmowa dostępu: wymagane uprawnienie do odczytu faktur",
+      "invoiceSend": "Odmowa dostępu: wymagane jest uprawnienie do wysyłania faktur"
     },
     "invoice": {
       "notFound": "Nie znaleziono faktury",

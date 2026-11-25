@@ -33,7 +33,10 @@ const harness = vi.hoisted(() => {
   knex.fn = { now: () => 'now()' };
   // expandAccountingExportCharges probes for the contract-change adjustments table.
   knex.schema = { hasTable: async () => false };
-  const tenantDb = () => ({ table: (table: string) => builder(table, rows[table] ?? []) });
+  const tenantDb = () => ({
+    table: (table: string) => builder(table, rows[table] ?? []),
+    tenantJoin: (query: unknown) => query
+  });
 
   const mappings = {
     services: {} as Record<string, any>,
@@ -456,6 +459,68 @@ describe('QuickBooksDesktopAdapter IIF transform', () => {
     expect(field(rows, '!SPL', spl, 'PRICE')).toBe('0.00');
     expect(field(rows, '!SPL', spl, 'AMOUNT')).toBe('0.00');
     expect(field(rows, '!TRNS', rows[3], 'AMOUNT')).toBe('0.00');
+  });
+
+  describe('fixed-plan members', () => {
+    const detail = (id: string, serviceId: string, quantity: number, rate: number, allocated: number, pricingBasis: string | null = null) => ({
+      item_id: 'plan-1', item_detail_id: id, service_id: serviceId, quantity, rate,
+      allocated_amount: allocated, tax_amount: 0, pricing_basis: pricingBasis
+    });
+    const component = (id: string, pricingBasis: string) => ({ detailItemIds: [id], pricingBasis });
+    const plan = (net: number, presentation: unknown) =>
+      charge({ item_id: 'plan-1', service_id: null, is_manual: false, quantity: 1, unit_price: net, net_amount: net, total_price: net, bundle_presentation: presentation });
+
+    beforeEach(() => {
+      harness.rows.invoices = [invoice()];
+      for (const id of ['svc-seat', 'svc-bundle', 'svc-prorated']) {
+        harness.mappings.services[id] = { external_entity_id: 'Services Income', metadata: { qbdItem: id } };
+      }
+    });
+
+    const splByItem = (rows: string[][]) => new Map(
+      rows.filter((r) => r[0] === 'SPL').map((r) => [field(rows, '!SPL', r, 'INVITEM'), r])
+    );
+
+    it('exports members at their stored quantity and rate, leaving prorated members as one unit', async () => {
+      harness.rows.invoice_charges = [plan(28795, {
+        components: [component('d-seat', 'unit'), component('d-bundle', 'bundle'), component('d-prorated', 'unit')]
+      })];
+      harness.rows['invoice_charge_details as d'] = [
+        detail('d-seat', 'svc-seat', 4, 4799, 19196),
+        detail('d-bundle', 'svc-bundle', 2, 2000, 4000),
+        detail('d-prorated', 'svc-prorated', 4, 1400, 5599)
+      ];
+
+      const { rows } = await transformContent(
+        context([{ document_id: 'inv-1', document_line_id: 'plan-1', amount_cents: 28795 }])
+      );
+      const spl = splByItem(rows);
+      expect(field(rows, '!SPL', spl.get('svc-seat')!, 'QNTY')).toBe('-4');
+      expect(field(rows, '!SPL', spl.get('svc-seat')!, 'PRICE')).toBe('47.99');
+      expect(field(rows, '!SPL', spl.get('svc-seat')!, 'AMOUNT')).toBe('-191.96');
+      expect(field(rows, '!SPL', spl.get('svc-bundle')!, 'QNTY')).toBe('-2');
+      expect(field(rows, '!SPL', spl.get('svc-bundle')!, 'PRICE')).toBe('20.00');
+      expect(field(rows, '!SPL', spl.get('svc-prorated')!, 'QNTY')).toBe('-1');
+      expect(field(rows, '!SPL', spl.get('svc-prorated')!, 'PRICE')).toBe('55.99');
+      expect(field(rows, '!TRNS', rows.find((r) => r[0] === 'TRNS')!, 'AMOUNT')).toBe('287.95');
+    });
+
+    it('passes a bundle-priced service seat quantity through even without a bundle snapshot', async () => {
+      harness.rows.invoice_charges = [plan(23196, null)];
+      harness.rows['invoice_charge_details as d'] = [
+        detail('d-seat', 'svc-seat', 4, 4799, 19196, 'bundle'),
+        detail('d-bundle', 'svc-bundle', 1, 4000, 4000, null)
+      ];
+
+      const { rows } = await transformContent(
+        context([{ document_id: 'inv-1', document_line_id: 'plan-1', amount_cents: 23196 }])
+      );
+      const spl = splByItem(rows);
+      expect(field(rows, '!SPL', spl.get('svc-seat')!, 'QNTY')).toBe('-4');
+      expect(field(rows, '!SPL', spl.get('svc-seat')!, 'PRICE')).toBe('47.99');
+      expect(field(rows, '!SPL', spl.get('svc-bundle')!, 'QNTY')).toBe('-1');
+      expect(field(rows, '!SPL', spl.get('svc-bundle')!, 'PRICE')).toBe('40.00');
+    });
   });
 
   it('scales amounts by the invoice currency', async () => {

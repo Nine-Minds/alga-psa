@@ -3,6 +3,8 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getComponentSchema } from '../schema/componentSchema';
 import type { DesignerInspectorTab } from '../schema/inspectorSchema';
 import type { DesignerNode } from '../state/designerStore';
+import { useInvoiceDesignerStore } from '../state/designerStore';
+import { resolveDesignerDocumentKind } from '../utils/documentKind';
 import { isEmptyValue, isFieldSetOnNode, isRuleVisible, readFieldValue, resolveDefaultNodeProps } from './fieldState';
 
 // Size lives in the shell's Size control rather than a schema panel.
@@ -40,13 +42,15 @@ type NodeOverridesSummaryProps = {
 export const NodeOverridesSummary: React.FC<NodeOverridesSummaryProps> = ({ node, nodesById, onJumpToTab }) => {
   const { t } = useTranslation('msp/invoicing');
   const parent = node.parentId ? nodesById.get(node.parentId) ?? null : null;
+  const nodes = useInvoiceDesignerStore((state) => state.nodes);
+  const documentKind = useMemo(() => resolveDesignerDocumentKind(nodes), [nodes]);
   const entries = useMemo(() => {
     const panels = getComponentSchema(node.type).inspector?.panels ?? [];
     const fromSchema = panels
-      .filter((panel) => isRuleVisible(panel.visibleWhen, node, parent))
+      .filter((panel) => isRuleVisible(panel.visibleWhen, node, parent, documentKind))
       .flatMap((panel) =>
         panel.fields
-          .filter((field) => isRuleVisible(field.visibleWhen, node, parent) && isFieldSetOnNode(node, field))
+          .filter((field) => isRuleVisible(field.visibleWhen, node, parent, documentKind) && isFieldSetOnNode(node, field))
           .map((field) => ({
             id: `${panel.id}.${field.id}`,
             tab: panel.tab ?? 'content',
@@ -80,7 +84,7 @@ export const NodeOverridesSummary: React.FC<NodeOverridesSummaryProps> = ({ node
           value: formatSummaryValue(layout[key]),
         }));
     return [...fromSchema, ...fromLayout, ...fromSize];
-  }, [node, parent, t]);
+  }, [node, parent, documentKind, t]);
 
   return (
     <div className="space-y-1" data-automation-id="designer-overrides-summary">

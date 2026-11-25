@@ -12,6 +12,7 @@ import {
   handleApiError,
   isServerActionErrorResult,
 } from 'server/src/lib/api/middleware/apiMiddleware';
+import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -37,17 +38,19 @@ export async function GET(request: Request, context: RouteContext) {
     const page = parsePositiveInt(url.searchParams.get('page'), 1);
     const limit = parsePositiveInt(url.searchParams.get('limit'), 25);
 
-    const deliveries = await listInboundDeliveries(
-      {
-        inboundWebhookId: id,
-        status: status && VALID_DELIVERY_STATUSES.has(status as InboundWebhookDispatchStatus)
-          ? (status as InboundWebhookDispatchStatus)
-          : undefined,
-        dateFrom: url.searchParams.get('date_from') ?? url.searchParams.get('dateFrom') ?? undefined,
-        dateTo: url.searchParams.get('date_to') ?? url.searchParams.get('dateTo') ?? undefined,
-      },
-      page,
-      limit,
+    const deliveries = await runWithApiKeyOrSession(request, () =>
+      listInboundDeliveries(
+        {
+          inboundWebhookId: id,
+          status: status && VALID_DELIVERY_STATUSES.has(status as InboundWebhookDispatchStatus)
+            ? (status as InboundWebhookDispatchStatus)
+            : undefined,
+          dateFrom: url.searchParams.get('date_from') ?? url.searchParams.get('dateFrom') ?? undefined,
+          dateTo: url.searchParams.get('date_to') ?? url.searchParams.get('dateTo') ?? undefined,
+        },
+        page,
+        limit,
+      ),
     );
     if (isServerActionErrorResult(deliveries)) {
       return createServerActionErrorResponse(deliveries);

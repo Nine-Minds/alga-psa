@@ -158,11 +158,24 @@ describe('renewTelephonyCallSubscriptions', () => {
     });
 
     // The secret minted for this tenant is what the webhook later verifies.
-    expect(row.webhook_secret).toMatch(/^[0-9a-f]{64}$/);
+    expect(row.webhook_secret).toMatch(/^[0-9a-f]{32}$/);
     expect(body.clientState).toBe(buildTelephonyClientState(TENANT, row.webhook_secret as string));
     expect(row.subscription_id).toBe('graph-subscription-1');
     expect(row.subscription_expires_at).toBeTruthy();
     expect(row.last_error).toBeNull();
+  });
+
+  it('replaces a stored secret too long for Graph clientState with one that fits', async () => {
+    const uuidTenant = 'dfd9fd6d-7234-4111-820e-4dc5254baf75';
+    const row = seedProvider({ tenant: uuidTenant, webhook_secret: 'a'.repeat(64) });
+
+    const [result] = await renewTelephonyCallSubscriptions({ tenantId: uuidTenant });
+
+    expect(result).toMatchObject({ action: 'created' });
+    expect(row.webhook_secret).toMatch(/^[0-9a-f]{32}$/);
+    const body = JSON.parse(String((fetchMock.mock.calls[0] as [string, RequestInit])[1].body));
+    expect(body.clientState).toBe(buildTelephonyClientState(uuidTenant, row.webhook_secret as string));
+    expect(body.clientState.length).toBeLessThanOrEqual(128);
   });
 
   it('T033: a subscription near expiry is renewed in place', async () => {
@@ -247,6 +260,11 @@ describe('telephony clientState and notification parsing', () => {
     });
     expect(parseTelephonyClientState('teams-artifacts:tenant-1:secret')).toBeNull();
     expect(parseTelephonyClientState(undefined)).toBeNull();
+  });
+
+  it('refuses to build a clientState longer than Graph allows', () => {
+    expect(() => buildTelephonyClientState('dfd9fd6d-7234-4111-820e-4dc5254baf75', 'a'.repeat(64)))
+      .toThrow(/136 characters; Microsoft Graph allows at most 128/);
   });
 
   it('extracts the call record id from both resource shapes Graph sends', () => {

@@ -14,6 +14,7 @@
     "communityEditionDescription": "La Community Edition auto-hébergée permet un nombre illimité d’utilisateurs, sans restriction de licence ni coût supplémentaire."
   },
   "purchaseSuccess": {
+    "unlimitedLicenses": "Illimité",
     "metaTitle": "Achat réussi",
     "scheduledTitle": "Changement planifié avec succès !",
     "updatedTitle": "Mise à jour réussie !",
@@ -395,7 +396,8 @@
   },
   "errors": {
     "notSignedIn": "Non autorisé. Connectez-vous pour gérer les licences.",
-    "accountManagementRead": "Autorisation refusée : autorisation de lecture sur la gestion des comptes requise"
+    "accountManagementRead": "Autorisation refusée : autorisation de lecture sur la gestion des comptes requise",
+    "accountManagementUpdate": "Autorisation refusée : autorisation de mise à jour sur la gestion des comptes requise"
   },
   "coManaged": {
     "trial": {
@@ -451,6 +453,8 @@
       },
       "error": {
         "operationConflict": "Cette demande a déjà été envoyée avec des informations différentes. Actualisez et recommencez.",
+        "trialClaimUnavailable": "Cet essai est déjà utilisé ou a été lancé pour un autre client. Actualisez et réessayez.",
+        "trialSponsorNotEligible": "Cet espace de travail n’est pas éligible à un essai de Seat. Vérifiez l’offre et l’état de facturation du compte.",
         "invalidSeats": "Saisissez un nombre entier de postes, au moins 1.",
         "invalidInvitation": "Choisissez un contact à inviter.",
         "contactNotFound": "Ce contact n'est plus disponible. Choisissez un autre contact.",
@@ -503,8 +507,7 @@
         "save": "Enregistrer les valeurs par défaut du transfert"
       },
       "client": {
-        "seatArrangement": "Accord de postes",
-        "summary": "Accord de postes : {{used}} sur {{count}} postes utilisés"
+        "seatArrangement": "Accord de postes"
       },
       "technicians": {
         "sent": "Invitation envoyée.",
@@ -549,6 +552,13 @@
         "addedUnavailable": "{{name}} a été ajouté mais ne peut pas être invité.",
         "unavailable": "Non listés car inactifs, sans adresse e-mail ou occupant déjà un poste ou une invitation : {{count}}."
       },
+      "trial": {
+        "available": "Un essai gratuit de 15 jours est disponible ci-dessus. Des postes cogérés peuvent être ajoutés à tout moment.",
+        "availableTrialEnables": "Inviter le technicien lance l’essai et active l’informatique cogérée pour ce client. Après les 15 jours, achetez un poste pour conserver le technicien.",
+        "pending": "Une invitation à l’essai de 15 jours attend le technicien. Des postes cogérés peuvent être ajoutés à tout moment.",
+        "active": "L’essai de 15 jours est en cours. Ajoutez des postes cogérés pour conserver le technicien ensuite.",
+        "ended": "L’essai de 15 jours est terminé. Ajoutez des postes cogérés pour conserver le technicien."
+      },
       "chooser": {
         "seat": "Poste",
         "seatHint": "Les techniciens du client travaillent dans votre PSA, limités à leur entreprise.",
@@ -556,7 +566,11 @@
         "workspaceHint": "L’équipe informatique du client dispose de son propre centre de services et escalade vers vous.",
         "description": "Choisissez comment l’équipe informatique de ce client travaille avec vous.",
         "shape": "Modèle cogéré",
-        "pool": "{{available}} sur {{purchased}} postes disponibles. {{allocated}} alloués."
+        "pool": "{{available}} sur {{purchased}} postes disponibles. {{allocated}} alloués.",
+        "poolEmpty": "Aucun poste cogéré pour le moment.",
+        "seatHintAfterTrial": "Ajoutez des postes cogérés pour conserver le technicien après l’essai de 15 jours.",
+        "seatHintTrialCovers": "Le poste d’essai couvre ce technicien jusqu’au {{date}}. Achetez un poste pour le conserver.",
+        "seatHintTrial": "Gratuit pendant 15 jours. Invitez un technicien pour activer l’informatique cogérée pour ce client."
       },
       "states": {
         "active": "Actif",
@@ -564,18 +578,18 @@
       }
     },
     "portableExport": {
-      "title": "Exporter l’espace de travail",
+      "title": "Exporter l'espace de travail",
       "description": "Téléchargez une archive portable et chiffrée des enregistrements et fichiers de votre espace de travail.",
-      "recovery": "Conservez la phrase secrète de récupération en lieu sûr. Sans elle, l’archive ne peut pas être ouverte.",
-      "connections": "L’archive contient les enregistrements de votre espace de travail et les fichiers qui y sont stockés. Les enregistrements et associations de documents, ainsi que l’historique du temps, des plannings, des réunions et des conversations, ne sont pas encore inclus et arriveront dans une version ultérieure. Les données de facturation, les données privées du MSP et les secrets d’intégration ne sont pas inclus.",
+      "recovery": "Conservez la phrase secrète de récupération en lieu sûr. Sans elle, l'archive ne peut pas être ouverte.",
+      "connections": "L'archive contient les enregistrements de votre espace de travail et les fichiers qui y sont stockés. Les enregistrements et associations de documents, ainsi que l'historique du temps, du planning, des réunions et des conversations, ne sont pas encore inclus et arriveront dans une version ultérieure. La facturation, les données privées du MSP et les secrets d'intégration ne sont pas inclus.",
       "passphrase": "Phrase secrète de récupération",
       "confirmPassphrase": "Confirmer la phrase secrète de récupération",
-      "download": "Préparer et télécharger l’archive",
-      "requested": "Votre demande s’ouvre dans un nouvel onglet. La préparation peut prendre quelques minutes ; votre navigateur téléchargera le fichier dès qu’il sera prêt.",
-      "loadError": "Vous ne pouvez pas exporter cet espace de travail avec votre accès actuel.",
+      "download": "Préparer et télécharger l'archive",
+      "requested": "Votre demande s’ouvre dans un nouvel onglet. La préparation peut prendre quelques minutes ; votre navigateur téléchargera le fichier lorsqu’il sera prêt.",
+      "loadError": "Vous ne pouvez pas exporter cet espace de travail avec vos accès actuels.",
       "lengthError": "Utilisez une phrase secrète comprise entre 16 et 1024 octets UTF-8.",
       "matchError": "Les phrases secrètes de récupération doivent correspondre.",
-      "unavailable": "L’export de l’espace de travail n’est pas disponible dans cette édition.",
+      "unavailable": "L'export de l'espace de travail n'est pas disponible dans cette édition.",
       "loading": "Chargement…"
     },
     "acceptance": {
@@ -604,8 +618,6 @@
     },
     "client": {
       "awaitingAcceptance": "L'administrateur client doit accepter avant que l'accès soit accordé.",
-      "chooseRelationship": "Choisir la relation",
-      "endedHint": "Cette relation est terminée. L'historique conservé et les archives restent disponibles.",
       "endedOn": "Terminée le {{date}}",
       "failedHint": "La configuration n'est pas terminée. Les postes restent réservés ; réessayez pour la poursuivre ou annulez la configuration.",
       "forClient": "Informatique cogérée pour {{name}}",
@@ -614,6 +626,7 @@
       "inconsistentHint": "Une configuration cogérée de ce client renvoie à un enregistrement d’espace de travail appartenant à un autre client. Rien ne peut être géré ni configuré ici tant que le support n’a pas corrigé l’enregistrement.",
       "invitation": "Invitation de l'administrateur",
       "notEnabled": "Informatique cogérée non activée",
+      "notEnabledTrialEnables": "L’informatique cogérée n’est pas encore activée. Démarrer l’essai gratuit de 15 jours d’un poste l’active pour ce client.",
       "progress": "Progression de la configuration",
       "provisioningHint": "Les sièges réservés restent retenus jusqu'à la fin de la configuration ou la confirmation du nettoyage.",
       "relationship": "Relation",
@@ -622,12 +635,11 @@
       "setupHint": "Activez l'informatique cogérée depuis ce client pour réserver des techniciens du client et inviter un administrateur.",
       "tab": "Informatique cogérée",
       "viewDetails": "Voir les détails",
-      "viewHistory": "Voir l'historique",
       "workspace": "Espace de travail client",
       "seatUsage": "{{used}} sur {{count}} postes de technicien",
       "seatAllocation": "{{count}} postes de technicien alloués"
     },
-    "description": "Gérez les postes de technicien mis à la disposition des espaces de travail de vos clients.",
+    "description": "Le co-management informatique permet au personnel informatique d'un client de travailler avec votre équipe dans AlgaPSA, sur les mêmes tickets, avec un accès limité à son entreprise. Chaque technicien client utilise un poste d'un pool que vous achetez ici.",
     "directory": {
       "empty": "Aucun espace de travail cogéré n'est disponible pour la gestion.",
       "prompt": "Sélectionnez l'espace de travail cogéré à gérer."
@@ -637,7 +649,7 @@
       "descriptionWith": "{{name}} n’a plus accès. L’historique du travail partagé est conservé en lecture seule.",
       "title": "IT cogérée terminée le {{date}}"
     },
-    "loading": "Chargement de la capacité en postes client…",
+    "loading": "Chargement de la capacité en postes cogérés…",
     "overview": {
       "shape": "Modèle",
       "state": "État",
@@ -718,15 +730,15 @@
       "description": "Cet espace de travail n’est pas disponible pour le moment. Contactez votre prestataire informatique si vous comptiez l’utiliser.",
       "title": "L’informatique cogérée n’est pas disponible"
     },
-    "capacity": "Postes achetés",
+    "capacity": "Achetés",
     "allocated": "Attribués aux clients",
-    "available": "Postes disponibles",
-    "seatPool": "Postes de technicien clients",
-    "seatDescription": "Attribuez des postes depuis ce pool partagé. Les demandeurs sont gratuits et vos techniciens MSP n'utilisent pas de postes clients.",
+    "available": "Disponibles",
+    "seatPool": "Postes cogérés",
+    "seatDescription": "Seuls les techniciens de vos clients ont besoin d'un poste. Les demandeurs et vos propres techniciens n'en ont pas besoin.",
     "quantity": "Total de postes dans votre pool",
     "reviewPurchase": "Vérifier l'achat",
     "resumePurchase": "Reprendre l'achat",
-    "confirmTitle": "Vérifier l'achat de postes clients",
+    "confirmTitle": "Vérifier l'achat de postes cogérés",
     "monthlyTotal_one": "{{count}} poste · {{amount}} par mois",
     "monthlyTotal_other": "{{count}} postes · {{amount}} par mois",
     "dueNow": "Montant estimé dû maintenant : {{amount}}",
@@ -734,7 +746,7 @@
     "checkoutTitle": "Finaliser l'achat de postes",
     "manageLicense": "Gérer votre licence auto-hébergée",
     "proRequired": "Un abonnement PSA Pro est requis pour parrainer des espaces de travail clients.",
-    "loadError": "Impossible de charger la capacité de postes clients. Veuillez réessayer.",
+    "loadError": "Impossible de charger la capacité en postes cogérés. Veuillez réessayer.",
     "purchaseError": "Impossible de finaliser l'achat de postes. Vous pouvez le reprendre en toute sécurité.",
     "termsChanged": "Le prix a changé depuis votre vérification. Vérifiez les nouvelles conditions avant de confirmer.",
     "offerUnavailable": "L’achat de nouvelles places est temporairement indisponible. Aucun montant n’a été débité.",
@@ -749,9 +761,6 @@
     "awaitingVerification_one": "Votre achat de {{count}} place est en attente de vérification du paiement. La place apparaîtra ici une fois le paiement confirmé.",
     "awaitingVerification_other": "Votre achat de {{count}} places est en attente de vérification du paiement. Les places apparaîtront ici une fois le paiement confirmé.",
     "refreshStatus": "Actualiser l'état",
-    "purchaseOnly": {
-      "intro": "Achetez ici un pool de places en cogestion. Après l'achat, attribuez des places aux clients depuis chaque fiche client."
-    },
     "previewError": "Impossible de chiffrer cette modification. Actualisez et réessayez.",
     "billingCustomerUnlinked": "Impossible de vérifier un compte de facturation Stripe pour cet espace de travail. Contactez l’assistance pour le faire associer.",
     "proSubscriptionRequired": "Les sièges cogérés nécessitent un abonnement Pro en cours. Vérifiez votre abonnement dans la gestion du compte.",
@@ -974,21 +983,6 @@
       "settings": "Gérer les politiques SLA",
       "mappingFor": "La priorité client {{name}} correspond à",
       "unmapped": "Non associée"
-    },
-    "portableExport": {
-      "title": "Exporter l'espace de travail",
-      "description": "Téléchargez une archive portable et chiffrée des enregistrements et fichiers de votre espace de travail.",
-      "recovery": "Conservez la phrase secrète de récupération en lieu sûr. Sans elle, l'archive ne peut pas être ouverte.",
-      "connections": "L'archive contient les enregistrements de votre espace de travail et les fichiers qui y sont stockés. Les enregistrements et associations de documents, ainsi que l'historique du temps, du planning, des réunions et des conversations, ne sont pas encore inclus et arriveront dans une version ultérieure. La facturation, les données privées du MSP et les secrets d'intégration ne sont pas inclus.",
-      "passphrase": "Phrase secrète de récupération",
-      "confirmPassphrase": "Confirmer la phrase secrète de récupération",
-      "download": "Préparer et télécharger l'archive",
-      "requested": "Votre demande s’ouvre dans un nouvel onglet. La préparation peut prendre quelques minutes ; votre navigateur téléchargera le fichier lorsqu’il sera prêt.",
-      "loadError": "Vous ne pouvez pas exporter cet espace de travail avec vos accès actuels.",
-      "lengthError": "Utilisez une phrase secrète comprise entre 16 et 1024 octets UTF-8.",
-      "matchError": "Les phrases secrètes de récupération doivent correspondre.",
-      "unavailable": "L'export de l'espace de travail n'est pas disponible dans cette édition.",
-      "loading": "Chargement…"
     },
     "section": {
       "title": "Cogestion",
@@ -1273,6 +1267,49 @@
       "reviewSeatChange": "Vérifier le changement de sièges",
       "billingError": "Impossible d’ouvrir la facturation. Actualisez le statut et réessayez.",
       "purchaseUnconfigured": "Les achats ne sont pas configurés pour ce déploiement."
+    },
+    "howMany": "Combien de postes souhaitez-vous ?",
+    "noSeatsYet": "Vous n'avez pas encore de poste.",
+    "perMonth": "par mois",
+    "priceBreakdown_one": "{{count}} poste × {{unit}}",
+    "priceBreakdown_other": "{{count}} postes × {{unit}}",
+    "reviewHint": "Rien n'est facturé tant que vous ne confirmez pas à l'étape suivante.",
+    "changeTitle": "Modifier le nombre de postes",
+    "adding_one": "Ajout de {{count}} poste",
+    "adding_other": "Ajout de {{count}} postes",
+    "removing_one": "Retrait de {{count}} poste",
+    "removing_other": "Retrait de {{count}} postes",
+    "fromTo": "{{from}} → {{to}} postes",
+    "monthlyWithDifference": "{{total}} par mois ({{difference}})",
+    "reviewChange": "Vérifier la modification",
+    "manageBilling": "Gérer la facturation",
+    "freeToAllocate_one": "{{count}} poste est libre à attribuer. Ouvrez une fiche client pour l'attribuer.",
+    "freeToAllocate_other": "{{count}} postes sont libres à attribuer. Ouvrez une fiche client pour les attribuer.",
+    "noneFree": "Tous les postes sont attribués. Ajoutez des postes ci-dessous ou libérez-en un auprès d'un client.",
+    "goToClients": "Aller aux clients",
+    "belowAllocated_one": "Vous ne pouvez pas descendre sous {{count}} poste : il est attribué à un client. Libérez-le d'abord auprès de ce client.",
+    "belowAllocated_other": "Vous ne pouvez pas descendre sous {{count}} postes : ils sont attribués à des clients. Libérez d'abord des postes auprès d'un client.",
+    "decreaseSeats": "Diminuer le nombre de postes",
+    "increaseSeats": "Augmenter le nombre de postes",
+    "usage": "{{allocated}} postes attribués sur {{purchased}}",
+    "howItWorks": {
+      "title": "Comment ça marche",
+      "buy": {
+        "title": "Achetez des postes",
+        "body": "Les postes vont dans un seul pool partagé pour tout votre MSP. Modifiez leur nombre à tout moment."
+      },
+      "enable": {
+        "title": "Activez le co-management pour un client",
+        "body": "Ouvrez la fiche client et choisissez combien de postes ce client reçoit."
+      },
+      "signIn": {
+        "title": "Leurs techniciens se connectent",
+        "body": "Chaque technicien client utilise un poste et ne voit que le travail de sa propre entreprise."
+      }
+    },
+    "whoNeedsSeat": {
+      "label": "Qui a besoin d'un poste ?",
+      "answer": "Uniquement les techniciens de vos clients. Les personnes qui ne font que soumettre des tickets sont gratuites, et vos propres techniciens sont couverts par vos licences AlgaPSA."
     }
   },
   "common": {

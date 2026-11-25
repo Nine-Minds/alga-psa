@@ -13,6 +13,7 @@ export default defineConfig({
     'lib/ticketQuery/ticketSlaSql': 'lib/ticketQuery/ticketSlaSql.ts',
     'lib/ticketCommentAttachments': 'lib/ticketCommentAttachments.ts',
     'lib/ticketCommentAttachmentToken': 'lib/ticketCommentAttachmentToken.ts',
+    'lib/net/outboundTarget': 'lib/net/outboundTarget.ts',
     'index': 'index.ts',
     'types/index': 'types/index.ts',
     'interfaces/contact.interfaces': 'interfaces/contact.interfaces.ts',
@@ -118,6 +119,7 @@ export default defineConfig({
     'billingClients/contractMonthlyValue': 'billingClients/contractMonthlyValue.ts',
     'billingClients/quoteDiscountAllocation': 'billingClients/quoteDiscountAllocation.ts',
     'billingClients/quoteConversionDiscounts': 'billingClients/quoteConversionDiscounts.ts',
+    'billingClients/quoteToContractLines': 'billingClients/quoteToContractLines.ts',
     'billingClients/serviceTaxTreatment': 'billingClients/serviceTaxTreatment.ts',
     'billingClients/index': 'billingClients/index.ts',
     // packages/jobs runs vitest from its own root, so this resolves through the

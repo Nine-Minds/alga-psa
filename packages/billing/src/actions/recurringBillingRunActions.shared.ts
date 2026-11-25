@@ -32,6 +32,7 @@ export type RecurringBillingRunInvoiceFailure = {
 };
 
 export type RecurringBillingRunTarget = {
+  billingProfileId?: string;
   selectorInput: IRecurringDueSelectionInput;
   executionWindow: IRecurringRunExecutionWindowIdentity;
   billingCycleId?: string | null;
@@ -53,6 +54,7 @@ export type RecurringBillingRunTarget = {
 };
 
 export type RecurringBillingRunGroupedTarget = {
+  billingProfileId?: string;
   groupKey: string;
   selectorInputs: IRecurringDueSelectionInput[];
   billingCycleId?: string | null;

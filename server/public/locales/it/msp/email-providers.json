@@ -418,6 +418,7 @@
         "oauthStatus": "Stato OAuth",
         "connected": "Collegato",
         "notConnected": "Non connesso",
+        "reauthorizationRequired": "Nuova autorizzazione richiesta",
         "reconnectOauth": "Riconnetti OAuth",
         "authorizeUrl": "Autorizza l'URL",
         "tokenUrl": "URL del token",
@@ -574,6 +575,7 @@
       "statusLabel": "Stato OAuth",
       "connected": "Collegato",
       "notConnected": "Non connesso",
+      "reauthorizationRequired": "Nuova autorizzazione richiesta",
       "authorizing": "Autorizzazione in corso...",
       "reconnect": "Riconnetti OAuth"
     },
@@ -1130,7 +1132,8 @@
       "ticketingFromDomainMismatch": "L’indirizzo mittente dei ticket deve utilizzare il dominio in uscita configurato",
       "refreshFailed": "Impossibile recuperare le impostazioni aggiornate",
       "updateFailed": "Impossibile aggiornare le impostazioni email",
-      "mailboxesLoadFailed": "Impossibile caricare le cassette postali Microsoft 365"
+      "mailboxesLoadFailed": "Impossibile caricare le cassette postali Microsoft 365",
+      "secretRequiredAfterConnectionChange": "Inserisci di nuovo la password per {{provider}}: l’indirizzo del server o i dati di accesso sono cambiati."
     },
     "inboundRules": {
       "notFound": "Regola per le email in entrata non trovata",

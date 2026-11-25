@@ -159,10 +159,24 @@ describe('board notification settings actions (integration)', () => {
     expect(await countRows('board_notification_rules', { rule_id: drop.rule_id })).toBe(0);
   });
 
+  it('saves a rule whose only trigger is a client reply on an unassigned ticket', async () => {
+    const saved: any = await saveBoardNotificationSettings(boardId, {
+      rules: [{ notify_on_create: false, notify_on_unassigned_client_reply: true, user_ids: [tech1] }],
+    });
+    expect(isActionMessageError(saved)).toBe(false);
+    expect(saved.rules).toHaveLength(1);
+    expect(saved.rules[0].notify_on_create).toBe(false);
+    expect(saved.rules[0].notify_on_unassigned_client_reply).toBe(true);
+
+    const loaded: any = await getBoardNotificationSettings(boardId);
+    expect(loaded.rules[0].notify_on_unassigned_client_reply).toBe(true);
+    expect(loaded.rules[0].status_ids).toEqual([]);
+  });
+
   it('rejects a rule without a trigger or without a recipient, and persists nothing', async () => {
     expectError(
       await saveBoardNotificationSettings(boardId, { rules: [{ notify_on_create: false, status_ids: [], user_ids: [tech1] }] }),
-      'must fire on ticket creation or on at least one status'
+      'must fire on ticket creation, on a client reply to an unassigned ticket, or on at least one status'
     );
     expectError(
       await saveBoardNotificationSettings(boardId, { rules: [{ notify_on_create: true, user_ids: [], team_ids: [] }] }),

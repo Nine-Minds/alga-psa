@@ -13,7 +13,11 @@ import {
   dateOnlyToLocalDate,
   periodLastInclusiveDay,
   resolveEntryDefaults,
+  resolveSingleDayPlanDefaults,
+  zonedWorkDayCalendar,
+  type ResolvedEntryDefaults,
 } from './timeEntryPeriodSelection';
+import { toEntryPlan, type StopwatchEntryPlanItem } from './stopwatch/stopwatchMath';
 import { createTimeEntrySaveHandler } from './timeEntrySaveAdapter';
 import type {
   IExtendedWorkItem,
@@ -218,7 +222,26 @@ export async function launchTimeEntryForWorkItem({ openDrawer, closeDrawer, cont
     }
 
     const timeZone = typeof userTimeZone === 'string' ? userTimeZone : 'UTC';
-    const defaults = resolveEntryDefaults({ context, periods, timeZone });
+    // A stopwatch session becomes one entry per work day in the user's zone (the zone the server
+    // stamps work_date with). One day is the ordinary single-entry drawer; several days keep their
+    // real dates, so a locked or uncovered day is reported on its entry instead of being moved.
+    const plan: StopwatchEntryPlanItem[] | null =
+      context.stopwatchSessionId && context.stopwatchSegments?.length
+        ? toEntryPlan(context.stopwatchSegments, Date.now(), zonedWorkDayCalendar(timeZone))
+        : null;
+    const multiDayPlan = plan && plan.length > 1 ? plan : null;
+
+    const defaults: ResolvedEntryDefaults | null = multiDayPlan
+      ? {
+          defaultStartTime: multiDayPlan[0].start,
+          defaultEndTime: multiDayPlan[0].end,
+          date: multiDayPlan[0].start,
+          source: 'context',
+          moved: { kind: 'none' },
+        }
+      : plan?.length === 1
+        ? resolveSingleDayPlanDefaults({ context, planItem: plan[0], periods, timeZone })
+        : resolveEntryDefaults({ context, periods, timeZone });
     if (!defaults) {
       launchBlockedToast(
         launchMessage(
@@ -240,6 +263,7 @@ export async function launchTimeEntryForWorkItem({ openDrawer, closeDrawer, cont
         defaults={defaults}
         contextNotice={context.notice}
         stopwatchSessionId={context.stopwatchSessionId}
+        entryPlan={multiDayPlan?.map(({ start, end }) => ({ start, end }))}
       />,
       undefined,
       undefined,

@@ -121,11 +121,14 @@ describe('Teams meeting artifact subscriptions', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(JSON.parse(String(fetchMock.mock.calls[0][1].body))).toMatchObject({
+      changeType: 'created',
       resource: 'communications/onlineMeetings/getAllRecordings',
       notificationUrl: 'https://example.test/api/teams/webhooks/recordings',
+      lifecycleNotificationUrl: 'https://example.test/api/teams/webhooks/recordings',
       clientState: buildTeamsArtifactClientState('tenant-1', 'recordings', 'known-secret'),
     });
     expect(JSON.parse(String(fetchMock.mock.calls[1][1].body))).toMatchObject({
+      changeType: 'created',
       resource: 'communications/onlineMeetings/getAllTranscripts',
       clientState: buildTeamsArtifactClientState('tenant-1', 'transcripts', 'known-secret'),
     });
@@ -137,8 +140,9 @@ describe('Teams meeting artifact subscriptions', () => {
   });
 
   it('generates and persists a clientState secret when none is stored yet', async () => {
+    const tenantId = '0f8fad5b-d9cb-469f-a165-70867728950e';
     const { knex, updates } = buildKnex({
-      tenant: 'tenant-1',
+      tenant: tenantId,
       install_status: 'active',
       selected_profile_id: 'profile-1',
       default_meeting_organizer_upn: 'organizer@example.com',
@@ -148,15 +152,52 @@ describe('Teams meeting artifact subscriptions', () => {
       transcripts_subscription_id: null,
     });
     createTenantKnexMock.mockResolvedValue({ knex });
-    global.fetch = vi.fn(async () => new Response(JSON.stringify({
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
       id: 'sub', expirationDateTime: '2026-06-03T00:00:00.000Z',
-    }), { status: 201 })) as any;
+    }), { status: 201 }));
+    global.fetch = fetchMock as any;
 
-    await renewTeamsMeetingArtifactSubscriptions({ tenantId: 'tenant-1' });
+    await renewTeamsMeetingArtifactSubscriptions({ tenantId });
 
     const secretUpdate = updates.find((u) => typeof u.meeting_artifact_webhook_secret === 'string');
     expect(secretUpdate).toBeDefined();
-    expect(String(secretUpdate?.meeting_artifact_webhook_secret)).toHaveLength(64);
+    expect(String(secretUpdate?.meeting_artifact_webhook_secret)).toMatch(/^[0-9a-f]{32}$/);
+    for (const call of fetchMock.mock.calls as unknown as Array<[string, RequestInit]>) {
+      expect(JSON.parse(String(call[1].body)).clientState.length).toBeLessThanOrEqual(128);
+    }
+  });
+
+  it('replaces a stored secret that would exceed the Graph clientState limit', async () => {
+    const tenantId = '0f8fad5b-d9cb-469f-a165-70867728950e';
+    const oversizedSecret = 'a'.repeat(64);
+    const { knex, updates } = buildKnex({
+      tenant: tenantId,
+      install_status: 'active',
+      selected_profile_id: 'profile-1',
+      default_meeting_organizer_upn: 'organizer@example.com',
+      default_meeting_organizer_object_id: 'organizer-object-id',
+      meeting_artifact_webhook_secret: oversizedSecret,
+      recordings_subscription_id: null,
+      transcripts_subscription_id: null,
+    });
+    createTenantKnexMock.mockResolvedValue({ knex });
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+      id: 'sub', expirationDateTime: '2026-06-03T00:00:00.000Z',
+    }), { status: 201 }));
+    global.fetch = fetchMock as any;
+
+    await renewTeamsMeetingArtifactSubscriptions({ tenantId });
+
+    const newSecret = String(updates.find((u) => typeof u.meeting_artifact_webhook_secret === 'string')
+      ?.meeting_artifact_webhook_secret);
+    expect(newSecret).toMatch(/^[0-9a-f]{32}$/);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    for (const call of fetchMock.mock.calls as unknown as Array<[string, RequestInit]>) {
+      const clientState = JSON.parse(String(call[1].body)).clientState as string;
+      expect(clientState.length).toBeLessThanOrEqual(128);
+      expect(clientState.endsWith(`:${newSecret}`)).toBe(true);
+    }
+    expect(() => buildTeamsArtifactClientState(tenantId, 'transcripts', oversizedSecret)).toThrow(/at most 128/);
   });
 
   it('T079 renews near-expiry subscriptions and recreates one that returns 404', async () => {
@@ -195,6 +236,38 @@ describe('Teams meeting artifact subscriptions', () => {
       ['POST', 'https://graph.microsoft.com/v1.0/subscriptions'],
     ]);
     expect(updates.at(-1)).toMatchObject({ transcripts_subscription_id: 'tr-new' });
+  });
+
+  it('force renews subscriptions that are not near expiry', async () => {
+    const farFuture = new Date(Date.now() + 48 * 60 * 60 * 1000);
+    const { knex } = buildKnex({
+      tenant: 'tenant-1',
+      install_status: 'active',
+      selected_profile_id: 'profile-1',
+      default_meeting_organizer_upn: 'organizer@example.com',
+      default_meeting_organizer_object_id: 'organizer-object-id',
+      meeting_artifact_webhook_secret: 'known-secret',
+      recordings_subscription_id: 'rec-live',
+      recordings_subscription_expires_at: farFuture,
+      transcripts_subscription_id: 'tr-live',
+      transcripts_subscription_expires_at: farFuture,
+    });
+    createTenantKnexMock.mockResolvedValue({ knex });
+    const fetchMock = vi.fn(async (url: string) => new Response(JSON.stringify({
+      id: url.split('/').pop(), expirationDateTime: '2026-06-03T00:00:00.000Z',
+    }), { status: 200 }));
+    global.fetch = fetchMock as any;
+
+    await expect(renewTeamsMeetingArtifactSubscriptions({ tenantId: 'tenant-1' })).resolves.toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    const result = await renewTeamsMeetingArtifactSubscriptions({ tenantId: 'tenant-1', force: true });
+
+    expect(result.map((row) => row.action)).toEqual(['renewed', 'renewed']);
+    expect(fetchMock.mock.calls.map((call) => [call[1].method, call[0]])).toEqual([
+      ['PATCH', 'https://graph.microsoft.com/v1.0/subscriptions/rec-live'],
+      ['PATCH', 'https://graph.microsoft.com/v1.0/subscriptions/tr-live'],
+    ]);
   });
 
   it('T081/T082 resolves the meeting from resourceData or decrypted resource data, while clientState only routes tenant/kind', async () => {

@@ -21,6 +21,8 @@ export type DesignerPreviewWidth = 'desktop' | 'mobile';
 export interface DesignerShellProps {
   /** Prefix for the shell's element ids. */
   idPrefix: string;
+  /** The shell's root element, for hosts that size panes from the shell's own width. */
+  rootRef?: React.Ref<HTMLDivElement>;
   toolbar: React.ReactNode;
   leftPane?: React.ReactNode;
   inspector?: React.ReactNode;
@@ -37,6 +39,7 @@ export interface DesignerShellProps {
 
 export function DesignerShell({
   idPrefix,
+  rootRef,
   toolbar,
   leftPane,
   inspector,
@@ -77,6 +80,7 @@ export function DesignerShell({
 
   return (
     <div
+      ref={rootRef}
       id={idPrefix}
       className={`flex h-full min-h-0 flex-col bg-[rgb(var(--color-background))] ${className ?? ''}`.trim()}
     >

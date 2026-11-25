@@ -24,6 +24,7 @@ import type {
 } from '@alga-psa/types';
 import { getProjectStatuses, getTemplates } from '@alga-psa/projects/actions';
 import {
+  amendOpportunityDeclaration,
   declareOpportunityStage,
   deleteOpportunity,
   listCitableSourcesForOpportunity,
@@ -48,7 +49,7 @@ import { LoseOpportunityDialog } from '../dialogs/LoseOpportunityDialog';
 import { EditValuesDialog } from '../dialogs/EditValuesDialog';
 import { EditOpportunityDialog } from '../dialogs/EditOpportunityDialog';
 import { DraftEditorDialog } from '../dialogs/DraftEditorDialog';
-import { DeclareStageDialog } from '../dialogs/DeclareStageDialog';
+import { DeclareStageDialog, type DeclarationDialogContent } from '../dialogs/DeclareStageDialog';
 import { OpportunityCitationDocument } from './OpportunityCitationDocument';
 
 const formatQuoteAmount = (quote: LinkableOpportunityQuote) =>
@@ -123,7 +124,8 @@ export function OpportunityDetailHost({
   const [linkingQuote, setLinkingQuote] = useState(false);
   const [draftOpen, setDraftOpen] = useState(Boolean(drafting && autoOpenDraft));
   const [assignees, setAssignees] = useState<OpportunityStepAssignee[]>([]);
-  const [declaringStage, setDeclaringStage] = useState<Exclude<OpportunityStage, 'won' | 'lost'> | null>(null);
+  // One dialog, two jobs: declare moves the deal to a stage; edit changes what a reached stage says.
+  const [declarationDialog, setDeclarationDialog] = useState<{ mode: 'declare' | 'edit'; stage: Exclude<OpportunityStage, 'won' | 'lost'> } | null>(null);
   const [citedDocumentId, setCitedDocumentId] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
@@ -217,16 +219,30 @@ export function OpportunityDetailHost({
    * makes. A rung click opens the declare dialog, where a supporting source is
    * optional.
    */
-  const declareStage = (stage: Exclude<OpportunityStage, 'won' | 'lost'>) => setDeclaringStage(stage);
+  const declareStage = (stage: Exclude<OpportunityStage, 'won' | 'lost'>) => setDeclarationDialog({ mode: 'declare', stage });
 
-  const submitDeclaration = async (ref: { type: 'interaction' | 'document'; id: string } | null) => {
-    if (!declaringStage) return;
-    const stage = declaringStage;
+  const submitDeclaration = async (content: DeclarationDialogContent) => {
+    if (!declarationDialog) return;
+    const { stage } = declarationDialog;
     await run(
-      () => declareOpportunityStage(detail.opportunity_id, stage, undefined, ref?.type ?? null, ref?.id ?? null),
+      () => declareOpportunityStage(detail.opportunity_id, stage, content),
       t('opportunities.toast.stageSet', 'Stage set to {{stage}}', { stage: stageLabelFor(stage) }),
     );
   };
+
+  /** Edits what a reached stage says. The deal does not move. */
+  const submitEvidenceEdit = async (content: DeclarationDialogContent) => {
+    if (!declarationDialog || declarationDialog.stage === 'identified') return;
+    const checkpoint = declarationDialog.stage;
+    await run(
+      () => amendOpportunityDeclaration(detail.opportunity_id, checkpoint, content),
+      t('opportunities.toast.evidenceSaved', 'Evidence saved'),
+    );
+  };
+
+  const editingDeclaration = declarationDialog?.mode === 'edit'
+    ? detail.ladder.find((step) => step.checkpoint === declarationDialog.stage)?.declaration ?? null
+    : null;
 
   const openCitation = (type: 'interaction' | 'document', id: string) => {
     if (type === 'interaction') onOpenInteraction?.(id);
@@ -260,6 +276,7 @@ export function OpportunityDetailHost({
             onStageSelect={detail.status === 'open' ? declareStage : undefined}
             onOpenCitation={openCitation}
             canOpenInteraction={Boolean(onOpenInteraction)}
+            onEditEvidence={(stage) => setDeclarationDialog({ mode: 'edit', stage })}
             onChanged={refresh}
           />
         }
@@ -310,11 +327,19 @@ export function OpportunityDetailHost({
       />
 
       <DeclareStageDialog
-        isOpen={declaringStage !== null}
-        stageLabel={declaringStage ? stageLabelFor(declaringStage) : ''}
+        isOpen={declarationDialog !== null}
+        mode={declarationDialog?.mode ?? 'declare'}
+        stageLabel={declarationDialog ? stageLabelFor(declarationDialog.stage) : ''}
+        initialNote={editingDeclaration?.note ?? null}
+        initialSources={(editingDeclaration?.citations ?? []).map((citation) => ({
+          type: citation.type,
+          id: citation.id,
+          label: citation.label,
+          missing: citation.missing,
+        }))}
         loadSources={() => listCitableSourcesForOpportunity(detail.opportunity_id)}
-        onClose={() => setDeclaringStage(null)}
-        onSubmit={submitDeclaration}
+        onClose={() => setDeclarationDialog(null)}
+        onSubmit={declarationDialog?.mode === 'edit' ? submitEvidenceEdit : submitDeclaration}
       />
       {citedDocumentId ? (
         <OpportunityCitationDocument

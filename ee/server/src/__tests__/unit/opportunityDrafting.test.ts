@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const dbMocks = vi.hoisted(() => ({ tenantDb: vi.fn() }));
 
 vi.mock('@alga-psa/db', () => ({ tenantDb: dbMocks.tenantDb }));
-vi.mock('@alga-psa/tenancy/actions', () => ({
+vi.mock('@alga-psa/tenancy/server/tenantSettings', () => ({
   getExperimentalFeaturesForTenant: vi.fn(),
 }));
 vi.mock('server/src/lib/tier-gating/assertAddOnAccess', () => ({
@@ -111,6 +111,11 @@ describe('opportunity AI drafting data', () => {
           checkpoint: 'assessment',
           detail: 'Assessment service accepted on quote Q-0042',
           recorded_at: '2026-07-01T12:00:00.000Z',
+        }, {
+          // A declaration with no written note (alga-2026-0002932): the prompt supplies its own fallback.
+          checkpoint: 'verbal',
+          detail: null,
+          recorded_at: '2026-07-02T12:00:00.000Z',
         }]);
       }
       if (name === 'quotes') {
@@ -201,6 +206,9 @@ describe('opportunity AI drafting data', () => {
     const prompt = provider.mock.calls[0][1].map((message: { content: string }) => message.content).join('\n');
     expect(prompt).toContain('Northwind Clinic');
     expect(prompt).toContain('Days since activity: 9');
+    expect(prompt).toContain('- assessment: Assessment service accepted on quote Q-0042');
+    expect(prompt).toContain('- verbal: reached, no note recorded');
+    expect(prompt).not.toMatch(/- verbal: (null)?\n/);
     expect(prompt).toContain('Q-0042: accepted');
     expect(prompt).toContain('Reviewed assessment findings with Dana');
     expect(prompt).toContain('Use short paragraphs and no exclamation points.');

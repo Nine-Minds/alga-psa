@@ -124,6 +124,7 @@
       "dismissError": "No se pudo descartar la tarea: {{message}}"
     },
     "retryLater": "Por favor, inténtelo de nuevo más tarde.",
+    "tryAgain": "Reintentar",
     "adHoc": {
       "endBeforeStart": "La hora de finalización debe ser posterior a la hora de inicio.",
       "fields": {

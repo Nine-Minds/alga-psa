@@ -536,6 +536,7 @@
     "deleteCommentOnly": "Radera endast kommentar",
     "cancelScheduledComment": "Avbryt schemalagd kommentar",
     "cancelScheduledCommentConfirm": "Avbryta den här schemalagda kommentaren?",
+    "scheduledCommentChangeFailed": "Det gick inte att ändra den schemalagda kommentaren. Uppdatera sidan och försök igen.",
     "invalidScheduleTime": "Välj en entydig framtida tid i den här tidszonen.",
     "publishAt": "Publiceringstid",
     "publishes": "Publiceras",
@@ -574,6 +575,13 @@
       },
       "unavailable": "Det här ärendet är inte tillgängligt.",
       "back": "Tillbaka till kundärenden"
+    },
+    "opener": {
+      "openedBy": "Öppnad via e-post från {{sender}}",
+      "attachments_one": "{{count}} bilaga",
+      "attachments_other": "{{count}} bilagor",
+      "show": "Visa originalmeddelandet",
+      "hide": "Dölj originalmeddelandet"
     }
   },
   "responseState": {

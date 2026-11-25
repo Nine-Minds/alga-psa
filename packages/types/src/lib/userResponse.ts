@@ -15,6 +15,7 @@ const USER_RESPONSE_FIELD_NAMES_TUPLE = [
   'last_name',
   'email',
   'phone',
+  'phone_extension',
   'timezone',
   'user_type',
   'contact_id',
@@ -58,23 +59,32 @@ export const SENSITIVE_USER_FIELDS = [
 
 type SensitiveUserField = typeof SENSITIVE_USER_FIELDS[number];
 
-export type SafeApiUser = Pick<IUserWithRoles, AllowlistedUserField> & {
+export type PublicUser = Pick<IUserWithRoles, AllowlistedUserField>;
+
+export type PublicUserWithRoles = PublicUser & {
   roles: IRole[];
   avatarUrl?: string | null;
   clientId?: string;
 };
 
-export function sanitizeUserForResponse<T extends Record<string, any>>(
-  user: T
-): SafeApiUser {
-  const sanitized: Record<string, any> = { roles: [] };
+// Compatibility name for existing API consumers.
+export type SafeApiUser = PublicUserWithRoles;
 
+/** Project fields explicitly: new database columns are private until allowlisted. */
+export function sanitizeUserFields<T extends Record<string, any>>(user: T): PublicUser {
+  const sanitized: Record<string, any> = {};
   for (const field of USER_RESPONSE_FIELD_NAMES) {
     if (field in user) {
       sanitized[field] = user[field];
     }
   }
+  return sanitized as PublicUser;
+}
 
+export function sanitizeUserForResponse<T extends Record<string, any>>(
+  user: T
+): PublicUserWithRoles {
+  const sanitized: PublicUserWithRoles = { ...sanitizeUserFields(user), roles: [] };
   if ('roles' in user && Array.isArray(user.roles)) {
     sanitized.roles = user.roles;
   }
@@ -87,7 +97,7 @@ export function sanitizeUserForResponse<T extends Record<string, any>>(
     sanitized.clientId = user.clientId;
   }
 
-  return sanitized as SafeApiUser;
+  return sanitized;
 }
 
 export type { SensitiveUserField };

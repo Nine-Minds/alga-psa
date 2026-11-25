@@ -796,7 +796,7 @@
   },
   "templateEditor": {
     "actions": {
-      "backToLayouts": "Retour aux mises en page",
+      "back": "Retour aux présentations de devis",
       "rerun": "Rediffusion",
       "saveLayout": "Enregistrer la mise en page"
     },
@@ -805,8 +805,6 @@
       "copyOf": "Copie de {{name}}",
       "standardTemplate": "Modèle standard"
     },
-    "title": "Éditeur de mise en page de devis",
-    "description": "Concevez la mise en page du devis à l'aide de l'éditeur visuel, puis prévisualisez-la avec des exemples de données.",
     "errors": {
       "exportAst": "Échec de l'exportation du modèle AST à partir de l'espace de travail visuel : {{message}}",
       "load": "Échec du chargement de l'éditeur de modèle de devis",
@@ -819,16 +817,13 @@
       "quoteDetailLoad": "Échec du chargement des détails du devis."
     },
     "fields": {
-      "layoutDetails": "Détails de mise en page",
+      "created": "Créé {{time}}",
+      "notSaved": "Pas encore enregistré",
+      "savedAt": "Enregistré {{time}}",
       "templateName": "Nom du modèle",
       "version": "Version"
     },
-    "footer": {
-      "created": "Créé :",
-      "lastUpdated": "Dernière mise à jour :"
-    },
     "headings": {
-      "editLayout": "Modifier la présentation du devis",
       "newLayout": "Nouvelle présentation du devis"
     },
     "placeholders": {
@@ -850,7 +845,14 @@
       "noQuotesFound": "Aucun devis trouvé.",
       "selectQuote": "Sélectionner un devis",
       "selectQuoteHint": "Sélectionnez un devis pour prévisualiser la sortie liée aux données.",
-      "loadingQuoteDetails": "Chargement des détails du devis…"
+      "loadingQuoteDetails": "Chargement des détails du devis…",
+      "frameTitle": "Aperçu du devis",
+      "zoom": {
+        "fit": "Ajuster",
+        "actual": "100 %",
+        "label": "Zoom de l’aperçu",
+        "fitWithScale": "Ajuster ({{percent}} %)"
+      }
     },
     "pipeline": {
       "render": "Rendu",
@@ -865,6 +867,9 @@
       "preview": "Aperçu",
       "transforms": "Transformations",
       "visual": "Visuel"
+    },
+    "titles": {
+      "edit": "Modifier la mise en page : {{name}}"
     }
   },
   "templatesPage": {

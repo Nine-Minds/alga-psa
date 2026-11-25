@@ -58,6 +58,7 @@ describe('getOpportunityDetail', () => {
       contact_phone_numbers: makeQuery({ phone_number: '+15551234567' }),
       users: makeQuery({ first_name: 'Rep', last_name: 'One' }),
       opportunity_evidence: makeQuery([]),
+      opportunity_evidence_citations: makeQuery([]),
       quotes: makeQuery([]),
     };
     dbMocks.tenantDb.mockReturnValue({
@@ -101,51 +102,81 @@ describe('getOpportunityDetail', () => {
     expect(detail?.contact_phone).toBeNull();
   });
 
-  describe('cited evidence on the ladder', () => {
-    const row = (overrides: Record<string, unknown>) => ({
+  describe('declarations on the ladder', () => {
+    const evidence = (overrides: Record<string, unknown>) => ({
       evidence_id: 'ev-1',
       opportunity_id: 'opp-1',
       checkpoint: 'qualified',
       source: 'user_declared',
       ref_type: null,
       ref_id: null,
+      detail: 'Call went well',
       recorded_at: '2026-10-01T00:00:00.000Z',
       corrected_at: null,
+      ...overrides,
+    });
+    const citation = (overrides: Record<string, unknown>) => ({
+      citation_id: 'c-1',
+      evidence_id: 'ev-1',
+      ref_type: 'interaction',
+      ref_id: 'int-1',
       interaction_title: null,
       document_name: null,
       resolved_interaction_id: null,
       resolved_document_id: null,
       ...overrides,
     });
-    const rungFor = (detail: any) => detail.ladder.find((step: any) => step.checkpoint === 'qualified').evidence;
+    const rungFor = (detail: any, checkpoint = 'qualified') => detail.ladder.find((step: any) => step.checkpoint === checkpoint);
 
-    it('resolves a cited interaction and document to display labels', async () => {
-      tables.opportunity_evidence = makeQuery([
-        row({ ref_type: 'interaction', ref_id: 'int-1', interaction_title: 'Discovery call', resolved_interaction_id: 'int-1' }),
+    it('exposes the note and the cited sources, resolved to labels, in the order the query returns them', async () => {
+      tables.opportunity_evidence = makeQuery([evidence({})]);
+      tables.opportunity_evidence_citations = makeQuery([
+        citation({ citation_id: 'c-1', ref_type: 'document', ref_id: 'doc-1', document_name: 'Scope.pdf', resolved_document_id: 'doc-1' }),
+        citation({ citation_id: 'c-2', ref_type: 'interaction', ref_id: 'int-1', interaction_title: 'Discovery call', resolved_interaction_id: 'int-1' }),
       ]);
-      let detail = await getOpportunityDetail({} as any, 'tenant-1', 'opp-1');
-      expect(rungFor(detail)).toMatchObject({ ref_label: 'Discovery call', ref_missing: false });
-
-      tables.opportunity_evidence = makeQuery([
-        row({ ref_type: 'document', ref_id: 'doc-1', document_name: 'Scope.pdf', resolved_document_id: 'doc-1' }),
-      ]);
-      detail = await getOpportunityDetail({} as any, 'tenant-1', 'opp-1');
-      expect(rungFor(detail)).toMatchObject({ ref_label: 'Scope.pdf', ref_missing: false });
-      // Every join is tenant-constrained through tenantDb.tenantJoin.
+      const detail = await getOpportunityDetail({} as any, 'tenant-1', 'opp-1');
+      expect(rungFor(detail).declaration).toEqual({
+        evidence_id: 'ev-1',
+        note: 'Call went well',
+        recorded_at: '2026-10-01T00:00:00.000Z',
+        citations: [
+          { citation_id: 'c-1', type: 'document', id: 'doc-1', label: 'Scope.pdf', missing: false },
+          { citation_id: 'c-2', type: 'interaction', id: 'int-1', label: 'Discovery call', missing: false },
+        ],
+      });
+      // Ordered by position, and every join is tenant-constrained through tenantDb.tenantJoin.
+      expect(tables.opportunity_evidence_citations.orderBy).toHaveBeenCalledWith([{ column: 'cc.evidence_id' }, { column: 'cc.position', order: 'asc' }]);
       expect(dbMocks.tenantJoin).toHaveBeenCalledWith(expect.anything(), 'documents as cd', 'cd.document_id', 'cda.document_id', expect.objectContaining({ type: 'left' }));
+      expect(dbMocks.tenantJoin).toHaveBeenCalledWith(expect.anything(), 'interactions as ci', 'ci.interaction_id', 'cc.ref_id', expect.objectContaining({ type: 'left' }));
     });
 
-    it('flags a deleted target as missing without throwing', async () => {
-      tables.opportunity_evidence = makeQuery([row({ ref_type: 'document', ref_id: 'gone' })]);
+    it('flags a deleted interaction and a detached document as missing with a null label, and every rung still renders', async () => {
+      tables.opportunity_evidence = makeQuery([evidence({}), evidence({ evidence_id: 'ev-2', checkpoint: 'proposed' })]);
+      tables.opportunity_evidence_citations = makeQuery([
+        citation({ citation_id: 'c-1', ref_type: 'interaction', ref_id: 'gone-int' }),
+        citation({ citation_id: 'c-2', ref_type: 'document', ref_id: 'gone-doc' }),
+      ]);
       const detail = await getOpportunityDetail({} as any, 'tenant-1', 'opp-1');
-      expect(rungFor(detail)).toMatchObject({ ref_label: null, ref_missing: true });
-      expect(detail?.ladder.find((step) => step.checkpoint === 'qualified')?.state).toBe('reached');
+      expect(rungFor(detail).declaration.citations).toEqual([
+        { citation_id: 'c-1', type: 'interaction', id: 'gone-int', label: null, missing: true },
+        { citation_id: 'c-2', type: 'document', id: 'gone-doc', label: null, missing: true },
+      ]);
+      expect(rungFor(detail).state).toBe('reached');
+      expect(rungFor(detail, 'proposed').state).toBe('reached');
+      expect(rungFor(detail, 'assessment').state).toBe('skipped');
     });
 
-    it('leaves uncited evidence unflagged', async () => {
-      tables.opportunity_evidence = makeQuery([row({})]);
+    it('gives a declaration with no sources an empty list, and an unreached or system-only rung no declaration', async () => {
+      tables.opportunity_evidence = makeQuery([
+        evidence({ detail: null }),
+        evidence({ evidence_id: 'ev-sys', checkpoint: 'proposed', source: 'system', ref_type: 'quote', ref_id: 'q-1', detail: 'Quote sent' }),
+      ]);
       const detail = await getOpportunityDetail({} as any, 'tenant-1', 'opp-1');
-      expect(rungFor(detail)).toMatchObject({ ref_label: null, ref_missing: false });
+      expect(rungFor(detail).declaration).toMatchObject({ note: null, citations: [] });
+      expect(rungFor(detail, 'proposed').declaration).toBeNull();
+      expect(rungFor(detail, 'proposed').evidence).toMatchObject({ source: 'system', ref_type: 'quote' });
+      expect(rungFor(detail, 'verbal').declaration).toBeNull();
+      expect(rungFor(detail).evidence).not.toHaveProperty('ref_label');
     });
   });
 });
