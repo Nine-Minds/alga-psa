@@ -32,7 +32,7 @@ const { authRef, authWrapper } = vi.hoisted(() => {
     authWrapper:
       (fn: (...args: any[]) => any) =>
       (...args: any[]) =>
-        fn({ user_id: ref.userId, tenant: ref.tenantId, roles: [] }, { tenant: ref.tenantId }, ...args),
+        fn({ user_id: ref.userId, tenant: ref.tenantId, user_type: 'internal', roles: [] }, { tenant: ref.tenantId }, ...args),
   };
 });
 

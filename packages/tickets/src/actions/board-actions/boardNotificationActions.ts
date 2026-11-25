@@ -21,6 +21,8 @@ import { BoardActionMessageError, boardActionErrorFrom, type BoardActionError } 
 export interface BoardNotificationRuleSettings {
   rule_id: string;
   notify_on_create: boolean;
+  /** Fires when a client replies on a ticket this board owns that has no assignee. */
+  notify_on_unassigned_client_reply: boolean;
   status_ids: string[];
   user_ids: string[];
   team_ids: string[];
@@ -38,6 +40,7 @@ export interface BoardNotificationRuleInput {
   /** Reused when provided so rule identities stay stable across saves. */
   rule_id?: string;
   notify_on_create?: boolean;
+  notify_on_unassigned_client_reply?: boolean;
   status_ids?: string[];
   user_ids?: string[];
   team_ids?: string[];
@@ -65,6 +68,7 @@ function toSettingsRule(rule: BoardNotificationRule): BoardNotificationRuleSetti
   return {
     rule_id: rule.rule_id,
     notify_on_create: rule.notify_on_create,
+    notify_on_unassigned_client_reply: rule.notify_on_unassigned_client_reply,
     status_ids: rule.status_ids,
     user_ids: rule.user_ids,
     team_ids: rule.team_ids,
@@ -219,6 +223,7 @@ export const saveBoardNotificationSettings = withAuth(
         const normalized = {
           rule_id: rule.rule_id && UUID_PATTERN.test(rule.rule_id) ? rule.rule_id : uuidv4(),
           notify_on_create: Boolean(rule.notify_on_create),
+          notify_on_unassigned_client_reply: Boolean(rule.notify_on_unassigned_client_reply),
           status_ids: dedupe(rule.status_ids),
           user_ids: dedupe(rule.user_ids),
           team_ids: dedupe(rule.team_ids),
@@ -245,9 +250,13 @@ export const saveBoardNotificationSettings = withAuth(
             { rule: index + 1, max: MAX_EMAIL_ADDRESSES_PER_RULE }
           );
         }
-        if (!normalized.notify_on_create && normalized.status_ids.length === 0) {
+        if (
+          !normalized.notify_on_create &&
+          !normalized.notify_on_unassigned_client_reply &&
+          normalized.status_ids.length === 0
+        ) {
           throw new Error(
-            `Notification rule ${index + 1} must fire on ticket creation or on at least one status`
+            `Notification rule ${index + 1} must fire on ticket creation, on a client reply to an unassigned ticket, or on at least one status`
           );
         }
         if (
@@ -378,6 +387,7 @@ export const saveBoardNotificationSettings = withAuth(
             rule_id: rule.rule_id,
             board_id: boardId,
             notify_on_create: rule.notify_on_create,
+            notify_on_unassigned_client_reply: rule.notify_on_unassigned_client_reply,
             is_enabled: rule.is_enabled,
             created_by: previous ? previous.created_by : user.user_id,
             // Rules list in created_at order; stagger new rules so input order is kept.

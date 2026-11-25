@@ -1036,7 +1036,8 @@
         "customRate": "Tarif personnalisé",
         "effectiveDate": "Date d'effet",
         "endDate": "Date de fin",
-        "notes": "Notes"
+        "notes": "Notes",
+        "appliesTo": "S'applique à"
       },
       "dialogs": {
         "confirmDeleteSchedule": "Voulez-vous vraiment supprimer ce barème de prix ?"
@@ -1058,7 +1059,10 @@
       "values": {
         "defaultRate": "Tarif par défaut",
         "ongoing": "En cours",
-        "useDefaultRate": "Utiliser le tarif par défaut"
+        "useDefaultRate": "Utiliser le tarif par défaut",
+        "wholeContract": "Tout le contrat",
+        "wholeContractEffect": "Tout le contrat — tarif de repli de {{amount}} par ligne active à tarif fixe ({{count}} lignes). Les barèmes propres à chaque ligne sont prioritaires.",
+        "unnamedLine": "Ligne sans nom"
       }
     },
     "dialog": {
@@ -1078,7 +1082,6 @@
         "failedToSavePricingSchedule": "Échec de l'enregistrement du barème de prix"
       },
       "fields": {
-        "customRate": "Tarif personnalisé",
         "customRatePlaceholder": "0.00",
         "duration": "Durée",
         "durationPlaceholder": "p. ex. 6",
@@ -1089,7 +1092,13 @@
         "notesPlaceholder": "Ajoutez des notes sur ce changement de prix (par ex., « Augmentation annuelle des tarifs »)",
         "unit": "Unité",
         "useDefaultRate": "Utiliser le tarif par défaut",
-        "useDuration": "Utiliser la durée"
+        "useDuration": "Utiliser la durée",
+        "appliesTo": "S'applique à",
+        "appliesToPlaceholder": "Sélectionnez une ligne à tarif fixe",
+        "lineFee": "Montant par période de facturation",
+        "lineFeeHelp": "Ce que cette ligne facture sur chaque période de facturation couverte par le barème, à la place de son tarif habituel.",
+        "lineFeeHelpMixed": "Remplace le forfait de cette ligne sur chaque période de facturation couverte par le barème. Les services tarifés à l'unité conservent leur prix unitaire.",
+        "lineFeeHelpWholeContract": "Tarif de repli pour chaque ligne active à tarif fixe pendant les périodes de facturation couvertes. Les barèmes propres à chaque ligne sont prioritaires."
       },
       "title": {
         "addPricingSchedule": "Ajouter un barème de prix",
@@ -1102,7 +1111,21 @@
         "durationRequired": "La valeur de durée est requise lors de l'utilisation de la durée",
         "effectiveDateRequired": "La date d'effet est requise",
         "endDateAfterEffectiveDate": "La date de fin doit être postérieure à la date d'effet",
-        "endDateRequiredWhenEnabled": "La date de fin est requise lorsque « A une date de fin » est activé"
+        "endDateRequiredWhenEnabled": "La date de fin est requise lorsque « A une date de fin » est activé",
+        "scopeRequired": "Choisissez une ligne à tarif fixe pour ce barème"
+      },
+      "values": {
+        "wholeContract": "Tout le contrat",
+        "unnamedLine": "Ligne sans nom"
+      },
+      "notices": {
+        "wholeContract": "Tout le contrat : barème de repli pour les lignes actives à tarif fixe. Les barèmes propres à chaque ligne sont prioritaires.",
+        "wholeContractEffect": "Tout le contrat : tarif de repli de {{amount}} par ligne active à tarif fixe et par période de facturation ({{count}} lignes). Les barèmes propres à chaque ligne sont prioritaires.",
+        "unitPricedExcluded": "Les lignes facturées à l'unité ne sont pas listées : un barème de prix ne modifie jamais un prix unitaire. Modifiez le prix unitaire sur la ligne."
+      },
+      "empty": {
+        "allLinesUnitPriced": "Toutes les lignes fixes de ce contrat facturent à l'unité. Un barème de prix ne modifie jamais un prix unitaire — modifiez le prix unitaire sur la ligne.",
+        "noEligibleLines": "Ce contrat n'a aucune ligne à tarif fixe : un barème de prix n'a rien à retarifer."
       }
     }
   },
@@ -2871,7 +2894,11 @@
       "endAfterEffective": "La date de fin doit être postérieure à la date d’effet",
       "overlaps": "Ce planning chevauche un planning tarifaire existant",
       "wouldOverlap": "Ce planning chevaucherait un planning tarifaire existant",
-      "notFound": "Planning tarifaire introuvable"
+      "notFound": "Planning tarifaire introuvable",
+      "invalidDate": "La date d'effet et la date de fin doivent être des dates calendaires (AAAA-MM-JJ)",
+      "lineNotEligible": "Les barèmes de prix s'appliquent à une ligne à tarif fixe de ce contrat ; choisissez l'une de ses lignes fixes",
+      "lineUnitPriced": "Cette ligne facture à l'unité : un barème de prix ne changerait pas ce qu'elle facture. Modifiez le prix unitaire sur la ligne.",
+      "lineRequired": "Choisissez une ligne à tarif fixe pour ce barème"
     },
     "renewals": {
       "permissions": {

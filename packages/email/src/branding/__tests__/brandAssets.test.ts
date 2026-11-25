@@ -14,11 +14,17 @@ import {
   BRAND_LOGO_MARKER,
 } from '../brandAssets';
 import { isDarkEmailHeader } from '../color';
-import { loadSystemTemplate } from './systemTemplateFixtures';
+import { LEGACY_BRAND_SLOGANS } from '../orphanedSlogan';
+import { loadAllSystemTemplates, loadSystemTemplate } from './systemTemplateFixtures';
 
 const LOGO = { variant: 'wide' as const, alt: 'Acme MSP' };
 
 const countLogos = (html: string) => (html.match(new RegExp(BRAND_LOGO_MARKER, 'g')) ?? []).length;
+
+/** The layout's footer row as the templates write it, in a tenant's colors. */
+const stockFooterRow = (content: string) =>
+  '<tr>\n      <td style="padding:18px 32px;background:#f8f5ff;color:#1f1147;font-size:12px;text-align:center;">\n'
+  + `        ${content}\n      </td>\n    </tr>`;
 
 describe('applyBrandLogo', () => {
   it('puts the logo inside the gradient header cell of a layout template', () => {
@@ -269,15 +275,46 @@ describe('findBrandLogoCid', () => {
 });
 
 describe('stripBrandAttribution', () => {
-  it('removes the leading attribution and its separator from a layout footer', () => {
-    const template = loadSystemTemplate('ticket-created');
-    expect(containsBrandAttribution(template.html)).toBe(true);
+  /** The slogan of each language's stock footer, which belongs to the attribution. */
+  const SLOGANS: Record<string, string> = {
+    en: 'Keeping teams aligned',
+    de: 'Teams auf Kurs halten',
+    sv: 'För samspelta team',
+  };
 
-    const stripped = stripBrandAttribution(template.html);
+  it('takes the AlgaPSA slogan and the whole footer row with the attribution', () => {
+    for (const [language, slogan] of Object.entries(SLOGANS)) {
+      const template = loadSystemTemplate('ticket-created', language);
+      expect(containsBrandAttribution(template.html)).toBe(true);
+      expect(template.html).toContain(slogan);
 
-    expect(containsBrandAttribution(stripped)).toBe(false);
-    expect(stripped).toContain('Keeping teams aligned');
-    expect(stripped).not.toContain('&middot; Keeping teams aligned');
+      const stripped = stripBrandAttribution(template.html);
+
+      expect(containsBrandAttribution(stripped)).toBe(false);
+      // The slogan is AlgaPSA's line: it goes with the attribution, and the
+      // footer row goes with it rather than leaving an empty coloured band.
+      expect(stripped).not.toContain(slogan);
+      expect(stripped).not.toMatch(/<td[^>]*background:#f8f5ff/i);
+      expect(stripped).toContain('{{ticket.title}}');
+    }
+  });
+
+  it('removes the localized attributions the templates ship without a slogan', () => {
+    for (const language of ['fr', 'es', 'de', 'nl', 'pt']) {
+      const template = loadSystemTemplate('project-status-update', language);
+      expect(containsBrandAttribution(template.html)).toBe(true);
+
+      const stripped = stripBrandAttribution(template.html);
+
+      expect(containsBrandAttribution(stripped)).toBe(false);
+      expect(stripped).not.toMatch(/<td[^>]*background:#f8f5ff/i);
+    }
+  });
+
+  it('removes a localized attribution and its slogan as one unit', () => {
+    const footer = stockFooterRow('Drivs av AlgaPSA &middot; För samspelta team');
+
+    expect(stripBrandAttribution(`<table>${footer}</table>`)).toBe('<table></table>');
   });
 
   it('removes the trailing attribution from the default copyright footer', () => {
@@ -292,9 +329,111 @@ describe('stripBrandAttribution', () => {
     expect(stripBrandAttribution(footer)).toBe('<div class="footer"><p>Sent to you</p></div>');
   });
 
-  it('handles the bullet separator older migrations wrote', () => {
-    expect(stripBrandAttribution('<td>Powered by AlgaPSA • Keeping teams aligned</td>'))
-      .toBe('<td>Keeping teams aligned</td>');
+  it('handles the bullet separator and the pre-rename spelling older migrations wrote', () => {
+    expect(stripBrandAttribution('<td>Powered by Alga PSA • Keeping teams aligned</td>')).toBe('<td></td>');
+  });
+
+  it('leaves a footer the tenant wrote themselves alone', () => {
+    const footer = '<tr><td style="text-align:center;">&copy; 2026 Acme MSP &middot; support@acme.example</td></tr>';
+
+    expect(stripBrandAttribution(footer)).toBe(footer);
+  });
+
+  it('is idempotent', () => {
+    const template = loadSystemTemplate('ticket-created', 'de');
+    const once = stripBrandAttribution(template.html);
+
+    expect(stripBrandAttribution(once)).toBe(once);
+  });
+
+  it('takes the stock footer row in either mode, in every language', () => {
+    for (const language of ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt', 'sv']) {
+      const template = loadSystemTemplate('ticket-created', language);
+      const shippedOnly = stripBrandAttribution(template.html, { footerRow: 'shipped-slogan' });
+
+      // What the classifier normalizes has to match what the apply path writes,
+      // or a branded copy would stop reading as ours.
+      expect(shippedOnly).toBe(stripBrandAttribution(template.html));
+      expect(containsBrandAttribution(shippedOnly)).toBe(false);
+    }
+  });
+
+  /**
+   * Every translation that ships, not only the languages spelled out above. The
+   * footer wording and the layout both vary by template and language, and any
+   * shape the strip fails to recognize whole is exactly the bug reported: an
+   * orphaned slogan, or an empty coloured band, in the footer of every branded
+   * copy of that template (alga-2026-0003353).
+   */
+  it('leaves no attribution, slogan or empty band anywhere in the shipped corpus', () => {
+    const templates = loadAllSystemTemplates();
+    expect(templates.length).toBeGreaterThan(400);
+
+    let carriedAttribution = 0;
+
+    for (const template of templates) {
+      const where = `${template.name}/${template.language}`;
+      const stripped = stripBrandAttribution(template.html);
+
+      if (!containsBrandAttribution(template.html)) {
+        expect(stripped, where).toBe(template.html);
+        continue;
+      }
+
+      carriedAttribution += 1;
+      // The classifier normalizes a stored row in the narrower mode, so the two
+      // have to agree on the stock footer or a branded copy stops reading as ours.
+      expect(stripBrandAttribution(template.html, { footerRow: 'shipped-slogan' }), where).toBe(stripped);
+      expect(containsBrandAttribution(stripped), where).toBe(false);
+      expect(LEGACY_BRAND_SLOGANS.filter((slogan) => stripped.includes(slogan)), where).toEqual([]);
+      // No empty coloured band where the footer row was, and no cell left
+      // opening on the separator that only joined the attribution to it.
+      expect(stripped, where).not.toMatch(/<td[^>]*background:[^>]*>\s*<\/td>/i);
+      expect(stripped, where).not.toMatch(/<td[^>]*>\s*(?:&middot;|&#183;|·|•)/i);
+      expect(stripBrandAttribution(stripped), where).toBe(stripped);
+    }
+
+    expect(carriedAttribution).toBeGreaterThan(300);
+  });
+
+  it.each([
+    ['their own line instead of our slogan', 'Acme MSP, your IT partner', 'Acme MSP, your IT partner'],
+    ['their own line after our slogan', 'Keeping teams aligned &middot; +1 555 0100', '+1 555 0100'],
+  ])('keeps a footer reworded with %s when only our own may go', (_shape, tail, theirs) => {
+    const footer = `<table>${stockFooterRow(`Powered by AlgaPSA &middot; ${tail}`)}</table>`;
+
+    const stripped = stripBrandAttribution(footer, { footerRow: 'shipped-slogan' });
+
+    expect(stripped).toContain(theirs);
+    expect(stripped).toMatch(/<tr>\s*<td/);
+    expect(containsBrandAttribution(stripped)).toBe(false);
+    // Our slogan takes the separator that joined their line to it along with
+    // it: a footer may not go out opening on a bare "&middot;".
+    expect(stripped).not.toMatch(/<td[^>]*>\s*(?:&middot;|&#183;|·|•)/);
+    expect(stripped).not.toContain('Keeping teams aligned');
+    // The apply path decorates the standard template, where the row is ours.
+    expect(stripBrandAttribution(footer)).toBe('<table></table>');
+  });
+
+  /**
+   * The row goes whole only where it is the layout's own (see layoutFooter.ts).
+   * A footer cell the tenant restyled is theirs: the attribution and our slogan
+   * go, the cell they typed stays, and the difference stays visible to the
+   * classifier — a row removed from both sides of its comparison could not
+   * differ, and the apply would silently rewrite their styling.
+   */
+  it('leaves the row of a footer cell the tenant restyled', () => {
+    const theirCell = '<tr><td style="padding:24px;background:#000000;color:#ffffff;'
+      + 'font-size:12px;text-align:left;">Powered by AlgaPSA &middot; Keeping teams aligned</td></tr>';
+
+    for (const footerRow of ['any-tail', 'shipped-slogan'] as const) {
+      const stripped = stripBrandAttribution(`<table>${theirCell}</table>`, { footerRow });
+
+      expect(stripped).toContain('background:#000000');
+      expect(stripped).toContain('text-align:left');
+      expect(containsBrandAttribution(stripped)).toBe(false);
+      expect(stripped).not.toContain('Keeping teams aligned');
+    }
   });
 });
 
@@ -318,5 +457,52 @@ describe('decorateBrandedHtml', () => {
 
     expect(countLogos(branded)).toBe(1);
     expect(containsBrandAttribution(branded)).toBe(false);
+  });
+
+  /**
+   * Hiding the attribution also repairs the footer an older strip left behind,
+   * which rides along on every HTML the apply writes. On the standard templates
+   * that repair has to be inert — the attribution strip has already taken the
+   * whole footer row, and nothing else the corpus ships looks like a leftover —
+   * so the only row it can ever change is one an older strip wrote.
+   */
+  it('leaves the standard templates to the attribution strip alone', () => {
+    const templates = loadAllSystemTemplates();
+    expect(templates.length).toBeGreaterThan(400);
+
+    for (const template of templates) {
+      const where = `${template.name}/${template.language}`;
+      const decorated = decorateBrandedHtml(template.html, { logo: LOGO, hideAttribution: true });
+
+      expect(decorated, where).toBe(stripBrandAttribution(applyBrandLogo(template.html, LOGO)));
+    }
+  });
+
+  /**
+   * And on a row an older strip did write, it is the repair: the orphaned slogan
+   * the tenant's branded copies have been sending (alga-2026-0003353) goes, in
+   * either footer mode — `shipped-slogan` included, which is how the apply
+   * decorates a ticked customization, the one row it rewrites in place.
+   */
+  it.each(['any-tail', 'shipped-slogan'] as const)('repairs an orphaned slogan in %s mode', (footerRow) => {
+    const leftover = `<table>${stockFooterRow('Teams auf Kurs halten')}</table>`;
+
+    expect(decorateBrandedHtml(leftover, { hideAttribution: true, footerRow })).toBe('<table></table>');
+  });
+
+  /**
+   * That repair rides on everything the apply writes, a ticked `customized` row
+   * included, so it may only ever take our own emptied band. A coloured rule or
+   * spacer row is a cell with nothing in it too, and it is the tenant's.
+   */
+  it("keeps a coloured spacer row of the tenant's own making", () => {
+    const accent = '<table><tr><td style="background:#b4552f;height:6px;line-height:6px;font-size:0;">'
+      + '</td></tr>' + stockFooterRow('Powered by AlgaPSA &middot; Keeping teams aligned') + '</table>';
+
+    const decorated = decorateBrandedHtml(accent, { hideAttribution: true, footerRow: 'shipped-slogan' });
+
+    expect(decorated).toContain('background:#b4552f');
+    expect(decorated).not.toContain('Keeping teams aligned');
+    expect(containsBrandAttribution(decorated)).toBe(false);
   });
 });

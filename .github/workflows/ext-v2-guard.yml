@@ -27,11 +27,9 @@ jobs:
         run: npm install -g npm@11
 
       - name: Install dependencies
-        run: |
-          if ! npm ci --legacy-peer-deps; then
-            echo "npm ci failed; attempting npm install fallback to regenerate lock data"
-            npm install --legacy-peer-deps
-          fi
+        # Retry recognized transient downloads once; keep lockfile errors fatal.
+        # legacy-peer-deps is already set in the repository .npmrc.
+        run: node scripts/install-api-test-dependencies.mjs
 
       - name: Run legacy extension grep guard
         run: npm run guard:ext-v2

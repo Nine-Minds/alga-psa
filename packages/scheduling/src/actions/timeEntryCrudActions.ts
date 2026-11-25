@@ -534,7 +534,9 @@ async function buildSavedTimeEntryResult(
 /**
  * Log a stopwatch session as the given prepared entries, atomically (logSession semantics): the
  * session must be the acting user's own open session, and any failure rolls back every entry and
- * leaves the session as it was. Events are published after commit.
+ * leaves the session as it was. Events are published after commit. The billing mode is not passed on:
+ * logSession resolves it from the acting user itself (seat technician -> operational entries), the same
+ * decision prepareTimeEntryForSave used for validation.
  */
 async function logPreparedStopwatchEntries(
   db: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
@@ -546,13 +548,9 @@ async function logPreparedStopwatchEntries(
   if (prepared.length === 0) {
     throw new Error('Validation failed: a stopwatch session needs at least one time entry');
   }
-  for (const { validatedTimeEntry, mode } of prepared) {
+  for (const { validatedTimeEntry } of prepared) {
     if (validatedTimeEntry.entry_id) {
       throw new Error('Validation failed: a stopwatch session can only be logged as a new time entry');
-    }
-    // The stopwatch log writes a commercial entry; an operational principal never takes that path.
-    if (mode === 'operational') {
-      throw new Error('Validation failed: a stopwatch session cannot be logged on the operational surface');
     }
     // One session has one subject: the split and every sheet are resolved in that user's timezone.
     if ((validatedTimeEntry.user_id ?? user.user_id) !== (prepared[0].validatedTimeEntry.user_id ?? user.user_id)) {

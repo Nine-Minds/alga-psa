@@ -15,7 +15,9 @@ import { ColumnDefinition } from '@alga-psa/types';
 import { IContractPricingSchedule } from '@alga-psa/types';
 import {
   getPricingSchedulesByContract,
-  deletePricingSchedule
+  getPricingScheduleLineScopes,
+  deletePricingSchedule,
+  type PricingScheduleLineScope
 } from '@alga-psa/billing/actions/contractPricingScheduleActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
@@ -43,6 +45,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currenc
   const { money } = useCurrencyFormat();
   const formatCustomRate = (minorUnits: number): string => money(minorUnits, currencyCode);
   const [schedules, setSchedules] = useState<IContractPricingSchedule[]>([]);
+  const [lineScopes, setLineScopes] = useState<PricingScheduleLineScope[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingSchedule, setEditingSchedule] = useState<IContractPricingSchedule | null>(null);
@@ -59,13 +62,24 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currenc
     setError(null);
 
     try {
-      const data = await getPricingSchedulesByContract(contractId);
+      const [data, scopes] = await Promise.all([
+        getPricingSchedulesByContract(contractId),
+        getPricingScheduleLineScopes(contractId),
+      ]);
       if (isActionMessageError(data) || isActionPermissionError(data)) {
         setError(getErrorMessage(data));
         setSchedules([]);
         return;
       }
       setSchedules(data);
+      if (isActionMessageError(scopes) || isActionPermissionError(scopes)) {
+        // Without the lines the scope column cannot name anything; say so
+        // instead of rendering the rows as if the contract had no fixed line.
+        setLineScopes([]);
+        setError(getErrorMessage(scopes));
+        return;
+      }
+      setLineScopes(scopes);
     } catch (error) {
       console.error('Error fetching pricing schedules:', error);
       setError(t('pricingSchedules.list.errors.failedToLoadPricingSchedules', {
@@ -127,6 +141,50 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currenc
     handleDialogClose();
   };
 
+  // Retain inactive lines for stored bindings and authoring, but only active
+  // bundle-fee lines contribute to the legacy fallback notice.
+  const bundleFeeLines = lineScopes.filter((line) => line.has_bundle_fee);
+  const activeBundleFeeLineCount = bundleFeeLines.filter((line) => line.is_active).length;
+  const unitPricedLineCount = lineScopes.filter((line) => !line.has_bundle_fee && line.has_unit_priced_members).length;
+
+  const lineName = (contractLineId: string): string => {
+    const line = lineScopes.find((candidate) => candidate.contract_line_id === contractLineId);
+    return line?.contract_line_name
+      || t('pricingSchedules.list.values.unnamedLine', { defaultValue: 'Unnamed line' });
+  };
+
+  /** The scope of a row: the line it is scoped to, or the whole contract. */
+  const scopeLabel = (schedule: IContractPricingSchedule): string =>
+    schedule.contract_line_id
+      ? lineName(schedule.contract_line_id)
+      : t('pricingSchedules.list.values.wholeContract', { defaultValue: 'Whole contract' });
+
+  /**
+   * A legacy rate is a fallback: line-specific schedules take precedence.
+   * The count describes active eligible lines, not actual schedule coverage.
+   */
+  const renderTimelineScope = (schedule: IContractPricingSchedule) => {
+    if (schedule.contract_line_id) {
+      return <span>{scopeLabel(schedule)}</span>;
+    }
+
+    const statesEffect = activeBundleFeeLineCount > 1
+      && schedule.custom_rate !== undefined && schedule.custom_rate !== null;
+
+    return (
+      <span className="text-warning flex items-center gap-1">
+        <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+        {statesEffect
+          ? t('pricingSchedules.list.values.wholeContractEffect', {
+            count: activeBundleFeeLineCount,
+            amount: formatCustomRate(schedule.custom_rate as number),
+            defaultValue: 'Whole contract — fallback fee of {{amount}} per active fixed-fee line ({{count}} lines). Line-specific schedules take precedence.',
+          })
+          : scopeLabel(schedule)}
+      </span>
+    );
+  };
+
   const scheduleColumns: ColumnDefinition<IContractPricingSchedule>[] = [
     {
       title: t('pricingSchedules.list.columns.effectiveDate', { defaultValue: 'Effective Date' }),
@@ -139,6 +197,11 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currenc
       render: (value) => value
         ? toPlainDate(value as string).toLocaleString(locale)
         : t('pricingSchedules.list.values.ongoing', { defaultValue: 'Ongoing' })
+    },
+    {
+      title: t('pricingSchedules.list.columns.appliesTo', { defaultValue: 'Applies To' }),
+      dataIndex: 'contract_line_id',
+      render: (_value, record) => renderTimelineScope(record)
     },
     {
       title: t('pricingSchedules.list.columns.customRate', { defaultValue: 'Custom Rate' }),
@@ -213,7 +276,9 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currenc
             <Button
               id="add-pricing-schedule-button"
               onClick={handleAddNew}
-              disabled={isReadOnly}
+              // The dialog's scope picker can only offer the contract's
+              // fixed-fee lines once they are loaded.
+              disabled={isReadOnly || isLoading}
             >
               <Plus className="h-4 w-4 mr-2" />
               {t('pricingSchedules.list.actions.addSchedule', { defaultValue: 'Add Schedule' })}
@@ -288,6 +353,9 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currenc
                                       ? formatCustomRate(schedule.custom_rate)
                                       : t('pricingSchedules.list.values.defaultRate', { defaultValue: 'Default rate' })}
                                   </div>
+                                  <div className="text-sm text-muted-foreground mt-1">
+                                    {renderTimelineScope(schedule)}
+                                  </div>
                                 </div>
                               </div>
                               {schedule.notes && (
@@ -323,6 +391,11 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currenc
             contractId={contractId}
             schedule={editingSchedule}
             currencyCode={currencyCode}
+            eligibleLines={bundleFeeLines}
+            currentLineName={editingSchedule?.contract_line_id
+              ? lineName(editingSchedule.contract_line_id)
+              : undefined}
+            unitPricedLineCount={unitPricedLineCount}
             onClose={handleDialogClose}
             onSave={handleSaveSuccess}
           />

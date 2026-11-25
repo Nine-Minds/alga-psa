@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { applyEmailPalette, containsEmailPaletteTokens } from '../applyEmailPalette';
-import { BRAND_LOGO_MARKER, containsBrandAttribution, decorateBrandedHtml } from '../brandAssets';
+import {
+  BRAND_LOGO_MARKER,
+  containsBrandAttribution,
+  decorateBrandedHtml,
+  type BrandAttributionStripOptions,
+} from '../brandAssets';
+import { LEGACY_BRAND_SLOGANS } from '../orphanedSlogan';
 import { planEmailBrandingApply, planEmailBrandingRemoval } from '../planEmailBrandingApply';
 import { resolveEmailPalette } from '../resolveEmailPalette';
 import { STOCK_EMAIL_PALETTE } from '../stockPalette';
@@ -378,7 +384,9 @@ describe('planEmailBrandingRemoval', () => {
 
 describe('enterprise brand assets in the plan', () => {
   const logo = { variant: 'wide' as const, alt: 'Acme MSP' };
-  const decorate = (html: string) => decorateBrandedHtml(html, { logo, hideAttribution: true });
+  // Forwards the planner's strip options, exactly as buildBrandDecorator does.
+  const decorate = (html: string, options?: BrandAttributionStripOptions) =>
+    decorateBrandedHtml(html, { logo, hideAttribution: true, ...options });
 
   function applyOnce() {
     const plan = planEmailBrandingApply({
@@ -403,6 +411,283 @@ describe('enterprise brand assets in the plan', () => {
     for (const row of applyOnce()) {
       expect(row.html_content).toContain(BRAND_LOGO_MARKER);
       expect(containsBrandAttribution(row.html_content)).toBe(false);
+    }
+  });
+
+  it('leaves no AlgaPSA slogan behind in anything it writes', () => {
+    const inserts = applyOnce();
+    const plan = planEmailBrandingApply({
+      systemRows: SYSTEM_ROWS,
+      tenantRows: inserts,
+      target: FOREST,
+      appliedPalette: TERRACOTTA,
+      scope: SCOPE,
+      decorate,
+    });
+
+    expect(plan.updates).toHaveLength(6);
+    for (const html of [...inserts.map((row) => row.html_content), ...plan.updates.map((update) => update.html)]) {
+      expect(containsBrandAttribution(html)).toBe(false);
+      expect(LEGACY_BRAND_SLOGANS.filter((slogan) => html.includes(slogan))).toEqual([]);
+    }
+  });
+
+  /** The attribution strip as it shipped before the fix: the slogan survived it. */
+  const legacyStrip = (html: string) => html
+    .replace(/<p>\s*Powered by AlgaPSA\s*<\/p>/gi, '')
+    .replace(/\s*&middot;\s*Powered by AlgaPSA/gi, '')
+    .replace(/Powered by AlgaPSA\s*&middot;\s*/gi, '')
+    .replace(/Powered by AlgaPSA/gi, '');
+
+  /** Rows as the old apply wrote them: an orphaned slogan, or an empty band. */
+  function storedBeforeTheFix() {
+    const plan = planEmailBrandingApply({
+      systemRows: SYSTEM_ROWS,
+      tenantRows: [],
+      target: TERRACOTTA,
+      scope: SCOPE,
+      decorate: (html: string) => legacyStrip(decorateBrandedHtml(html, { logo })),
+    });
+
+    return plan.inserts.map((insert, index) => ({
+      id: 800 + index,
+      name: insert.name,
+      language_code: insert.language,
+      subject: insert.subject,
+      html_content: insert.html,
+      text_content: insert.text,
+    }));
+  }
+
+  const EMPTY_FOOTER_BAND = /<tr[^>]*>\s*<td[^>]*>\s*<\/td>\s*<\/tr>/;
+
+  /**
+   * How an existing tenant picks up the fix: "Apply to templates" again, with
+   * the branding settings exactly as they were. Their stored copies carry what
+   * the old strip left — the bare slogan, or the empty band where the footer
+   * was the attribution alone (alga-2026-0003353) — so an apply that changes no
+   * setting must still rewrite that footer instead of reporting the rows as
+   * already up to date.
+   */
+  it('rewrites copies left on an orphaned slogan, branding unchanged', () => {
+    const stored = storedBeforeTheFix();
+    expect(stored).toHaveLength(6);
+    for (const row of stored) {
+      const slogans = LEGACY_BRAND_SLOGANS.filter((slogan) => row.html_content.includes(slogan));
+      expect(slogans.length > 0 || EMPTY_FOOTER_BAND.test(row.html_content)).toBe(true);
+    }
+
+    const plan = planEmailBrandingApply({
+      systemRows: SYSTEM_ROWS,
+      tenantRows: stored,
+      target: TERRACOTTA,
+      appliedPalette: TERRACOTTA,
+      scope: SCOPE,
+      decorate,
+    });
+
+    expect(plan.skipped).toEqual([]);
+    expect(plan.updates).toHaveLength(6);
+    for (const update of plan.updates) {
+      expect(containsBrandAttribution(update.html)).toBe(false);
+      expect(LEGACY_BRAND_SLOGANS.filter((slogan) => update.html.includes(slogan))).toEqual([]);
+      expect(update.html).not.toMatch(EMPTY_FOOTER_BAND);
+    }
+  });
+
+  /**
+   * The same repair has to reach a copy the tenant has since edited. That row is
+   * theirs, so only a tick brings it into the run, and it is then recolored in
+   * place in `shipped-slogan` mode — where there is no attribution left to
+   * recognize, the old strip having already taken it. The leftover footer is
+   * still ours, so it goes too, instead of being repainted in the new palette
+   * and left standing as an orphaned tagline (alga-2026-0003353).
+   */
+  it('repairs an orphaned slogan in a customized row the tenant ticked', () => {
+    const stored = storedBeforeTheFix().map((row) => ({
+      ...row,
+      html_content: row.html_content.replace('</body>', '<p>Call us on +1 555 0100.</p>\n</body>'),
+    }));
+
+    const planInput = {
+      systemRows: SYSTEM_ROWS,
+      tenantRows: stored,
+      target: TERRACOTTA,
+      appliedPalette: TERRACOTTA,
+      scope: SCOPE,
+      decorate,
+    };
+
+    // The hand edit makes the row the tenant's: untouched until they tick it.
+    const untouched = planEmailBrandingApply(planInput);
+    expect(untouched.updates).toEqual([]);
+    expect(untouched.skipped).toHaveLength(6);
+    expect(untouched.skipped.every((skip) => skip.state === 'customized')).toBe(true);
+
+    const plan = planEmailBrandingApply({
+      ...planInput,
+      scope: { ...SCOPE, includeCustomized: NAMES },
+    });
+
+    expect(plan.skipped).toEqual([]);
+    expect(plan.updates).toHaveLength(6);
+    for (const update of plan.updates) {
+      expect(update.html).toContain('+1 555 0100');
+      expect(LEGACY_BRAND_SLOGANS.filter((slogan) => update.html.includes(slogan))).toEqual([]);
+      expect(update.html).not.toMatch(EMPTY_FOOTER_BAND);
+    }
+  });
+
+  /**
+   * The other side of the same rule: hiding the attribution takes the whole
+   * footer row, but only where that row is ours. A tenant who kept the
+   * attribution and wrote their own line beside it owns that footer, so neither
+   * an apply nor a removal may touch the row.
+   */
+  it('neither rewrites nor deletes a footer the tenant reworded', () => {
+    const tenantRows = NAMES.map((name, index) => {
+      const row = brandedRow(900 + index, name, 'en');
+      const html = row.html_content.replace(
+        /Powered by AlgaPSA(?:\s*&middot;\s*[^<]*)?/,
+        'Powered by AlgaPSA &middot; Acme MSP, your IT partner',
+      );
+
+      expect(html).not.toBe(row.html_content);
+      return { ...row, html_content: html };
+    });
+
+    const plan = planEmailBrandingApply({
+      systemRows: SYSTEM_ROWS,
+      tenantRows,
+      target: TERRACOTTA,
+      appliedPalette: TERRACOTTA,
+      scope: { names: NAMES, languages: ['en'] },
+      decorate,
+    });
+
+    expect(plan.inserts).toEqual([]);
+    expect(plan.updates).toEqual([]);
+    expect(plan.skipped).toHaveLength(3);
+    expect(plan.skipped.every((skip) => skip.state === 'customized' && skip.reason === 'customized')).toBe(true);
+
+    const removal = planEmailBrandingRemoval({
+      systemRows: SYSTEM_ROWS,
+      tenantRows,
+      appliedPalette: TERRACOTTA,
+    });
+
+    expect(removal.deletable).toEqual([]);
+    expect(removal.kept).toHaveLength(3);
+  });
+
+  /**
+   * And when that same tenant does tick the template, so the apply recolors
+   * their row in place: hiding the attribution takes the attribution, not the
+   * line they wrote beside it. The row is theirs, so only a footer we shipped
+   * may be carried off with the attribution — the rest of the cell stays, and
+   * does not open on the separator that used to join it to our line.
+   */
+  it.each([
+    ['their own line instead of our slogan', 'Powered by AlgaPSA &middot; Acme MSP &middot; +1 555 0100'],
+    ['their own line after our slogan', 'Powered by AlgaPSA &middot; Keeping teams aligned &middot; +1 555 0100'],
+  ])('keeps the words beside the attribution in a ticked customized row, %s', (_shape, footer) => {
+    const tenantRows = NAMES.map((name, index) => {
+      const row = brandedRow(950 + index, name, 'en');
+      const html = row.html_content.replace(/Powered by AlgaPSA(?:\s*&middot;\s*[^<]*)?/, footer);
+
+      expect(html).not.toBe(row.html_content);
+      return { ...row, html_content: html };
+    });
+
+    const plan = planEmailBrandingApply({
+      systemRows: SYSTEM_ROWS,
+      tenantRows,
+      target: FOREST,
+      appliedPalette: TERRACOTTA,
+      scope: { names: NAMES, languages: ['en'], includeCustomized: NAMES },
+      decorate,
+    });
+
+    expect(plan.skipped).toEqual([]);
+    expect(plan.updates).toHaveLength(3);
+    for (const update of plan.updates) {
+      expect(update.html).toContain('+1 555 0100');
+      expect(containsBrandAttribution(update.html)).toBe(false);
+      // Ours goes, theirs stays, and what stays opens on their own words rather
+      // than on the separator that used to join them to our line.
+      expect(LEGACY_BRAND_SLOGANS.filter((slogan) => update.html.includes(slogan))).toEqual([]);
+      expect(update.html).not.toMatch(/<td[^>]*>\s*(?:&middot;|&#183;|·|•)/);
+    }
+  });
+
+  /**
+   * The footer row is ours to take only where it is the layout's own. A tenant
+   * who restyled their footer cell owns that row even with our words still in
+   * it: the apply leaves it alone until they tick it, and "Remove branding"
+   * never deletes it (see layoutFooter.ts).
+   */
+  it('neither rewrites nor deletes a footer cell the tenant restyled', () => {
+    const tenantRows = NAMES.map((name, index) => {
+      const row = brandedRow(960 + index, name, 'en');
+      const html = row.html_content.replace(
+        /<td style="padding:18px 32px;background:[^"]*">/,
+        '<td style="padding:24px 32px;background:#000000;color:#ffffff;font-size:12px;text-align:left;">',
+      );
+
+      expect(html).not.toBe(row.html_content);
+      return { ...row, html_content: html };
+    });
+
+    const plan = planEmailBrandingApply({
+      systemRows: SYSTEM_ROWS,
+      tenantRows,
+      target: FOREST,
+      appliedPalette: TERRACOTTA,
+      scope: { names: NAMES, languages: ['en'] },
+      decorate,
+    });
+
+    expect(plan.updates).toEqual([]);
+    expect(plan.skipped.every((skip) => skip.state === 'customized' && skip.reason === 'customized')).toBe(true);
+
+    const removal = planEmailBrandingRemoval({
+      systemRows: SYSTEM_ROWS,
+      tenantRows,
+      appliedPalette: TERRACOTTA,
+    });
+
+    expect(removal.deletable).toEqual([]);
+    expect(removal.kept).toHaveLength(3);
+  });
+
+  /**
+   * The consequence of reading a missing footer row as ours
+   * (see classifyTenantTemplate.ts): a tenant who deleted the row by hand gets
+   * it back on the next apply, because deleting it is indistinguishable from
+   * the row an apply writes with the attribution hidden. The Enterprise toggle
+   * is the supported way to drop that footer, and it keeps working.
+   */
+  it('restores a footer row the tenant deleted by hand', () => {
+    const footerRow = /<tr[^>]*>\s*<td[^>]*>\s*Powered by AlgaPSA[^<]*<\/td>\s*<\/tr>/;
+    const tenantRows = NAMES.map((name, index) => {
+      const row = brandedRow(980 + index, name, 'en');
+      expect(row.html_content).toMatch(footerRow);
+      return { ...row, html_content: row.html_content.replace(footerRow, '') };
+    });
+
+    const plan = planEmailBrandingApply({
+      systemRows: SYSTEM_ROWS,
+      tenantRows,
+      target: TERRACOTTA,
+      appliedPalette: TERRACOTTA,
+      scope: { names: NAMES, languages: ['en'] },
+      decorate: (html: string) => decorateBrandedHtml(html, { logo }),
+    });
+
+    expect(plan.skipped).toEqual([]);
+    expect(plan.updates).toHaveLength(3);
+    for (const update of plan.updates) {
+      expect(containsBrandAttribution(update.html)).toBe(true);
     }
   });
 
