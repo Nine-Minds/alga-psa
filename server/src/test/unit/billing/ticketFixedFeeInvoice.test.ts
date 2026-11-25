@@ -139,6 +139,42 @@ describe('ticket fixed-fee quick invoice selection', () => {
     }));
   });
 
+  it.each([
+    ['no description', null, 'Widget'],
+    ['a blank description', '', 'Widget'],
+  ])('falls back to the catalog product name for a quick-invoiced material with %s', async (_case, description, expected) => {
+    tables['ticket_materials as tm'] = query(undefined, [{
+      ticket_material_id: 'material-a', service_id: 'service-a', quantity: 2, rate: 1500,
+      description, currency_code: 'USD', service_name: 'Widget', source_updated_at: version,
+    }]);
+    const tenantJoin = vi.fn();
+    mocks.facade.mockImplementation(() => ({ table: (name: string) => tables[name], tenantJoin }));
+    await generateTicketInvoice({
+      ticketId: 'ticket-a', timeEntryIds: [], materialIds: ['material-a'], fixedFeeIds: [],
+      sourceVersions: { 'material-a': version },
+    });
+    expect(tenantJoin).toHaveBeenCalledWith(
+      expect.anything(), 'service_catalog as sc', 'sc.service_id', 'tm.service_id', { type: 'left' },
+    );
+    expect(mocks.generate).toHaveBeenCalledWith(expect.objectContaining({
+      items: [expect.objectContaining({ service_id: 'service-a', description: expected })],
+    }));
+  });
+
+  it('keeps an explicit material description over the catalog product name', async () => {
+    tables['ticket_materials as tm'] = query(undefined, [{
+      ticket_material_id: 'material-a', service_id: 'service-a', quantity: 2, rate: 1500,
+      description: 'On-site install', currency_code: 'USD', service_name: 'Widget', source_updated_at: version,
+    }]);
+    await generateTicketInvoice({
+      ticketId: 'ticket-a', timeEntryIds: [], materialIds: ['material-a'], fixedFeeIds: [],
+      sourceVersions: { 'material-a': version },
+    });
+    expect(mocks.generate).toHaveBeenCalledWith(expect.objectContaining({
+      items: [expect.objectContaining({ description: 'On-site install' })],
+    }));
+  });
+
   it('lists same-currency fees and reports exclusions', async () => {
     tables['ticket_fixed_fee_services as f'] = query(undefined, [{ ...fee }, { ...fee, entry_id: 'fee-eur', currency_code: 'EUR' }]);
     expect(await getTicketBillableItems('ticket-a')).toMatchObject({

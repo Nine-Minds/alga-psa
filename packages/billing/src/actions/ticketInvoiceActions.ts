@@ -411,13 +411,15 @@ export const generateTicketInvoice = withAuth(async (
           'sc.default_rate',
         );
 
+  const materialQuery = db.table('ticket_materials as tm');
+  db.tenantJoin(materialQuery, 'service_catalog as sc', 'sc.service_id', 'tm.service_id', { type: 'left' });
   const materialRows: any[] = materialIds.length === 0
     ? []
-    : await db
-        .table('ticket_materials as tm')
+    : await materialQuery
         .whereIn('tm.ticket_material_id', materialIds)
         .where({ 'tm.ticket_id': input.ticketId, 'tm.client_id': ticket.client_id, 'tm.is_billed': false })
         .select('tm.ticket_material_id', 'tm.service_id', 'tm.quantity', 'tm.rate', 'tm.description', 'tm.currency_code',
+          'sc.service_name',
           knex.raw('tm.updated_at::text as source_updated_at'));
 
   const fixedFeeQuery = db.table('ticket_fixed_fee_services as f');
@@ -498,7 +500,7 @@ export const generateTicketInvoice = withAuth(async (
       service_id: row.service_id,
       quantity: Number(row.quantity) || 0,
       rate: Math.max(0, Math.round(Number(row.rate) || 0)),
-      description: row.description || 'Product',
+      description: row.description || row.service_name || 'Product',
       source_link: sourceLink,
     });
   }
