@@ -13,6 +13,13 @@ describe('documents and folders audience migration (S1)', () => {
   let db: Knex;
   let scratch: string;
   const tenant = randomUUID();
+  // Rows that already exist when the tables are distributed. On Citus, create_distributed_table
+  // copies them to the shards but leaves the coordinator heap holding a stale copy, which the
+  // migration must truncate (closure fully distributed) before it adds and validates the CHECK.
+  const preTenant = randomUUID();
+  const preIds = { visibleDoc: randomUUID(), hiddenDoc: randomUUID(), visibleFolder: randomUUID() };
+  const citus = process.env.TEST_DB_BACKEND === 'citus';
+  let heapBefore: Record<string, number> = {};
   const seatUser = randomUUID();
   const revokedUser = randomUUID();
   const plainUser = randomUUID();
@@ -29,6 +36,9 @@ describe('documents and folders audience migration (S1)', () => {
     (await db('document_folders').where({ tenant }).select('folder_id', 'audience'))
       .map((r) => [r.folder_id, r.audience]));
 
+  const heapBytes = async () => Object.fromEntries(await Promise.all(['documents', 'document_folders'].map(
+    async (table) => [table, Number((await db.raw('SELECT pg_relation_size(?::regclass) AS b', [table])).rows[0].b)])));
+
   beforeAll(async () => {
     wireLocalTestDbEnv();
     scratch = mkdtempSync(path.join(tmpdir(), 'document-audience-'));
@@ -44,6 +54,10 @@ describe('documents and folders audience migration (S1)', () => {
             PRIMARY KEY (tenant, folder_id));
           CREATE TABLE co_managed_seat_assignments (tenant uuid, assignment_id uuid, user_id uuid, state text,
             PRIMARY KEY (tenant, assignment_id));
+          INSERT INTO documents (tenant, document_id, is_client_visible) VALUES
+            ('${preTenant}', '${preIds.visibleDoc}', true), ('${preTenant}', '${preIds.hiddenDoc}', false);
+          INSERT INTO document_folders (tenant, folder_id, is_client_visible) VALUES
+            ('${preTenant}', '${preIds.visibleFolder}', true);
         \`);
         if (process.env.TEST_DB_BACKEND === 'citus') {
           await knex.raw("SELECT create_distributed_table('tenants', 'tenant')");
@@ -72,6 +86,7 @@ describe('documents and folders audience migration (S1)', () => {
       { tenant, folder_id: ids.visibleFolder, is_client_visible: true },
       { tenant, folder_id: ids.hiddenFolder, is_client_visible: false },
     ]);
+    heapBefore = await heapBytes();
     await migration.up(db);
   }, 300_000);
 
@@ -98,6 +113,24 @@ describe('documents and folders audience migration (S1)', () => {
       [ids.visibleFolder]: 'requester',
       [ids.hiddenFolder]: 'organization_private',
     });
+  });
+
+  it('backfills rows present at distribution and clears the stale coordinator heap on Citus', async () => {
+    expect(Object.fromEntries(
+      (await db('documents').where({ tenant: preTenant }).select('document_id', 'audience')).map((r) => [r.document_id, r.audience]),
+    )).toEqual({ [preIds.visibleDoc]: 'requester', [preIds.hiddenDoc]: 'organization_private' });
+    expect(await db('document_folders').where({ tenant: preTenant }).first('audience')).toEqual({ audience: 'requester' });
+
+    expect(heapBefore.documents).toBeGreaterThan(0);
+    expect(heapBefore.document_folders).toBeGreaterThan(0);
+    // Citus: stranded pre-distribution heap truncated. Plain Postgres: the heap is the table; never truncated.
+    const after = await heapBytes();
+    if (citus) {
+      expect(after).toEqual({ documents: 0, document_folders: 0 });
+    } else {
+      expect(after.documents).toBeGreaterThan(0);
+      expect(after.document_folders).toBeGreaterThan(0);
+    }
   });
 
   it('keeps is_client_visible equal to audience = requester on both tables', async () => {
