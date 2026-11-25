@@ -17,7 +17,7 @@ vi.mock('google-auth-library', () => ({
     refreshAccessToken = refreshAccessToken;
   },
 }));
-vi.mock('googleapis', () => ({ google: { gmail: vi.fn(() => ({})) } }));
+vi.mock('googleapis/build/src/apis/gmail/index.js', () => ({ gmail: vi.fn(() => ({})) }));
 vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: async () => {
     throw new Error('db not available in unit test');

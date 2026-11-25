@@ -1,3 +1,6 @@
+// Keep build-tool dependencies outside src/, which billing's application
+// typecheck includes. The normal typecheck command checks this file separately
+// with tsconfig.tooling-tests.json; Vitest discovers it through tests/**/*.test.ts.
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -34,7 +37,7 @@ describe('preview polyfill lookup in a production bundle', () => {
 
     // Compile the real module with Next's production webpack. Source-only tests
     // miss webpack replacing createRequire(...).resolve(...) with a module ID.
-    const source = readFileSync(path.join(__dirname, 'previewPagination.server.ts'), 'utf8');
+    const source = readFileSync(path.join(__dirname, '../src/lib/invoice-template-ast/previewPagination.server.ts'), 'utf8');
     const entry = path.join(buildRoot, 'preview.mjs');
     writeFileSync(entry, ts.transpileModule(source, {
       compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },

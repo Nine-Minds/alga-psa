@@ -15,7 +15,6 @@ export default defineConfig({
       'tests/**/*.test.tsx',
       'src/lib/invoice-template-ast/printSettings.test.ts',
       'src/lib/invoice-template-ast/previewSheet.test.ts',
-      'src/lib/invoice-template-ast/previewPagination.bundle.test.ts',
       // Preview framing (sheet, guide, page caption) must never reach a PDF.
       'src/lib/invoice-template-ast/previewSeparation.test.ts',
       // And the caption it does draw speaks the reader's language, not the document's.
