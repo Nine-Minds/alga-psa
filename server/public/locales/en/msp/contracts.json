@@ -1036,7 +1036,8 @@
         "customRate": "Custom Rate",
         "effectiveDate": "Effective Date",
         "endDate": "End Date",
-        "notes": "Notes"
+        "notes": "Notes",
+        "appliesTo": "Applies To"
       },
       "dialogs": {
         "confirmDeleteSchedule": "Are you sure you want to delete this pricing schedule?"
@@ -1058,7 +1059,10 @@
       "values": {
         "defaultRate": "Default rate",
         "ongoing": "Ongoing",
-        "useDefaultRate": "Use default rate"
+        "useDefaultRate": "Use default rate",
+        "wholeContract": "Whole contract",
+        "wholeContractEffect": "Whole contract — fallback fee of {{amount}} per active fixed-fee line ({{count}} lines). Line-specific schedules take precedence.",
+        "unnamedLine": "Unnamed line"
       }
     },
     "dialog": {
@@ -1078,7 +1082,6 @@
         "failedToSavePricingSchedule": "Failed to save pricing schedule"
       },
       "fields": {
-        "customRate": "Custom Rate",
         "customRatePlaceholder": "0.00",
         "duration": "Duration",
         "durationPlaceholder": "e.g., 6",
@@ -1089,7 +1092,13 @@
         "notesPlaceholder": "Add notes about this pricing change (e.g., 'Annual rate increase')",
         "unit": "Unit",
         "useDefaultRate": "Use default rate",
-        "useDuration": "Use duration"
+        "useDuration": "Use duration",
+        "appliesTo": "Applies to",
+        "appliesToPlaceholder": "Select a fixed-fee line",
+        "lineFee": "Fee per billing period",
+        "lineFeeHelp": "What this line bills in every billing period the schedule covers, replacing its usual fee.",
+        "lineFeeHelpMixed": "Replaces the bundle fee of this line in every billing period the schedule covers. Members priced per unit keep their own unit price.",
+        "lineFeeHelpWholeContract": "Fallback fee for each active fixed-fee line in the billing periods covered. Line-specific schedules take precedence."
       },
       "title": {
         "addPricingSchedule": "Add Pricing Schedule",
@@ -1102,7 +1111,21 @@
         "durationRequired": "Duration value is required when using duration",
         "effectiveDateRequired": "Effective date is required",
         "endDateAfterEffectiveDate": "End date must be after effective date",
-        "endDateRequiredWhenEnabled": "End date is required when \"Has end date\" is enabled"
+        "endDateRequiredWhenEnabled": "End date is required when \"Has end date\" is enabled",
+        "scopeRequired": "Choose a fixed-fee line for this schedule"
+      },
+      "values": {
+        "wholeContract": "Whole contract",
+        "unnamedLine": "Unnamed line"
+      },
+      "notices": {
+        "wholeContract": "Whole contract: fallback schedule for active fixed-fee lines. Line-specific schedules take precedence.",
+        "wholeContractEffect": "Whole contract: fallback fee of {{amount}} per active fixed-fee line per billing period ({{count}} lines). Line-specific schedules take precedence.",
+        "unitPricedExcluded": "Lines that bill per unit are not listed: a pricing schedule never changes a per-unit price. Change the unit price on the line instead."
+      },
+      "empty": {
+        "allLinesUnitPriced": "Every fixed line on this contract bills per unit. A pricing schedule never changes a per-unit price — change the unit price on the line instead.",
+        "noEligibleLines": "This contract has no fixed-fee line, so a pricing schedule has nothing to reprice."
       }
     }
   },
@@ -2871,7 +2894,11 @@
       "endAfterEffective": "End date must be after effective date",
       "overlaps": "This schedule overlaps with an existing pricing schedule",
       "wouldOverlap": "This schedule would overlap with an existing pricing schedule",
-      "notFound": "Pricing schedule not found"
+      "notFound": "Pricing schedule not found",
+      "invalidDate": "Effective date and end date must be calendar dates (YYYY-MM-DD)",
+      "lineNotEligible": "Pricing schedules apply to a fixed-fee line of this contract; pick one of its fixed lines",
+      "lineUnitPriced": "This line bills per unit, so a pricing schedule would not change what it bills. Change the unit price on the line instead.",
+      "lineRequired": "Choose a fixed-fee line for this schedule"
     },
     "renewals": {
       "permissions": {
