@@ -1,0 +1,62 @@
+[
+  {
+    "id": "T001",
+    "featureIds": ["F001", "F004"],
+    "description": "DB-backed: with a real published single-client bundle, a restricted MSP user creates a contact in scope through addContact, and is refused with no row written for an out-of-scope client and for no client, through addContact, createClientContact and the CSV import create branch. An unrestricted user in a tenant with no bundle and no resolver subject creates as before.",
+    "implemented": true
+  },
+  {
+    "id": "T002",
+    "featureIds": ["F002", "F003", "F005"],
+    "description": "DB-backed: for a restricted user, an email held by an out-of-scope contact and one held by a client-less contact both return the generic in-use result with no client name and no contact, on create and on find-or-create; an email held by an in-scope contact returns that contact. An unrestricted MSP user still receives the named-client message.",
+    "implemented": false
+  },
+  {
+    "id": "T003",
+    "featureIds": ["F006"],
+    "description": "DB-backed: createOrFindIntegrationContactByEmail refuses a caller without contact:create and writes nothing, refuses an out-of-scope client for a restricted caller, and succeeds for a permitted caller. The two exports are absent from the pinned permission-coverage gaps.",
+    "implemented": false
+  },
+  {
+    "id": "T004",
+    "featureIds": ["F007", "F008"],
+    "description": "The contact writer ledger contract fails when an actor-initiated path inserts a contact without the command, and passes with REST create, ticket import and the workflow contact actions routed through it. One DB-backed case: workflow contacts.create with a restricted user actor is refused for an out-of-scope client.",
+    "implemented": false
+  },
+  {
+    "id": "T005",
+    "featureIds": ["F009"],
+    "description": "DB-backed: findContactByEmailAddress and checkExistingEmails return nothing for an out-of-scope email and the match for an in-scope email, for a restricted user; unchanged for an unrestricted user.",
+    "implemented": false
+  },
+  {
+    "id": "T006",
+    "featureIds": ["F010"],
+    "description": "Seat authority matrix and role catalog: contact create is granted with own_client and every other contact write stays denied; the role grant list and the migration catalog stay equal.",
+    "implemented": false
+  },
+  {
+    "id": "T007",
+    "featureIds": ["F010", "F001", "F002"],
+    "description": "DB-backed, with a real seat arrangement and active assignment and only the session mocked: the technician creates a contact for the arrangement's client; is refused for another client and for no client; receives the generic result for an email at another client; and is refused after the assignment is revoked. An MSP user is the control.",
+    "implemented": false
+  },
+  {
+    "id": "T008",
+    "featureIds": ["F011"],
+    "description": "Migration: a tenant whose Seat Technician role predates the change holds contact:create afterwards; a tenant with no seat role is untouched; a second run changes nothing.",
+    "implemented": false
+  },
+  {
+    "id": "T009",
+    "featureIds": ["F012", "F013", "F014"],
+    "description": "Browser, as a seat technician: Add Ticket, Add new contact shows the client fixed to the arrangement's client with no add-client option; saving creates the contact and selects it on the ticket; an email held at another client shows the generic message. As an MSP user without contact:create the Add new affordance is absent; as an ordinary MSP user the client field stays optional and selectable.",
+    "implemented": false
+  },
+  {
+    "id": "T010",
+    "featureIds": ["F001"],
+    "description": "CE: in a community build with no resolver registered, a plain tenant creates a contact through the command with a single tenant probe and nothing reaches into ee/ at runtime.",
+    "implemented": true
+  }
+]

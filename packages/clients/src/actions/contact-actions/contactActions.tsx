@@ -1,7 +1,6 @@
 'use server'
 
-import { assertRecordCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
-import { queueContactCreated, queueContactUpdated } from '../../lib/contactEvents';
+import { queueContactUpdated } from '../../lib/contactEvents';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
 import type {
@@ -28,6 +27,7 @@ import {
   isMspUser,
 } from '../../lib/authHelpers';
 import type { IBoard } from '@alga-psa/types';
+import { assertContactCreateAllowed, createContactAs } from '@alga-psa/shared/models/contactCreateCommand';
 import { assertContactIsNotSharedMailbox, deleteContactCascade, ContactModel, CreateContactInput, UpdateContactInput } from '@alga-psa/shared/models/contactModel';
 import { localizeActionError, withAuth } from '@alga-psa/auth';
 import { publishWorkflowEvent, publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -315,21 +315,6 @@ async function contactActionResultErrorFrom(error: unknown, fallback: string): P
   }
 
   return fallback;
-}
-
-/** The shared create gate for every MSP contact create: the candidate contact's client must be in the subject's scope. */
-async function assertContactCreateInScope(
-  trx: Knex.Transaction,
-  tenant: string,
-  user: Parameters<typeof assertRecordCreateAllowed>[1]['user'],
-  clientId: string | null | undefined,
-): Promise<void> {
-  await assertRecordCreateAllowed(trx, {
-    tenant,
-    user,
-    resourceType: 'contact',
-    record: { clientId: clientId ?? null },
-  }, 'contact');
 }
 
 async function prefixedContactActionErrorFrom(error: unknown, fallback: string): Promise<string> {
@@ -695,12 +680,10 @@ export const addContact = withAuth(async (
       work_arrangement: contactData.work_arrangement ?? undefined,
     };
 
-    // LEVERAGE: pattern contact-create-with-event
-    // Use the shared ContactModel to create the contact.
-    // The model handles validation and business rules.
+    // The create command owns permission, client scope, the duplicate check, the insert and the
+    // contact-created event, in that order.
     const created = await withTransaction(db, async (trx: Knex.Transaction) => {
-      await assertContactCreateInScope(trx, tenant, user, createInput.client_id);
-      const contact = await ContactModel.createContact(createInput, tenant, trx);
+      const contact = await createContactAs(trx, { tenant, actor: user, input: createInput });
       // Same transaction as the contact: a cross-client location rolls the contact back too.
       const locations = contactData.locations === undefined
         ? []
@@ -708,31 +691,6 @@ export const addContact = withAuth(async (
           createdBy: user?.user_id ?? null,
         });
       return { ...contact, locations };
-    });
-
-    const clientId = (created as any)?.client_id;
-    // Client-less contacts emit too: the webhook layer carries client_id only when present.
-    const occurredAt = (created as any)?.created_at ?? new Date().toISOString();
-    const actor = maybeUserActor(user);
-    await publishWorkflowEvent({
-      eventType: 'CONTACT_CREATED',
-      payload: buildContactCreatedPayload({
-        contactId: created.contact_name_id,
-        clientId,
-        fullName: created.full_name,
-        email: created.email || undefined,
-        primaryEmailCanonicalType: created.primary_email_canonical_type ?? null,
-        primaryEmailCustomTypeId: created.primary_email_custom_type_id ?? null,
-        primaryEmailType: created.primary_email_type ?? null,
-        additionalEmailAddresses: created.additional_email_addresses ?? [],
-        phoneNumbers: created.phone_numbers,
-        defaultPhoneNumber: created.default_phone_number || undefined,
-        defaultPhoneType: created.default_phone_type || undefined,
-        createdByUserId: user?.user_id,
-        createdAt: occurredAt,
-      }),
-      ctx: { tenantId: tenant, occurredAt, actor },
-      idempotencyKey: `contact_created:${created.contact_name_id}`,
     });
 
     return { success: true, contact: created };
@@ -1407,6 +1365,9 @@ export const importContactsFromCSV = withAuth(async (
           }
 
           if (existingContact && !updateExisting) {
+            // Without update-existing a match is a failed create: the actor must be allowed to create
+            // here before the row may say whether the email or name is already taken.
+            await assertContactCreateAllowed(trx, { tenant, actor: user, clientId: contactData.client_id || undefined });
             const duplicateField = matchedByEmail ? 'email' : 'name';
             results.push({
               success: false,
@@ -1566,8 +1527,7 @@ export const importContactsFromCSV = withAuth(async (
                 contactData.primary_location_name,
               );
 
-            await assertContactCreateInScope(trx, tenant, user, contactToCreate.client_id);
-            savedContact = await ContactModel.createContact(contactToCreate, tenant, trx);
+            savedContact = await createContactAs(trx, { tenant, actor: user, input: contactToCreate });
             if (resolvedLocations !== undefined) {
               await replaceContactLocations(
                 trx,
@@ -1577,7 +1537,6 @@ export const importContactsFromCSV = withAuth(async (
                 { createdBy: user?.user_id ?? null },
               );
             }
-            queueContactCreated(trx, tenant, savedContact as any, { actorUserId: user?.user_id });
 
             if (hasImportedTags(contactData.tags)) {
               await writeImportedContactTags(trx, tenant, savedContact.contact_name_id, contactData.tags, false);
@@ -1830,35 +1789,29 @@ export const createClientContact = withAuth(async (
       throw new Error(phoneRowError);
     }
 
-    const existingContact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await tenantScopedTable(trx, 'contacts', tenant)
-        .where({ email: normalizedEmail })
-        .first();
-    });
-
-    if (existingContact) {
-      throw await contactError('errors.contact.emailExists', 'EMAIL_EXISTS: ');
-    }
-
     const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      await assertContactCreateInScope(trx, tenant, user, clientId);
-      const created = await ContactModel.createContact({
-        full_name: structural.data.full_name,
-        email: normalizedEmail,
-        primary_email_canonical_type: primaryEmailCanonicalType,
-        primary_email_custom_type: primaryEmailCustomType,
-        additional_email_addresses: additionalEmailAddresses ?? [],
-        phone_numbers: resolvedPhoneNumbers,
-        client_id: clientId,
-        role: jobTitle,
-      }, tenant, trx);
-      queueContactCreated(trx, tenant, created as any, { actorUserId: user?.user_id });
-      return created;
+      return await createContactAs(trx, {
+        tenant,
+        actor: user,
+        input: {
+          full_name: structural.data.full_name,
+          email: normalizedEmail,
+          primary_email_canonical_type: primaryEmailCanonicalType,
+          primary_email_custom_type: primaryEmailCustomType,
+          additional_email_addresses: additionalEmailAddresses ?? [],
+          phone_numbers: resolvedPhoneNumbers,
+          client_id: clientId,
+          role: jobTitle,
+        },
+      });
     });
 
     return contact;
   } catch (error) {
     console.error('Error creating client contact:', error);
+    if (error instanceof Error && error.message.startsWith('EMAIL_EXISTS:')) {
+      throw await contactError('errors.contact.emailExists', 'EMAIL_EXISTS: ');
+    }
     throw error;
   }
 });

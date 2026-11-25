@@ -1,12 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // The client-scope create gate needs a real connection; it is covered by the T008 integration test.
-vi.mock('@alga-psa/authorization/recordCreateAuthorization', () => ({ assertRecordCreateAllowed: vi.fn(async () => undefined) }));
+// The create command's gate and duplicate lookup need a real connection; they are covered by the
+// contactCreateCommand integration tests. Here the command only hands the input on to the mocked model.
+vi.mock('@alga-psa/shared/models/contactCreateCommand', () => ({
+  assertContactCreateAllowed: vi.fn(async () => undefined),
+  createContactAs: (trx: unknown, { tenant, input }: { tenant: string; input: unknown }) => (globalThis as any).__createContactMock(input, tenant, trx),
+}));
 
 const createTenantKnexMock = vi.fn(async () => ({ knex: {} as any }));
 const withTransactionMock = vi.fn();
 const assertMspPermissionMock = vi.fn();
 const createContactMock = vi.fn();
+(globalThis as any).__createContactMock = (...args: any[]) => createContactMock(...args);
 const getContactByIdMock = vi.fn();
 const updateContactMock = vi.fn();
 

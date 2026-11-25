@@ -12,7 +12,8 @@ const root = path.resolve(__dirname, '../../../..');
 const read = (rel: string) => readFileSync(path.join(root, rel), 'utf8');
 
 const PUBLISHED_WRITERS: Record<string, string> = {
-  'packages/clients/src/actions/contact-actions/contactActions.tsx': 'queueContactCreated',
+  'packages/clients/src/actions/contact-actions/contactActions.tsx': 'queueContactUpdated',
+  'shared/models/contactCreateCommand.ts': 'queueContactCreated',
   'packages/clients/src/actions/inboundActions.ts': 'queueContactUpdated',
   'packages/clients/src/actions/queryActions.ts': 'queueContactCreated',
   'packages/clients/src/actions/clientActions.ts': 'trackContactUpdates',
@@ -93,10 +94,11 @@ describe('contacts writer classification', () => {
     expect(reason.length).toBeGreaterThan(20);
   });
 
-  it('createClientContact (QuickAddClient / onboarding) publishes contact.created after commit', () => {
+  it('addContact, createClientContact and the CSV import create through the create command, which publishes contact.created after commit', () => {
     const src = read('packages/clients/src/actions/contact-actions/contactActions.tsx');
-    const fn = src.slice(src.indexOf('createClientContact'));
-    expect(fn).toContain('queueContactCreated(trx');
+    expect(src.match(/createContactAs\(trx/g)).toHaveLength(3);
+    expect(src).not.toMatch(/ContactModel\.createContact\(/);
+    expect(read('shared/models/contactCreateCommand.ts')).toContain('queueContactCreated(trx');
   });
 
   it('client merge re-parents contacts through contact.updated', () => {
