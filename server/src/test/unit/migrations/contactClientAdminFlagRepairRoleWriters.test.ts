@@ -17,7 +17,7 @@ import path from 'path';
  */
 const migrationPath = path.resolve(
   __dirname,
-  '../../../../migrations/20261125090000_repair_contact_client_admin_flag_role_writers.cjs'
+  '../../../../migrations/20261124090000_repair_contact_client_admin_flag_role_writers.cjs'
 );
 const source = readFileSync(migrationPath, 'utf8');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
