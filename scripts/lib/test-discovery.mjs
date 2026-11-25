@@ -47,7 +47,8 @@ export function isApplianceNodeTest(file) {
 // These roots are not covered by the server unit command or package-local
 // Nx test targets. Keep runtime requirements explicit during reconciliation.
 export function isAdditionalWorkspaceTest(file, lane) {
-  if (lane === 'temporal-database') return file === 'ee/temporal-workflows/src/__tests__/e2e/tenant-creation-workflow.e2e.test.ts' || file === 'ee/temporal-workflows/src/db/__tests__/database-connection.integration.test.ts' || file === 'ee/temporal-workflows/src/activities/__tests__/user-activities-simple.test.ts' || file === 'ee/temporal-workflows/src/activities/__tests__/tenant-activities.test.ts' || /^ee\/temporal-workflows\/src\/db\/__tests__\/(product-upgrade-operations|tenant-setup-idempotency)\.integration\.test\.ts$/.test(file);
+  // LEVERAGE: pattern lane-membership-twice — temporal-database membership is also listed in ee/temporal-workflows/vitest.database.config.ts; a new test must be added to both.
+  if (lane === 'temporal-database') return file === 'ee/temporal-workflows/src/__tests__/e2e/tenant-creation-workflow.e2e.test.ts' || file === 'ee/temporal-workflows/src/db/__tests__/database-connection.integration.test.ts' || file === 'ee/temporal-workflows/src/activities/__tests__/user-activities-simple.test.ts' || file === 'ee/temporal-workflows/src/activities/__tests__/tenant-activities.test.ts' || file === 'ee/temporal-workflows/src/activities/__tests__/managedSeatRoleTenantDeletion.integration.test.ts' || /^ee\/temporal-workflows\/src\/db\/__tests__\/(product-upgrade-operations|tenant-setup-idempotency)\.integration\.test\.ts$/.test(file);
   // LEVERAGE: pattern lane-membership-twice — temporal-engine membership is also listed in ee/temporal-workflows/vitest.engine.config.ts; a new test must be added to both.
   if (lane === 'temporal-engine') {
     if (file === 'ee/temporal-workflows/src/__tests__/e2e/email-only.e2e.test.ts') return true;

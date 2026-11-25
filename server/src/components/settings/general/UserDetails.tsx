@@ -623,7 +623,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
               // A capability-owned role is shown, never offered for removal: its owner assigns and removes it.
               if (isManagedRole(role)) {
                 return (
-                  <div key={role.role_id} className="space-y-2 p-2 bg-gray-50 rounded">
+                  <div key={role.role_id} className="space-y-2 p-2 bg-[rgb(var(--color-border-50))] rounded">
                     <div className="flex items-center gap-2">
                       <Text size="2">{role.role_name}</Text>
                       <ManagedRoleBadge role={role} />
