@@ -124,7 +124,7 @@ describe('ContactBentoLayout full edit save', () => {
   });
 
   it.each([false, true])('formats the refreshed resend date using the app country (quickView=%s)', async (quickView) => {
-    const summary = { hasAccount: false, lastSignIn: null, invitedAt: '2026-11-01T12:00:00.000Z', invitationState: 'expired' } as const;
+    const summary = { hasAccount: false, accountInactive: false, lastSignIn: null, invitedAt: '2026-11-01T12:00:00.000Z', invitationState: 'expired' } as const;
     hoisted.getContactPortalSummary.mockResolvedValue({
       ...summary, invitationState: 'pending', invitedAt: '2026-12-01T12:00:00.000Z',
     });
