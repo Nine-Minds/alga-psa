@@ -1811,9 +1811,20 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
     // Read from the rows, and only if a seat technician is among the recipients.
     const commentAudience = lazyAudience(() => readTicketCommentAudience(db, tenantId, comment?.id));
 
-    // Get ticket details including contact
+    // Get ticket details including contact. board_id, is_closed and client_id are read for the
+    // board notification rule step at the end of this handler.
     const ticket = await tenantScopedTable(db, 'tickets', tenantId)
-      .select('ticket_id', 'ticket_number', 'title', 'assigned_to', 'contact_name_id', 'tenant')
+      .select(
+        'ticket_id',
+        'ticket_number',
+        'title',
+        'assigned_to',
+        'contact_name_id',
+        'tenant',
+        'board_id',
+        'is_closed',
+        'client_id'
+      )
       .where('ticket_id', ticketId)
       .first();
 
@@ -2091,6 +2102,88 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
         logger.info('[InternalNotificationSubscriber] Created notification for ticket comment (client portal)', {
           ticketId,
           userId: contactUser.user_id,
+          tenantId
+        });
+      }
+    }
+
+    // Board notification rules (trigger: client replied on an unassigned ticket). A client reply
+    // flips the response state to "waiting on internal" but reaches nobody when the ticket has no
+    // assignee, so the rule's users and teams get the queue alert. Fires on every qualifying
+    // reply — there is no per-ticket state — and never assigns or touches the watch list.
+    const mayBeClientReplyOnUnassigned = Boolean(
+      comment?.id &&
+      !comment.isInternal &&
+      !ticket.assigned_to &&
+      !ticket.is_closed &&
+      ticket.board_id &&
+      shouldCreateTicketCommentNotification(suppression, 'internal')
+    );
+    // The comment row is the single source of author classification (the same
+    // `author_type` the email handler reads): 'client' is a portal user or an
+    // inbound email from a contact.
+    const clientReplyAuthorType = mayBeClientReplyOnUnassigned
+      ? (await tenantScopedTable(db, 'comments', tenantId)
+          .select('author_type')
+          .where({ comment_id: comment!.id })
+          .first())?.author_type
+      : undefined;
+    if (clientReplyAuthorType === 'client') {
+      // Users only: plain-address recipients are email-only (no in-app).
+      const { users: ruleRecipients } = await resolveBoardNotificationAudience(
+        db,
+        tenantId,
+        { kind: 'client_reply_unassigned', boardId: ticket.board_id },
+        { excludeUserIds: [...notifiedUserIds, userId] }
+      );
+      const visibleRecipients = ruleRecipients.length > 0
+        ? await filterRecipientsWhoCanReadTicket(db, tenantId, ticketId, ruleRecipients)
+        : [];
+      // Names for the alert, read only once the rule has someone to tell.
+      const [board, client] = visibleRecipients.length > 0
+        ? await Promise.all([
+            tenantScopedTable(db, 'boards', tenantId).select('board_name').where({ board_id: ticket.board_id }).first(),
+            ticket.client_id
+              ? tenantScopedTable(db, 'clients', tenantId).select('client_name').where({ client_id: ticket.client_id }).first()
+              : null,
+          ])
+        : [null, null];
+      for (const recipient of visibleRecipients) {
+        await createNotificationFromTemplateInternal(db, {
+          tenant: tenantId,
+          user_id: recipient.userId,
+          template_name: 'ticket-board-client-reply-unassigned',
+          ticketAudience: { ticketId, audience: commentAudience },
+          type: 'info',
+          category: 'tickets',
+          link: ticketUrl,
+          data: {
+            ticketId: ticket.ticket_number || 'Ticket',
+            ticketTitle: ticket.title,
+            clientName: client?.client_name || 'Unknown',
+            // The contact who replied, which is the fact the queue needs.
+            contactName: authorName,
+            boardName: board?.board_name || '',
+            commentPreview
+          },
+          metadata: {
+            ticketId: ticket.ticket_id,
+            ticketNumber: ticket.ticket_number || 'Ticket',
+            comment: {
+              id: comment?.id,
+              text: commentPreview,
+              author: authorName,
+              ...(userId ? { authorId: userId } : {}),
+              isInternal: false
+            }
+          }
+        });
+      }
+      if (visibleRecipients.length > 0) {
+        logger.info('[InternalNotificationSubscriber] Created board notification rule notifications for client reply on unassigned ticket', {
+          ticketId,
+          boardId: ticket.board_id,
+          recipientCount: visibleRecipients.length,
           tenantId
         });
       }

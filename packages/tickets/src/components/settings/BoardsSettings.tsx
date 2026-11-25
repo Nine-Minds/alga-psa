@@ -132,6 +132,7 @@ interface EditableNotificationRule {
   temp_id: string;
   rule_id?: string;
   notify_on_create: boolean;
+  notify_on_unassigned_client_reply: boolean;
   status_ids: string[];
   user_ids: string[];
   team_ids: string[];
@@ -143,6 +144,7 @@ function createEmptyNotificationRule(index: number): EditableNotificationRule {
   return {
     temp_id: `notification-rule-${Date.now()}-${index}`,
     notify_on_create: true,
+    notify_on_unassigned_client_reply: false,
     status_ids: [],
     user_ids: [],
     team_ids: [],
@@ -918,6 +920,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             temp_id: rule.rule_id,
             rule_id: rule.rule_id,
             notify_on_create: rule.notify_on_create,
+            notify_on_unassigned_client_reply: rule.notify_on_unassigned_client_reply ?? false,
             status_ids: rule.status_ids,
             user_ids: rule.user_ids,
             team_ids: rule.team_ids,
@@ -1157,6 +1160,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
       rules: rulesToSave.map((rule) => ({
         rule_id: rule.rule_id,
         notify_on_create: rule.notify_on_create,
+        notify_on_unassigned_client_reply: rule.notify_on_unassigned_client_reply,
         status_ids: rule.status_ids,
         user_ids: rule.user_ids,
         team_ids: rule.team_ids,
@@ -1204,8 +1208,8 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
       }
 
       for (const rule of notificationRules) {
-        if (!rule.notify_on_create && rule.status_ids.length === 0) {
-          failInSection('notifications', t('ticketing.boards.editor.sections.notificationsTriggerRequired', 'Each notification rule needs at least one trigger: ticket creation or a status.'));
+        if (!rule.notify_on_create && !rule.notify_on_unassigned_client_reply && rule.status_ids.length === 0) {
+          failInSection('notifications', t('ticketing.boards.editor.sections.notificationsTriggerRequired', 'Each notification rule needs at least one trigger: ticket creation, a client reply on an unassigned ticket, or a status.'));
           return;
         }
         if ((invalidNotificationEmails[rule.temp_id] ?? []).length > 0) {
@@ -2256,7 +2260,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             id="notifications"
             error={sectionErrors['notifications']}
             title={t('ticketing.boards.editor.sections.notifications', 'Notifications')}
-            description={t('ticketing.boards.editor.sections.notificationsHelp', 'Notify technicians about new tickets and status changes, and set default watchers')}
+            description={t('ticketing.boards.editor.sections.notificationsHelp', 'Notify technicians about new tickets, status changes and client replies on unassigned tickets, and set default watchers')}
             icon={<Bell className="h-4 w-4" />}
             open={!collapsedSections.has('notifications')}
             dirty={isSectionDirty('notifications')}
@@ -2339,6 +2343,16 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                       />
                       <Label htmlFor={`board-notification-rule-${index}-create`}>
                         {t('ticketing.boards.editor.sections.notificationsOnCreate', 'When a ticket is created on this board')}
+                      </Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id={`board-notification-rule-${index}-client-reply`}
+                        checked={rule.notify_on_unassigned_client_reply}
+                        onChange={(e) => updateRule({ notify_on_unassigned_client_reply: (e.target as HTMLInputElement).checked })}
+                      />
+                      <Label htmlFor={`board-notification-rule-${index}-client-reply`}>
+                        {t('ticketing.boards.editor.sections.notificationsOnClientReplyUnassigned', 'When a client replies on an unassigned ticket')}
                       </Label>
                     </div>
                     <div>
