@@ -27,9 +27,9 @@ import { BentoTile, BentoTileAddButton, BentoTileEmpty, BentoTileEmptyAction } f
 import { ContentCardVariantProvider } from '@alga-psa/ui/components/ContentCard';
 import { TagManager } from '@alga-psa/tags/components';
 import { useToast, useDrawer } from '@alga-psa/ui';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
-import { updateContact, getInteractionsForEntity, getClientById } from '@alga-psa/clients/actions';
+import { updateContact, getInteractionsForEntity, getClientById, getContactPortalSummary } from '@alga-psa/clients/actions';
 import { useOptionalClientCrossFeature } from '../../../context/ClientCrossFeatureContext';
 import { QuickAddInteraction } from '../../interactions/QuickAddInteraction';
 import InteractionDetails from '../../interactions/InteractionDetails';
@@ -94,13 +94,6 @@ interface ContactBentoLayoutProps {
   onContactUpdated?: () => Promise<void> | void;
   onChangesSaved?: () => void;
   onDocumentCreated?: () => Promise<void>;
-}
-
-function formatDate(value?: string | Date | null): string {
-  if (!value) return '—';
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return '—';
-  return date.toLocaleDateString();
 }
 
 /** The slice of i18next's `t` the module-level formatters below need. */
@@ -235,7 +228,7 @@ export function ContactBentoLayout({
   stats,
   ticketsSummary,
   relatedWork,
-  portalSummary,
+  portalSummary: initialPortalSummary,
   newTicketHref,
   assetsSlot,
   userPermissions = { canInvite: false, canUpdateRoles: false, canRead: false },
@@ -245,6 +238,14 @@ export function ContactBentoLayout({
   onDocumentCreated,
 }: ContactBentoLayoutProps) {
   const { t } = useTranslation('msp/contacts');
+  const { formatDate: formatAppDate } = useFormatters();
+  function formatDate(value?: string | Date | null): string {
+    if (!value) return '—';
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '—';
+    return formatAppDate(value);
+  }
+
   // The loader reads the latest translator through a ref so a new `t` (namespace load,
   // language switch) never re-triggers the fetch.
   const tRef = useRef(t);
@@ -264,6 +265,22 @@ export function ContactBentoLayout({
   const [isPortalOpen, setIsPortalOpen] = useState(false);
   const [isDocumentsOpen, setIsDocumentsOpen] = useState(false);
   const [isInteractionOpen, setIsInteractionOpen] = useState(false);
+  const [portalSummary, setPortalSummary] = useState(initialPortalSummary);
+  useEffect(() => {
+    setPortalSummary(initialPortalSummary);
+  }, [initialPortalSummary]);
+
+  const handleInvitationChanged = async () => {
+    onChangesSaved?.();
+    // Full server-rendered contact pages cannot supply a refresh callback.
+    // Refresh our own tile and hero as well as notifying the quick-view opener.
+    try {
+      const summary = await getContactPortalSummary(contact.contact_name_id);
+      if (!isReturnedActionError(summary)) setPortalSummary(summary);
+    } catch (error) {
+      console.error('Failed to refresh contact portal summary:', error);
+    }
+  };
 
   // The interactions list is owned here: server pages can't pass refresh
   // callbacks across the RSC boundary, and quick-view callers don't pass
@@ -353,7 +370,12 @@ export function ContactBentoLayout({
         ? t('contactBento.portalChip.signedIn', { defaultValue: 'Portal · signed in {{when}}', when: formatDate(portalSummary.lastSignIn) })
         : t('contactBento.portalChip.neverSignedIn', { defaultValue: 'Portal · never signed in' });
     }
-    if (portalSummary.invitedAt) return t('contactBento.portalChip.invited', { defaultValue: 'Portal · invited' });
+    if (portalSummary.invitationState === 'expired') {
+      return t('contactBento.portalChip.invitationExpired', { defaultValue: 'Portal · invitation expired' });
+    }
+    if (portalSummary.invitationState === 'pending') {
+      return t('contactBento.portalChip.invited', { defaultValue: 'Portal · invited' });
+    }
     return t('contactBento.portalChip.noAccess', { defaultValue: 'No portal access' });
   })();
 
@@ -613,7 +635,14 @@ export function ContactBentoLayout({
         ? { label: t('contactBento.portal.deactivated', { defaultValue: 'Deactivated' }), positive: false }
         : { label: t('contactBento.portal.activeAccount', { defaultValue: 'Active account' }), positive: true };
     }
-    if (portalSummary.invitedAt) return { label: t('contactBento.portal.invitationSent', { defaultValue: 'Invitation sent' }), positive: false };
+    // An invitation that lapsed unused is kept on the contact, so "Invitation
+    // sent" would otherwise stand for ever next to a dead link.
+    if (portalSummary.invitationState === 'expired') {
+      return { label: t('contactBento.portal.invitationExpired', { defaultValue: 'Invitation expired' }), positive: false };
+    }
+    if (portalSummary.invitationState === 'pending') {
+      return { label: t('contactBento.portal.invitationSent', { defaultValue: 'Invitation sent' }), positive: false };
+    }
     return { label: t('contactBento.portal.noAccess', { defaultValue: 'No access' }), positive: false };
   })();
 
@@ -1028,7 +1057,11 @@ export function ContactBentoLayout({
         className="max-w-3xl"
       >
         <DialogContent>
-          <ContactPortalTab contact={contact} currentUserPermissions={userPermissions} />
+          <ContactPortalTab
+            contact={contact}
+            currentUserPermissions={userPermissions}
+            onInvitationChanged={handleInvitationChanged}
+          />
         </DialogContent>
       </Dialog>
     );

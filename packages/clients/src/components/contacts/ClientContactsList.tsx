@@ -1,10 +1,19 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import type { IContact, IClientWithLocation } from '@alga-psa/types';
-import { getContactsByClient, searchContactListIds } from '@alga-psa/clients/actions';
+import {
+  getContactsByClient,
+  getPortalInvitationStatesForClient,
+  searchContactListIds,
+} from '@alga-psa/clients/actions';
 import { getContactPortalPermissions } from '@alga-psa/auth/actions';
+import { isValidEmail } from '@alga-psa/validation';
+import type {
+  PortalInvitationState,
+  PortalInvitationStateTarget,
+} from '@alga-psa/portal-shared/types';
 import { contactMatchesPhoneDigits, phoneSearchDigits } from '../../lib/contactSearchMatch';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -23,7 +32,7 @@ import { useContactQuickViewDrawer } from './bento/useContactQuickViewDrawer';
 import { useContactEditDrawer } from './bento/useContactEditDrawer';
 import QuickAddContact from './QuickAddContact';
 import BulkPortalInvitationDialog, { type BulkPortalInvitationTarget } from './BulkPortalInvitationDialog';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ClientContactsListProps {
   clientId: string;
@@ -45,6 +54,7 @@ const addIdToContacts = (contacts: IContact[]): ContactWithId[] => {
 
 const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, client }) => {
   const { t } = useTranslation('msp/contacts');
+  const { formatDate } = useFormatters();
   const [contacts, setContacts] = useState<ContactWithId[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +67,14 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
   const [indexedSearchContactIds, setIndexedSearchContactIds] = useState<Set<string> | null>(null);
   const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set());
   const [invitationTarget, setInvitationTarget] = useState<BulkPortalInvitationTarget | null>(null);
+  // Each contact's standing with the portal, so a rollout can be read off this
+  // list: 'all' leaves the list alone, the rest narrow it to who needs chasing.
+  // `null` is "this reader cannot see invitation state", which hides the column
+  // rather than claiming nobody was ever invited.
+  const [invitationStates, setInvitationStates] = useState<
+    Map<string, { state: PortalInvitationState; expiresAt: string | null; contactInactive: boolean; emailConflict: boolean }> | null
+  >(null);
+  const [invitationFilter, setInvitationFilter] = useState<'all' | 'expired' | 'pending' | 'open'>('all');
   // False until the check resolves, so the invite affordances never flash in
   // for a reader who would only meet a server refusal. Same gate the contact's
   // own Portal tab uses.
@@ -106,12 +124,33 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
     };
   }, []);
 
+  const refreshInvitationStates = useCallback(() => {
+    getPortalInvitationStatesForClient(clientId)
+      .then((rows) => setInvitationStates(rows === null ? null : new Map(
+        rows.map((row) => [row.contactId, {
+          state: row.state,
+          expiresAt: row.expiresAt,
+          contactInactive: row.contactInactive,
+          emailConflict: row.emailConflict,
+        }]),
+      )))
+      .catch((err) => {
+        console.error('Error loading portal invitation states:', err);
+        setInvitationStates(null);
+      });
+  }, [clientId]);
+
+  useEffect(() => {
+    refreshInvitationStates();
+  }, [refreshInvitationStates]);
+
   // Re-run the list query so a contact moved to another client drops out of
   // this list as soon as the drawer saves.
   const refreshContacts = () => {
     getContactsByClient(clientId, statusFilter)
       .then(data => setContacts(addIdToContacts(data)))
       .catch(err => console.error('Error refreshing contacts after drawer save:', err));
+    refreshInvitationStates();
   };
 
   const handleQuickView = (contact: IContact) => {
@@ -196,16 +235,105 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
   }, [contacts, t]);
 
   const locationFilteredContacts = useMemo(() => {
-    if (locationFilter === 'all') return filteredContacts;
-    if (locationFilter === 'remote') {
-      return filteredContacts.filter((contact) => contact.work_arrangement === 'remote');
+    const byLocation = locationFilter === 'all'
+      ? filteredContacts
+      : locationFilter === 'remote'
+        ? filteredContacts.filter((contact) => contact.work_arrangement === 'remote')
+        : locationFilter === 'none'
+          ? filteredContacts.filter((contact) => (contact.locations ?? []).length === 0)
+          : filteredContacts.filter((contact) =>
+            (contact.locations ?? []).some((location) => location.location_id === locationFilter));
+
+    if (invitationFilter === 'all' || !invitationStates) return byLocation;
+    // Same classification the resend acts on, and the resend is aimed at the
+    // rows this leaves on screen, so what the MSP filtered to is what the batch
+    // mails.
+    const wanted: PortalInvitationState[] = invitationFilter === 'open'
+      ? ['expired', 'pending']
+      : [invitationFilter];
+    return byLocation.filter((contact) => {
+      const state = invitationStates.get(contact.contact_name_id)?.state;
+      return state !== undefined && wanted.includes(state);
+    });
+  }, [filteredContacts, locationFilter, invitationFilter, invitationStates]);
+
+  /** The states a "Resend" from here would act on; the filter names the set. */
+  const resendStates: PortalInvitationStateTarget[] = invitationFilter === 'pending'
+    ? ['pending']
+    : invitationFilter === 'open'
+      ? ['expired', 'pending']
+      : ['expired'];
+
+  // Every active filter applies to the resend target. Deactivated contacts are
+  // excluded because their invitations cannot be used; the dialog explains any
+  // other skipped recipients in the target.
+  const resendContacts = useMemo(
+    () => (invitationStates
+      ? locationFilteredContacts
+        .filter((contact) => {
+          const entry = invitationStates.get(contact.contact_name_id);
+          return entry !== undefined
+            && !entry.contactInactive
+            && (resendStates as string[]).includes(entry.state);
+        })
+      : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locationFilteredContacts, invitationStates, resendStates.join(',')],
+  );
+
+  // Match the dialog's eligibility checks before offering an action that would
+  // have no recipients. Keep the full target so mixed batches explain skips.
+  const hasResendRecipients = resendContacts.some((contact) =>
+    !contact.is_inactive
+    && contact.contact_kind !== 'shared_mailbox'
+    && isValidEmail(contact.email)
+    && !invitationStates?.get(contact.contact_name_id)?.emailConflict
+  );
+
+  const invitationStateCell = (contactId: string): React.ReactNode => {
+    const entry = invitationStates?.get(contactId);
+    if (!entry || entry.state === 'none') {
+      return (
+        <span className="text-[rgb(var(--color-text-400))]">
+          {t('clientContactsList.invitation.none', { defaultValue: 'Not invited' })}
+        </span>
+      );
     }
-    if (locationFilter === 'none') {
-      return filteredContacts.filter((contact) => (contact.locations ?? []).length === 0);
+    if (entry.state === 'active_user') {
+      return t('clientContactsList.invitation.activeUser', { defaultValue: 'Active portal user' });
     }
-    return filteredContacts.filter((contact) =>
-      (contact.locations ?? []).some((location) => location.location_id === locationFilter));
-  }, [filteredContacts, locationFilter]);
+    if (entry.state === 'inactive_user') {
+      return (
+        <span className="text-[rgb(var(--color-text-400))]">
+          {t('clientContactsList.invitation.inactiveUser', { defaultValue: 'Inactive portal user' })}
+        </span>
+      );
+    }
+    // An invitation on a deactivated contact is refused at use time, so the
+    // cell says it cannot be used rather than counting down to an expiry.
+    if (entry.contactInactive) {
+      return (
+        <span className="text-[rgb(var(--color-text-400))]">
+          {t('clientContactsList.invitation.contactInactive', {
+            defaultValue: 'Invitation unusable (contact inactive)',
+          })}
+        </span>
+      );
+    }
+    if (entry.state === 'pending') {
+      return t('clientContactsList.invitation.pendingUntil', {
+        defaultValue: 'Pending until {{date}}',
+        // The app's own language and date format, like every other date on the
+        // contacts screens — not the browser's.
+        date: entry.expiresAt ? formatDate(entry.expiresAt) : '',
+      });
+    }
+    return (
+      <span className="text-[rgb(var(--color-status-warning))]">
+        {t('clientContactsList.invitation.expired', { defaultValue: 'Invitation expired' })}
+      </span>
+    );
+  };
 
   // Select-all covers exactly what the filters left on screen, so the header
   // box never quietly ticks a contact the user cannot see.
@@ -266,12 +394,26 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
     },
   ] : [];
 
+  // A rollout is run from this list, so who still owes the portal a visit
+  // belongs on the row rather than inside each contact's Portal tab — but only
+  // for a reader the server actually tells.
+  const invitationColumn: ColumnDefinition<IContact>[] = invitationStates ? [
+    {
+      title: t('clientContactsList.table.portalInvitation', { defaultValue: 'Portal invitation' }),
+      dataIndex: 'contact_name_id',
+      id: 'portal-invitation',
+      width: '15%',
+      sortable: false,
+      render: (value, record): React.ReactNode => invitationStateCell(record.contact_name_id),
+    },
+  ] : [];
+
   const columns: ColumnDefinition<IContact>[] = [
     ...selectColumn,
     {
       title: t('clientContactsList.table.name', { defaultValue: 'Name' }),
       dataIndex: 'full_name',
-      width: '40%',
+      width: '30%',
       render: (value, record): React.ReactNode => (
         <div className="flex items-center">
           <ContactAvatar
@@ -317,6 +459,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
       render: (value, record): React.ReactNode =>
         record.email || t('common.states.na', { defaultValue: 'N/A' }),
     },
+    ...invitationColumn,
     {
       title: t('clientContactsList.table.location', { defaultValue: 'Location' }),
       // The nested name, so the table sorts the column by it rather than by the object.
@@ -347,7 +490,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
         defaultValue: 'Phone number'
       }),
       dataIndex: 'default_phone_number',
-      width: '18%',
+      width: '15%',
       render: (value, record): React.ReactNode =>
         <PhoneText value={record.default_phone_number || record.phone_numbers?.find((phoneNumber: any) => phoneNumber.is_default)?.phone_number} extension={record.phone_numbers?.find((phoneNumber: any) => phoneNumber.is_default)?.extension} defaultCountry={client.location_country_code} fallback={t('common.states.na', { defaultValue: 'N/A' })} />,
     },
@@ -482,6 +625,40 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
             onValueChange={setLocationFilter}
             options={locationFilterOptions}
           />
+          {invitationStates && <CustomSelect
+            id="contact-invitation-state-filter"
+            value={invitationFilter}
+            onValueChange={(value) => {
+              setInvitationFilter(value as 'all' | 'expired' | 'pending' | 'open');
+              setCurrentPage(1);
+            }}
+            options={[
+              {
+                value: 'all',
+                label: t('clientContactsList.filter.allInvitationStates', {
+                  defaultValue: 'Any invitation state',
+                }),
+              },
+              {
+                value: 'expired',
+                label: t('clientContactsList.filter.invitationExpired', {
+                  defaultValue: 'Expired invitations',
+                }),
+              },
+              {
+                value: 'pending',
+                label: t('clientContactsList.filter.invitationPending', {
+                  defaultValue: 'Pending invitations',
+                }),
+              },
+              {
+                value: 'open',
+                label: t('clientContactsList.filter.invitationExpiredOrPending', {
+                  defaultValue: 'Expired or pending',
+                }),
+              },
+            ]}
+          />}
           {/* W7 (roast gap): a client with dozens of contacts had no search. */}
           <Input
             id="client-contacts-search"
@@ -503,6 +680,25 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
                 defaultValue: 'Invite to portal ({{selected}})',
                 selected: selectedContactIds.size
               })}
+            </Button>
+          )}
+          {canInvite && invitationStates && selectedContactIds.size === 0 && hasResendRecipients && (
+            <Button
+              id="resend-portal-invitations-btn"
+              variant="secondary"
+              onClick={() => setInvitationTarget({
+                mode: 'invitationState',
+                states: resendStates,
+                contactIds: resendContacts.map((contact) => contact.contact_name_id),
+              })}
+            >
+              {resendStates.length > 1
+                ? t('clientContactsList.actions.resendOpen', {
+                  defaultValue: 'Resend expired or pending',
+                })
+                : resendStates[0] === 'pending'
+                  ? t('clientContactsList.actions.resendPending', { defaultValue: 'Resend pending' })
+                  : t('clientContactsList.actions.resendExpired', { defaultValue: 'Resend expired' })}
             </Button>
           )}
           {canInvite && (
