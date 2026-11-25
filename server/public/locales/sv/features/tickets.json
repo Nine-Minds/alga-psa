@@ -575,6 +575,13 @@
       },
       "unavailable": "Det här ärendet är inte tillgängligt.",
       "back": "Tillbaka till kundärenden"
+    },
+    "opener": {
+      "openedBy": "Öppnad via e-post från {{sender}}",
+      "attachments_one": "{{count}} bilaga",
+      "attachments_other": "{{count}} bilagor",
+      "show": "Visa originalmeddelandet",
+      "hide": "Dölj originalmeddelandet"
     }
   },
   "responseState": {

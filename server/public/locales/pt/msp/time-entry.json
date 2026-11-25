@@ -153,7 +153,8 @@
       "endAfterStartPicker": "O horário de término deve ser posterior ao horário de início",
       "durationSameDay": "A duração deve terminar no mesmo dia",
       "endSameDay": "O horário de término deve ser no mesmo dia do horário de início",
-      "invalidTimeRange": "Insira um intervalo de tempo válido"
+      "invalidTimeRange": "Insira um intervalo de tempo válido",
+      "billableExceedsDuration": "A duração faturável não pode exceder a duração total"
     },
     "serviceSource": {
       "task": "Padrão da tarefa",
@@ -531,6 +532,12 @@
     "save": {
       "noPeriod": "Nenhum período abrange {{date}}. Escolha um dia dentro de um período.",
       "sheetLocked": "A folha de horas de {{date}} tem o estado «{{status}}». Escolha um dia numa folha de rascunho ou numa folha com alterações solicitadas."
+    },
+    "multiDay": {
+      "notice": "Este cronômetro abrangeu {{count}} dias, por isso será salvo como uma entrada de tempo por dia. Remova um dia para deixar o tempo dele de fora.",
+      "dayHeading": "Dia {{index}} de {{count}} · {{date}}",
+      "remove": "Remover",
+      "total": "Total: {{duration}}"
     }
   },
   "launch": {

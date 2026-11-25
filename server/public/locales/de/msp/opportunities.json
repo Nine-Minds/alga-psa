@@ -471,7 +471,8 @@
       "whitespaceSuggestionCreated": "Vorschlag zur Überprüfung bereit",
       "whitespaceSuggestionDismissed": "Dieser Vorschlag wurde zuvor abgelehnt",
       "whitespaceSuggestionKnown": "Dieser Vorschlag ist bereits bekannt",
-      "won": "Gewonnen"
+      "won": "Gewonnen",
+      "evidenceSaved": "Nachweise gespeichert"
     },
     "type": {
       "expansion": "Erweiterung",
@@ -569,14 +570,25 @@
     },
     "declare": {
       "title": "Zu {{stage}} verschieben",
-      "sourceLabel": "Unterstützende Quelle",
-      "noSource": "Keine Quelle",
-      "sourceHelp": "Optional. Verweisen Sie auf eine Interaktion oder ein Dokument dieses Deals. Hängen Sie ein Dokument zuerst an den Deal an, falls es nicht aufgeführt ist.",
+      "sourceHelp": "Optional. Verweisen Sie auf Interaktionen oder Dokumente dieses Deals. Hängen Sie ein Dokument zuerst an den Deal an, wenn es nicht aufgeführt ist.",
       "submit": "Festlegen",
       "source": "Quelle",
       "sourceRemoved": "Quelle entfernt",
       "interactionFallback": "Interaktion",
-      "documentFallback": "Dokument"
+      "documentFallback": "Dokument",
+      "editTitle": "Nachweise für {{stage}}",
+      "noteLabel": "Notiz",
+      "notePlaceholder": "Woran zeigt sich, dass der Deal in dieser Phase ist?",
+      "sourcesLabel": "Belegende Quellen",
+      "groupInteractions": "Interaktionen",
+      "groupDocuments": "Dokumente",
+      "removeSource": "Quelle entfernen",
+      "sourcesLoading": "Quellen werden geladen…",
+      "addSource": "Quelle hinzufügen",
+      "noSourcesAvailable": "Keine weiteren Interaktionen oder Dokumente zu diesem Deal",
+      "save": "Speichern",
+      "editEvidence": "Nachweise bearbeiten",
+      "addEvidence": "Nachweis hinzufügen"
     }
   }
 }

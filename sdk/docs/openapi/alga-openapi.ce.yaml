@@ -17551,6 +17551,166 @@ components:
         project_status_mapping_id as a UUID from the project task status
         mappings endpoint. The phaseId path parameter selects which phase will
         receive the task.
+    ProjectMaterialParams:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Project UUID.
+        materialId:
+          type: string
+          format: uuid
+          description: Project material UUID.
+      required:
+        - id
+        - materialId
+    ProjectMaterialResource:
+      type: object
+      properties:
+        project_material_id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        client_id:
+          type: string
+          format: uuid
+        service_id:
+          type: string
+          format: uuid
+        service_name:
+          type:
+            - string
+            - "null"
+        sku:
+          type:
+            - string
+            - "null"
+        quantity:
+          type: number
+        rate:
+          type: number
+          description: Integer minor units (cents).
+        currency_code:
+          type: string
+        description:
+          type:
+            - string
+            - "null"
+        is_billed:
+          type: boolean
+        billed_invoice_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        billed_at:
+          type:
+            - string
+            - "null"
+        billing_destination:
+          type: string
+          enum:
+            - next_project_invoice
+            - schedule_entry
+            - separate
+            - project_completion
+            - on_hold
+        billing_schedule_entry_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        from_staging_line_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        created_at:
+          type:
+            - string
+            - "null"
+        updated_at:
+          type:
+            - string
+            - "null"
+      required:
+        - project_material_id
+        - project_id
+        - client_id
+        - service_id
+        - quantity
+        - rate
+        - currency_code
+        - is_billed
+        - billing_destination
+    ProjectMaterialEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/ProjectMaterialResource"
+      required:
+        - data
+    ProjectMaterialListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectMaterialResource"
+      required:
+        - data
+    ProjectMaterialCreateBody:
+      type: object
+      properties:
+        service_id:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          exclusiveMinimum: 0
+        rate:
+          type: number
+          minimum: 0
+        currency_code:
+          type: string
+          minLength: 3
+          maxLength: 3
+        description:
+          type:
+            - string
+            - "null"
+          maxLength: 1000
+        unit_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        billing_destination:
+          type: string
+          enum:
+            - next_project_invoice
+            - schedule_entry
+            - separate
+            - project_completion
+            - on_hold
+        billing_schedule_entry_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+      required:
+        - service_id
+        - quantity
+        - rate
+        - currency_code
+      additionalProperties: false
+      description: Material to add to a project. client_id is taken from the project
+        and is rejected if sent; allow_reserved_override is not accepted. rate
+        is integer minor units. unit_id is required for serialized stock-tracked
+        products.
     ProjectTaskCommentParams:
       type: object
       properties:
@@ -19528,6 +19688,13 @@ components:
             - string
             - "null"
           format: uuid
+          description: The first time entry the session was logged as.
+        time_entry_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Every time entry the session was logged as, one per work day.
         closed_at:
           type:
             - string
@@ -19597,6 +19764,7 @@ components:
         - notes
         - status
         - time_entry_id
+        - time_entry_ids
         - closed_at
         - created_at
         - updated_at
@@ -19638,10 +19806,18 @@ components:
             time_entry:
               type: object
               additionalProperties: {}
-              description: The persisted time entry.
+              description: The persisted time entry (the first one when the session spans
+                several work days).
+            time_entries:
+              type: array
+              items:
+                type: object
+                additionalProperties: {}
+              description: Every persisted time entry, one per work day with active time.
           required:
             - session
             - time_entry
+            - time_entries
       required:
         - data
     WorkV1StopwatchConflictError:
@@ -22674,6 +22850,25 @@ components:
       required:
         - id
         - evidenceId
+    OpportunityDeclarationParamsV1:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Opportunity UUID from opportunities.opportunity_id.
+        checkpoint:
+          type: string
+          enum:
+            - qualified
+            - assessment
+            - proposed
+            - verbal
+            - won
+          description: The stage checkpoint whose declaration is edited. won is refused.
+      required:
+        - id
+        - checkpoint
     OpportunityStepParamsV1:
       type: object
       properties:
@@ -23003,6 +23198,30 @@ components:
           type:
             - string
             - "null"
+        citations:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                minLength: 1
+              id:
+                type: string
+                format: uuid
+            required:
+              - type
+              - id
+        refType:
+          type:
+            - string
+            - "null"
+          minLength: 1
+        refId:
+          type:
+            - string
+            - "null"
+          format: uuid
       required:
         - stage
     WinOpportunityBodyV1:
@@ -23104,6 +23323,20 @@ components:
           type:
             - string
             - "null"
+        citations:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                minLength: 1
+              id:
+                type: string
+                format: uuid
+            required:
+              - type
+              - id
         refType:
           type:
             - string
@@ -23116,6 +23349,27 @@ components:
           format: uuid
       required:
         - checkpoint
+    AmendOpportunityDeclarationBodyV1:
+      type: object
+      properties:
+        detail:
+          type:
+            - string
+            - "null"
+        citations:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                minLength: 1
+              id:
+                type: string
+                format: uuid
+            required:
+              - type
+              - id
     CorrectOpportunityEvidenceBodyV1:
       type: object
       properties:
@@ -37385,7 +37639,13 @@ paths:
       description: Inherited ApiBaseController update route for one contact_name_id.
         work_arrangement and locations[] behave as on create; locations omitted
         leaves the links untouched, an empty array removes them all, and
-        changing client_id removes them (a location never crosses clients).
+        changing client_id removes them (a location never crosses clients). A
+        different email replaces the primary address and drops the old one
+        unless it is re-sent in additional_email_addresses (sending one of the
+        contact's own additional addresses with no additional_email_addresses in
+        the body promotes it and keeps the old primary as an additional row,
+        leaving the contact's other addresses alone); an address already used by
+        another contact is refused.
       tags:
         - Contacts
       security:
@@ -66150,6 +66410,204 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/projects/{id}/materials:
+    get:
+      summary: List project materials
+      description: Returns the materials (products) recorded against a project, newest
+        first, with product name and SKU. Requires project:read and read access
+        to the project.
+      tags:
+        - Projects
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: project
+        x-rbac-action: read
+        x-chat-callable: true
+        x-chat-display-name: List Project Materials
+        x-chat-rbac-resource: project
+        x-chat-approval-required: false
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Project UUID.
+          required: true
+          description: Project UUID.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Project materials returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectMaterialListEnvelope"
+        "400":
+          description: Invalid project identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks project read permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Project not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: Add a project material
+      description: Adds a product to a project with quantity, rate and currency. A
+        stock-tracked product consumes stock and a serialized product delivers
+        the picked unit_id. Insufficient stock, or stock reserved or held for a
+        sales order, is refused with 400 on quantity and nothing is written.
+        Requires project:update. Returns the created material.
+      tags:
+        - Projects
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: project
+        x-rbac-action: update
+        x-chat-callable: true
+        x-chat-display-name: Add Project Material
+        x-chat-rbac-resource: project
+        x-chat-approval-required: true
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Project UUID.
+          required: true
+          description: Project UUID.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectMaterialCreateBody"
+      responses:
+        "201":
+          description: Material added.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectMaterialEnvelope"
+        "400":
+          description: "Invalid body (field path reported), insufficient or reserved stock
+            (path: quantity)."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks project update permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Project not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/projects/{id}/materials/{materialId}:
+    delete:
+      summary: Delete a project material
+      description: Deletes an unbilled material from the project and restores the
+        stock it consumed. Returns 404 if the material does not belong to the
+        project, and 409 if it has been billed. Requires project:update.
+      tags:
+        - Projects
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: project
+        x-rbac-action: update
+        x-chat-callable: true
+        x-chat-display-name: Delete Project Material
+        x-chat-rbac-resource: project
+        x-chat-approval-required: true
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Project UUID.
+          required: true
+          description: Project UUID.
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: uuid
+            description: Project material UUID.
+          required: true
+          description: Project material UUID.
+          name: materialId
+          in: path
+      responses:
+        "204":
+          description: Material deleted and stock restored.
+        "400":
+          description: Invalid identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks project update permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Project not found, or the material does not belong to it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: The material has been billed and cannot be deleted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/projects/tasks/{taskId}/comments:
     get:
       summary: List project task comments
@@ -75202,10 +75660,14 @@ paths:
   /api/v1/stopwatch/{id}/log:
     post:
       summary: Log stopwatch as time entry
-      description: "Logs the session as exactly one time entry: start = first segment
-        start (to the minute), end = start + active duration, billable_duration
-        = active minutes (min 1). Any body field overrides the derived value.
-        The time sheet is resolved server-side from the start date; a locked
+      description: "Logs the session as one time entry per work day (in the entry user
+        timezone) that has active time: each entry starts at the first active
+        instant of that day (to the minute) and lasts the active minutes of that
+        day, ending no later than 23:59; paused time is never booked. A session
+        within one day is one entry (billable_duration = active minutes, min 1).
+        An explicit start_time/end_time in the body produces exactly one entry
+        over that span. Other body fields override the derived value. The time
+        sheet is resolved server-side from the start date; a locked
         (submitted/approved) sheet returns 409 and the session is left
         untouched."
       tags:
@@ -83158,6 +83620,10 @@ paths:
       summary: Set opportunity stage
       description: Sets an open-pipeline stage through the declared-evidence flow the
         board drag uses; won and lost answer 400 pointing at /win and /lose.
+        detail and citations (interaction or document sources of this
+        opportunity) set the declaration note and sources; omitted fields keep
+        an existing declaration. refType and refId are shorthand for one
+        citation and are refused with 400 beside citations.
       tags:
         - Opportunities v1
       security:
@@ -83451,7 +83917,11 @@ paths:
   /api/v1/opportunities/{id}/evidence:
     post:
       summary: Record declared evidence
-      description: Records the declared qualified checkpoint only.
+      description: Declares a stage (identified through verbal) with an optional note
+        (detail) and citations of interactions or documents attached to this
+        opportunity. Omitted fields keep an existing declaration. refType and
+        refId are shorthand for one citation and are refused with 400 beside
+        citations.
       tags:
         - Opportunities v1
       security:
@@ -83523,7 +83993,8 @@ paths:
                 $ref: "#/components/schemas/OpportunityApiErrorV1"
     get:
       summary: List opportunity evidence
-      description: Lists append-only evidence and corrected records in recorded order.
+      description: Lists append-only evidence and corrected records in recorded order,
+        with the sources each declaration cites.
       tags:
         - Opportunities v1
       security:
@@ -83551,6 +84022,97 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OpportunityApiArraySuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpportunityApiErrorV1"
+        "401":
+          description: API key missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpportunityApiErrorV1"
+        "403":
+          description: RBAC denied for the opportunities resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpportunityApiErrorV1"
+        "404":
+          description: Opportunity or nested resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpportunityApiErrorV1"
+        "409":
+          description: Opportunity state conflicts with the requested operation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpportunityApiErrorV1"
+        "500":
+          description: Unexpected controller or service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpportunityApiErrorV1"
+  /api/v1/opportunities/{id}/declarations/{checkpoint}:
+    put:
+      summary: Edit stage declaration
+      description: Replaces the note (detail) and sources (citations) of the
+        declaration for a reached checkpoint (qualified, assessment, proposed or
+        verbal) without moving the deal and without publishing a stage-changed
+        event. Omitted fields keep their current value; null detail or an empty
+        citations array clears it. Works on closed opportunities. An unreached
+        checkpoint answers 409; won answers 400.
+      tags:
+        - Opportunities v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: opportunities
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Opportunity UUID from opportunities.opportunity_id.
+          required: true
+          description: Opportunity UUID from opportunities.opportunity_id.
+          name: id
+          in: path
+        - schema:
+            type: string
+            enum:
+              - qualified
+              - assessment
+              - proposed
+              - verbal
+              - won
+            description: The stage checkpoint whose declaration is edited. won is refused.
+          required: true
+          description: The stage checkpoint whose declaration is edited. won is refused.
+          name: checkpoint
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AmendOpportunityDeclarationBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpportunityApiSuccessV1"
         "400":
           description: Validation or request parsing failure.
           content:

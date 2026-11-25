@@ -780,7 +780,11 @@ export class TimeEntryService extends BaseService<any> {
         if (!session || (session.status !== 'running' && session.status !== 'paused')) {
           throw new NotFoundError('Active session not found');
         }
-        this.assertServiceIdPresent(data.service_id ?? session.service_id);
+        // A seat technician's session is logged operationally (no service); logSession resolves the mode from
+        // the actor and refuses a commercial field, so only the commercial path pre-checks the service here.
+        if (await resolveTimeEntryMode(trx, context.tenant, context.userId, new RequestLocalAuthorizationCache()) !== 'operational') {
+          this.assertServiceIdPresent(data.service_id ?? session.service_id);
+        }
         return logSession(trx, context.tenant, context.user as IUser, sessionId, {
           end_time: data.end_time,
           notes: data.notes || undefined,
@@ -792,9 +796,12 @@ export class TimeEntryService extends BaseService<any> {
       throw mapStopwatchError(error);
     }
 
-    await publishLoggedSessionEvents(result.persisted, context);
+    for (const persisted of result.persisted) {
+      await publishLoggedSessionEvents(persisted, context);
+    }
 
-    return this.getById(result.persisted.entry.entry_id, context);
+    // The first entry, as before; a multi-day session's other entries are reachable via the session.
+    return this.getById(result.persisted[0].entry.entry_id, context);
   }
 
   /** Abandon the caller's own timer without writing effort (REST cancel-tracking). */

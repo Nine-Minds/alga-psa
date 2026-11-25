@@ -401,4 +401,4 @@ function getTemplate() {
   };
 }
 
-module.exports = { TEMPLATE_NAME, SUBTYPE_NAME, getTemplate };
+module.exports = { TEMPLATE_NAME, SUBTYPE_NAME, COPY, buildBodyHtml, buildText, getTemplate };

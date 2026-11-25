@@ -153,7 +153,8 @@
       "endAfterStartPicker": "End time must be after start time",
       "durationSameDay": "Duration must end on the same day",
       "endSameDay": "End time must be on the same day as start time",
-      "invalidTimeRange": "Enter a valid time range"
+      "invalidTimeRange": "Enter a valid time range",
+      "billableExceedsDuration": "Billable duration cannot exceed total duration"
     },
     "serviceSource": {
       "task": "Default from task",
@@ -531,6 +532,12 @@
     "save": {
       "noPeriod": "No time period covers {{date}}. Pick a day inside a time period.",
       "sheetLocked": "The time sheet for {{date}} is {{status}}. Pick a day on a draft sheet or one with changes requested."
+    },
+    "multiDay": {
+      "notice": "This timer ran across {{count}} days, so it will be saved as one time entry per day. Remove a day to leave its time out.",
+      "dayHeading": "Day {{index}} of {{count}} · {{date}}",
+      "remove": "Remove",
+      "total": "Total: {{duration}}"
     }
   },
   "launch": {

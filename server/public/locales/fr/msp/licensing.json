@@ -453,6 +453,8 @@
       },
       "error": {
         "operationConflict": "Cette demande a déjà été envoyée avec des informations différentes. Actualisez et recommencez.",
+        "trialClaimUnavailable": "Cet essai est déjà utilisé ou a été lancé pour un autre client. Actualisez et réessayez.",
+        "trialSponsorNotEligible": "Cet espace de travail n’est pas éligible à un essai de Seat. Vérifiez l’offre et l’état de facturation du compte.",
         "invalidSeats": "Saisissez un nombre entier de postes, au moins 1.",
         "invalidInvitation": "Choisissez un contact à inviter.",
         "contactNotFound": "Ce contact n'est plus disponible. Choisissez un autre contact.",
@@ -505,8 +507,7 @@
         "save": "Enregistrer les valeurs par défaut du transfert"
       },
       "client": {
-        "seatArrangement": "Accord de postes",
-        "summary": "Accord de postes : {{used}} sur {{count}} postes utilisés"
+        "seatArrangement": "Accord de postes"
       },
       "technicians": {
         "sent": "Invitation envoyée.",
@@ -551,6 +552,13 @@
         "addedUnavailable": "{{name}} a été ajouté mais ne peut pas être invité.",
         "unavailable": "Non listés car inactifs, sans adresse e-mail ou occupant déjà un poste ou une invitation : {{count}}."
       },
+      "trial": {
+        "available": "Un essai gratuit de 15 jours est disponible ci-dessus. Des postes cogérés peuvent être ajoutés à tout moment.",
+        "availableTrialEnables": "Inviter le technicien lance l’essai et active l’informatique cogérée pour ce client. Après les 15 jours, achetez un poste pour conserver le technicien.",
+        "pending": "Une invitation à l’essai de 15 jours attend le technicien. Des postes cogérés peuvent être ajoutés à tout moment.",
+        "active": "L’essai de 15 jours est en cours. Ajoutez des postes cogérés pour conserver le technicien ensuite.",
+        "ended": "L’essai de 15 jours est terminé. Ajoutez des postes cogérés pour conserver le technicien."
+      },
       "chooser": {
         "seat": "Poste",
         "seatHint": "Les techniciens du client travaillent dans votre PSA, limités à leur entreprise.",
@@ -558,7 +566,11 @@
         "workspaceHint": "L’équipe informatique du client dispose de son propre centre de services et escalade vers vous.",
         "description": "Choisissez comment l’équipe informatique de ce client travaille avec vous.",
         "shape": "Modèle cogéré",
-        "pool": "{{available}} sur {{purchased}} postes disponibles. {{allocated}} alloués."
+        "pool": "{{available}} sur {{purchased}} postes disponibles. {{allocated}} alloués.",
+        "poolEmpty": "Aucun poste cogéré pour le moment.",
+        "seatHintAfterTrial": "Ajoutez des postes cogérés pour conserver le technicien après l’essai de 15 jours.",
+        "seatHintTrialCovers": "Le poste d’essai couvre ce technicien jusqu’au {{date}}. Achetez un poste pour le conserver.",
+        "seatHintTrial": "Gratuit pendant 15 jours. Invitez un technicien pour activer l’informatique cogérée pour ce client."
       },
       "states": {
         "active": "Actif",
@@ -606,8 +618,6 @@
     },
     "client": {
       "awaitingAcceptance": "L'administrateur client doit accepter avant que l'accès soit accordé.",
-      "chooseRelationship": "Choisir la relation",
-      "endedHint": "Cette relation est terminée. L'historique conservé et les archives restent disponibles.",
       "endedOn": "Terminée le {{date}}",
       "failedHint": "La configuration n'est pas terminée. Les postes restent réservés ; réessayez pour la poursuivre ou annulez la configuration.",
       "forClient": "Informatique cogérée pour {{name}}",
@@ -616,6 +626,7 @@
       "inconsistentHint": "Une configuration cogérée de ce client renvoie à un enregistrement d’espace de travail appartenant à un autre client. Rien ne peut être géré ni configuré ici tant que le support n’a pas corrigé l’enregistrement.",
       "invitation": "Invitation de l'administrateur",
       "notEnabled": "Informatique cogérée non activée",
+      "notEnabledTrialEnables": "L’informatique cogérée n’est pas encore activée. Démarrer l’essai gratuit de 15 jours d’un poste l’active pour ce client.",
       "progress": "Progression de la configuration",
       "provisioningHint": "Les sièges réservés restent retenus jusqu'à la fin de la configuration ou la confirmation du nettoyage.",
       "relationship": "Relation",
@@ -624,7 +635,6 @@
       "setupHint": "Activez l'informatique cogérée depuis ce client pour réserver des techniciens du client et inviter un administrateur.",
       "tab": "Informatique cogérée",
       "viewDetails": "Voir les détails",
-      "viewHistory": "Voir l'historique",
       "workspace": "Espace de travail client",
       "seatUsage": "{{used}} sur {{count}} postes de technicien",
       "seatAllocation": "{{count}} postes de technicien alloués"

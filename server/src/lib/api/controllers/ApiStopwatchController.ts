@@ -127,7 +127,7 @@ export class ApiStopwatchController extends ApiBaseController {
     });
   }
 
-  /** POST /api/v1/stopwatch/{id}/log - 201 { session, time_entry }. Locked sheet -> 409. */
+  /** POST /api/v1/stopwatch/{id}/log - 201 { session, time_entry (first), time_entries (all) }. Locked sheet -> 409. */
   log() {
     return this.run('create', async (apiRequest) => {
       const id = this.sessionIdFromPath(apiRequest);

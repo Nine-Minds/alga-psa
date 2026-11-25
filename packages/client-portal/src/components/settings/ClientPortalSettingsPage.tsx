@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
 import { ClientDetailsSettings } from './ClientDetailsSettings';
@@ -11,13 +11,12 @@ import { DrawerProvider, DrawerOutlet } from "@alga-psa/ui";
 import { checkClientPortalPermissions } from '../../actions/client-portal-actions/clientUserActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-
-// Tab identifiers (stable, locale-independent keys)
-type TabId = 'account' | 'client-details' | 'user-management' | 'visibility-groups';
-
-// Valid URL slugs
-const VALID_TAB_SLUGS: TabId[] = ['account', 'client-details', 'user-management', 'visibility-groups'];
-const DEFAULT_TAB: TabId = 'account';
+import {
+  coerceClientPortalSettingsTab,
+  resolveClientPortalSettingsSurfaces,
+  type ClientPortalSettingsSurfaces,
+  type ClientPortalSettingsTab,
+} from '../../lib/clientPortalSettingsSurfaces';
 
 export default function ClientPortalSettingsPage() {
   const { t: tProfile } = useTranslation('client-portal');
@@ -26,27 +25,25 @@ export default function ClientPortalSettingsPage() {
   const tabParam = searchParams?.get('tab');
   const hydrationReadyRef = useRef(false);
 
-  const [hasUserManagementAccess, setHasUserManagementAccess] = useState(false);
-  const [hasVisibilityGroupAccess, setHasVisibilityGroupAccess] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  // null until permissions have loaded, so no tab the user may not see is ever flashed.
+  const [surfaces, setSurfaces] = useState<ClientPortalSettingsSurfaces | null>(null);
+  const [selectedTab, setSelectedTab] = useState<ClientPortalSettingsTab | null>(null);
 
-  // Determine initial tab from URL or default
-  const initialTabId = useMemo(() => {
-    if (tabParam && VALID_TAB_SLUGS.includes(tabParam.toLowerCase() as TabId)) {
-      return tabParam.toLowerCase() as TabId;
-    }
-    return DEFAULT_TAB;
-  }, [tabParam]);
-
-  const [activeTab, setActiveTab] = useState<TabId>(initialTabId);
+  const defaultTab = surfaces?.tabs[0];
+  // ?tab= is honoured only if permitted; otherwise coerced to the first permitted tab.
+  const urlTab = useMemo(
+    () => (surfaces ? coerceClientPortalSettingsTab(tabParam, surfaces) : undefined),
+    [surfaces, tabParam],
+  );
+  const activeTab = selectedTab ?? urlTab;
 
   // Update URL when tab changes (after hydration)
-  const updateURL = useCallback((tabId: TabId) => {
+  const updateURL = useCallback((tabId: ClientPortalSettingsTab) => {
     if (!hydrationReadyRef.current) return;
 
     const currentSearchParams = new URLSearchParams(window.location.search);
 
-    if (tabId !== DEFAULT_TAB) {
+    if (tabId !== defaultTab) {
       currentSearchParams.set('tab', tabId);
     } else {
       currentSearchParams.delete('tab');
@@ -57,33 +54,35 @@ export default function ClientPortalSettingsPage() {
       : '/client-portal/client-settings';
 
     window.history.pushState({}, '', newUrl);
-  }, []);
+  }, [defaultTab]);
 
-  // Handle client-side initialization and URL changes
   useEffect(() => {
     hydrationReadyRef.current = true;
+  }, []);
 
-    setActiveTab((prev) => (prev === initialTabId ? prev : initialTabId));
-  }, [initialTabId]);
+  // A changed URL (e.g. back button) takes over from the last clicked tab.
+  useEffect(() => {
+    setSelectedTab(null);
+  }, [tabParam]);
 
-  // Handle tab change with URL synchronization
   const handleTabChange = useCallback((tabId: string) => {
-    const nextTab = tabId as TabId;
-    setActiveTab(nextTab);
+    const nextTab = tabId as ClientPortalSettingsTab;
+    setSelectedTab(nextTab);
     updateURL(nextTab);
   }, [updateURL]);
 
   useEffect(() => {
+    let mounted = true;
     const checkPermissions = async () => {
       const permissions = await checkClientPortalPermissions();
-      setHasUserManagementAccess(permissions.hasUserManagementAccess);
-      setHasVisibilityGroupAccess(permissions.hasVisibilityGroupAccess);
-      setIsLoading(false);
+      if (!mounted) return;
+      setSurfaces(resolveClientPortalSettingsSurfaces(permissions));
     };
     checkPermissions();
+    return () => { mounted = false; };
   }, []);
 
-  if (isLoading) {
+  if (!surfaces) {
     return (
       <div className="flex items-center justify-center py-8">
         <LoadingIndicator
@@ -95,35 +94,34 @@ export default function ClientPortalSettingsPage() {
     );
   }
 
-  const tabs = [
-    {
-      id: 'account',
+  // The server route guard 404s this case; nothing to render client-side either.
+  if (!activeTab) return null;
+
+  const tabContent: Record<ClientPortalSettingsTab, { label: string; content: React.ReactNode }> = {
+    'account': {
       label: tProfile('clientSettings.tabs.account'),
-      content: <ClientAccount />
+      content: (
+        <ClientAccount
+          showPlanCard={surfaces.showPlanCard}
+          showInvoicesCard={surfaces.showInvoicesCard}
+        />
+      ),
     },
-    {
-      id: 'client-details',
+    'client-details': {
       label: tProfile('clientSettings.tabs.clientDetails'),
-      content: <ClientDetailsSettings />
-    }
-  ];
-
-  // Only add User Management tab if user has permission
-  if (hasUserManagementAccess) {
-    tabs.push({
-      id: 'user-management',
+      content: <ClientDetailsSettings />,
+    },
+    'user-management': {
       label: tProfile('clientSettings.tabs.userManagement'),
-      content: <UserManagementSettings />
-    });
-  }
-
-  if (hasVisibilityGroupAccess) {
-    tabs.push({
-      id: 'visibility-groups',
+      content: <UserManagementSettings />,
+    },
+    'visibility-groups': {
       label: tProfile('clientSettings.tabs.visibilityGroups'),
-      content: <VisibilityGroupsSettings />
-    });
-  }
+      content: <VisibilityGroupsSettings />,
+    },
+  };
+
+  const tabs = surfaces.tabs.map((id) => ({ id, ...tabContent[id] }));
 
   return (
     <DrawerProvider>

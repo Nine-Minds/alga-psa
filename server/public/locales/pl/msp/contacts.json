@@ -288,7 +288,8 @@
     },
     "primary": {
       "title": "Główny adres e-mail",
-      "description": "Ten adres pozostaje domyślnym adresem zapisanym w rekordzie kontaktu"
+      "description": "Ten adres pozostaje domyślnym adresem zapisanym w rekordzie kontaktu",
+      "keepOldEmail": "Zachowaj {{email}} jako dodatkowy e-mail"
     },
     "row": {
       "title": "Dodatkowy e-mail {{number}}",

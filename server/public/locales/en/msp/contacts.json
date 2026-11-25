@@ -288,7 +288,8 @@
     },
     "primary": {
       "title": "Primary email",
-      "description": "This remains the default address stored on the contact record"
+      "description": "This remains the default address stored on the contact record",
+      "keepOldEmail": "Keep {{email}} as an additional email"
     },
     "row": {
       "title": "Additional email {{number}}",

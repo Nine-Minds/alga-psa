@@ -341,6 +341,25 @@ const TEMPLATES = [
     },
   },
 
+  // ── ticket-board-client-reply-unassigned ─────────────────────────────
+  // Sent to users selected by a board notification rule when a client replies
+  // on a ticket that has no assignee (client-reply trigger).
+  {
+    templateName: 'ticket-board-client-reply-unassigned',
+    subtypeName: 'ticket-board-client-reply-unassigned',
+    translations: {
+      en: { title: 'Client reply, nobody assigned on {{boardName}}', message: '{{contactName}} ({{clientName}}) replied to ticket #{{ticketId}} "{{ticketTitle}}" on board {{boardName}}. The ticket has no assignee: {{commentPreview}}' },
+      fr: { title: 'Réponse du client, ticket non assigné sur {{boardName}}', message: '{{contactName}} ({{clientName}}) a répondu au ticket #{{ticketId}} "{{ticketTitle}}" sur le tableau {{boardName}}. Le ticket n\'a pas de responsable : {{commentPreview}}' },
+      es: { title: 'Respuesta del cliente, ticket sin asignar en {{boardName}}', message: '{{contactName}} ({{clientName}}) respondió al ticket #{{ticketId}} "{{ticketTitle}}" en el tablero {{boardName}}. El ticket no tiene responsable asignado: {{commentPreview}}' },
+      de: { title: 'Kundenantwort, Ticket ohne Zuweisung auf {{boardName}}', message: '{{contactName}} ({{clientName}}) hat auf Ticket #{{ticketId}} "{{ticketTitle}}" auf dem Board {{boardName}} geantwortet. Das Ticket ist niemandem zugewiesen: {{commentPreview}}' },
+      nl: { title: 'Reactie van de klant, ticket niet toegewezen op {{boardName}}', message: '{{contactName}} ({{clientName}}) heeft gereageerd op ticket #{{ticketId}} "{{ticketTitle}}" op bord {{boardName}}. Het ticket is aan niemand toegewezen: {{commentPreview}}' },
+      it: { title: 'Risposta del cliente, ticket non assegnato su {{boardName}}', message: '{{contactName}} ({{clientName}}) ha risposto al ticket #{{ticketId}} "{{ticketTitle}}" sulla bacheca {{boardName}}. Il ticket non è assegnato a nessuno: {{commentPreview}}' },
+      pl: { title: 'Odpowiedź klienta, zgłoszenie nieprzypisane na tablicy {{boardName}}', message: '{{contactName}} ({{clientName}}) odpowiedział(a) na zgłoszenie #{{ticketId}} "{{ticketTitle}}" na tablicy {{boardName}}. Zgłoszenie nie ma przypisanej osoby: {{commentPreview}}' },
+      pt: { title: 'Resposta do cliente, ticket sem responsável em {{boardName}}', message: '{{contactName}} ({{clientName}}) respondeu ao ticket #{{ticketId}} "{{ticketTitle}}" no quadro {{boardName}}. O ticket não tem responsável: {{commentPreview}}' },
+      sv: { title: 'Kundsvar, ärendet är otilldelat på {{boardName}}', message: '{{contactName}} ({{clientName}}) svarade på ärende #{{ticketId}} ”{{ticketTitle}}” på tavlan {{boardName}}. Ärendet är inte tilldelat någon: {{commentPreview}}' },
+    },
+  },
+
   // ── ticket-handed-to-client-it ───────────────────────────────────────
   // Co-managed seat: MSP staff handed a ticket to the client's technicians.
   {

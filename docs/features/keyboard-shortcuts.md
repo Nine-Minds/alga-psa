@@ -108,6 +108,28 @@ inside it registers the shortcut. It takes priority over the page-level
 saves the panel form rather than the underlying page. The shortcut is wired up
 in: ticket details panel, client quick-view panel, and contact details panel.
 
+### Designer focus mode
+
+Every in-app designer has a focus mode that expands the editor to fill the
+whole browser window, hiding the app sidebar and header. It covers the invoice
+layout designer, the quote and document layout editors, the workflow designer
+(designer view only; the workflow list keeps the normal app chrome) and the
+service request Form Studio builder.
+
+| Action | macOS | Windows / Linux |
+|--------|-------|-----------------|
+| Enter or leave focus mode (`designer.toggleFocusMode`) | ⌘. | Ctrl+. |
+
+- Each designer also has a focus-mode toggle button in its toolbar.
+- The shortcut works while a text field in the designer is focused, and keeps
+  working while the designer's `editor` scope is active.
+- Switching in or out does not reload the editor, so undo history and unsaved
+  edits are kept.
+- The choice is remembered per designer on the user's account, so a designer
+  reopens in the mode it was last left in.
+- The invoice designer switches the canvas to 100% zoom in focus mode and
+  restores the previous zoom on exit.
+
 ## Customizing Shortcuts
 
 Navigate to **Profile → Keyboard Shortcuts** to manage personal bindings.

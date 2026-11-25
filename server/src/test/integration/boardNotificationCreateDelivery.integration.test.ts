@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import Handlebars from 'handlebars';
+import { createRequire } from 'node:module';
 import { runWithTenant, tenantDb } from '@alga-psa/db';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
@@ -10,7 +12,7 @@ import { createClient, createTenant, createUser } from '../../../test-utils/test
  * Board notification rule, trigger "created": delivered inside both existing handleTicketCreated
  * handlers (email + in-app). Rule recipients are never assigned and never added to the watch list.
  */
-const sent: Array<{ to: string; template: string; recipientUserId?: string; replyContext?: Record<string, unknown> }> = [];
+const sent: Array<{ to: string; template: string; recipientUserId?: string; replyContext?: Record<string, unknown>; context?: any }> = [];
 let testDb: Knex;
 const deniedUserIds = new Set<string>();
 const publishedBusEvents: Array<{ eventType: string; payload: Record<string, any> }> = [];
@@ -42,8 +44,8 @@ vi.mock('../../lib/db', async (importOriginal) => ({
 
 vi.mock('../../lib/notifications/sendEventEmail', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../lib/notifications/sendEventEmail')>()),
-  sendEventEmail: vi.fn(async (params: { to: string; template: string; recipientUserId?: string; replyContext?: Record<string, unknown> }) => {
-    sent.push({ to: params.to, template: params.template, recipientUserId: params.recipientUserId, replyContext: params.replyContext });
+  sendEventEmail: vi.fn(async (params: { to: string; template: string; recipientUserId?: string; replyContext?: Record<string, unknown>; context?: any }) => {
+    sent.push({ to: params.to, template: params.template, recipientUserId: params.recipientUserId, replyContext: params.replyContext, context: params.context });
   }),
 }));
 
@@ -256,6 +258,74 @@ describe('board notification rules: create trigger delivery (integration)', () =
       expect(await inAppFor(ticketId, 'ticket-board-created')).toContain(users.watcher);
     } finally {
       await scoped.table('board_notification_rule_recipients').where({ rule_id: ruleId, user_id: users.watcher }).delete();
+    }
+  });
+
+  // alga-2026-0003184: internal ticket-created recipients render the HTML Description.
+  const tableDescription = JSON.stringify([{
+    type: 'table',
+    content: {
+      type: 'tableContent',
+      rows: [{ cells: [
+        { type: 'tableCell', props: {}, content: [{ type: 'text', text: 'Host', styles: { bold: true } }] },
+        { type: 'tableCell', props: {}, content: [{ type: 'text', text: 'stadium-fw01', styles: {} }] },
+      ] }],
+    },
+  }]);
+  const renderCreated = (email: { context?: any }) => {
+    const { getTemplate } = createRequire(import.meta.url)('../../../migrations/utils/templates/email/tickets/ticketCreated.cjs');
+    const en = getTemplate().translations.find((t: any) => t.language === 'en');
+    return { html: Handlebars.compile(en.htmlContent)(email.context), text: Handlebars.compile(en.textContent)(email.context) };
+  };
+
+  it('an internal watcher and the assignee get a ticket-created email whose Description is a table', async () => {
+    const ticketId = await createTicketRow({
+      assigned_to: users.assignee,
+      attributes: JSON.stringify({ description: tableDescription, watch_list: [{ email: 'watcher@example.com', active: true }] }),
+    });
+    await runWithTenant(tenant, () => emailHandler(event(ticketId)));
+
+    for (const to of ['watcher@example.com', 'assignee@example.com']) {
+      const mails = sent.filter((email) => email.to === to && email.template === 'ticket-created');
+      expect(mails).toHaveLength(1);
+      const { html, text } = renderCreated(mails[0]);
+      const box = html.slice(html.indexOf('Description'));
+      expect(box).toMatch(/<table[\s>]/);
+      expect(box).toMatch(/<td[^>]*>[\s\S]*?stadium-fw01[\s\S]*?<\/td>/);
+      expect(text).toContain('stadium-fw01');
+    }
+  });
+
+  it('a rule user who is also an active watcher gets one ticket-created email with a tabular Description', async () => {
+    const ruleId = (await scoped.table('board_notification_rules').where({ board_id: boardId }).first()).rule_id;
+    await scoped.table('board_notification_rule_recipients').insert({ tenant, rule_id: ruleId, recipient_type: 'user', user_id: users.watcher });
+    try {
+      const ticketId = await createTicketRow({
+        attributes: JSON.stringify({ description: tableDescription, watch_list: [{ email: 'watcher@example.com', active: true }] }),
+      });
+      await runWithTenant(tenant, () => emailHandler(event(ticketId)));
+      const mails = sent.filter((email) => email.to === 'watcher@example.com');
+      expect(mails.map((m) => m.template)).toEqual(['ticket-created']);
+      const { html } = renderCreated(mails[0]);
+      const box = html.slice(html.indexOf('Description'));
+      expect(box).toMatch(/<table[\s>]/);
+      expect(box).toMatch(/<td[^>]*>[\s\S]*?stadium-fw01[\s\S]*?<\/td>/);
+    } finally {
+      await scoped.table('board_notification_rule_recipients').where({ rule_id: ruleId, user_id: users.watcher }).delete();
+    }
+  });
+
+  it('every ticket-created send carries descriptionHtml; an empty description gives the escaped fallback paragraph', async () => {
+    const ticketId = await createTicketRow({
+      assigned_to: users.assignee,
+      attributes: JSON.stringify({ watch_list: [{ email: 'watcher@example.com', active: true }] }),
+    });
+    await runWithTenant(tenant, () => emailHandler(event(ticketId)));
+    const created = sent.filter((email) => email.template === 'ticket-created');
+    expect(created.length).toBeGreaterThan(0);
+    for (const mail of created) {
+      expect(mail.context.ticket.descriptionHtml).toBe('<p>No description provided.</p>');
+      expect(renderCreated(mail).html).toContain('<p>No description provided.</p>');
     }
   });
 

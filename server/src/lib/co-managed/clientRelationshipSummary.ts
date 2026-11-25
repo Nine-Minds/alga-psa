@@ -39,3 +39,9 @@ export function resolveClientRelationshipSummary(
   if (!selected) return { kind: 'absent' };
   return selected.ended ? { kind: 'ended', relationship: selected } : { kind: 'live', relationship: selected };
 }
+
+/** Whether this view offers to set the client up (the workspace setup, or the shape chooser around it). */
+export function workspaceSetupOpen(view: CoManagedClientManagementView): boolean {
+  return !view.relationships.some((entry) => !entry.ended) && !view.relationships.some((entry) => entry.retained)
+    && !view.inconsistent && view.canManage;
+}

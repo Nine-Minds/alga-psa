@@ -237,9 +237,11 @@ describe('StopwatchApiService and legacy tracking adapters (real DB)', () => {
     it('log writes one entry on the resolved sheet and returns { session, time_entry }', async () => {
       const { ctx, sheetId } = await userWithSheet('api-log');
       const started = await asTenant(() => stopwatch.start({ work_item_type: 'ticket', work_item_id: bucket.ticketId, service_id: bucket.serviceId, notes: 'to log' }, ctx));
-      const { session, time_entry } = await asTenant(() => stopwatch.log(started.session_id, {}, ctx));
+      const { session, time_entry, time_entries } = await asTenant(() => stopwatch.log(started.session_id, {}, ctx));
       expect(session.status).toBe('logged');
       expect(session.time_entry_id).toBe(time_entry.entry_id);
+      expect(session.time_entry_ids).toEqual([time_entry.entry_id]);
+      expect(time_entries).toEqual([time_entry]);
       expect(time_entry).toMatchObject({
         user_id: ctx.userId,
         time_sheet_id: sheetId,
@@ -252,6 +254,27 @@ describe('StopwatchApiService and legacy tracking adapters (real DB)', () => {
       expect(await tenantDb(db, tenantId).table('time_entries').where({ user_id: ctx.userId })).toHaveLength(1);
       await expectError(asTenant(() => stopwatch.log(started.session_id, {}, ctx)), ConflictError);
       expect(await asTenant(() => stopwatch.getActive(ctx))).toBeNull();
+    });
+
+    it('log splits a session that crossed midnight into one entry per work day: time_entry is the first, time_entries all', async () => {
+      const { ctx, sheetId } = await userWithSheet('api-log-midnight');
+      const started = await asTenant(() => stopwatch.start({ work_item_type: 'ticket', work_item_id: bucket.ticketId, service_id: bucket.serviceId, notes: 'late night' }, ctx));
+      await asTenant(() => stopwatch.pause(started.session_id, ctx));
+      // Rewrite the single segment to 90 minutes either side of the last UTC midnight (the user's zone is UTC).
+      const midnight = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`).getTime();
+      await tenantDb(db, tenantId).table('time_tracking_session_segments')
+        .where({ session_id: started.session_id })
+        .update({ started_at: new Date(midnight - 90 * 60_000), ended_at: new Date(midnight + 90 * 60_000) });
+
+      const { session, time_entry, time_entries } = await asTenant(() => stopwatch.log(started.session_id, {}, ctx));
+
+      expect(time_entries).toHaveLength(2);
+      expect(time_entry.entry_id).toBe(time_entries[0].entry_id);
+      expect(session.time_entry_id).toBe(time_entries[0].entry_id);
+      expect(session.time_entry_ids).toEqual(time_entries.map((e) => e.entry_id));
+      expect(time_entries.map((e) => Number(e.billable_duration))).toEqual([89, 90]);
+      expect(time_entries.every((e) => e.time_sheet_id === sheetId)).toBe(true);
+      expect(await tenantDb(db, tenantId).table('time_entries').where({ user_id: ctx.userId })).toHaveLength(2);
     });
 
     it('log honours caller overrides; a missing service is a 400', async () => {

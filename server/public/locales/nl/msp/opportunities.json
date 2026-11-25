@@ -471,7 +471,8 @@
       "whitespaceSuggestionCreated": "Suggestie klaar voor beoordeling",
       "whitespaceSuggestionDismissed": "Dit voorstel werd eerder verworpen",
       "whitespaceSuggestionKnown": "Deze suggestie is al bekend",
-      "won": "Gewonnen"
+      "won": "Gewonnen",
+      "evidenceSaved": "Onderbouwing opgeslagen"
     },
     "type": {
       "expansion": "Uitbreiding",
@@ -569,14 +570,25 @@
     },
     "declare": {
       "title": "Verplaats naar {{stage}}",
-      "sourceLabel": "Ondersteunende bron",
-      "noSource": "Geen bron",
-      "sourceHelp": "Optioneel. Verwijs naar een interactie of document van deze deal. Voeg een document eerst aan de deal toe als het niet in de lijst staat.",
+      "sourceHelp": "Optioneel. Verwijs naar interacties of documenten van deze deal. Voeg een document eerst aan de deal toe als het niet in de lijst staat.",
       "submit": "Vastleggen",
       "source": "Bron",
       "sourceRemoved": "Bron verwijderd",
       "interactionFallback": "Interactie",
-      "documentFallback": "Document"
+      "documentFallback": "Document",
+      "editTitle": "Onderbouwing voor {{stage}}",
+      "noteLabel": "Notitie",
+      "notePlaceholder": "Waaruit blijkt dat de deal in deze fase zit?",
+      "sourcesLabel": "Onderbouwende bronnen",
+      "groupInteractions": "Interacties",
+      "groupDocuments": "Documenten",
+      "removeSource": "Bron verwijderen",
+      "sourcesLoading": "Bronnen laden…",
+      "addSource": "Bron toevoegen",
+      "noSourcesAvailable": "Geen andere interacties of documenten bij deze deal",
+      "save": "Opslaan",
+      "editEvidence": "Onderbouwing bewerken",
+      "addEvidence": "Onderbouwing toevoegen"
     }
   }
 }

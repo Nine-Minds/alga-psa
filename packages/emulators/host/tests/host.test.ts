@@ -1,10 +1,50 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { createServer, connect } from 'node:net';
+import { createServer, connect, type Server } from 'node:net';
 import { once } from 'node:events';
+import { readFileSync } from 'node:fs';
 import type { Router } from 'express';
 import { EmulatorHost } from '../src/host';
 import type { ControlRegistry, EmulatorCore, EmulatorPackage, HostEnv } from '../src/types';
+
+/** Lowest port the kernel may hand out for `listen(0)`. */
+function ephemeralPortFloor(): number {
+  try {
+    const [low] = readFileSync('/proc/sys/net/ipv4/ip_local_port_range', 'utf8').trim().split(/\s+/);
+    const parsed = Number(low);
+    if (Number.isInteger(parsed) && parsed > 1024) return parsed;
+  } catch {
+    // Not Linux: fall through to the IANA dynamic range floor (macOS, Windows).
+  }
+  return 32768;
+}
+
+/**
+ * Occupy a port that `listen(0)` can never be assigned. A test that frees a
+ * port and binds it again must not draw it from the ephemeral range: once
+ * released, any concurrent `listen(0)` — this host's own vendor surface or a
+ * parallel test file — may be handed it first, failing the rebind with
+ * EADDRINUSE.
+ */
+async function occupyNonEphemeralPort(): Promise<{ server: Server; port: number }> {
+  const ceiling = ephemeralPortFloor();
+  const floor = Math.max(1025, ceiling - 12000);
+  const span = ceiling - floor;
+  const offset = Math.floor(Math.random() * span);
+  for (let i = 0; i < span; i += 1) {
+    const port = floor + ((offset + i) % span);
+    const server = createServer();
+    try {
+      server.listen(port);
+      await once(server, 'listening');
+      return { server, port };
+    } catch (error) {
+      server.close();
+      if ((error as NodeJS.ErrnoException).code !== 'EADDRINUSE') throw error;
+    }
+  }
+  throw new Error(`No free port in [${floor}, ${ceiling})`);
+}
 
 /** Minimal but complete emulator: a counter with one action, view, seeder, and domain fault. */
 class CounterCore implements EmulatorCore {
@@ -97,12 +137,10 @@ describe('EmulatorHost', () => {
   }
 
   it('closes a started vendor socket after a control-port collision and can retry', async () => {
-    const occupied = createServer();
-    occupied.listen(0);
-    await once(occupied, 'listening');
-    const address = occupied.address();
-    if (!address || typeof address === 'string') throw new Error('Expected TCP listener');
-    const controlPort = address.port;
+    // The retry below rebinds this port after releasing it, so it must come
+    // from outside the ephemeral range (see occupyNonEphemeralPort).
+    const { server: occupied, port: controlPort } = await occupyNonEphemeralPort();
+    expect(controlPort).toBeLessThan(ephemeralPortFloor());
     let vendorPort = 0;
     const probeSocket = () => new Promise<void>((resolve, reject) => {
       const socket = connect({ host: '127.0.0.1', port: vendorPort });

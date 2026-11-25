@@ -453,6 +453,8 @@
       },
       "error": {
         "operationConflict": "This request was already sent with different details. Refresh and start again.",
+        "trialClaimUnavailable": "This trial is already in use or was started for another client. Refresh and try again.",
+        "trialSponsorNotEligible": "This workspace is not eligible for a Seat trial. Check the account's plan and billing status.",
         "invalidSeats": "Enter a whole number of seats, at least 1.",
         "invalidInvitation": "Choose a contact to invite.",
         "contactNotFound": "This contact is no longer available. Choose another contact.",
@@ -505,8 +507,7 @@
         "save": "Save handoff defaults"
       },
       "client": {
-        "seatArrangement": "Seat arrangement",
-        "summary": "Seat arrangement: {{used}} of {{count}} seats used"
+        "seatArrangement": "Seat arrangement"
       },
       "technicians": {
         "sent": "Invitation sent.",
@@ -551,6 +552,13 @@
         "addedUnavailable": "{{name}} was added but cannot be invited.",
         "unavailable": "Not listed because they are inactive, have no email address, or already hold a seat or invitation: {{count}}."
       },
+      "trial": {
+        "available": "A free 15-day trial is available above. Co-managed seats can be added at any time.",
+        "availableTrialEnables": "Inviting the technician starts the trial and enables co-managed IT for this client. After the 15 days, buy a seat to keep the technician.",
+        "pending": "A 15-day trial invitation is waiting for the technician. Co-managed seats can be added at any time.",
+        "active": "The 15-day trial is running. Add co-managed seats to keep the technician afterwards.",
+        "ended": "The 15-day trial has ended. Add co-managed seats to keep the technician."
+      },
       "chooser": {
         "seat": "Seat",
         "seatHint": "The client's technicians work in your PSA, limited to their company.",
@@ -558,7 +566,11 @@
         "workspaceHint": "The client's IT team gets its own service desk and escalates to you.",
         "description": "Choose how this client's IT team works with you.",
         "shape": "Co-managed shape",
-        "pool": "{{available}} of {{purchased}} seats available. {{allocated}} allocated."
+        "pool": "{{available}} of {{purchased}} seats available. {{allocated}} allocated.",
+        "poolEmpty": "No co-managed seats yet.",
+        "seatHintAfterTrial": "Add co-managed seats to keep the technician after the 15-day trial.",
+        "seatHintTrialCovers": "The trial seat covers this technician until {{date}}. Buy a seat to keep them.",
+        "seatHintTrial": "Free for 15 days. Invite a technician to enable co-managed IT for this client."
       },
       "states": {
         "active": "Active",
@@ -606,8 +618,6 @@
     },
     "client": {
       "awaitingAcceptance": "The customer administrator must accept before access is granted.",
-      "chooseRelationship": "Choose relationship",
-      "endedHint": "This relationship has ended. Retained history and archives remain available.",
       "endedOn": "Ended {{date}}",
       "failedHint": "Setup did not finish. Seats stay reserved; retry to continue it, or cancel the setup.",
       "forClient": "Co-managed IT for {{name}}",
@@ -616,6 +626,7 @@
       "inconsistentHint": "A co-managed setup for this client points to a workspace record that belongs to a different client. Nothing can be managed or set up here until support corrects the record.",
       "invitation": "Administrator invitation",
       "notEnabled": "Co-managed IT not enabled",
+      "notEnabledTrialEnables": "Co-managed IT is not enabled yet. Starting the free 15-day Seat trial enables it for this client.",
       "progress": "Setup progress",
       "provisioningHint": "Reserved seats stay held until setup completes or cleanup is acknowledged.",
       "relationship": "Relationship",
@@ -624,7 +635,6 @@
       "setupHint": "Enable co-managed IT from this client to reserve customer technicians and invite an administrator.",
       "tab": "Co-managed IT",
       "viewDetails": "View details",
-      "viewHistory": "View history",
       "workspace": "Customer workspace",
       "seatUsage": "{{used}} of {{count}} technician seats",
       "seatAllocation": "{{count}} allocated technician seats"

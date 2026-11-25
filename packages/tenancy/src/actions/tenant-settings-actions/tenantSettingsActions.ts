@@ -4,13 +4,12 @@ import { withAuth, hasPermission, type AuthContext } from '@alga-psa/auth';
 import { featureFlags } from '@alga-psa/core/server';
 import { validateStorableTimeZone } from '@alga-psa/core/timeZones';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { isLicensedUserType } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { WizardData } from '@alga-psa/types';
 import type { Knex } from 'knex';
-import { hasTenantSettingsUpdate } from '../tenant-actions/tenantSettingsAuthorization';
 import { persistTenantOnboardingProgress } from '../../server/onboardingProgress';
-import { mergeTenantSettingsJson, readTenantSettingsJson, readTenantSettingsRow } from '../../server/tenantSettingsStore';
-import { isLicensedUserType } from '@alga-psa/types';
+import { hasTenantSettingsUpdate } from '../tenant-actions/tenantSettingsAuthorization';
 import {
   actionError,
   permissionError,
@@ -70,10 +69,6 @@ function tenantSettingsActionErrorFrom(error: unknown): TenantSettingsActionErro
   return null;
 }
 
-const DEFAULT_EXPERIMENTAL_FEATURES: ExperimentalFeatures = {
-  aiAssistant: false,
-};
-
 const AI_ASSISTANT_ACTIVATION_FLAG = 'ai-assistant-activation';
 const WIZARD_DATA_KEYS = new Set([
   'firstName', 'lastName', 'tenantName', 'email', 'newPassword', 'confirmPassword', 'locale',
@@ -92,21 +87,28 @@ function isWizardDataPatch(value: unknown): value is Partial<WizardData> {
     Object.keys(value).every((key) => WIZARD_DATA_KEYS.has(key));
 }
 
+// Keep the worker-safe implementation out of the client action module graph.
+// These imports are evaluated only when a server action executes.
+const getExperimentalFeaturesForTenant = async (tenant: string, user?: Pick<IUserWithRoles, 'user_id' | 'user_type'>) =>
+  (await import('./tenantSettings.server')).getExperimentalFeaturesForTenant(tenant, user);
+
+const getTenantTimezone = async (tenant: string) =>
+  (await import('./tenantSettings.server')).getTenantTimezone(tenant);
+
+const initializeTenantSettingsForTenant = async (tenant: string) =>
+  (await import('./tenantSettings.server')).initializeTenantSettings(tenant);
+
 const tenantSettingsQuery = (knex: Knex, tenant: string) =>
   tenantDb(knex, tenant).table('tenant_settings');
 
-function normalizeExperimentalFeatures(value: unknown): ExperimentalFeatures {
-  if (!value || typeof value !== 'object') {
-    return { ...DEFAULT_EXPERIMENTAL_FEATURES };
-  }
+const getTenantSettingsForTenant = async (tenant: string): Promise<TenantSettings | null> => {
+  const { knex } = await createTenantKnex(tenant);
+  const settings = await tenantSettingsQuery(knex, tenant)
+    .select('*')
+    .first();
 
-  const record = value as Record<string, unknown>;
-  return {
-    aiAssistant: record.aiAssistant === true,
-  };
-}
-
-const getTenantSettingsForTenant = (tenant: string): Promise<TenantSettings | null> => readTenantSettingsRow(tenant);
+  return (settings as TenantSettings | undefined) || null;
+};
 
 async function canTenantActivateAiAssistant(
   tenant: string,
@@ -128,18 +130,6 @@ export const getTenantSettings = withAuth(async (
   if (!canRead && !canRunSetup) throw new Error('Permission denied: Cannot read tenant settings');
   return getTenantSettingsForTenant(tenant);
 });
-export const getExperimentalFeaturesForTenant = async (
-  tenant: string,
-  user?: Pick<IUserWithRoles, 'user_id' | 'user_type'>
-): Promise<ExperimentalFeatures> => {
-  const settings = await getTenantSettingsForTenant(tenant);
-  const features = normalizeExperimentalFeatures(settings?.settings?.experimentalFeatures);
-  if (!(await canTenantActivateAiAssistant(tenant, user))) {
-    features.aiAssistant = false;
-  }
-
-  return features;
-};
 
 export const getExperimentalFeatures = withAuth(async (
   user: IUserWithRoles,
@@ -180,7 +170,9 @@ export const updateExperimentalFeatures = withAuth(async (
       ...features,
     };
 
-    await mergeTenantSettingsJson(tenant, { experimentalFeatures: merged });
+    await updateTenantSettings({
+      experimentalFeatures: merged,
+    });
   } catch (error) {
     console.error('Error updating experimental features:', error);
     const expected = tenantSettingsActionErrorFrom(error);
@@ -210,7 +202,7 @@ export const updateTenantOnboardingStatus = withAuth(async (
     throw new Error('Invalid tenant onboarding update.');
   }
   try {
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
 
     // Use a literal timestamp for Citus compatibility
     const now = new Date();
@@ -260,7 +252,7 @@ export const saveTenantOnboardingProgress = withAuth(async (
   if (!isLicensedUserType(user.user_type) || !(await hasPermission(user, 'settings', 'update'))) throw new Error('Permission denied: Workspace setup access required');
   if (!isWizardDataPatch(wizardData)) throw new Error('Invalid tenant onboarding progress.');
   try {
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
     await persistTenantOnboardingProgress(knex, tenant, wizardData);
   } catch (error) {
     console.error('Error saving tenant onboarding progress:', error);
@@ -274,11 +266,11 @@ export const clearTenantOnboardingData = withAuth(async (
 ): Promise<void | TenantSettingsActionError> => {
   try {
     // Check if user has admin permissions
-    if (!isLicensedUserType(user.user_type) || !(await hasPermission(user, 'settings', 'update')) || !user.roles.some((role: any) => role.role_name === 'admin')) {
+    if (!isLicensedUserType(user.user_type) || !(await hasTenantSettingsUpdate(user, tenant)) || !user.roles.some((role: any) => role.role_name === 'admin')) {
       return permissionError('Permission denied: Only admin users can clear onboarding data.', 'msp/settings:errors.tenantSettings.permissions.clearOnboarding');
     }
 
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
 
     // Use a literal timestamp for Citus compatibility
     const now = new Date();
@@ -297,13 +289,120 @@ export const clearTenantOnboardingData = withAuth(async (
   }
 });
 
+const normalizeSettingsRecord = (value: unknown): Record<string, any> => {
+  if (!value) return {};
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      return parsed && typeof parsed === 'object' ? (parsed as Record<string, any>) : {};
+    } catch {
+      return {};
+    }
+  }
+  return typeof value === 'object' ? (value as Record<string, any>) : {};
+};
+
+const getCurrentTenantSettingsJson = async (tenant: string): Promise<Record<string, any>> => {
+  const { knex } = await createTenantKnex(tenant);
+  const row = await tenantSettingsQuery(knex, tenant)
+    .select('settings')
+    .first();
+  return normalizeSettingsRecord(row?.settings);
+};
+
+const upsertTenantSettingsJson = async (tenant: string, updatedSettings: Record<string, any>): Promise<void> => {
+  const { knex } = await createTenantKnex(tenant);
+  const now = new Date();
+
+  await tenantSettingsQuery(knex, tenant)
+    .insert({
+      tenant,
+      settings: JSON.stringify(updatedSettings),
+      updated_at: now,
+    })
+    .onConflict('tenant')
+    .merge({
+      settings: JSON.stringify(updatedSettings),
+      updated_at: now,
+    });
+};
+
+const updateTenantSettingsInternal = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext,
+  settings: Record<string, any>
+): Promise<void> => {
+  try {
+    const currentSettings = await getCurrentTenantSettingsJson(tenant);
+    const updatedSettings = {
+      ...currentSettings,
+      ...settings,
+    };
+
+    await upsertTenantSettingsJson(tenant, updatedSettings);
+  } catch (error) {
+    console.error('Error updating tenant settings:', error);
+    throw error;
+  }
+});
+
+const updateTenantAnalyticsSettingsInternal = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext,
+  analyticsSettings: Record<string, any>
+): Promise<void> => {
+  try {
+    const currentSettings = await getCurrentTenantSettingsJson(tenant);
+    const currentAnalytics = normalizeSettingsRecord(currentSettings.analytics);
+    const updatedSettings = {
+      ...currentSettings,
+      analytics: {
+        ...currentAnalytics,
+        ...analyticsSettings,
+        last_updated_at: new Date().toISOString(),
+      },
+    };
+
+    await upsertTenantSettingsJson(tenant, updatedSettings);
+  } catch (error) {
+    console.error('Error updating tenant analytics settings:', error);
+    throw error;
+  }
+});
+
+export const updateTenantSettings = withAuth(async (
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
+  settings: Record<string, any>
+): Promise<void | TenantSettingsActionError> => {
+  if (!isLicensedUserType(user.user_type) || !(await hasTenantSettingsUpdate(user, tenant))) {
+    return permissionError('Permission denied: Cannot update settings', 'msp/settings:errors.tenantSettings.permissions.update');
+  }
+  if (!settings || typeof settings !== 'object' || Array.isArray(settings)) return actionError('Invalid tenant settings update.');
+  return updateTenantSettingsInternal(settings);
+});
+
 export const getTenantAnalyticsSettings = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext
 ): Promise<any> => {
-  if (!isLicensedUserType(user.user_type) || !(await hasPermission(user, 'settings', 'read'))) throw new Error('Permission denied: Cannot read tenant analytics settings');
+  if (!isLicensedUserType(user.user_type) || (!(await hasPermission(user, 'settings', 'read')) && !(await hasPermission(user, 'settings', 'update')))) throw new Error('Permission denied: Cannot read tenant analytics settings');
   const settings = await getTenantSettingsForTenant(tenant);
   return settings?.settings?.analytics || null;
+});
+
+export const updateTenantAnalyticsSettings = withAuth(async (
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
+  analyticsSettings: Record<string, any>
+): Promise<void | TenantSettingsActionError> => {
+  if (!isLicensedUserType(user.user_type) || !(await hasTenantSettingsUpdate(user, tenant))) {
+    return permissionError('Permission denied: Cannot update settings', 'msp/settings:errors.tenantSettings.permissions.update');
+  }
+  if (!analyticsSettings || typeof analyticsSettings !== 'object' || Array.isArray(analyticsSettings)) {
+    return actionError('Invalid tenant analytics settings update.');
+  }
+  return updateTenantAnalyticsSettingsInternal(analyticsSettings);
 });
 
 /**
@@ -316,9 +415,7 @@ export const getTenantTimezoneAuth = withAuth(async (
   if (!isLicensedUserType(user.user_type) || (!(await hasPermission(user, 'settings', 'read')) && !(await hasPermission(user, 'settings', 'update')))) {
     throw new Error('Permission denied: Cannot read tenant timezone');
   }
-  const settings = await readTenantSettingsJson(tenant);
-  const timezone = settings.timezone;
-  return typeof timezone === 'string' && timezone.length > 0 ? timezone : null;
+  return getTenantTimezone(tenant);
 });
 
 /**
@@ -351,5 +448,12 @@ export const setTenantTimezone = withAuth(async (
     // An empty value is not a timezone to store at the tenant level.
     return actionError(`Invalid timezone: ${timezone}`, 'msp/settings:errors.tenantSettings.invalidTimezone', { timezone });
   }
-  return mergeTenantSettingsJson(tenant, { timezone: validation.timeZone });
+  return updateTenantSettings({ timezone: validation.timeZone });
+});
+
+export const initializeTenantSettings = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext
+): Promise<void> => {
+  return initializeTenantSettingsForTenant(tenant);
 });

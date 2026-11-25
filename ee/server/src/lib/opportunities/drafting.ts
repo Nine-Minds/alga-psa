@@ -222,7 +222,7 @@ export function buildFollowUpDraftMessages(
         `Client: ${context.opportunity.client_name}`,
         `Stage: ${context.opportunity.stage}`,
         `Days since activity: ${context.opportunity.days_since_activity}`,
-        `Evidence:\n${context.evidence.map((item) => `- ${item.checkpoint}: ${item.detail}`).join('\n') || '- None'}`,
+        `Evidence:\n${context.evidence.map((item) => `- ${item.checkpoint}: ${item.detail.trim() || 'reached, no note recorded'}`).join('\n') || '- None'}`,
         `Linked quotes:\n${context.quotes.map((quote) => `- ${quote.quote_number}: ${quote.status}`).join('\n') || '- None'}`,
         `Recent interactions:\n${context.recent_interactions.map((item) => `- ${item.title}`).join('\n') || '- None'}`,
         `Voice steering: ${steering}`,

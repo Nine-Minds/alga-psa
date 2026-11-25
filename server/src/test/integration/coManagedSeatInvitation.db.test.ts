@@ -243,6 +243,8 @@ describeDb('inviting a seat technician against the allocation', { shuffle: false
     const technician = await createUser(db, sponsor, { user_type: 'internal' });
     // An active technician and a pending invitation each hold a seat; a revoked one holds none.
     await db.transaction((trx) => retainBuiltinResolverSubject(trx, { tenant: sponsor, userId: technician }, CO_MANAGED_SEAT_RESOLVER_ID));
+    // Bound rows need a marked user (20261113130000); Citus runs no marker trigger, so mark it as acceptance does.
+    await db('users').where({ tenant: sponsor, user_id: technician }).update({ seat_reader: true });
     await db('co_managed_seat_assignments').insert([
       { tenant: sponsor, assignment_id: randomUUID(), arrangement_id: arrangement.arrangement_id, user_id: technician, state: 'active' },
       { tenant: sponsor, assignment_id: randomUUID(), arrangement_id: arrangement.arrangement_id, state: 'revoked', revoked_at: new Date() },
