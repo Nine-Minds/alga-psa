@@ -1003,5 +1003,25 @@
     "doc": "sdk/docs/openapi/alga-openapi.ee.json",
     "pointer": "/components/schemas/AccessCreateUserBodyV1/required",
     "reason": "alga-2026-0003292: a user is never created without a role, so createUserSchema now requires role_ids and POST /api/v1/users rejects a body without it. Deliberately breaking for callers that relied on creating a role-less user; the alternative is the zero-role state that left a tenant unable to administer itself."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1software~1search/get/parameters/query:limit/schema/maximum",
+    "reason": "alga-2026-0003306: GET /api/v1/software/search has always rejected limit > 100 with a 400 (parsePositiveIntParam cap of 100 in the route); the published maximum of 200 was wrong. Lowering it to 100 documents existing behaviour and does not reject any request the route previously accepted."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/SoftwareSearchQuery/properties/limit/maximum",
+    "reason": "alga-2026-0003306: GET /api/v1/software/search has always rejected limit > 100 with a 400 (parsePositiveIntParam cap of 100 in the route); the published maximum of 200 was wrong. Lowering it to 100 documents existing behaviour and does not reject any request the route previously accepted."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1software~1search/get/parameters/query:limit/schema/maximum",
+    "reason": "alga-2026-0003306: GET /api/v1/software/search has always rejected limit > 100 with a 400 (parsePositiveIntParam cap of 100 in the route); the published maximum of 200 was wrong. Lowering it to 100 documents existing behaviour and does not reject any request the route previously accepted."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/SoftwareSearchQuery/properties/limit/maximum",
+    "reason": "alga-2026-0003306: GET /api/v1/software/search has always rejected limit > 100 with a 400 (parsePositiveIntParam cap of 100 in the route); the published maximum of 200 was wrong. Lowering it to 100 documents existing behaviour and does not reject any request the route previously accepted."
   }
 ]

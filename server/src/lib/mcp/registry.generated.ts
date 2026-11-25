@@ -27145,7 +27145,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/software/search",
     "displayName": "Search software across the fleet",
     "summary": "Search software across the fleet",
-    "description": "Searches installed software across all assets in the tenant, with filters for name/publisher search, category, software_type, is_managed, is_security_relevant, and client_id. Paginated. Authenticated by the global x-api-key middleware and tenant-scoped by the underlying withAuth action (it calls the searchSoftwareFleetWide server action directly rather than using a route-level controller wrapper).",
+    "description": "Searches installed software across all assets in the tenant, with filters for name/publisher search, category, software_type, is_managed, is_security_relevant, and client_id. Paginated. The route bridges the x-api-key identity into the searchSoftwareFleetWide withAuth action (session callers without a key use the session), which is tenant-scoped and requires asset:read and applies record-level read authorization. Missing or invalid credentials return 401, a caller without asset:read returns 403, and invalid parameters return 400.",
     "tags": [
       "Software"
     ],
@@ -27224,7 +27224,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 200
+          "maximum": 100
         }
       }
     ],
