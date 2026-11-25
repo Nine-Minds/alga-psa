@@ -235,7 +235,7 @@ export class MetadataService {
       version: spec.info.version,
       edition: 'ce', // Both invitation routes are available in both editions.
     });
-    for (const [routePath, definition] of Object.entries(invitationDocs.paths)) {
+    for (const [routePath, definition] of Object.entries(invitationDocs.paths ?? {})) {
       const discovered = spec.paths[routePath]?.post;
       if (!discovered || !definition?.post) continue;
       spec.paths[routePath].post = {
