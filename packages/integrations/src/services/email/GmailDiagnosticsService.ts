@@ -8,7 +8,7 @@
  * provider card that just says "connected".
  */
 
-import { google } from 'googleapis';
+import * as google from 'googleapis/build/src/apis/pubsub/index.js';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import type {
   DiagnosticsStepStatus,
