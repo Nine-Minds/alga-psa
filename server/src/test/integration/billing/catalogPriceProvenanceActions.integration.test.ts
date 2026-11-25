@@ -464,27 +464,63 @@ describe('Catalog price provenance — clone, wizard, constraints and schedule o
       currency_code: 'USD'
     }, 'contract_id');
 
-    // A bounded existing schedule: Feb 1 – Mar 1.
-    await createPricingSchedule({
+    const lineId = await context.createEntity('contract_lines', {
       contract_id: contractId,
+      contract_line_name: 'T18 fixed-fee line',
+      billing_frequency: 'monthly',
+      contract_line_type: 'Fixed',
+      is_template: false,
+      is_active: true,
+      custom_rate: 10000,
+      rate_provenance: 'custom'
+    }, 'contract_line_id');
+
+    // A schedule needs a billable bundle service, not just an empty Fixed line.
+    const serviceId = await createTestService(context, {
+      service_name: 'T18 Bundle service',
+      billing_method: 'fixed',
+      default_rate: 10000,
+    });
+    await context.db('contract_line_services').insert({
+      tenant: context.tenantId,
+      contract_line_id: lineId,
+      service_id: serviceId,
+      quantity: 1,
+    });
+    await context.db('contract_line_service_configuration').insert({
+      tenant: context.tenantId,
+      config_id: uuidv4(),
+      contract_line_id: lineId,
+      service_id: serviceId,
+      configuration_type: 'Fixed',
+      quantity: 1,
+    });
+
+    // A bounded existing schedule: Feb 1 – Mar 1, on the same fixed-fee line.
+    const bounded = await createPricingSchedule({
+      contract_id: contractId,
+      contract_line_id: lineId,
       effective_date: '2023-02-01',
       end_date: '2023-03-01',
       custom_rate: 10000,
     });
+    expect('actionError' in bounded).toBe(false);
 
     // The case the old pre-check missed: a new unbounded schedule that starts
     // *before* the existing bounded one and so fully contains it.
     const overlapping = await createPricingSchedule({
       contract_id: contractId,
+      contract_line_id: lineId,
       effective_date: '2023-01-01',
       end_date: null,
       custom_rate: 12000,
     });
-    expect('actionError' in overlapping).toBe(true);
+    expect(overlapping).toMatchObject({ messageKey: 'msp/contracts:errors.pricingSchedule.overlaps' });
 
     // A non-overlapping schedule still lands.
     const adjacent = await createPricingSchedule({
       contract_id: contractId,
+      contract_line_id: lineId,
       effective_date: '2023-03-01',
       end_date: '2023-04-01',
       custom_rate: 14000,
@@ -496,6 +532,6 @@ describe('Catalog price provenance — clone, wizard, constraints and schedule o
     const moved = await updatePricingSchedule((adjacent as { schedule_id: string }).schedule_id, {
       effective_date: '2023-02-15',
     });
-    expect('actionError' in moved).toBe(true);
+    expect(moved).toMatchObject({ messageKey: 'msp/contracts:errors.pricingSchedule.wouldOverlap' });
   });
 });

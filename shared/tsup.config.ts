@@ -119,6 +119,7 @@ export default defineConfig({
     'billingClients/contractMonthlyValue': 'billingClients/contractMonthlyValue.ts',
     'billingClients/quoteDiscountAllocation': 'billingClients/quoteDiscountAllocation.ts',
     'billingClients/quoteConversionDiscounts': 'billingClients/quoteConversionDiscounts.ts',
+    'billingClients/quoteToContractLines': 'billingClients/quoteToContractLines.ts',
     'billingClients/serviceTaxTreatment': 'billingClients/serviceTaxTreatment.ts',
     'billingClients/index': 'billingClients/index.ts',
     // packages/jobs runs vitest from its own root, so this resolves through the

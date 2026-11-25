@@ -85,6 +85,7 @@ vi.mock('@alga-psa/auth/withAuth', () => ({
         {
           user_id: 'journey-test-user',
           tenant: tenantId,
+          user_type: 'internal',
           roles: [{ role_name: 'Admin' }],
         } as any,
         { tenant: tenantId },
