@@ -9,6 +9,14 @@ export class BrowserPoolService {
 
   constructor(private maxBrowsers: number = MAX_BROWSERS) {}
 
+  private launchBrowser(): Promise<Browser> {
+    return puppeteer.launch({
+      headless: true,
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+      args: ISOLATED_RENDERER_BROWSER_ARGS,
+    });
+  }
+
   async getBrowser(): Promise<Browser> {
     if (this.browserPool.length > 0) {
       const browser = this.browserPool.pop();
@@ -19,11 +27,7 @@ export class BrowserPoolService {
     }
 
     if (this.activeBrowsers < this.maxBrowsers) {
-      const browser = await puppeteer.launch({
-        headless: true,
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-        args: ISOLATED_RENDERER_BROWSER_ARGS,
-      });
+      const browser = await this.launchBrowser();
       this.activeBrowsers++;
       return browser;
     }
@@ -45,11 +49,7 @@ export class BrowserPoolService {
           // next tick start a second one and blow past maxBrowsers.
           clearInterval(interval);
           try {
-            const browser = await puppeteer.launch({
-              headless: true,
-              executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-              args: ISOLATED_RENDERER_BROWSER_ARGS,
-            });
+            const browser = await this.launchBrowser();
             this.activeBrowsers++;
             resolve(browser);
           } catch (error) {

@@ -44,6 +44,7 @@ import { analytics } from '@alga-psa/analytics/client';
 import { QuickCreateDialog, QuickCreateType } from './QuickCreateDialog';
 import { VendorSupportDialog } from './VendorSupportDialog';
 import { useProduct } from '@/context/ProductContext';
+import { CO_MANAGED_SEAT_SURFACE } from '@shared/services/productSurfaceKinds';
 import { ThemeToggle } from '@alga-psa/ui/components/ThemeToggle';
 import { TrialBanner } from './TrialBanner';
 import { PaymentFailedBanner } from './PaymentFailedBanner';
@@ -248,12 +249,29 @@ const ALGADESK_QUICK_CREATE_TYPES: ReadonlySet<QuickCreateType> = new Set([
   'contact',
 ]);
 
+const CO_MANAGED_SEAT_QUICK_CREATE_TYPES: ReadonlySet<QuickCreateType> = new Set([
+  'ticket',
+  'contact',
+]);
+
+const CO_MANAGED_QUICK_CREATE_TYPES: ReadonlySet<QuickCreateType> = new Set([
+  'ticket',
+  'contact',
+  'project',
+  'asset',
+]);
+
 const QuickCreateMenu: React.FC<{ t: HeaderTranslator }> = ({ t }) => {
   const [activeQuickCreate, setActiveQuickCreate] = useState<QuickCreateType>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const { isAlgaDesk } = useProduct();
-  const visibleOptions = isAlgaDesk
-    ? quickCreateOptions.filter((option) => ALGADESK_QUICK_CREATE_TYPES.has(option.type))
+  const { isAlgaDesk, productCode, surfaceKind } = useProduct();
+  const allowedTypes = surfaceKind === CO_MANAGED_SEAT_SURFACE
+    ? CO_MANAGED_SEAT_QUICK_CREATE_TYPES
+    : productCode === 'co_managed'
+      ? CO_MANAGED_QUICK_CREATE_TYPES
+      : isAlgaDesk ? ALGADESK_QUICK_CREATE_TYPES : null;
+  const visibleOptions = allowedTypes
+    ? quickCreateOptions.filter((option) => allowedTypes.has(option.type))
     : quickCreateOptions;
   const translatedOptions = visibleOptions.map((option) => ({
     ...option,

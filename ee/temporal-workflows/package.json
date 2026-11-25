@@ -12,6 +12,7 @@
     "start": "node dist/ee/temporal-workflows/src/worker.js",
     "start:worker": "node dist/ee/temporal-workflows/src/worker.js",
     "start:client": "node dist/ee/temporal-workflows/src/client.js",
+    "check:billing-catalog-loader": "tsx scripts/check-billing-catalog-loader.ts",
     "upgrade:tenant-product": "tsx src/scripts/upgrade-tenant-product.ts",
     "test": "vitest",
     "test:package-artifact": "node --test ../../scripts/tests/co-managed-package-artifact.test.mjs",

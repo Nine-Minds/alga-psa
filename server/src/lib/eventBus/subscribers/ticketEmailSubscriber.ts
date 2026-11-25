@@ -85,6 +85,7 @@ import {
   resolveTicketEmailTemplate,
   ticketEmailRecipientVariables,
 } from '@alga-psa/notifications/lib/templateVariables/ticketEmailAudience';
+import { sanitizeEmailHtml } from '@alga-psa/shared/lib/email/sanitizeEmailHtml';
 import { optionalEmailData } from '../../notifications/optionalEmailData';
 import type { CommentEmailRecipient, CommentEmailRecipients } from '@alga-psa/types';
 import type { EmailAddress } from '../../../types/email.types';
@@ -1244,7 +1245,8 @@ function formatTicketDateTime(
  * Shared "ticket summary" email context (the ticket-created body variables).
  * Used by the ticket-created handler and the board status-entered handler.
  */
-async function buildTicketSummaryEmailContext(
+// Exported for unit tests of the description sanitising path.
+export async function buildTicketSummaryEmailContext(
   db: Knex,
   tenantId: string,
   ticket: NonNullable<TicketEmailRow>,
@@ -1368,9 +1370,13 @@ async function buildTicketSummaryEmailContext(
   const descriptionFormatting = formatBlockNoteContent(rawDescription);
   const descriptionText = descriptionFormatting.text.trim();
   const description = descriptionText || 'No description provided.';
+  // The HTML rendition derives from an untrusted inbound email body and is
+  // inserted unescaped ({{{ }}}) by the board-created template, so it goes
+  // through the shared email sanitiser. Fall back to the escaped paragraph.
+  const escapedDescriptionFallback = `<p>${escapeHtml(description)}</p>`;
   const descriptionHtml = descriptionText
-    ? descriptionFormatting.html
-    : `<p>${description}</p>`;
+    ? ((await sanitizeEmailHtml(descriptionFormatting.html)) || escapedDescriptionFallback)
+    : escapedDescriptionFallback;
 
   const requesterDetailsForText = requesterDetails;
   const assignedDetailsForText = assignedDetails;
@@ -3725,6 +3731,81 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           },
           attachments: inlineCommentImageAttachments,
         }, 'Ticket Comment Added', resource.user_id);
+      }
+    }
+
+    // Board notification rules (trigger: client replied on an unassigned ticket). The reply flips
+    // the response state to "waiting on internal" but reaches nobody when the ticket has no
+    // assignee, so the rule's users and teams are mailed. `author_type` (already read from the
+    // comment row above) is the single author classification: 'client' is a portal user or an
+    // inbound email from a contact. Deliberately NOT deduped against watchers the way the
+    // created/status triggers are: a client-authored comment sends watchers no standard email, so
+    // excluding them would silence a watcher who is a rule recipient. `sentEmails` already keeps
+    // every recipient to one message.
+    if (
+      isPublicComment &&
+      commentAuthorType === 'client' &&
+      !ticket.assigned_to &&
+      !ticket.is_closed &&
+      ticket.board_id &&
+      shouldSendTicketCommentNotification(suppression, 'internal')
+    ) {
+      const { users: ruleUsers, addresses: ruleAddresses } = await resolveBoardNotificationAudience(
+        db,
+        tenantId,
+        { kind: 'client_reply_unassigned', boardId: ticket.board_id },
+        { excludeUserIds: [commentAuthorUserId] }
+      );
+      // Only principals go through the visibility filter. Plain addresses have no principal.
+      const ruleRecipients = ruleUsers.length > 0
+        ? await filterRecipientsWhoCanReadTicket(db, tenantId, payload.ticketId, ruleUsers)
+        : [];
+      const boardReplySubject = `Client Reply, Unassigned on ${boardName} • ${ticket.title}`;
+      const boardReplyReplyContext = {
+        ticketId: ticket.ticket_id || payload.ticketId,
+        commentId: payload.comment?.id,
+        threadId: ticket.email_metadata?.threadId,
+      };
+      for (const recipient of ruleRecipients) {
+        await sendIfUnique({
+          tenantId,
+          ...emailEntityContext,
+          to: recipient.email,
+          addressedAs: 'msp',
+          subject: boardReplySubject,
+          template: 'ticket-board-client-reply-unassigned',
+          context: buildContext(internalUrl),
+          replyContext: boardReplyReplyContext,
+          attachments: inlineCommentImageAttachments,
+        }, 'Board Client Reply Unassigned', recipient.userId);
+      }
+
+      // Address recipients: same template and subtype as users, no recipientUserId (no principal,
+      // so no per-user preference). `issueReplyToken: false` keeps the thread headers but mints no
+      // reply token, so a reply is matched by thread headers, which check the sender.
+      let addressesSent = 0;
+      for (const address of ruleAddresses) {
+        const sentToAddress = await sendIfUnique({
+          tenantId,
+          ...emailEntityContext,
+          to: address.email,
+          addressedAs: 'msp',
+          subject: boardReplySubject,
+          template: 'ticket-board-client-reply-unassigned',
+          context: buildContext(internalUrl),
+          replyContext: { ...boardReplyReplyContext, issueReplyToken: false },
+          attachments: inlineCommentImageAttachments,
+        }, 'Board Client Reply Unassigned');
+        if (sentToAddress) addressesSent += 1;
+      }
+      if (addressesSent > 0) {
+        // Never log the addresses themselves.
+        logger.info('[TicketEmailSubscriber] Sent board notification rule emails to address recipients (client reply on unassigned ticket)', {
+          eventId: event.id,
+          ticketId: payload.ticketId,
+          boardId: ticket.board_id,
+          addressCount: addressesSent,
+        });
       }
     }
 

@@ -263,7 +263,8 @@
       "titleDelete": "Ocorreram erros ao excluir faturas:",
       "titleReverse": "Ocorreram erros ao reverter faturas:",
       "loadReady": "Falha ao carregar períodos de faturamento. Por favor, tente novamente.",
-      "loadHistory": "Falha ao carregar o histórico de faturas recorrentes. Por favor, tente novamente."
+      "loadHistory": "Falha ao carregar o histórico de faturas recorrentes. Por favor, tente novamente.",
+      "noInvoicesCreated": "Nenhuma fatura foi criada. Atualize a lista e verifique se este período já foi faturado ou não contém itens a faturar."
     },
     "loading": {
       "billingData": "Carregando dados de faturamento",
@@ -339,6 +340,10 @@
       },
       "nextInvoice": "Será faturado na próxima fatura",
       "outsideLookback": "Fora do período de retroação — não faturado"
+    },
+    "billingProfile": {
+      "label": "Perfil de faturamento — {{client}}, fatura {{index}}",
+      "automatic": "Usar o perfil atribuído ao trabalho selecionado"
     }
   },
   "manualInvoices": {
@@ -435,7 +440,8 @@
       "SERVICE_REQUIRED": "Atribua um serviço a este encargo antes de guardar.",
       "BILLING_PROFILE_NOT_FOUND": "O perfil de faturação selecionado não está disponível para este cliente. Atualize a página e tente novamente.",
       "sessionExpired": "Sua sessão expirou. Suas alterações continuam aqui, mas não foram salvas. Entre novamente em uma nova guia e tente salvar outra vez.",
-      "saveRefreshFailed": "Suas alterações foram salvas, mas a página da fatura não foi atualizada por completo. Recarregue a página para ver a fatura salva."
+      "saveRefreshFailed": "Suas alterações foram salvas, mas a página da fatura não foi atualizada por completo. Recarregue a página para ver a fatura salva.",
+      "BILLING_PROFILE_MISMATCH": "O perfil de faturamento selecionado excluiria cobranças. Quantidade: {{count}}. Escolha o perfil de faturamento atribuído a este trabalho ou selecione as linhas de cada perfil separadamente."
     },
     "warnings": {
       "noBillingEmail": "Este cliente não tem e-mail de cobrança. A fatura pode ser gerada, mas não poderá ser enviada por e-mail nem paga online até que você defina um contato de cobrança, um e-mail de cobrança do cliente ou um e-mail no local de cobrança ou padrão."
@@ -2700,6 +2706,15 @@
         "clearLines": "Linha única",
         "stackedLinesHint": "Cada linha não vazia é exibida em sua própria linha. Quando todas as linhas estão vazias, é exibida a chave de vinculação da coluna indicada acima.",
         "removeLine": "Remover a linha {{index}}",
+        "valueLabels": "Texto dos valores",
+        "addKnownValues": "+ Valores conhecidos",
+        "addValueLabel": "+ Valor",
+        "valueLabelsHint": "Escolha as palavras impressas para um valor, por exemplo true → Incluído. Um rótulo vazio não imprime nada.",
+        "valueLabelKey": "Valor",
+        "valueLabelKeyPlaceholder": "true",
+        "valueLabelText": "Texto impresso",
+        "valueLabelTextPlaceholder": "Em branco",
+        "removeValueLabel": "Remover texto",
         "align": "Alinhamento",
         "widthPlaceholder": "auto | 50% | 120px"
       },

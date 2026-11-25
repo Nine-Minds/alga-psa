@@ -568,7 +568,7 @@ it('verifies saved detail and historical locale matrix through persisted reads, 
     for (const variant of ['task-identities', 'hour-block', 'multi-tax-long']) {
       cases.push(await generateProductionVariant(db, variant, `${dir}/sources/${variant}`));
     }
-    for (const variant of ['historical-fallbacks', 'historical-partial', 'historical-none']) {
+    for (const variant of ['historical-v1', 'historical-fallbacks', 'historical-partial', 'historical-none']) {
       const ids = await createSourceFixture(db);
       const generated = await generateInvoiceForCycle(ids.cycleId) as any;
       expect(generated.invoice_id).toBeTruthy();
@@ -580,6 +580,8 @@ it('verifies saved detail and historical locale matrix through persisted reads, 
         const original = before[index];
         let snapshot = structuredClone(original.work_item_snapshot);
         if (variant === 'historical-none' || (variant === 'historical-partial' && index === 0)) snapshot = null;
+        // Pre-rate-capture snapshots: rates render unknown, work identity stays.
+        else if (variant === 'historical-v1') snapshot = { ...snapshot, version: 1 };
         else if (variant === 'historical-fallbacks') {
           if (index === 0) snapshot = { ...snapshot, workItemType: 'ad_hoc', workItemId: null, ticketNumber: null, title: null, description: 'Frozen historical public work' };
           if (index === 1) snapshot = { ...snapshot, workItemType: 'project_task', workItemId: randomUUID(), ticketNumber: null, title: null, description: null };
@@ -623,6 +625,14 @@ it('verifies saved detail and historical locale matrix through persisted reads, 
         expect(vm.ticketGroups!.some((group) => group.workItemType === 'ad_hoc')).toBe(true);
         expect(vm.timeEntries!.some((entry) => entry.rateKind === 'unknown' && entry.rate === null)).toBe(true);
       }
+      if (fixture.variant === 'historical-v1') {
+        expect(vm.timeEntries!.some((entry) => entry.rateKind === 'unknown' && entry.rate === null)).toBe(true);
+      }
+      // Missing historical detail must not be reconstructed from live work.
+      if (fixture.variant === 'historical-partial' || fixture.variant === 'historical-none') {
+        expect(vm.timeEntries ?? []).toHaveLength(links.filter((link) => link.work_item_snapshot).length);
+      }
+      if (fixture.variant === 'historical-none') expect(vm.timeEntries ?? []).toHaveLength(0);
       for (const locale of ['en', 'fr', 'zz-unavailable']) {
         const prefix = `${dir}/${fixture.variant}-${locale}`;
         const localized = await localizeTemplateAstForLocale(ast, locale);
@@ -658,6 +668,14 @@ it('verifies saved detail and historical locale matrix through persisted reads, 
         if (display.ticketDetailNote) expected.push(display.ticketDetailNote);
         if (fixture.variant === 'historical-fallbacks') expected.push(locale === 'fr' ? 'Autre temps facturé' : 'Other billed time', locale === 'fr' ? 'Tâche de projet' : 'Project task');
         if (fixture.variant === 'task-identities') expected.push('Same public task name', locale === 'fr' ? 'Tâche de projet' : 'Project task');
+        if (fixture.variant === 'historical-v1') expected.push('Public ticket 0', 'Public ticket 1');
+        // Pinned literals, so a missing locale key or a dropped note cannot pass.
+        if (fixture.variant === 'historical-partial') expected.push(locale === 'fr'
+          ? 'Seules les écritures de temps facturé disponibles figurent dans ce détail.'
+          : 'Only available billed-time entries are included in this detail.');
+        if (fixture.variant === 'historical-none') expected.push(locale === 'fr'
+          ? 'Le détail des écritures de temps facturé est indisponible pour cette facture.'
+          : 'Billed-time entry detail is unavailable for this invoice.');
         for (const label of expected) {
           expect(compact(flowText), `${fixture.variant}/${locale}: ${label}`).toContain(compact(label));
           expect(compact(authoritative.render.html!), `${fixture.variant}/${locale} full preview: ${label}`).toContain(compact(label));
@@ -667,6 +685,7 @@ it('verifies saved detail and historical locale matrix through persisted reads, 
         const dates = (vm.timeEntries ?? []).map((entry) => formatBoundValue(entry.date, 'date', vm.currencyCode, effectiveLocale)!);
         for (const date of dates) expect(compact(flowText)).toContain(compact(date));
         expect(text).not.toMatch(/PRIVATE|EDITED/);
+        if (fixture.variant === 'historical-none') expect(compact(flowText)).not.toContain('Publicticket');
         expect(flowText).not.toMatch(/PRIVATE|EDITED/);
         expect(JSON.stringify(vm)).toBe(frozen);
         expect(await db('invoice_time_entries').where({ tenant: state.tenant, invoice_id: fixture.invoiceId }).orderBy('invoice_time_entry_id')).toEqual(links);

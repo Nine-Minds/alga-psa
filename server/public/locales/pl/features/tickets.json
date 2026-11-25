@@ -580,6 +580,7 @@
     "deleteCommentOnly": "Usuń tylko komentarz",
     "cancelScheduledComment": "Anuluj zaplanowany komentarz",
     "cancelScheduledCommentConfirm": "Anulować ten zaplanowany komentarz?",
+    "scheduledCommentChangeFailed": "Nie można zmienić tego zaplanowanego komentarza. Odśwież stronę i spróbuj ponownie.",
     "invalidScheduleTime": "Wybierz jednoznaczny przyszły czas w tej strefie czasowej.",
     "publishAt": "Opublikuj o",
     "publishes": "Publikuje",
@@ -618,6 +619,15 @@
       },
       "unavailable": "To zgłoszenie jest niedostępne.",
       "back": "Wróć do zgłoszeń klientów"
+    },
+    "opener": {
+      "openedBy": "Otwarte e-mailem od {{sender}}",
+      "attachments_one": "{{count}} załącznik",
+      "attachments_few": "{{count}} załączniki",
+      "attachments_many": "{{count}} załączników",
+      "attachments_other": "{{count}} załącznika",
+      "show": "Pokaż oryginalną wiadomość e-mail",
+      "hide": "Ukryj oryginalną wiadomość e-mail"
     }
   },
   "responseState": {

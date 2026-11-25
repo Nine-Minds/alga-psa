@@ -510,8 +510,6 @@
     "po": {
       "amountLabel": "Kwota PO (opcjonalnie)",
       "amountPlaceholder": "0.00",
-      "comingSoon": "Integracja faktur będzie wkrótce dostępna. Ustawienia zostaną zapisane, ale wymuszanie PO nie będzie aktywne do przyszłego wydania.",
-      "noteLabel": "Uwaga:",
       "numberLabel": "Numer PO *",
       "numberPlaceholder": "np. PO-2024-12345",
       "requirePurchaseOrder": "Wymagaj zamówienia zakupu",

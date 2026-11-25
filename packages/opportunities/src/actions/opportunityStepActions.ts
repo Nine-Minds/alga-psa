@@ -23,7 +23,7 @@ import {
 } from '../lib/opportunitySteps';
 import { nextPlannedStep, templateDueDate } from '../lib/opportunityStepPlan';
 import { OPEN_OPPORTUNITY_STAGES } from '../lib/opportunityStages';
-import { declareStage } from '../lib/stageEngine';
+import { declareStageFromStep } from '../lib/stageEngine';
 
 async function requirePermission(user: unknown, action: 'read' | 'update'): Promise<void> {
   if (!await hasPermission(user as any, 'opportunities', action)) {
@@ -349,7 +349,7 @@ export const completeOpportunityStep = withAuth(async (
   return withTransaction(knex, async (trx) => {
     const result = await completeOpportunityStepCore(trx, tenant, opportunityId, stepId, actorId(user), data);
     if (data.checkpoint && data.checkpoint !== 'won') {
-      await declareStage(trx, tenant, opportunityId, data.checkpoint, actorId(user), result.completed.title);
+      await declareStageFromStep(trx, tenant, opportunityId, data.checkpoint, actorId(user), result.completed.title);
     }
     return OpportunityStepModel.listForOpportunity(trx, tenant, opportunityId);
   });

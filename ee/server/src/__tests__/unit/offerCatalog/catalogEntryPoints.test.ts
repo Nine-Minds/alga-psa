@@ -129,7 +129,7 @@ describe('independent first-purchase entry points', () => {
     expect(await loadBillingCatalogContext()).toMatchObject({ stripeAccount: 'acct_database', priceId: 'price_database', source: 'database', sellable: true });
     expect(await getCoManagedPurchaseState()).toMatchObject({ capacity: 0, allocated: 0, purchase: { canPurchase: true } });
     render(page);
-    fireEvent.click(await screen.findByRole('button', { name: 'Buy co-managed seats' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'coManaged.reviewPurchase' }));
     await vi.waitFor(() => expect(screen.getByText('coManaged.dueNow €12.00')).toBeInTheDocument());
     expect(mocks.purchase).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'coManaged.confirmPurchase' }));

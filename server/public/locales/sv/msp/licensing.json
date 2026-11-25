@@ -453,6 +453,8 @@
       },
       "error": {
         "operationConflict": "Begäran har redan skickats med andra uppgifter. Uppdatera och börja om.",
+        "trialClaimUnavailable": "Den här provperioden används redan eller startades för en annan kund. Uppdatera och försök igen.",
+        "trialSponsorNotEligible": "Den här arbetsytan är inte berättigad till en Seat-provperiod. Kontrollera kontots plan och faktureringsstatus.",
         "invalidSeats": "Ange ett heltal för antal platser, minst 1.",
         "invalidInvitation": "Välj en kontakt att bjuda in.",
         "contactNotFound": "Den här kontakten finns inte längre. Välj en annan kontakt.",
@@ -505,8 +507,7 @@
         "save": "Spara standardvärden för överlämning"
       },
       "client": {
-        "seatArrangement": "Platsavtal",
-        "summary": "Platsavtal: {{used}} av {{count}} platser används"
+        "seatArrangement": "Platsavtal"
       },
       "technicians": {
         "sent": "Inbjudan skickad.",
@@ -551,6 +552,13 @@
         "addedUnavailable": "{{name}} lades till men kan inte bjudas in.",
         "unavailable": "Visas inte eftersom de är inaktiva, saknar e-post eller redan har plats eller inbjudan: {{count}}."
       },
+      "trial": {
+        "available": "En kostnadsfri provperiod på 15 dagar finns ovan. Samhanterade platser kan läggas till när som helst.",
+        "availableTrialEnables": "När teknikern bjuds in startar provperioden och samhanterad IT aktiveras för den här kunden. Köp en plats efter de 15 dagarna för att behålla teknikern.",
+        "pending": "En inbjudan till provperioden på 15 dagar väntar på teknikern. Samhanterade platser kan läggas till när som helst.",
+        "active": "Provperioden på 15 dagar pågår. Lägg till samhanterade platser för att behålla teknikern efteråt.",
+        "ended": "Provperioden på 15 dagar har avslutats. Lägg till samhanterade platser för att behålla teknikern."
+      },
       "chooser": {
         "seat": "Plats",
         "seatHint": "Kundens tekniker arbetar i ert PSA, begränsade till sitt företag.",
@@ -558,7 +566,11 @@
         "workspaceHint": "Kundens IT-team får en egen servicedesk och eskalerar till er.",
         "description": "Välj hur den här kundens IT-team arbetar med er.",
         "shape": "Samhanterad form",
-        "pool": "{{available}} av {{purchased}} platser tillgängliga. {{allocated}} tilldelade."
+        "pool": "{{available}} av {{purchased}} platser tillgängliga. {{allocated}} tilldelade.",
+        "poolEmpty": "Inga samhanterade platser ännu.",
+        "seatHintAfterTrial": "Lägg till samhanterade platser för att behålla teknikern efter provperioden på 15 dagar.",
+        "seatHintTrialCovers": "Provplatsen täcker den här teknikern till {{date}}. Köp en plats för att behålla dem.",
+        "seatHintTrial": "Gratis i 15 dagar. Bjud in en tekniker för att aktivera samhanterad IT för den här kunden."
       },
       "states": {
         "active": "Aktiv",
@@ -569,15 +581,15 @@
       "title": "Exportera arbetsyta",
       "description": "Ladda ned ett krypterat, portabelt arkiv med arbetsytans poster och filer.",
       "recovery": "Förvara återställningslösenfrasen på ett säkert ställe. Utan den går arkivet inte att öppna.",
-      "connections": "Arkivet innehåller arbetsytans poster och de filer som lagras i arbetsytan. Dokumentposter och -kopplingar samt historik för tid, schema, möten och konversationer ingår ännu inte och kommer i en senare version. Faktureringsdata, MSP-privata data och integrationshemligheter ingår inte.",
+      "connections": "Arkivet innehåller arbetsytans poster och de filer som lagras i arbetsytan. Dokumentposter och kopplingar samt historik för tid, schema, möten och konversationer ingår ännu inte och kommer i en senare version. Fakturering, MSP-privata data och integrationshemligheter ingår inte.",
       "passphrase": "Återställningslösenfras",
       "confirmPassphrase": "Bekräfta återställningslösenfras",
       "download": "Förbered och ladda ned arkiv",
       "requested": "Din begäran öppnas i en ny flik. Förberedelsen kan ta några minuter; webbläsaren laddar ned filen när den är klar.",
-      "loadError": "Du kan inte exportera den här arbetsytan med din nuvarande behörighet.",
+      "loadError": "Du kan inte exportera den här arbetsytan med din nuvarande åtkomst.",
       "lengthError": "Använd en lösenfras på mellan 16 och 1024 UTF-8-byte.",
       "matchError": "Återställningslösenfraserna måste matcha.",
-      "unavailable": "Export av arbetsytor är inte tillgängligt i den här utgåvan.",
+      "unavailable": "Export av arbetsyta är inte tillgänglig i den här utgåvan.",
       "loading": "Läser in…"
     },
     "acceptance": {
@@ -606,8 +618,6 @@
     },
     "client": {
       "awaitingAcceptance": "Kundens administratör måste acceptera innan åtkomst beviljas.",
-      "chooseRelationship": "Välj relation",
-      "endedHint": "Den här relationen har avslutats. Sparad historik och sparade arkiv finns kvar.",
       "endedOn": "Avslutades {{date}}",
       "failedHint": "Konfigurationen slutfördes inte. Platserna förblir reserverade; försök igen för att fortsätta eller avbryt konfigurationen.",
       "forClient": "Samhanterad IT för {{name}}",
@@ -616,6 +626,7 @@
       "inconsistentHint": "En samförvaltad konfiguration för den här kunden pekar på en arbetsytepost som tillhör en annan kund. Inget kan hanteras eller konfigureras här förrän supporten har rättat posten.",
       "invitation": "Administratörsinbjudan",
       "notEnabled": "Samhanterad IT är inte aktiverad",
+      "notEnabledTrialEnables": "Samhanterad IT är inte aktiverad ännu. Att starta den kostnadsfria provperioden på 15 dagar för en plats aktiverar den för den här kunden.",
       "progress": "Konfigurationsförlopp",
       "provisioningHint": "Reserverade användarlicenser hålls kvar tills konfigurationen är klar eller rensningen har bekräftats.",
       "relationship": "Relation",
@@ -624,12 +635,11 @@
       "setupHint": "Aktivera samhanterad IT från den här kunden för att reservera kundens tekniker och bjuda in en administratör.",
       "tab": "Samhanterad IT",
       "viewDetails": "Visa detaljer",
-      "viewHistory": "Visa historik",
       "workspace": "Kundarbetsyta",
       "seatUsage": "{{used}} av {{count}} teknikerplatser",
       "seatAllocation": "{{count}} tilldelade teknikerplatser"
     },
-    "description": "Hantera de teknikerlicenser som är tillgängliga för dina kunders arbetsytor.",
+    "description": "Med samhanterad IT arbetar en kunds egen IT-personal tillsammans med ditt team i AlgaPSA — i samma ärenden, med åtkomst begränsad till det egna företaget. Varje kundtekniker använder en plats från en pool som du köper här.",
     "directory": {
       "empty": "Inga samhanterade arbetsytor finns att hantera.",
       "prompt": "Välj den samhanterade arbetsyta som ska hanteras."
@@ -639,7 +649,7 @@
       "descriptionWith": "{{name}} har inte längre åtkomst. Historiken för delat arbete sparas och är skrivskyddad.",
       "title": "Samförvaltad IT avslutades {{date}}"
     },
-    "loading": "Läser in kundlicenskapacitet…",
+    "loading": "Läser in kapaciteten för samhanterade platser…",
     "overview": {
       "shape": "Form",
       "state": "Status",
@@ -720,15 +730,15 @@
       "description": "Den här arbetsytan är inte tillgänglig just nu. Kontakta din IT-leverantör om du räknade med att använda den.",
       "title": "Samförvaltad IT är inte tillgänglig"
     },
-    "capacity": "Köpta platser",
+    "capacity": "Köpta",
     "allocated": "Tilldelade kunder",
-    "available": "Tillgängliga platser",
-    "seatPool": "Teknikerplatser för kunder",
-    "seatDescription": "Tilldela platser från denna delade pool. Beställare är gratis och dina MSP-tekniker använder inte kundplatser.",
+    "available": "Tillgängliga",
+    "seatPool": "Samhanterade platser",
+    "seatDescription": "Bara dina kunders tekniker behöver en plats. Beställare och dina egna tekniker behöver ingen.",
     "quantity": "Totalt antal platser i din pool",
     "reviewPurchase": "Granska köp",
     "resumePurchase": "Återuppta köp",
-    "confirmTitle": "Granska köp av kundplatser",
+    "confirmTitle": "Granska köp av samhanterade platser",
     "monthlyTotal_one": "{{count}} plats · {{amount}} per månad",
     "monthlyTotal_other": "{{count}} platser · {{amount}} per månad",
     "dueNow": "Beräknat belopp att betala nu: {{amount}}",
@@ -736,7 +746,7 @@
     "checkoutTitle": "Slutför platsköp",
     "manageLicense": "Hantera din egenhostade licens",
     "proRequired": "En Pro PSA-prenumeration krävs för att sponsra kunders arbetsytor.",
-    "loadError": "Det gick inte att läsa in kapaciteten för kundplatser. Försök igen.",
+    "loadError": "Det gick inte att läsa in kapaciteten för samhanterade platser. Försök igen.",
     "purchaseError": "Det gick inte att slutföra platsköpet. Du kan säkert återuppta det.",
     "termsChanged": "Priset har ändrats sedan du granskade köpet. Granska de uppdaterade villkoren innan du bekräftar.",
     "offerUnavailable": "Det går tillfälligt inte att köpa nya platser. Inget belopp har debiterats.",
@@ -751,9 +761,6 @@
     "awaitingVerification_one": "Ditt köp av {{count}} plats väntar på betalningsverifiering. Platsen visas här när betalningen har bekräftats.",
     "awaitingVerification_other": "Ditt köp av {{count}} platser väntar på betalningsverifiering. Platserna visas här när betalningen har bekräftats.",
     "refreshStatus": "Uppdatera status",
-    "purchaseOnly": {
-      "intro": "Köp en pool med samhanterade platser här. Efter köpet tilldelar du platser till kunder från varje kundpost."
-    },
     "previewError": "Det gick inte att prissätta ändringen. Uppdatera och försök igen.",
     "billingCustomerUnlinked": "Det gick inte att verifiera ett Stripe-faktureringskonto för den här arbetsytan. Kontakta supporten för att länka kontot.",
     "proSubscriptionRequired": "Samhanterade platser kräver en giltig Pro-prenumeration. Kontrollera din prenumeration i kontohanteringen.",
@@ -976,21 +983,6 @@
       "settings": "Hantera SLA-policyer",
       "mappingFor": "Kundprioritet {{name}} motsvarar",
       "unmapped": "Inte kopplad"
-    },
-    "portableExport": {
-      "title": "Exportera arbetsyta",
-      "description": "Ladda ned ett krypterat, portabelt arkiv med arbetsytans poster och filer.",
-      "recovery": "Förvara återställningslösenfrasen på ett säkert ställe. Utan den går arkivet inte att öppna.",
-      "connections": "Arkivet innehåller arbetsytans poster och de filer som lagras i arbetsytan. Dokumentposter och kopplingar samt historik för tid, schema, möten och konversationer ingår ännu inte och kommer i en senare version. Fakturering, MSP-privata data och integrationshemligheter ingår inte.",
-      "passphrase": "Återställningslösenfras",
-      "confirmPassphrase": "Bekräfta återställningslösenfras",
-      "download": "Förbered och ladda ned arkiv",
-      "requested": "Din begäran öppnas i en ny flik. Förberedelsen kan ta några minuter; webbläsaren laddar ned filen när den är klar.",
-      "loadError": "Du kan inte exportera den här arbetsytan med din nuvarande åtkomst.",
-      "lengthError": "Använd en lösenfras på mellan 16 och 1024 UTF-8-byte.",
-      "matchError": "Återställningslösenfraserna måste matcha.",
-      "unavailable": "Export av arbetsyta är inte tillgänglig i den här utgåvan.",
-      "loading": "Läser in…"
     },
     "section": {
       "title": "Samförvaltning",
@@ -1275,6 +1267,49 @@
       "reviewSeatChange": "Granska ändringen av platser",
       "billingError": "Det gick inte att öppna faktureringen. Uppdatera statusen och försök igen.",
       "purchaseUnconfigured": "Köp är inte konfigurerade för den här driftsättningen."
+    },
+    "howMany": "Hur många platser vill du ha?",
+    "noSeatsYet": "Du har inga platser ännu.",
+    "perMonth": "per månad",
+    "priceBreakdown_one": "{{count}} plats × {{unit}}",
+    "priceBreakdown_other": "{{count}} platser × {{unit}}",
+    "reviewHint": "Inget debiteras förrän du bekräftar i nästa steg.",
+    "changeTitle": "Ändra antalet platser",
+    "adding_one": "Lägger till {{count}} plats",
+    "adding_other": "Lägger till {{count}} platser",
+    "removing_one": "Tar bort {{count}} plats",
+    "removing_other": "Tar bort {{count}} platser",
+    "fromTo": "{{from}} → {{to}} platser",
+    "monthlyWithDifference": "{{total}} per månad ({{difference}})",
+    "reviewChange": "Granska ändring",
+    "manageBilling": "Hantera fakturering",
+    "freeToAllocate_one": "{{count}} plats är ledig att tilldela. Öppna en kundpost för att tilldela den.",
+    "freeToAllocate_other": "{{count}} platser är lediga att tilldela. Öppna en kundpost för att tilldela dem.",
+    "noneFree": "Alla platser är tilldelade. Lägg till platser nedan eller frigör en från en kund.",
+    "goToClients": "Gå till kunder",
+    "belowAllocated_one": "Du kan inte gå under {{count}} plats: den är tilldelad en kund. Frigör den först hos den kunden.",
+    "belowAllocated_other": "Du kan inte gå under {{count}} platser: de är tilldelade kunder. Frigör först platser hos en kund.",
+    "decreaseSeats": "Minska antalet platser",
+    "increaseSeats": "Öka antalet platser",
+    "usage": "{{allocated}} av {{purchased}} platser tilldelade",
+    "howItWorks": {
+      "title": "Så fungerar det",
+      "buy": {
+        "title": "Köp platser",
+        "body": "Platserna hamnar i en gemensam pool för hela din MSP. Ändra antalet när som helst."
+      },
+      "enable": {
+        "title": "Aktivera samhanterad IT för en kund",
+        "body": "Öppna kundposten och välj hur många platser kunden får."
+      },
+      "signIn": {
+        "title": "Deras tekniker loggar in",
+        "body": "Varje kundtekniker använder en plats och ser bara sitt eget företags arbete."
+      }
+    },
+    "whoNeedsSeat": {
+      "label": "Vem behöver en plats?",
+      "answer": "Bara dina kunders tekniker. De som bara skickar in ärenden är kostnadsfria, och dina egna tekniker täcks av dina AlgaPSA-licenser."
     }
   },
   "common": {

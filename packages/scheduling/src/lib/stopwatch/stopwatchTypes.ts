@@ -25,7 +25,7 @@ export interface UpdateSessionDraftInput {
  * Overrides applied on top of the values derived from the session (toEntrySpan). Caller values win.
  * saveTimeEntry passes the whole drawer entry through this shape.
  */
-export interface LogSessionInput {
+export interface LogSessionEntryFields {
   start_time?: string;
   end_time?: string;
   /** Minutes. When omitted it is derived from the final start/end span. */
@@ -43,6 +43,21 @@ export interface LogSessionInput {
   work_item_type?: string;
   /** Entry subject (delegation); defaults to the acting user. */
   user_id?: string;
+}
+
+/** One entry of an explicit multi-entry log (the drawer's per-day entries). The span is mandatory. */
+export interface LogSessionEntryInput extends LogSessionEntryFields {
+  start_time: string;
+  end_time: string;
+}
+
+export interface LogSessionInput extends LogSessionEntryFields {
+  /**
+   * Explicit entries, persisted together in the caller's transaction. When omitted the session is
+   * split server-side into one entry per work day (an explicit start_time/end_time stays one entry).
+   * The other fields act as defaults for every listed entry.
+   */
+  entries?: LogSessionEntryInput[];
 }
 
 export interface StopwatchOptions {

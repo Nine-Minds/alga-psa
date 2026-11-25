@@ -14,6 +14,12 @@ import * as Y from 'yjs'
  * AI rooms are ignored. Errors are logged, never thrown: a failed persist must
  * not disrupt the live editing session — Hocuspocus retries on the next
  * debounce / unload.
+ *
+ * Hocuspocus unloads a room — and resolves `destroy()` on shutdown — without
+ * waiting for a store or authorization request that is already in flight, so
+ * the extension tracks its own outstanding requests. `settled()` resolves once
+ * they have all finished, and `onDestroy` drains them so a graceful shutdown
+ * does not cut off the final persist of a room that just unloaded.
  */
 export class CollabPersistenceExtension {
   constructor(config = {}) {
@@ -21,9 +27,31 @@ export class CollabPersistenceExtension {
     this.apiKey = config.apiKey || ''
     this.authorizationUrl = config.authorizationUrl || this.apiUrl.replace(/\/persist(?:\?.*)?$/, '/authorize')
     this.roomCredentials = new Map()
+    this.inFlight = new Set()
   }
 
-  async authorizeWriter(documentName, credential) {
+  track(work) {
+    this.inFlight.add(work)
+    const release = () => { this.inFlight.delete(work) }
+    work.then(release, release)
+    return work
+  }
+
+  async settled() {
+    while (this.inFlight.size > 0) {
+      await Promise.allSettled([...this.inFlight])
+    }
+  }
+
+  async onDestroy() {
+    await this.settled()
+  }
+
+  authorizeWriter(documentName, credential) {
+    return this.track(this.requestWriterAuthorization(documentName, credential))
+  }
+
+  async requestWriterAuthorization(documentName, credential) {
     const [, tenantId, documentId] = documentName.split(':')
     if (!tenantId || !documentId || !credential || !this.apiKey) return false
     try {
@@ -57,7 +85,11 @@ export class CollabPersistenceExtension {
     this.roomCredentials.delete(documentName)
   }
 
-  async onStoreDocument({ document, documentName }) {
+  onStoreDocument(payload) {
+    return this.track(this.persistDocument(payload))
+  }
+
+  async persistDocument({ document, documentName }) {
     if (!documentName || !documentName.startsWith('document:')) {
       return
     }

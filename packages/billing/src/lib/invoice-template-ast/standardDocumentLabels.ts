@@ -109,6 +109,8 @@ export const STANDARD_DOCUMENT_LABELS: readonly TemplateI18nRef[] = [
   { i18nKey: 'labels.shipping', defaultValue: 'Shipping' },
   { i18nKey: 'labels.returnBy', defaultValue: 'Return by' },
   { i18nKey: 'labels.returnShipTo', defaultValue: 'Return ship to' },
+  { i18nKey: 'labels.yes', defaultValue: 'Yes' },
+  { i18nKey: 'labels.no', defaultValue: 'No' },
 ];
 
 const byKey = new Map(STANDARD_DOCUMENT_LABELS.map((label) => [label.i18nKey, label] as const));

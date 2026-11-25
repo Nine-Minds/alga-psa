@@ -250,6 +250,8 @@ export async function inviteCoManagedSeatTechnician(
     const [invitation] = await sponsor.table('user_invitations').insert({
       tenant: input.sponsorTenant,
       email,
+      email_normalized: email,
+      invited_user_id: null,
       first_name: firstName,
       last_name: lastName,
       role_id: null,
@@ -406,6 +408,9 @@ export async function acceptCoManagedSeatInvitation(
       hashed_password: hashedPassword,
       user_type: 'internal',
       is_inactive: false,
+      // Created to be bound by the assignment written below. Citus runs no marker trigger, and the
+      // assignment's foreign key refuses a binding row whose user is not marked (20261113130000).
+      seat_reader: true,
     });
     // The seat role and no other.
     await sponsor.table('user_roles').insert({ tenant: sponsorTenant, user_id: userId, role_id: roleId });

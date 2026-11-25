@@ -33,6 +33,16 @@ export function createSharedConversationSession(resource: CoManagedSharedResourc
   /** Files chosen for the next message; sent through the registered file stager and cleared only once the message is saved. */
   staging?: AttachmentStaging }) {
   let snapshot: SharedConversationSnapshot | null = null;
+  const listeners = new Set<() => void>();
+  const subscribe = (listener: () => void) => {
+    listeners.add(listener);
+    return () => listeners.delete(listener);
+  };
+  const publishSnapshot = (next: SharedConversationSnapshot) => {
+    snapshot = next;
+    version += 1;
+    for (const listener of listeners) listener();
+  };
   const writer = createTicketCommentWriter({
     kind: options.kind ?? PLAIN_TEXT_WRITER,
     resource,
@@ -46,22 +56,18 @@ export function createSharedConversationSession(resource: CoManagedSharedResourc
   // A version signal bumped after EVERY completed load (initial, post-write refresh, disclosure
   // reload), so panels that read `snapshot()` re-render without being handed a counter by each host.
   let version = 0;
-  const listeners = new Set<() => void>();
-  const subscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
   // The last write that left staged files unsent (a draft the server may already hold). The files panel shows it as an alert.
   let unsent: { code: string } | null = null;
   const setUnsent = (next: { code: string } | null) => { unsent = next; listeners.forEach(listener => listener()); };
   const comments = () => snapshot ? mapConversation(snapshot.items, resource.id, snapshot.actor) : [];
   const load = async () => {
-    snapshot = await loadSharedConversation(before => getCoManagedTicketConversationScreenAction(resource, before));
-    version += 1;
-    listeners.forEach(listener => listener());
+    publishSnapshot(await loadSharedConversation(before => getCoManagedTicketConversationScreenAction(resource, before)));
     return snapshot;
   };
   return {
     load,
-    snapshot: () => snapshot,
     subscribe,
+    snapshot: () => snapshot,
     /** Monotonic; changes exactly when a load completes. */
     version: () => version,
     /** Audiences the signed-in viewer may write to (server-resolved; empty until loaded). */

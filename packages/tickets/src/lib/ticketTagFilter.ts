@@ -30,10 +30,10 @@ export async function resolveTicketTagIdsByText(
  * Compiles a tag-id filter through the predicate compiler (path `tags`, keyed by tag_id) as a
  * tenant-correlated boolean over the `t` ticket alias. An empty id list matches nothing.
  */
-export function compileTicketTagIdsFilter(tagIds: readonly string[]): { sql: string; bindings: unknown[] } {
+export function compileTicketTagIdsFilter(tenant: string, tagIds: readonly string[]): { sql: string; bindings: unknown[] } {
   const group: PredicateGroup = {
     join: 'and',
     clauses: [{ path: 'tags', operator: 'in', value: Array.from(new Set(tagIds)) }],
   };
-  return compilePredicateFragment(createTicketQuerySchema(() => new Date().toISOString()), group, { rootAlias: 't' });
+  return compilePredicateFragment(createTicketQuerySchema(() => new Date().toISOString()), group, { rootAlias: 't', tenant });
 }

@@ -1815,8 +1815,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     return baseTabContent.filter((tab) => !excludedTabs.has(tab.id));
   }, [baseTabContent, isAlgaDeskMode]);
 
-  // The app-owned co-managed integration supplies a header summary and a stable
-  // `co-managed` tab once capability admission and client read authority resolve.
+  // The app-owned co-managed integration supplies the stable `co-managed`
+  // tab only (the header carries no co-managed UI) once capability admission and client read authority resolve.
   // Until then (and when unavailable) the ordinary client renders unchanged.
   const renderClientBody = (coManagedSlots: ClientCoManagedSlots | null) => {
     const clientTabs = coManagedSlots?.tab ? [...tabContent, coManagedSlots.tab] : tabContent;
@@ -1882,7 +1882,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           )}
 
           <div className="flex items-center gap-2 mr-8" data-print-hide>
-            {coManagedSlots?.summary}
             {showEntraSyncAction && (
               <div className="flex flex-col items-end gap-1">
                 <Button

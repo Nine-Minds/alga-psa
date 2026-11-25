@@ -3,7 +3,23 @@ import { tenantDb } from '@alga-psa/db';
 import { randomUUID } from 'node:crypto';
 import { createCoManagedSeatArrangement, inviteCoManagedSeatTechnician, refreshCoManagedSeatInvitation, revokeCoManagedSeatInvitation,
   revokeCoManagedSeatAssignment, setCoManagedSeatBoardScope } from '@alga-psa/co-managed';
+import { readSeatTrialSponsorEligibility } from './seatTrialEligibility';
 import { lockCoManagedSponsorPool, releaseCoManagedSeatAllocation } from '@alga-psa/licensing';
+
+export type CoManagedSeatTrialErrorCode = 'SPONSOR_NOT_ELIGIBLE' | 'TRIAL_CLAIM_UNAVAILABLE' | 'OPERATION_CONFLICT';
+
+/**
+ * A refusal the trial screen can name. `name` is fixed so `refused()` in the shared action layer can
+ * recognise it without importing this EE module into the CE build.
+ */
+export class CoManagedSeatTrialError extends Error {
+  readonly code: CoManagedSeatTrialErrorCode;
+  constructor(code: CoManagedSeatTrialErrorCode) {
+    super(code);
+    this.name = 'CoManagedSeatTrialError';
+    this.code = code;
+  }
+}
 
 export type SeatTrialStatus = 'pending' | 'active' | 'base_paused' | 'expired' | 'paid' | 'checkout_pending' | 'ended';
 
@@ -23,14 +39,10 @@ export async function prepareCoManagedSeatTrial(db: Knex, input: {
     await trx.raw('SELECT pg_advisory_xact_lock(hashtext(?), hashtext(?))', ['internal_user_seats', input.tenant]);
     await lockCoManagedSponsorPool(trx, input.tenant);
     const sponsor = tenantDb(trx, input.tenant);
-    const owner = await sponsor.table('tenants').first('product_code', 'plan', 'billing_source', 'suspended_at');
-    const entitlement = await sponsor.table('co_managed_entitlements').first('source');
-    if (!await sponsor.table('co_managed_trial_sponsors').where('base_until', '>', trx.fn.now()).first('tenant') ||
-        owner?.product_code !== 'psa' || owner.plan !== 'pro' || owner.billing_source === 'manual' || owner.suspended_at ||
-        (entitlement && entitlement.source !== 'hosted')) throw new Error('SPONSOR_NOT_ELIGIBLE');
+    if (!(await readSeatTrialSponsorEligibility(trx, input.tenant)).eligible) throw new CoManagedSeatTrialError('SPONSOR_NOT_ELIGIBLE');
     const existing = await sponsor.table('co_managed_seat_trials').first();
     if (existing?.state === 'pending') {
-      if (existing.client_id !== input.clientId) throw new Error('TRIAL_CLAIM_UNAVAILABLE');
+      if (existing.client_id !== input.clientId) throw new CoManagedSeatTrialError('TRIAL_CLAIM_UNAVAILABLE');
       const allocation = await sponsor.table('co_managed_allocations').where({ allocation_id: existing.allocation_id })
         .forUpdate().first('operation_id');
       const arrangement = await sponsor.table('co_managed_seat_arrangements').where({ arrangement_id: existing.arrangement_id })
@@ -46,12 +58,12 @@ export async function prepareCoManagedSeatTrial(db: Knex, input: {
       if (!pilot || arrangement?.allocation_id !== existing.allocation_id ||
           !assignment || !['invited', 'active'].includes(assignment.state) ||
           allocation?.operation_id !== input.operationId || assignment.contact_id !== input.contactId ||
-          JSON.stringify(currentScope) !== JSON.stringify(requestedScope)) throw new Error('OPERATION_CONFLICT');
+          JSON.stringify(currentScope) !== JSON.stringify(requestedScope)) throw new CoManagedSeatTrialError('OPERATION_CONFLICT');
       const invitation = assignment.state === 'invited'
         ? await refreshCoManagedSeatInvitation(trx, { sponsorTenant: input.tenant, assignmentId: existing.assignment_id }) : null;
       return { trialId: existing.trial_id, arrangementId: existing.arrangement_id, assignmentId: existing.assignment_id, invitation };
     }
-    if (existing && (existing.activated_at || existing.state !== 'ended' || existing.conversion_state === 'pending')) throw new Error('TRIAL_CLAIM_UNAVAILABLE');
+    if (existing && (existing.activated_at || existing.state !== 'ended' || existing.conversion_state === 'pending')) throw new CoManagedSeatTrialError('TRIAL_CLAIM_UNAVAILABLE');
     const arrangement = await createCoManagedSeatArrangement(trx, { sponsorTenant: input.tenant, clientId: input.clientId,
       operationId: input.operationId, seats: 1, fundingSource: 'seat_trial' });
     await setCoManagedSeatBoardScope(trx, { sponsorTenant: input.tenant, arrangementId: arrangement.arrangement_id, boards: input.boards });
@@ -87,13 +99,13 @@ async function withPendingPilot<T>(db: Knex, input: PilotBinding,
     const sponsor = tenantDb(trx, input.tenant);
     const pilot = await sponsor.table('co_managed_seat_trials').where({ trial_id: input.trialId }).first();
     if (!pilot || pilot.state !== 'pending' || pilot.activated_at || pilot.conversion_state === 'pending' ||
-        (input.allocationId && input.allocationId !== pilot.allocation_id)) throw new Error('TRIAL_CLAIM_UNAVAILABLE');
+        (input.allocationId && input.allocationId !== pilot.allocation_id)) throw new CoManagedSeatTrialError('TRIAL_CLAIM_UNAVAILABLE');
     await sponsor.table('co_managed_allocations').where({ allocation_id: pilot.allocation_id }).forUpdate().first();
     await sponsor.table('co_managed_seat_arrangements').where({ arrangement_id: pilot.arrangement_id }).forUpdate().first();
     const assignment = await sponsor.table('co_managed_seat_assignments')
       .where({ assignment_id: pilot.assignment_id }).forUpdate().first('state');
     await sponsor.table('co_managed_seat_trials').where({ trial_id: pilot.trial_id }).forUpdate().first();
-    if (!assignment || !['invited', 'active', 'revoked'].includes(assignment.state)) throw new Error('TRIAL_CLAIM_UNAVAILABLE');
+    if (!assignment || !['invited', 'active', 'revoked'].includes(assignment.state)) throw new CoManagedSeatTrialError('TRIAL_CLAIM_UNAVAILABLE');
     return work(trx, pilot, assignment.state);
   });
 }

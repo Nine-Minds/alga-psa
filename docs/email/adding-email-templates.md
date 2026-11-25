@@ -62,6 +62,7 @@ Every ticket email carries `recipient.isInternal`. A template that goes to both 
 1. Add the value to the context the handler builds in `ticketEmailSubscriber.ts`. Pass data, not markup: a string, a number, or a plain array of objects. Labels and table markup belong in the template, in each language.
 2. Classify the path in `TICKET_EMAIL_VARIABLE_AUDIENCE`. Mark it `client` only when a requester may see it. An entry covers its subtree, so `ticket.assets` also covers `ticket.assets[].name`.
 3. Add the variable to the template's entry in `packages/notifications/src/lib/templateVariables/seed.ts` and in the inventory at `docs/plans/2026-07-17-email-template-variables-inventory.json`. The registry test renders every template listed in the inventory with the registry's example data, so both files must list the variable.
+4. Regenerate the published list: `npx tsx packages/notifications/scripts/generate-variable-docs.ts --output=docs/email/template-variable-reference.md`. The website guide links to that file.
 
 A path with no entry is MSP-only. The client rendering drops it, and `ticketEmailAudience.test.ts` fails until you classify it.
 

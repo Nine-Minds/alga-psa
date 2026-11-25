@@ -452,7 +452,7 @@ export async function getCoManagedClientManagement(db: Knex, actor: CoManagedSes
   });
   // A cancelled setup does not block a new one; a live or retained (departed)
   // relationship does. Only then is the provisioning authority evaluated.
-  // LEVERAGE: pattern co-managed-setup-open — "no live and no retained relationship" is also derived in CoManagedClientView and CoManagedClientSummary
+  // LEVERAGE: pattern co-managed-setup-open — "no live and no retained relationship" is also derived in CoManagedClientView and in this policy
   const setupOpen = !view.inconsistent && view.relationships.every(entry => entry.ended && !entry.retained);
   return { ...view, canSetUp: setupOpen && view.canManage && await canManageCoManagedClient(db, actor, clientId) };
 }

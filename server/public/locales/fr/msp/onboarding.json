@@ -334,7 +334,8 @@
     },
     "address": {
       "title": "Adresse de l'entreprise",
-      "description": "Préremplie à partir de vos informations de facturation — vérifiez et corrigez si nécessaire. Cette adresse figure sur vos factures et devis.",
+      "description": "Cette adresse figure sur vos factures et devis.",
+      "prefilledFromBilling": "Certaines de ces valeurs ont été renseignées à partir de vos informations de facturation. Veuillez les vérifier.",
       "fields": {
         "addressLine1": {
           "label": "Adresse ligne 1",

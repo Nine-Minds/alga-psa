@@ -3,10 +3,19 @@ import { computeWorkDateFields, resolveUserTimeZone, tenantDb } from '@alga-psa/
 import type { IUser } from '@alga-psa/types';
 import { persistTimeEntry, type PersistedTimeEntry } from '../timeEntryWriteCore';
 import { resolveTimeSheetForWorkDate } from '../timeSheetResolution';
-import { saveTimeEntryParamsSchema, type SaveTimeEntryParams } from '../../actions/timeEntrySchemas';
+import {
+  saveOperationalTimeEntryParamsSchema,
+  saveTimeEntryParamsSchema,
+  type SaveTimeEntryParams,
+} from '../../actions/timeEntrySchemas';
+import { resolveTimeEntryMode } from '../timeEntryMode';
+import { assertSeatOwnOperationalEntry } from '../seatTimeAccess';
+import { RequestLocalAuthorizationCache } from '@alga-psa/authorization/kernel';
 import { StopwatchConflictError, StopwatchError } from './stopwatchErrors';
-import { activeMs, toEntrySpan } from './stopwatchMath';
+import { zonedWorkDayCalendar } from '../timeEntryPeriodSelection';
+import { activeMs, toEntryPlan, toEntrySpan } from './stopwatchMath';
 import type {
+  LogSessionEntryFields,
   LogSessionInput,
   StartSessionInput,
   StartSessionOptions,
@@ -56,6 +65,20 @@ async function loadSegments(trx: Knex.Transaction, tenant: string, sessionId: st
     started_at: iso(row.started_at) as string,
     ended_at: iso(row.ended_at),
   }));
+}
+
+/** Entries a session was logged as, chronological. Sessions logged before the link table fall back to time_entry_id. */
+async function loadLoggedEntryIds(trx: Knex.Transaction, tenant: string, session: any): Promise<string[]> {
+  const db = tenantDb(trx, tenant);
+  const links = await db.table('time_tracking_session_entries')
+    .where({ session_id: session.session_id })
+    .select('entry_id');
+  if (links.length === 0) return session.time_entry_id ? [session.time_entry_id] : [];
+  const entries = await db.table('time_entries')
+    .whereIn('entry_id', links.map((row: any) => row.entry_id))
+    .orderBy('start_time', 'asc')
+    .select('entry_id');
+  return entries.map((row: any) => row.entry_id);
 }
 
 async function loadDisplayFields(trx: Knex.Transaction, tenant: string, session: any) {
@@ -108,6 +131,7 @@ async function buildView(
   const now = await currentTime(trx, options);
   const segments = await loadSegments(trx, tenant, session.session_id);
   const display = await loadDisplayFields(trx, tenant, session);
+  const timeEntryIds = await loadLoggedEntryIds(trx, tenant, session);
   return {
     session_id: session.session_id,
     user_id: session.user_id,
@@ -117,6 +141,7 @@ async function buildView(
     notes: session.notes ?? '',
     status: session.status,
     time_entry_id: session.time_entry_id ?? null,
+    time_entry_ids: timeEntryIds,
     closed_at: iso(session.closed_at),
     created_at: iso(session.created_at) as string,
     updated_at: iso(session.updated_at) as string,
@@ -353,19 +378,37 @@ export async function updateSessionDraft(
 
 export interface LogSessionResult {
   session: StopwatchSessionView;
-  persisted: PersistedTimeEntry;
+  /** One per entry, in chronological order. */
+  persisted: PersistedTimeEntry[];
 }
 
 /**
- * Log an open session as exactly one time entry (D4/D5), inside the caller's transaction:
- * pauses it if running, builds the entry from toEntrySpan with caller overrides, resolves the
- * sheet (unless the caller names one), persists through persistTimeEntry, then marks the
- * session logged. Throws an expected error (locked sheet, no period, ...) when it cannot; the
- * caller's transaction then rolls back, so a session that was paused beforehand stays paused
- * (a running one stays running).
+ * Log an open session as one time entry per work day (D4/D5, design 2.1), inside the caller's
+ * transaction: pauses it if running, builds the entries, resolves each entry's sheet from its
+ * own work date (unless the caller names one), persists every entry through persistTimeEntry,
+ * links them to the session, then marks the session logged. Throws an expected error (locked
+ * sheet, no period, ...) when any entry cannot be saved; the caller's transaction then rolls
+ * everything back, so a session that was paused beforehand stays paused (a running one stays
+ * running).
  *
- * Callers publish events AFTER commit: publishPersistedTimeEntryEvents(result.persisted).
+ * Which entries:
+ *  - `input.entries`: exactly those (the drawer's reviewed days).
+ *  - an explicit `start_time`/`end_time`: one entry over that span, as before.
+ *  - otherwise: toEntryPlan over the session's segments in the entry subject's work timezone
+ *    (the same zone persistTimeEntry stamps work_date with).
+ * When the server derives more than one entry, `billable_duration` and `time_sheet_id` overrides
+ * are ignored: each applies to a single day only.
+ *
+ * Callers publish events AFTER commit: publishPersistedTimeEntryEvents for every result.persisted.
  * `actor` is the acting user and must own the session. Permission checks are the caller's job.
+ *
+ * Billing mode: resolved HERE, from the actor, with the same `resolveTimeEntryMode` every time-entry
+ * write uses. It is deliberately not a parameter, so no caller (server action, REST service) can log a
+ * seat technician's session as commercial or ask for a mode. A seat (operational) session is written
+ * through the operational schema and persistTimeEntry({ mode: 'operational' }): actual duration, zero
+ * billable minutes, no service/contract line/tax. A service is not required and `session.service_id` is
+ * not applied; a commercial field in the input is refused by the write core rather than dropped, and the
+ * entry subject must be the actor. Ticket scope is enforced by persistTimeEntry as for manual entries.
  */
 export async function logSession(
   trx: Knex.Transaction,
@@ -383,58 +426,101 @@ export async function logSession(
     await closeOpenSegment(trx, tenant, sessionId, now);
   }
   const segments = await loadSegments(trx, tenant, sessionId);
-  const span = toEntrySpan(segments, now);
 
-  const startIso = input.start_time ?? span.start.toISOString();
-  const endIso = input.end_time ?? span.end.toISOString();
-  const spanMinutes = Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60_000);
-  const billable =
-    input.is_billable === false ? 0 : (input.billable_duration ?? Math.max(0, spanMinutes));
+  const { entries: explicitEntries, ...defaults } = input;
+  const entryUserId = defaults.user_id ?? actor.user_id;
+  const mode = await resolveTimeEntryMode(trx, tenant, actor.user_id, new RequestLocalAuthorizationCache());
+  const isOperational = mode === 'operational';
+  if (isOperational) {
+    // A seat technician logs only their own effort, as for a manual operational entry.
+    assertSeatOwnOperationalEntry({ billing_mode: 'operational', user_id: entryUserId }, actor.user_id);
+    for (const item of [defaults, ...(explicitEntries ?? [])]) {
+      if (item.user_id && item.user_id !== actor.user_id) {
+        assertSeatOwnOperationalEntry({ billing_mode: 'operational', user_id: item.user_id }, actor.user_id);
+      }
+    }
+  }
+  const timeZone = await resolveUserTimeZone(trx, tenant, entryUserId);
 
-  const entryUserId = input.user_id ?? actor.user_id;
-  let timeSheetId = input.time_sheet_id;
-  if (!timeSheetId) {
-    const timeZone = await resolveUserTimeZone(trx, tenant, entryUserId);
-    const { work_date } = computeWorkDateFields(startIso, timeZone);
-    timeSheetId = (await resolveTimeSheetForWorkDate(trx, tenant, entryUserId, work_date)).timeSheetId;
+  let inputs: LogSessionEntryFields[];
+  if (explicitEntries && explicitEntries.length > 0) {
+    inputs = explicitEntries.map((entry) => ({ ...defaults, ...entry }));
+  } else if (defaults.start_time || defaults.end_time) {
+    const span = toEntrySpan(segments, now);
+    inputs = [{
+      ...defaults,
+      start_time: defaults.start_time ?? span.start.toISOString(),
+      end_time: defaults.end_time ?? span.end.toISOString(),
+    }];
+  } else {
+    const plan = toEntryPlan(segments, now, zonedWorkDayCalendar(timeZone));
+    const { billable_duration, time_sheet_id, ...shared } = defaults;
+    inputs = plan.map((item) => ({
+      ...(plan.length === 1 ? defaults : shared),
+      start_time: item.start.toISOString(),
+      end_time: item.end.toISOString(),
+    }));
   }
 
-  const serviceId = input.service_id ?? session.service_id ?? undefined;
-  if (!serviceId?.trim()) {
-    throw new StopwatchError('serviceRequired');
-  }
-
+  // An operational session never takes a service from the draft: the entry carries none.
+  const serviceId = isOperational ? undefined : (defaults.service_id ?? session.service_id ?? undefined);
   const nowIso = now.toISOString();
-  const entry = saveTimeEntryParamsSchema.parse({
-    entry_id: null,
-    work_item_id: input.work_item_id ?? session.work_item_id,
-    work_item_type: input.work_item_type ?? session.work_item_type,
-    start_time: startIso,
-    end_time: endIso,
-    created_at: nowIso,
-    updated_at: nowIso,
-    billable_duration: billable,
-    notes: input.notes ?? session.notes ?? '',
-    user_id: entryUserId,
-    time_sheet_id: timeSheetId,
-    approval_status: 'DRAFT',
-    service_id: serviceId,
-    contract_line_id: input.contract_line_id ?? undefined,
-    tax_region: input.tax_region,
-    tax_rate_id: input.tax_rate_id ?? undefined,
-  }) as SaveTimeEntryParams;
+  const persisted: PersistedTimeEntry[] = [];
 
-  const persisted = await persistTimeEntry(trx, { tenant, actor, entry });
+  for (const item of inputs) {
+    const startIso = item.start_time as string;
+    const endIso = item.end_time as string;
+    const spanMinutes = Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60_000);
+    const billable =
+      item.is_billable === false ? 0 : (item.billable_duration ?? Math.max(0, spanMinutes));
 
+    let timeSheetId = item.time_sheet_id;
+    if (!timeSheetId) {
+      const { work_date } = computeWorkDateFields(startIso, timeZone);
+      timeSheetId = (await resolveTimeSheetForWorkDate(trx, tenant, entryUserId, work_date)).timeSheetId;
+    }
+
+    const entryServiceId = isOperational ? item.service_id : (item.service_id ?? serviceId);
+    if (!isOperational && !entryServiceId?.trim()) {
+      throw new StopwatchError('serviceRequired');
+    }
+
+    const entry = (isOperational ? saveOperationalTimeEntryParamsSchema : saveTimeEntryParamsSchema).parse({
+      entry_id: null,
+      work_item_id: item.work_item_id ?? session.work_item_id,
+      work_item_type: item.work_item_type ?? session.work_item_type,
+      start_time: startIso,
+      end_time: endIso,
+      created_at: nowIso,
+      updated_at: nowIso,
+      billable_duration: billable,
+      notes: item.notes ?? session.notes ?? '',
+      user_id: entryUserId,
+      time_sheet_id: timeSheetId,
+      approval_status: 'DRAFT',
+      service_id: entryServiceId,
+      contract_line_id: item.contract_line_id ?? undefined,
+      tax_region: item.tax_region,
+      tax_rate_id: item.tax_rate_id ?? undefined,
+    }) as SaveTimeEntryParams;
+
+    persisted.push(await persistTimeEntry(trx, { tenant, actor, entry, ...(isOperational ? { mode } : {}) }));
+  }
+
+  await tenantDb(trx, tenant).table('time_tracking_session_entries').insert(
+    persisted.map((p) => ({ tenant, session_id: sessionId, entry_id: p.entry.entry_id })),
+  );
+
+  const first = persisted[0];
   const [updated] = await tenantDb(trx, tenant).table('time_tracking_sessions')
     .where({ session_id: sessionId })
     .update({
       status: 'logged',
-      time_entry_id: persisted.entry.entry_id,
+      time_entry_id: first.entry.entry_id,
       closed_at: now,
       updated_at: now,
-      service_id: serviceId,
-      notes: entry.notes,
+      service_id: isOperational ? null : (inputs[0].service_id ?? serviceId ?? null),
+      notes: inputs[0].notes ?? session.notes ?? '',
     })
     .returning('*');
 

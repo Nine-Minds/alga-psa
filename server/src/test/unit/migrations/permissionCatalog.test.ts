@@ -125,6 +125,21 @@ describe('permission catalog structure', () => {
     expect(collectCatalogErrors()).toEqual([]);
   });
 
+  it.each(['algadesk', 'psa', 'co_managed'])('keeps permission administration unique and Admin-only in %s', (product) => {
+    const entries = catalog.getProductPermissions(product)
+      .filter((entry: any) => entry.resource === 'permission');
+    expect(entries.map((entry: any) => entry.action).sort()).toEqual(['create', 'delete', 'read', 'update']);
+    const identities = entries.map(catalog.permissionIdentity);
+    for (const entry of entries) {
+      expect(entry.msp).toBe(true);
+      expect(entry.client).toBe(false);
+    }
+    for (const [role, grants] of roleGrants.compileRoleGrants(product)) {
+      const administration = grants.identities.filter((identity: string) => identities.includes(identity));
+      expect(administration.sort(), `${product} ${role}`).toEqual(role === 'msp:Admin' ? [...identities].sort() : []);
+    }
+  });
+
   it.each([
     ['duplicate identity', [
       { resource: 'ticket', action: 'read', msp: true, client: false, description: 'd', products: ['psa'], defaultGrants: {} },

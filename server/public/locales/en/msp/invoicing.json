@@ -263,7 +263,8 @@
       "titleDelete": "Errors occurred while deleting invoices:",
       "titleReverse": "Errors occurred while reversing invoices:",
       "loadReady": "Failed to load billing periods. Please try again.",
-      "loadHistory": "Failed to load recurring invoice history. Please try again."
+      "loadHistory": "Failed to load recurring invoice history. Please try again.",
+      "noInvoicesCreated": "No invoice was created. Refresh the list and check whether this period was already invoiced or has nothing to bill."
     },
     "loading": {
       "billingData": "Loading billing data",
@@ -339,6 +340,10 @@
       },
       "nextInvoice": "Bills on next invoice",
       "outsideLookback": "Outside lookback — not billed"
+    },
+    "billingProfile": {
+      "label": "Billing profile — {{client}}, invoice {{index}}",
+      "automatic": "Use the profile assigned to the selected work"
     }
   },
   "manualInvoices": {
@@ -433,6 +438,7 @@
       "SOURCE_NOT_ELIGIBLE": "A selected item is not one of this ticket's billable items, or it is no longer eligible. Refresh and try again.",
       "SOURCE_CURRENCY_MISMATCH": "Some selected products are priced in a different currency than this client invoices in, so they cannot be added. Invoice them separately in their own currency.",
       "SERVICE_REQUIRED": "Assign a service to this charge before saving.",
+      "BILLING_PROFILE_MISMATCH": "The selected billing profile would exclude {{count}} charge(s). Choose the billing profile assigned to this work, or select each profile’s lines separately.",
       "BILLING_PROFILE_NOT_FOUND": "The selected billing profile is not available for this client. Refresh and try again.",
       "sessionExpired": "Your session expired before this save completed. Your edits remain in this editor and were not saved. Sign in again in a new tab, then retry the save here.",
       "saveRefreshFailed": "Your changes were saved, but the invoice page could not finish refreshing. Reload to view the saved invoice."
@@ -2700,6 +2706,15 @@
         "clearLines": "Single line",
         "stackedLinesHint": "Each non-empty line renders on its own row. When all lines are empty the column’s binding key above is shown.",
         "removeLine": "Remove line {{index}}",
+        "valueLabels": "Value wording",
+        "addKnownValues": "+ Known values",
+        "addValueLabel": "+ Value",
+        "valueLabelsHint": "Choose the words printed for a value, such as true → Included. An empty label prints nothing.",
+        "valueLabelKey": "Value",
+        "valueLabelKeyPlaceholder": "true",
+        "valueLabelText": "Printed wording",
+        "valueLabelTextPlaceholder": "Blank",
+        "removeValueLabel": "Remove wording",
         "align": "Align",
         "widthPlaceholder": "auto | 50% | 120px"
       },

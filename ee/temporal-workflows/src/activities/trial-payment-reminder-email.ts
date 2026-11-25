@@ -1,11 +1,15 @@
 /**
  * Trial payment reminder email template.
  *
- * Shares the welcome email scaffolding in email-activities.ts (Poppins/Inter
- * web fonts, purple gradient header, tagline + info cards, VML bulletproof
- * buttons, dark slate footer) so the two hosted lifecycle emails read as one
- * family. Kept out of the activity modules' export surface: it is a pure
- * template builder, not a Temporal activity.
+ * Uses the lifecycle email scaffolding the welcome email had before its
+ * 2026-11 redesign (Poppins/Inter web fonts, purple gradient header, tagline +
+ * info cards, VML bulletproof buttons, dark slate footer). The welcome email
+ * now renders from a copy model (welcome-email.ts); this one was left as is.
+ * Kept out of the activity modules' export surface: it is a pure template
+ * builder, not a Temporal activity.
+ *
+ * LEVERAGE: pattern lifecycle-email-renderer — a hand-written HTML+text pair per
+ * email; welcome-email.ts's model + two renderers is the candidate layer.
  *
  * AlgaPSA-only copy on purpose: AlgaDesk is sold without a trial, so it never
  * reaches this reminder (tenant creation does not schedule one for it).

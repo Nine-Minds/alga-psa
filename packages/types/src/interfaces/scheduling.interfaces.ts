@@ -1,6 +1,7 @@
 import { TenantEntity } from './index';
 import { WorkItemType } from './workItem.interfaces';
 import type { ProjectServiceSource } from './project.interfaces';
+import type { StopwatchSegmentView } from './stopwatch.interfaces';
 
 /**
  * Appointment Request Status
@@ -141,4 +142,9 @@ export interface TimeEntryWorkItemContext {
   notice?: string;
   /** Stopwatch session this entry logs; saving the entry closes the session (D4). */
   stopwatchSessionId?: string;
+  /**
+   * The session's segments. The launcher splits them into one entry per work day in the user's
+   * timezone (toEntryPlan); startTime/endTime keep the single-span view for other consumers.
+   */
+  stopwatchSegments?: StopwatchSegmentView[];
 }

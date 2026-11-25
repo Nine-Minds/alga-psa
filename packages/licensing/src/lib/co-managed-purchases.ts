@@ -32,7 +32,7 @@ export class CoManagedPurchaseError extends Error {
       PURCHASE_IN_PROGRESS: 'Complete or resume the pending purchase before starting another.',
       PURCHASE_AWAITING_VERIFICATION: 'The first purchase is awaiting payment verification. Refresh shortly.',
       OPERATION_CONFLICT: 'This purchase was started with a different seat quantity.',
-      ALLOCATED_CAPACITY_REQUIRED: 'Release allocated customer seats before reducing this pool.',
+      ALLOCATED_CAPACITY_REQUIRED: 'Release allocated co-managed seats before reducing this pool.',
       OFFLINE_LICENSE_REQUIRED: 'Update the signed license to change self-hosted co-managed capacity.',
     }[code]);
     this.name = 'CoManagedPurchaseError';

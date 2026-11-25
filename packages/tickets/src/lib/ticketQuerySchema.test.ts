@@ -60,6 +60,12 @@ describe('ticket query schema: computed attributes (T032)', () => {
       const subselects = (fragment.sql.match(/\(SELECT 1 FROM/g) ?? []).length;
       const correlations = (fragment.sql.match(/\.tenant = \?\?/g) ?? []).length;
       expect(correlations).toBeGreaterThanOrEqual(subselects);
+
+      // With a tenant, each of those correlations is also a filter by value (Citus routing).
+      const pinned = compilePredicateFragment(schema, clause, { rootAlias: 't', tenant: UUID });
+      expect(pinned.bindings).toHaveLength((pinned.sql.match(/\?\??/g) ?? []).length);
+      expect((pinned.sql.match(/\.tenant = \? AND/g) ?? []).length).toBe(correlations);
+      expect((pinned.sql.match(/\.tenant = \?\?/g) ?? []).length).toBe(correlations);
     }
   });
 

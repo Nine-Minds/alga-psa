@@ -14873,7 +14873,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts/{id}",
     "displayName": "Update contact",
     "summary": "Update contact",
-    "description": "Inherited ApiBaseController update route for one contact_name_id. work_arrangement and locations[] behave as on create; locations omitted leaves the links untouched, an empty array removes them all, and changing client_id removes them (a location never crosses clients).",
+    "description": "Inherited ApiBaseController update route for one contact_name_id. work_arrangement and locations[] behave as on create; locations omitted leaves the links untouched, an empty array removes them all, and changing client_id removes them (a location never crosses clients). A different email replaces the primary address and drops the old one unless it is re-sent in additional_email_addresses (sending one of the contact's own additional addresses with no additional_email_addresses in the body promotes it and keeps the old primary as an additional row, leaving the contact's other addresses alone); an address already used by another contact is refused.",
     "tags": [
       "Contacts"
     ],
@@ -18994,7 +18994,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/documents",
     "displayName": "Attach File to Record",
     "summary": "Attach one file to a ticket, project task, client, contact or asset",
-    "description": "Attaches ONE file to a ticket, project_task, client, contact or asset. Prefer source.type=url: give an https URL and the server downloads it (max size is the tenant storage limit). The URL host must be on the workspace's allowed download hosts (a tenant admin manages the list under Settings > MCP Server > Allowed download hosts; the ChatGPT file host is built in). If the call fails with 400 FETCH_HOST_NOT_ALLOWED, nothing was downloaded: tell the user an admin can add that host, and do not retry with other URLs. Use source.type=base64 only for small content you wrote yourself, never to relay a user's file, and file_name is then required. One file per call; make several calls for several files. In an MCP client with the attach_file tool, use that instead. Returns 201 with the stored document; 400 for a disallowed type, oversize file, unfetchable URL or a host that is not allowed (FETCH_HOST_NOT_ALLOWED), 403 without permission, 404 for a missing record.",
+    "description": "Attaches ONE file to a ticket, project_task, client, contact or asset. Prefer source.type=url: give an https URL and the server downloads it (max size is the tenant storage limit). The URL host must be on the workspace's allowed download hosts (a tenant admin manages the list under Settings > MCP Server > Allowed download hosts; the ChatGPT file host is built in). If the call fails with 400 FETCH_HOST_NOT_ALLOWED, nothing was downloaded: tell the user an admin can add that host, and do not retry with other URLs. Use source.type=base64 only for small content you wrote yourself, never to relay a user's file, and file_name is then required. One file per call; make several calls for several files. The file is internal-only unless you pass is_client_visible=true (only when the user asks for the client to see it; ticket, project_task and client only, contact and asset get 400; needs document:update); the returned document shows is_client_visible. In an MCP client with the attach_file tool, use that instead. Returns 201 with the stored document; 400 for a disallowed type, oversize file, unfetchable URL or a host that is not allowed (FETCH_HOST_NOT_ALLOWED), 403 without permission, 404 for a missing record.",
     "tags": [
       "Documents"
     ],
@@ -19070,6 +19070,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "mime_type": {
           "type": "string",
           "description": "Declared MIME type. The server sniffs the bytes and a recognised type overrides this; the storage allowlist is applied to the resolved type."
+        },
+        "is_client_visible": {
+          "type": "boolean",
+          "description": "Whether the client portal can show the document. Default false (internal only). Only ticket, project_task and client support true; contact and asset get 400. true also needs the document:update permission. The created document in the response carries the resulting is_client_visible."
         }
       },
       "required": [
@@ -44398,6 +44402,178 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ]
   },
   {
+    "id": "get-_api_v1_projects_id_materials",
+    "method": "get",
+    "path": "/api/v1/projects/{id}/materials",
+    "displayName": "List project materials",
+    "summary": "List project materials",
+    "description": "Returns the materials (products) recorded against a project, newest first, with product name and SKU. Requires project:read and read access to the project.",
+    "tags": [
+      "Projects"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Project UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/ProjectMaterialResource"
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_projects_id_materials",
+    "method": "post",
+    "path": "/api/v1/projects/{id}/materials",
+    "displayName": "Add a project material",
+    "summary": "Add a project material",
+    "description": "Adds a product to a project with quantity, rate and currency. A stock-tracked product consumes stock and a serialized product delivers the picked unit_id. Insufficient stock, or stock reserved or held for a sales order, is refused with 400 on quantity and nothing is written. Requires project:update. Returns the created material.",
+    "tags": [
+      "Projects"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Project UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project UUID."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "service_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "quantity": {
+          "type": "integer",
+          "exclusiveMinimum": 0
+        },
+        "rate": {
+          "type": "number",
+          "minimum": 0
+        },
+        "currency_code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1000
+        },
+        "unit_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "billing_destination": {
+          "type": "string",
+          "enum": [
+            "next_project_invoice",
+            "schedule_entry",
+            "separate",
+            "project_completion",
+            "on_hold"
+          ]
+        },
+        "billing_schedule_entry_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "service_id",
+        "quantity",
+        "rate",
+        "currency_code"
+      ],
+      "additionalProperties": false,
+      "description": "Material to add to a project. client_id is taken from the project and is rejected if sent; allow_reserved_override is not accepted. rate is integer minor units. unit_id is required for serialized stock-tracked products."
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/ProjectMaterialResource"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_projects_id_materials_materialid",
+    "method": "delete",
+    "path": "/api/v1/projects/{id}/materials/{materialId}",
+    "displayName": "Delete a project material",
+    "summary": "Delete a project material",
+    "description": "Deletes an unbilled material from the project and restores the stock it consumed. Returns 404 if the material does not belong to the project, and 409 if it has been billed. Requires project:update.",
+    "tags": [
+      "Projects"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Project UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project UUID."
+        }
+      },
+      {
+        "name": "materialId",
+        "in": "path",
+        "required": true,
+        "description": "Project material UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project material UUID."
+        }
+      }
+    ]
+  },
+  {
     "id": "get-_api_v1_projects_tasks_taskid_comments",
     "method": "get",
     "path": "/api/v1/projects/tasks/{taskId}/comments",
@@ -54841,7 +55017,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/stopwatch/{id}/log",
     "displayName": "Log stopwatch as time entry",
     "summary": "Log stopwatch as time entry",
-    "description": "Logs the session as exactly one time entry: start = first segment start (to the minute), end = start + active duration, billable_duration = active minutes (min 1). Any body field overrides the derived value. The time sheet is resolved server-side from the start date; a locked (submitted/approved) sheet returns 409 and the session is left untouched.",
+    "description": "Logs the session as one time entry per work day (in the entry user timezone) that has active time: each entry starts at the first active instant of that day (to the minute) and lasts the active minutes of that day, ending no later than 23:59; paused time is never booked. A session within one day is one entry (billable_duration = active minutes, min 1). An explicit start_time/end_time in the body produces exactly one entry over that span. Other body fields override the derived value. The time sheet is resolved server-side from the start date; a locked (submitted/approved) sheet returns 409 and the session is left untouched.",
     "tags": [
       "Work Management v1"
     ],
@@ -54898,12 +55074,21 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "time_entry": {
               "type": "object",
               "additionalProperties": {},
-              "description": "The persisted time entry."
+              "description": "The persisted time entry (the first one when the session spans several work days)."
+            },
+            "time_entries": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "description": "Every persisted time entry, one per work day with active time."
             }
           },
           "required": [
             "session",
-            "time_entry"
+            "time_entry",
+            "time_entries"
           ]
         }
       },
@@ -65636,7 +65821,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/opportunities/{id}/stage",
     "displayName": "Set opportunity stage",
     "summary": "Set opportunity stage",
-    "description": "Sets an open-pipeline stage through the declared-evidence flow the board drag uses; won and lost answer 400 pointing at /win and /lose.",
+    "description": "Sets an open-pipeline stage through the declared-evidence flow the board drag uses; won and lost answer 400 pointing at /win and /lose. detail and citations (interaction or document sources of this opportunity) set the declaration note and sources; omitted fields keep an existing declaration. refType and refId are shorthand for one citation and are refused with 400 beside citations.",
     "tags": [
       "Opportunities v1"
     ],
@@ -65674,6 +65859,40 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "string",
             "null"
           ]
+        },
+        "citations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "minLength": 1
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ]
+          }
+        },
+        "refType": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "refId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
         }
       },
       "required": [
@@ -65901,7 +66120,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/opportunities/{id}/evidence",
     "displayName": "List opportunity evidence",
     "summary": "List opportunity evidence",
-    "description": "Lists append-only evidence and corrected records in recorded order.",
+    "description": "Lists append-only evidence and corrected records in recorded order, with the sources each declaration cites.",
     "tags": [
       "Opportunities v1"
     ],
@@ -65945,7 +66164,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/opportunities/{id}/evidence",
     "displayName": "Record declared evidence",
     "summary": "Record declared evidence",
-    "description": "Records the declared qualified checkpoint only.",
+    "description": "Declares a stage (identified through verbal) with an optional note (detail) and citations of interactions or documents attached to this opportunity. Omitted fields keep an existing declaration. refType and refId are shorthand for one citation and are refused with 400 beside citations.",
     "tags": [
       "Opportunities v1"
     ],
@@ -65982,6 +66201,26 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "null"
           ]
         },
+        "citations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "minLength": 1
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ]
+          }
+        },
         "refType": {
           "type": [
             "string",
@@ -66000,6 +66239,95 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "checkpoint"
       ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_opportunities_id_declarations_checkpoint",
+    "method": "put",
+    "path": "/api/v1/opportunities/{id}/declarations/{checkpoint}",
+    "displayName": "Edit stage declaration",
+    "summary": "Edit stage declaration",
+    "description": "Replaces the note (detail) and sources (citations) of the declaration for a reached checkpoint (qualified, assessment, proposed or verbal) without moving the deal and without publishing a stage-changed event. Omitted fields keep their current value; null detail or an empty citations array clears it. Works on closed opportunities. An unreached checkpoint answers 409; won answers 400.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      },
+      {
+        "name": "checkpoint",
+        "in": "path",
+        "required": true,
+        "description": "The stage checkpoint whose declaration is edited. won is refused.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "qualified",
+            "assessment",
+            "proposed",
+            "verbal",
+            "won"
+          ],
+          "description": "The stage checkpoint whose declaration is edited. won is refused."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "detail": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "citations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "minLength": 1
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ]
+          }
+        }
+      }
     },
     "responseBodySchema": {
       "type": "object",

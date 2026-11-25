@@ -9,7 +9,9 @@ import { dirname, join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const SRC = resolve(__dirname, '../../..');
-const FORBIDDEN_SPECIFIER = /^(qrcode|bwip-js)(\/|$)/;
+// The server-only i18n loader (reached through a dynamic import in i18nLabels.ts)
+// silently breaks the Turbopack client build of every page that bundles it.
+const FORBIDDEN_SPECIFIER = /^(qrcode|bwip-js)(\/|$)|^@alga-psa\/ui\/lib\/i18n\/serverOnly$/;
 const FORBIDDEN_FILE = /(\.server\.tsx?$|invoice-template-ast\/server-render\.ts$|services\/labelPdfService\.ts$)/;
 
 const walk = (dir: string, out: string[] = []): string[] => {
@@ -36,8 +38,8 @@ const hasDirective = (source: string, directive: string) =>
   new RegExp(`^\\s*['"]${directive}['"]`).test(stripComments(source).slice(0, 400));
 const isServerActionModule = (source: string) => hasDirective(source, 'use server');
 
-describe('client bundle isolation of barcode encoders', () => {
-  it('no use-client module reaches qrcode, bwip-js, *.server modules or the server renderer', () => {
+describe('client bundle isolation of server-only modules', () => {
+  it('no use-client module reaches qrcode, bwip-js, the server-only i18n loader, *.server modules or the server renderer', () => {
     const files = walk(SRC);
     const clientRoots = files.filter((f) => hasDirective(readFileSync(f, 'utf8'), 'use client'));
     expect(clientRoots.length).toBeGreaterThan(10);

@@ -12,10 +12,10 @@ import { getCoManagedManagementOptions, getCoManagedManagementStatus, changeCoMa
   getCoManagedClientOverview as readCoManagedClientOverview } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
 import { admitCoManagedSponsor } from '../co-managed/admitSponsor';
-async function withBillingCatalogContext<T>(work: () => Promise<T>): Promise<T> {
+async function withBillingCatalogContext<T>(work: () => Promise<T>, tenantId?: string): Promise<T> {
   if (!isEnterpriseEdition()) return work();
   const { withBillingCatalogContext: run } = await import('@enterprise/lib/stripe/offerCatalog/surfaceProbe');
-  return run(work);
+  return run(work, tenantId);
 }
 
 // Enabling and management actions gate on `admits` (flag AND entitlement) before
@@ -90,7 +90,7 @@ export const getCoManagedPurchaseState = withAuth(async (user, { tenant }) => {
     minimumQuantity: first.phase === 'established' ? state.allocated : Math.max(1, state.allocated),
     canPurchase: reason === 'available', canResume: reason === 'pending', reason };
   return { ...state, selfHosted, purchase: availability };
-  });
+  }, tenant);
 });
 
 export const getCoManagedProvisioningOptions = withAuth(async (user, { tenant }, search: string = '', selectedClientId?: string) => {
