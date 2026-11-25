@@ -19,8 +19,8 @@ type PricingScheduleMutationResult = IContractPricingSchedule | PricingScheduleA
 type PricingScheduleDeleteResult = { success: true } | PricingScheduleActionError;
 
 /**
- * A Fixed contract line a pricing schedule can be scoped to, with the facts
- * the UI needs to describe what the schedule rate would actually do.
+ * A contract line retained for historical schedule bindings, with the facts
+ * the UI needs to offer only eligible fixed-fee lines for new scopes.
  */
 export interface PricingScheduleLineScope {
   contract_line_id: string;
@@ -28,14 +28,14 @@ export interface PricingScheduleLineScope {
   /** Inactive bindings remain visible, but do not contribute to live billing. */
   is_active: boolean;
   /**
-   * The line has a bundle member or a non-product fallback service, so the
-   * schedule rate becomes the line's fee for the period. False when every
+   * The line is Fixed and has a bundle member or non-product fallback service,
+   * so the schedule rate becomes its fee for the period. False when every
    * member is unit-priced: the engine prices those from their own unit rates
    * and the plan-level rate has no precedence
    * (compute/computeFixedCharges.ts — "has NO precedence" for pricing_basis 'unit').
    */
   has_bundle_fee: boolean;
-  /** At least one member bills quantity × unit rate, which a schedule never changes. */
+  /** A Fixed line has unit-priced members, which a schedule never changes. */
   has_unit_priced_members: boolean;
 }
 
@@ -113,17 +113,18 @@ function calculateEndDateFromDuration(
 }
 
 /**
- * Fixed lines of a contract, each with whether a schedule rate would reprice it.
+ * All lines of a contract, each with whether a schedule rate would reprice it.
+ * Keep historical names even after a line changes away from Fixed.
  * One definition of "eligible" shared by the picker and the write-path guard.
  */
-async function fetchFixedLineScopes(
+async function fetchLineScopes(
   db: any,
   contractId: string,
 ): Promise<PricingScheduleLineScope[]> {
   const lines = await db.table('contract_lines')
-    .where({ contract_id: contractId, contract_line_type: 'Fixed' })
+    .where({ contract_id: contractId })
     .orderBy('display_order', 'asc')
-    .select('contract_line_id', 'contract_line_name', 'is_active');
+    .select('contract_line_id', 'contract_line_name', 'is_active', 'contract_line_type');
 
   if (!Array.isArray(lines) || lines.length === 0) {
     return [];
@@ -169,9 +170,9 @@ async function fetchFixedLineScopes(
     is_active: line.is_active === true,
     // The engine falls back to a non-product service of any configuration
     // only when no Fixed services exist. Fixed unit members suppress fallback.
-    has_bundle_fee: bundleMembers.has(line.contract_line_id) ||
-      (!unitMembers.has(line.contract_line_id) && fallbackMembers.has(line.contract_line_id)),
-    has_unit_priced_members: unitMembers.has(line.contract_line_id),
+    has_bundle_fee: line.contract_line_type === 'Fixed' && (bundleMembers.has(line.contract_line_id) ||
+      (!unitMembers.has(line.contract_line_id) && fallbackMembers.has(line.contract_line_id))),
+    has_unit_priced_members: line.contract_line_type === 'Fixed' && unitMembers.has(line.contract_line_id),
   }));
 }
 
@@ -184,7 +185,7 @@ async function getLineScopeValidationError(
   contractId: string,
   contractLineId: string,
 ): Promise<{ message: string; key: string } | null> {
-  const scopes = await fetchFixedLineScopes(db, contractId);
+  const scopes = await fetchLineScopes(db, contractId);
   const scope = scopes.find((candidate) => candidate.contract_line_id === contractLineId);
 
   if (!scope || (!scope.has_bundle_fee && !scope.has_unit_priced_members)) {
@@ -205,7 +206,7 @@ async function getLineScopeValidationError(
 }
 
 /**
- * Fixed lines of a contract with the facts the pricing-schedule picker needs.
+ * Contract line names and eligibility facts for the schedule list and picker.
  */
 export const getPricingScheduleLineScopes = withAuth(async (
   user,
@@ -221,7 +222,7 @@ export const getPricingScheduleLineScopes = withAuth(async (
     return actionError('Tenant not found', 'msp/billing:errors.context.tenantNotFound');
   }
 
-  return fetchFixedLineScopes(tenantDb(knex, tenant), contractId);
+  return fetchLineScopes(tenantDb(knex, tenant), contractId);
 });
 
 

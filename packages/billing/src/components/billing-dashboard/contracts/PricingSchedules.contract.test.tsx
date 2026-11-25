@@ -227,6 +227,28 @@ describe('PricingSchedules contract-currency custom rate', () => {
     expect(screen.queryByRole('option', { name: 'Seats' })).not.toBeInTheDocument();
   });
 
+  it.each(['Hourly', 'Usage'])('names a historical %s binding in the list, timeline, and editor only', async (lineType) => {
+    const historicalName = `Support now ${lineType}`;
+    getPricingSchedulesByContractMock.mockResolvedValue([
+      schedule(),
+      schedule({ schedule_id: 'legacy', contract_line_id: null, custom_rate: 90000 }),
+    ]);
+    getPricingScheduleLineScopesMock.mockResolvedValue([
+      fixedLine('line-1', historicalName, { has_bundle_fee: false }),
+      fixedLine('line-2', 'Backup'),
+    ]);
+
+    renderList();
+
+    expect(await screen.findAllByText(historicalName)).toHaveLength(2);
+    expect(screen.queryByText('Unnamed line')).not.toBeInTheDocument();
+    expect(screen.queryByText(/fallback fee of/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('cell', { name: historicalName }));
+    expect(screen.getByRole('dialog')).toHaveTextContent(historicalName);
+    expect(screen.getByRole('option', { name: 'Backup' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: historicalName })).not.toBeInTheDocument();
+  });
+
   it('does not count unit-priced or product-only lines in the whole-contract effect', async () => {
     getPricingSchedulesByContractMock.mockResolvedValue([
       schedule({ contract_line_id: null, custom_rate: 90000 }),

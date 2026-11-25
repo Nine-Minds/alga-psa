@@ -60,8 +60,8 @@ type Fixtures = {
   schedulesFirst?: unknown[];
   /** Rows the list read (`select('*')`) resolves to. */
   schedulesRows?: unknown[];
-  /** Fixed lines of the contract, as contract_lines rows. */
-  lines?: Array<{ contract_line_id: string; contract_line_name: string | null; is_active?: boolean }>;
+  /** Lines of the contract, including bindings whose type has since changed. */
+  lines?: Array<{ contract_line_id: string; contract_line_name: string | null; is_active?: boolean; contract_line_type?: string }>;
   /** Member rows: one per (line, pricing_basis). */
   members?: Array<{ contract_line_id: string; pricing_basis: string | null; configuration_type?: string; item_kind?: string }>;
 };
@@ -95,10 +95,13 @@ function seedTables(fixtures: Fixtures = {}) {
     where: vi.fn().mockReturnThis(),
     first: vi.fn(async () => ({ is_system_managed_default: false })),
   };
+  let lineFilter: Record<string, unknown> = {};
   const linesQuery: any = {
-    where: vi.fn().mockReturnThis(),
+    where: vi.fn(function (this: any, filter: Record<string, unknown>) { lineFilter = filter; return this; }),
     orderBy: vi.fn().mockReturnThis(),
-    select: vi.fn(async () => fixtures.lines ?? DEFAULT_LINES),
+    select: vi.fn(async () => (fixtures.lines ?? DEFAULT_LINES)
+      .map(line => ({ contract_id: 'contract-1', contract_line_type: 'Fixed', ...line }))
+      .filter(line => Object.entries(lineFilter).every(([key, value]) => line[key as keyof typeof line] === value))),
   };
   const membersQuery: any = {
     join: vi.fn().mockReturnThis(),
@@ -404,8 +407,37 @@ describe('pricing schedule actions: line scope', () => {
       expect.objectContaining({ contract_line_id: 'line-1', has_bundle_fee: true, is_active: true }),
       expect.objectContaining({ contract_line_id: 'line-2', has_bundle_fee: true, is_active: false }),
     ]);
-    expect(linesQuery.select).toHaveBeenCalledWith('contract_line_id', 'contract_line_name', 'is_active');
-    expect(linesQuery.where).toHaveBeenCalledExactlyOnceWith({ contract_id: 'contract-1', contract_line_type: 'Fixed' });
+    expect(linesQuery.select).toHaveBeenCalledWith('contract_line_id', 'contract_line_name', 'is_active', 'contract_line_type');
+    expect(linesQuery.where).toHaveBeenCalledExactlyOnceWith({ contract_id: 'contract-1' });
+  });
+
+  it.each(['Hourly', 'Usage'])('preserves a binding changed to %s without allowing new scope assignments', async (lineType) => {
+    const { schedulesQuery } = seedTables({
+      lines: [{ contract_line_id: 'line-1', contract_line_name: 'Historical support', contract_line_type: lineType, is_active: true }],
+      // Old Fixed configurations may survive the line type change.
+      members: [
+        { contract_line_id: 'line-1', pricing_basis: 'bundle' },
+        { contract_line_id: 'line-1', pricing_basis: 'unit' },
+      ],
+      schedulesFirst: [storedRow, { ...storedRow, contract_line_id: 'line-1' }, undefined],
+    });
+
+    expect(await (getPricingScheduleLineScopes as any)(user, ctx, 'contract-1')).toEqual([{
+      contract_line_id: 'line-1', contract_line_name: 'Historical support', is_active: true,
+      has_bundle_fee: false, has_unit_priced_members: false,
+    }]);
+    await expect(callCreatePricingSchedule(user, ctx, createData())).resolves.toMatchObject({
+      messageKey: 'msp/contracts:errors.pricingSchedule.lineNotEligible',
+    });
+    await expect(callUpdatePricingSchedule(user, ctx, 'schedule-1', { contract_line_id: 'line-1' }))
+      .resolves.toMatchObject({ messageKey: 'msp/contracts:errors.pricingSchedule.lineNotEligible' });
+    expect(schedulesQuery.insert).not.toHaveBeenCalled();
+    expect(schedulesQuery.update).not.toHaveBeenCalled();
+
+    await callUpdatePricingSchedule(user, ctx, 'schedule-1', { contract_line_id: 'line-1', effective_date: '2026-07-01' });
+    expect(schedulesQuery.update).toHaveBeenCalledWith(expect.objectContaining({
+      contract_line_id: 'line-1', effective_date: '2026-07-01',
+    }));
   });
 
   it('includes a non-Fixed fallback service in scope inventory, create, and re-scope', async () => {

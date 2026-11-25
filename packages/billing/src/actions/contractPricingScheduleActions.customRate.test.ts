@@ -78,7 +78,7 @@ function seedTables(schedulesFirstResults: unknown[], row: Record<string, unknow
   const linesQuery: any = {
     where: vi.fn().mockReturnThis(),
     orderBy: vi.fn().mockReturnThis(),
-    select: vi.fn(async () => [{ contract_line_id: 'line-1', contract_line_name: 'Managed Services' }]),
+    select: vi.fn(async () => [{ contract_line_id: 'line-1', contract_line_name: 'Managed Services', contract_line_type: 'Fixed' }]),
   };
   const membersQuery: any = {
     join: vi.fn().mockReturnThis(),
