@@ -181,6 +181,33 @@ describe('DeclareStageDialog', () => {
     await waitFor(() => expect(onSubmit).toHaveBeenCalledWith({ note: null, citations: [] }));
   });
 
+  it('edit mode keeps submit enabled with a "Source removed" source and submits it with the note', async () => {
+    const onSubmit = vi.fn();
+    render(
+      <DeclareStageDialog
+        isOpen
+        mode="edit"
+        stageLabel="Verbal"
+        initialNote="Old"
+        initialSources={[
+          { type: 'document', id: 'doc-gone', label: null, missing: true },
+          { type: 'document', id: 'doc-1', label: 'Scope.pdf', missing: false },
+        ]}
+        loadSources={async () => sources}
+        onClose={() => {}}
+        onSubmit={onSubmit}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'New note' } });
+    expect(screen.getByText('Source removed')).toBeInTheDocument();
+    expect(screen.getByText('Save').closest('button')).not.toBeDisabled();
+    fireEvent.click(screen.getByText('Save'));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith({
+      note: 'New note',
+      citations: [{ type: 'document', id: 'doc-gone' }, { type: 'document', id: 'doc-1' }],
+    }));
+  });
+
   it('never gates the note or the submit when the source lookup fails', async () => {
     const onSubmit = vi.fn();
     render(<DeclareStageDialog isOpen mode="edit" stageLabel="Verbal" initialNote="Existing" loadSources={async () => { throw new Error('boom'); }} onClose={() => {}} onSubmit={onSubmit} />);

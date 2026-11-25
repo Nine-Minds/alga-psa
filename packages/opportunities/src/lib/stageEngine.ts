@@ -197,7 +197,7 @@ function sameDeclaration(a: ResolvedDeclaration, b: ResolvedDeclaration): boolea
 /**
  * The only code that inserts or supersedes a `user_declared` row for a
  * checkpoint. Resolves `content` against the live declaration (patch
- * semantics), guards every supplied citation, and writes nothing when the
+ * semantics), guards every citation the edit introduces, and writes nothing when the
  * result equals what is already there. A change supersedes the live row with
  * a correction and inserts its replacement with the citation rows; the
  * replacement inherits `recorded_at` / `recorded_by`, because that is when the
@@ -240,8 +240,13 @@ async function writeDeclaration(
   if (supplied && supplied.length > MAX_DECLARATION_CITATIONS) {
     throw new OpportunityDeclarationError('too_many_citations', `A declaration can cite at most ${MAX_DECLARATION_CITATIONS} sources`);
   }
-  // One bad citation refuses the whole write, before anything is changed.
+  // Only a citation this edit introduces is guarded. One already on the live declaration
+  // is carried forward as-is, even if its source has since been detached ("Source removed"):
+  // it was validated when recorded. One bad new citation refuses the whole write, before
+  // anything is changed.
+  const alreadyCited = new Set(current.citations.map((citation) => `${citation.type}:${citation.id}`));
   for (const citation of supplied ?? []) {
+    if (alreadyCited.has(`${citation.type}:${citation.id}`)) continue;
     await assertRefBelongsToOpportunity(db, tenant, opportunityId, citation);
   }
   const next: ResolvedDeclaration = {
