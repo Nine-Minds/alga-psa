@@ -1,0 +1,326 @@
+[
+  {
+    "id": "F001",
+    "description": "Create client_portal_notices table with severity, localized content jsonb, link_url, starts_at, ends_at, dismissible, audience_type, timestamps",
+    "group": "Data",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Create client_portal_notice_targets table (client/tag targets per notice)",
+    "group": "Data",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Create client_portal_notice_dismissals table with unique (tenant, notice, user)",
+    "group": "Data",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Distribute all three tables on Citus colocated with tenants via the shared migration helper; idempotent; no-op on plain Postgres",
+    "group": "Data",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Notice types and shared constants (severity, audience type, content shape, message and label length caps)",
+    "group": "Types",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Validate notice input: default-locale message required, length caps, ends_at after starts_at, severity and audience enums",
+    "group": "Validation",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Validate link URL: https or same-origin relative path only; reject all other schemes",
+    "group": "Validation",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Force dismissible=false for critical severity at write time",
+    "group": "Validation",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Liveness predicate: live when within optional start/end window, evaluated against server time",
+    "group": "Logic",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Derive Live / Scheduled / Expired status for display",
+    "group": "Logic",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Locale resolution: user locale if present in content map, else default",
+    "group": "Logic",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Server action: list notices (settings:read, MSP only) with audience summary names and derived status",
+    "group": "Actions",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Server action: get one notice for editing",
+    "group": "Actions",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Server action: create notice with targets (settings:update, MSP only)",
+    "group": "Actions",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Server action: update notice and replace targets; clear dismissals on content or audience change",
+    "group": "Actions",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Server action: delete notice and its targets and dismissals",
+    "group": "Actions",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Server action: preview audience, returning names of clients an audience resolves to",
+    "group": "Actions",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Portal query: live notices matching the session user's client (all, explicit client, or any shared client tag), excluding that user's dismissals, ordered by severity then recency, in one query",
+    "group": "Portal",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Derive the user's client server-side from the session user's contact; never accept a client id from the request",
+    "group": "Portal",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Server action: dismiss notice for calling user only, refused for non-dismissible or non-visible notices",
+    "group": "Portal",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Load active notices in the client portal server layout and pass them to the client layout",
+    "group": "Portal",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "ClientPortalNoticeBar component using standard Alert with severity-to-variant mapping, full width under the header",
+    "group": "UI",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Render message as plain text and link with target=_blank and rel=noopener noreferrer",
+    "group": "UI",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Dismiss control on dismissible notices only; optimistic hide then server persist",
+    "group": "UI",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Collapse beyond 3 visible notices with a +N more disclosure",
+    "group": "UI",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Mount notice bar in ClientPortalTopBar beside StaleActionBanner so it shows on every portal page",
+    "group": "UI",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Client Portal settings: Notices section with DataTable (message preview, severity, audience names, schedule, status chip)",
+    "group": "Settings UI",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Add/Edit notice dialog: severity, default message, link, schedule, dismissible toggle, audience selector",
+    "group": "Settings UI",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Audience selector: All clients / Specific clients (client picker) / Clients with tags (tag picker)",
+    "group": "Settings UI",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Per-locale message repeater with default first",
+    "group": "Settings UI",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Dismissible toggle disabled and off when severity is critical",
+    "group": "Settings UI",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Preview of the bar in a chosen locale before saving",
+    "group": "Settings UI",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Delete confirmation dialog",
+    "group": "Settings UI",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Stable element ids on all new interactive controls per UI standards",
+    "group": "Settings UI",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Locale strings for portal bar (dismiss, more, severity labels) and authoring UI in en and the other shipped locales",
+    "group": "i18n",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Permission errors use permissionError with a translated key",
+    "group": "Security",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  }
+]

@@ -1,7 +1,11 @@
-import crypto from 'node:crypto';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { fetchMicrosoftGraphAppToken } from '../graphAuth';
+import {
+  assertGraphClientStateFits,
+  fitsGraphClientState,
+  generateGraphClientStateSecret,
+} from '../graphClientState';
 import { isTeamsEmulatorModeEnabled } from '../teams/emulatorMode';
 import { getMicrosoftGraphBaseUrl } from '../teams/microsoftEndpoints';
 import { resolveTeamsMeetingGraphConfig } from '../meetings/meetingConfig';
@@ -50,8 +54,12 @@ interface GraphSubscriptionResponse {
 // clientState is Microsoft Graph's shared secret for webhooks: the tenant and
 // provider segments route the notification, the trailing secret proves it came
 // from a subscription we created.
-export function buildTelephonyClientState(tenantId: string, secret: string): string {
+function formatClientState(tenantId: string, secret: string): string {
   return `telephony-call-records:${tenantId}:${TEAMS_PHONE_PROVIDER}:${secret}`;
+}
+
+export function buildTelephonyClientState(tenantId: string, secret: string): string {
+  return assertGraphClientStateFits(formatClientState(tenantId, secret), 'Teams call-records subscription');
 }
 
 export function parseTelephonyClientState(
@@ -68,10 +76,6 @@ export function parseTelephonyClientState(
   }
 
   return { tenantId, provider, secret };
-}
-
-function generateWebhookSecret(): string {
-  return crypto.randomBytes(32).toString('hex');
 }
 
 function normalizeString(value: unknown): string {
@@ -217,9 +221,11 @@ export async function renewTelephonyCallSubscriptions(input: {
     return [];
   }
 
+  // Secrets stored by earlier releases were too long for Graph's clientState limit, so no
+  // subscription can be using them; replace them rather than failing every renewal.
   let clientStateSecret = normalizeString(row.webhook_secret);
-  if (!clientStateSecret) {
-    clientStateSecret = generateWebhookSecret();
+  if (!clientStateSecret || !fitsGraphClientState(formatClientState(tenantId, clientStateSecret))) {
+    clientStateSecret = generateGraphClientStateSecret();
     await db.table('telephony_providers')
       .where({ provider_id: row.provider_id })
       .update({ webhook_secret: clientStateSecret, updated_at: knex.fn.now() });

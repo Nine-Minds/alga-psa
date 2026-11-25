@@ -1,3 +1,5 @@
+import { classifyForwardedHeaderField, parseForwardedHeaderBlock } from './forwardedMessage';
+
 export type ReplyParseConfidence = 'high' | 'medium' | 'low';
 export type ReplyParsingStrategy =
   | 'custom-boundary'
@@ -110,54 +112,6 @@ interface TrimResult {
 
 interface HtmlTrimResult extends TrimResult {
   preserveUntrimmedText?: boolean;
-}
-
-type QuotedHeaderField = 'from' | 'sent' | 'to' | 'cc' | 'subject';
-
-/**
- * Classify fields that commonly appear in a plain-text quoted-message envelope.
- * A single matching line is not enough evidence: structured email/form bodies
- * frequently contain legitimate fields such as `Subject:` or `From:`.
- */
-function classifyQuotedHeaderField(line: string): QuotedHeaderField | null {
-  if (/^(?:from|de)\s*:/i.test(line)) return 'from';
-  if (/^(?:sent|date|envoyé)\s*:/i.test(line)) return 'sent';
-  if (/^(?:to|répondre à)\s*:/i.test(line)) return 'to';
-  if (/^cc\s*:/i.test(line)) return 'cc';
-  if (/^subject\s*:/i.test(line)) return 'subject';
-  return null;
-}
-
-/**
- * Recognize the coherent envelope emitted by plain-text Outlook-style replies.
- * Requiring From + Sent/Date + To + Subject avoids truncating authored content
- * merely because one form field happens to look like an email header.
- */
-function isCoherentQuotedHeaderBlock(lines: string[], startIndex: number): boolean {
-  if (classifyQuotedHeaderField(lines[startIndex].trim()) !== 'from') {
-    return false;
-  }
-
-  const fields = new Set<QuotedHeaderField>();
-  const endIndex = Math.min(lines.length, startIndex + 10);
-
-  for (let i = startIndex; i < endIndex; i += 1) {
-    const rawLine = lines[i];
-    const line = rawLine.trim();
-    if (!line) break;
-
-    const field = classifyQuotedHeaderField(line);
-    if (field) {
-      fields.add(field);
-      continue;
-    }
-
-    // Permit folded header values, but stop as soon as normal body text begins.
-    if (/^\s/.test(rawLine)) continue;
-    break;
-  }
-
-  return fields.has('from') && fields.has('sent') && fields.has('to') && fields.has('subject');
 }
 
 /** Quoted lines a wrapped attribution must introduce: a whole quoted message, not one sentence. */
@@ -670,7 +624,7 @@ function stripProviderHeaders(text: string, config: ReplyParserConfig, preserveU
     // Above our boundary, a script can have "written" authored evidence in any
     // supported language. Require a sender address in the provider's attribution
     // position; dates and times alone do not establish quoted history.
-    if (preserveUnattributedQuotes && !classifyQuotedHeaderField(line)) {
+    if (preserveUnattributedQuotes && !classifyForwardedHeaderField(line)) {
       return /^on .+wrote:$/i.test(line)
         ? attributionDateTimeRegex.test(line) && providerAttributionTailRegex.test(line)
         : localizedProviderAttributionRegex.test(line);
@@ -700,10 +654,10 @@ function stripProviderHeaders(text: string, config: ReplyParserConfig, preserveU
     }
 
     if (isProviderHeader(line)) {
-      const headerField = classifyQuotedHeaderField(line);
+      const headerField = classifyForwardedHeaderField(line);
       if (headerField) {
         // An Outlook envelope ends the reply only as a whole From/Sent/To/Subject block.
-        if (!isCoherentQuotedHeaderBlock(lines, i)) {
+        if (!parseForwardedHeaderBlock(lines, i)) {
           kept.push(rawLine);
           continue;
         }
@@ -744,8 +698,8 @@ function stripProviderHeaders(text: string, config: ReplyParserConfig, preserveU
         const value = attributionLines[index];
         // Header-like fields need the same coherent envelope evidence here as above.
         // An isolated Subject: (before or inside the quote) may label authored evidence.
-        if (classifyQuotedHeaderField(value)) {
-          return isCoherentQuotedHeaderBlock(attributionLines, index);
+        if (classifyForwardedHeaderField(value)) {
+          return Boolean(parseForwardedHeaderBlock(attributionLines, index));
         }
         // Above an explicit boundary, "Here is what the deployment script wrote:"
         // is not evidence of provider history. Keep legacy stripping elsewhere.

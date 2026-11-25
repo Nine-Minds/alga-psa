@@ -10,6 +10,7 @@ import { CONTACT_EMAIL_CANONICAL_TYPES } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
@@ -215,6 +216,58 @@ export function promoteContactEmailRow(
         canonical_type: normalized.primary_email_canonical_type,
         custom_type: normalized.primary_email_custom_type,
         display_order: remainingRows.length,
+      },
+    ],
+  };
+}
+
+/**
+ * A saved contact whose primary address is being overwritten may keep the old address as an
+ * additional one; the option is only worth showing while the two differ.
+ */
+export function shouldOfferKeepOldPrimaryEmail(
+  savedPrimaryEmail: string | null | undefined,
+  primaryEmail: string | null | undefined
+): boolean {
+  const normalizedSavedEmail = normalizeEmailAddress(savedPrimaryEmail);
+  const normalizedPrimaryEmail = normalizeEmailAddress(primaryEmail);
+  if (!normalizedSavedEmail || !normalizedPrimaryEmail) {
+    return false;
+  }
+
+  return normalizedSavedEmail !== normalizedPrimaryEmail;
+}
+
+export function appendKeptOldPrimaryEmail(
+  value: ContactEmailAddressesEditorChange,
+  oldPrimaryEmail: string | null | undefined
+): ContactEmailAddressesEditorChange {
+  const normalizedOldEmail = normalizeEmailAddress(oldPrimaryEmail);
+  if (!normalizedOldEmail || normalizedOldEmail === normalizeEmailAddress(value.email)) {
+    return value;
+  }
+
+  const alreadyPresent = value.additional_email_addresses.some(
+    (row) => normalizeEmailAddress(row.email_address) === normalizedOldEmail
+  );
+  if (alreadyPresent) {
+    return value;
+  }
+
+  // The kept row carries the label shown on the primary row it is leaving.
+  const keptCustomType = value.primary_email_canonical_type === null
+    ? (value.primary_email_custom_type?.trim() || null)
+    : null;
+
+  return {
+    ...value,
+    additional_email_addresses: [
+      ...value.additional_email_addresses,
+      {
+        email_address: (oldPrimaryEmail ?? '').trim(),
+        canonical_type: keptCustomType ? null : (value.primary_email_canonical_type ?? 'work'),
+        custom_type: keptCustomType,
+        display_order: value.additional_email_addresses.length,
       },
     ],
   };
@@ -632,6 +685,11 @@ interface ContactEmailAddressesEditorProps {
   /** When set, used as the DOM id for the primary email input (default: `${id}-primary-email`). */
   primaryEmailInputId?: string;
   compactAdditionalRows?: boolean;
+  /**
+   * The contact's stored primary address. Only an existing contact has one, and it turns a
+   * correction of the primary input into an offer to keep the old address as an additional one.
+   */
+  savedPrimaryEmail?: string | null;
   value: ContactEmailAddressesEditorValue;
   onChange: (value: ContactEmailAddressesEditorChange) => void;
   customTypeSuggestions?: string[];
@@ -644,6 +702,7 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
   id,
   primaryEmailInputId,
   compactAdditionalRows = false,
+  savedPrimaryEmail,
   value,
   onChange,
   customTypeSuggestions = [],
@@ -663,6 +722,7 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
   const [draftRows, setDraftRows] = useState<EditableAdditionalEmailRow[]>(
     () => buildEditableAdditionalEmailRows(normalizedValue.additional_email_addresses)
   );
+  const [keepOldPrimaryEmail, setKeepOldPrimaryEmail] = useState(false);
   const [touchedRowKeys, setTouchedRowKeys] = useState<Set<string>>(new Set());
   const [expandedRowKey, setExpandedRowKey] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -757,7 +817,8 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
     nextPrimaryEmail: string,
     nextPrimaryCanonicalType: ContactEmailCanonicalType | null,
     nextPrimaryCustomType: string | null,
-    nextRows: EditableAdditionalEmailRow[]
+    nextRows: EditableAdditionalEmailRow[],
+    nextKeepOldPrimaryEmail: boolean = keepOldPrimaryEmail
   ) => {
     const nextValue = compactContactEmailAddresses({
       email: nextPrimaryEmail,
@@ -765,17 +826,31 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
       primary_email_custom_type: nextPrimaryCustomType,
       additional_email_addresses: nextRows,
     });
+    // The kept old primary rides along in the emitted payload only: it is not a row the user edits
+    // here, it is the address they chose not to lose.
+    const emittedValue = nextKeepOldPrimaryEmail
+      ? appendKeptOldPrimaryEmail(nextValue, savedPrimaryEmail)
+      : nextValue;
 
-    lastEmittedSignatureRef.current = buildContactEmailAddressesSignature(nextValue);
+    lastEmittedSignatureRef.current = buildContactEmailAddressesSignature(emittedValue);
     setPrimaryEmail(nextValue.email);
     setPrimaryCanonicalType(nextValue.primary_email_canonical_type);
     setPrimaryCustomType(nextValue.primary_email_custom_type);
     setDraftRows(buildEditableAdditionalEmailRows(nextValue.additional_email_addresses, nextRows));
-    onChange(nextValue);
+    onChange(emittedValue);
   };
 
   const handlePrimaryEmailChange = (nextEmail: string) => {
-    commitValue(nextEmail, primaryCanonicalType, primaryCustomType, draftRows);
+    // Typing the stored address back in withdraws the question.
+    const returnedToSavedEmail = normalizeEmailAddress(nextEmail) === normalizeEmailAddress(savedPrimaryEmail);
+    const nextKeepOldPrimaryEmail = keepOldPrimaryEmail && !returnedToSavedEmail;
+    setKeepOldPrimaryEmail(nextKeepOldPrimaryEmail);
+    commitValue(nextEmail, primaryCanonicalType, primaryCustomType, draftRows, nextKeepOldPrimaryEmail);
+  };
+
+  const handleKeepOldPrimaryEmailChange = (nextChecked: boolean) => {
+    setKeepOldPrimaryEmail(nextChecked);
+    commitValue(primaryEmail, primaryCanonicalType, primaryCustomType, draftRows, nextChecked);
   };
 
   const handlePrimaryTypeChange = (nextValue: string) => {
@@ -965,6 +1040,7 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
   };
 
   const primaryTypeValue = primaryCanonicalType === null ? 'custom' : primaryCanonicalType ?? 'work';
+  const offersKeepOldPrimaryEmail = shouldOfferKeepOldPrimaryEmail(savedPrimaryEmail, primaryEmail);
 
   return (
     <div ref={containerRef} className="space-y-4">
@@ -1031,6 +1107,19 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
               placeholder={t('contactEmailAddressesEditor.fields.emailPlaceholder', { defaultValue: 'name@example.com' })}
               disabled={disabled}
             />
+            {offersKeepOldPrimaryEmail && (
+              <Checkbox
+                id={`${id}-keep-old-primary-email`}
+                containerClassName="pt-1"
+                checked={keepOldPrimaryEmail}
+                onChange={(event) => handleKeepOldPrimaryEmailChange(event.target.checked)}
+                disabled={disabled}
+                label={t('contactEmailAddressesEditor.primary.keepOldEmail', {
+                  email: (savedPrimaryEmail ?? '').trim(),
+                  defaultValue: `Keep ${(savedPrimaryEmail ?? '').trim()} as an additional email`,
+                })}
+              />
+            )}
           </div>
           <div className="space-y-1">
             <Label htmlFor={`${id}-primary-type`} className="block text-gray-700">

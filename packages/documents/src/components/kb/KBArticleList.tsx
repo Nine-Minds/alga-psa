@@ -79,6 +79,7 @@ interface KBArticleListProps {
   onPageSizeChange: (size: number) => void;
   onRefresh: () => void;
   onEdit?: (article: IKBArticleWithDocument) => void;
+  /** Drives the empty-state create affordance only; the page header owns the primary "New Article" button. */
   onCreateNew?: () => void;
   onSubmitForReview?: (article: IKBArticleWithDocument) => void;
   onPublish?: (article: IKBArticleWithDocument) => void;
@@ -308,12 +309,6 @@ export default function KBArticleList({
             {t('list.countSummary', { defaultValue: '{{count}} article(s)', count: total })}
           </p>
         </div>
-        {onCreateNew && (
-          <Button id="kb-list-create" onClick={onCreateNew} size="sm">
-            <Plus className="w-4 h-4 mr-2" />
-            {t('page.actions.newArticle', { defaultValue: 'New Article' })}
-          </Button>
-        )}
       </div>
 
       {/* Table */}

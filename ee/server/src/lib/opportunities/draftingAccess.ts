@@ -1,5 +1,5 @@
 import { ADD_ONS } from '@alga-psa/types';
-import { getExperimentalFeaturesForTenant } from '@alga-psa/tenancy/actions';
+import { getExperimentalFeaturesForTenant } from '@alga-psa/tenancy/server/tenantSettings';
 import { assertTenantAddOnAccess } from 'server/src/lib/tier-gating/assertAddOnAccess';
 
 export interface OpportunityDraftingAccessDependencies {

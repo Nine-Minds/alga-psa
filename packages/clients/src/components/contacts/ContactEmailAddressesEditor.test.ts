@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  appendKeptOldPrimaryEmail,
   compactContactEmailAddresses,
   moveContactEmailRows,
   normalizeDraftContactEmailAddresses,
   promoteContactEmailRow,
+  shouldOfferKeepOldPrimaryEmail,
   validateContactEmailAddresses,
 } from './ContactEmailAddressesEditor';
 
@@ -174,6 +176,69 @@ describe('ContactEmailAddressesEditor helpers', () => {
       _localId: 'row-1',
       display_order: 1,
     });
+  });
+
+  it('offers to keep the old primary email only for a saved address the user changed', () => {
+    expect(shouldOfferKeepOldPrimaryEmail('primary@example.com', 'corrected@example.com')).toBe(true);
+    expect(shouldOfferKeepOldPrimaryEmail('primary@example.com', ' PRIMARY@example.com ')).toBe(false);
+    expect(shouldOfferKeepOldPrimaryEmail('primary@example.com', '')).toBe(false);
+    expect(shouldOfferKeepOldPrimaryEmail(null, 'corrected@example.com')).toBe(false);
+    expect(shouldOfferKeepOldPrimaryEmail(undefined, 'corrected@example.com')).toBe(false);
+  });
+
+  it('appends the kept old primary email as a last additional row carrying the primary label', () => {
+    expect(appendKeptOldPrimaryEmail({
+      email: 'corrected@example.com',
+      primary_email_canonical_type: null,
+      primary_email_custom_type: 'Escalations',
+      additional_email_addresses: [
+        {
+          email_address: 'billing@example.com',
+          canonical_type: 'billing',
+          custom_type: null,
+          display_order: 0,
+        },
+      ],
+    }, 'primary@example.com')).toEqual({
+      email: 'corrected@example.com',
+      primary_email_canonical_type: null,
+      primary_email_custom_type: 'Escalations',
+      additional_email_addresses: [
+        {
+          email_address: 'billing@example.com',
+          canonical_type: 'billing',
+          custom_type: null,
+          display_order: 0,
+        },
+        {
+          email_address: 'primary@example.com',
+          canonical_type: null,
+          custom_type: 'Escalations',
+          display_order: 1,
+        },
+      ],
+    });
+  });
+
+  it('leaves the rows alone when the old primary email is absent, unchanged or already listed', () => {
+    const value = {
+      email: 'corrected@example.com',
+      primary_email_canonical_type: 'work' as const,
+      primary_email_custom_type: null,
+      additional_email_addresses: [
+        {
+          email_address: 'primary@example.com',
+          canonical_type: 'work' as const,
+          custom_type: null,
+          display_order: 0,
+        },
+      ],
+    };
+
+    expect(appendKeptOldPrimaryEmail(value, 'primary@example.com')).toBe(value);
+    expect(appendKeptOldPrimaryEmail(value, null)).toBe(value);
+    expect(appendKeptOldPrimaryEmail({ ...value, additional_email_addresses: [] }, 'corrected@example.com'))
+      .toEqual({ ...value, additional_email_addresses: [] });
   });
 
   it('allows reusing a custom email label across rows because custom labels are tenant-scoped suggestions', () => {

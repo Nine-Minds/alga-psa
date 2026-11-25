@@ -84,7 +84,8 @@ describe('ApiMetadataController.getDocs', () => {
     const response = await handler(request);
 
     expect([302, 307]).toContain(response.status);
-    expect(response.headers.get('location')).toBe('http://example.com/api/v1/meta/openapi');
+    // Relative: the request origin is the internal upstream behind the hosted proxy.
+    expect(response.headers.get('location')).toBe('/api/v1/meta/openapi');
     expect(runWithTenantMock).toHaveBeenCalledWith('tenant-abc', expect.any(Function));
   });
 

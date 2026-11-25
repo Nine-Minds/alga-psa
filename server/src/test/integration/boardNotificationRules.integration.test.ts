@@ -30,6 +30,7 @@ describe('board notification rules: resolve + expand (integration)', () => {
   async function addRule(opts: {
     boardId: string;
     notifyOnCreate?: boolean;
+    notifyOnUnassignedClientReply?: boolean;
     enabled?: boolean;
     statusIds?: string[];
     userIds?: string[];
@@ -42,6 +43,7 @@ describe('board notification rules: resolve + expand (integration)', () => {
       rule_id: ruleId,
       board_id: opts.boardId,
       notify_on_create: opts.notifyOnCreate ?? false,
+      notify_on_unassigned_client_reply: opts.notifyOnUnassignedClientReply ?? false,
       is_enabled: opts.enabled ?? true,
     });
     for (const statusId of opts.statusIds ?? []) {
@@ -127,6 +129,27 @@ describe('board notification rules: resolve + expand (integration)', () => {
     expect(matched.map((r) => r.rule_id)).toEqual([statusRule]);
     const none = await loadMatchingRules(db, tenant, { kind: 'status_entered', statusId: otherStatus });
     expect(none).toEqual([]);
+  });
+
+  it('client-reply trigger matches only its board and only enabled rules with the flag', async () => {
+    const { boardId: own, statusIds: [ownStatus] } = await makeBoard('Client reply own');
+    const { boardId: other } = await makeBoard('Client reply other');
+    const onOwn = await addRule({ boardId: own, notifyOnUnassignedClientReply: true, userIds: [alice] });
+    await addRule({ boardId: own, notifyOnUnassignedClientReply: true, enabled: false, userIds: [carol] });
+    // A rule with the other two triggers must not fire for a client reply.
+    await addRule({ boardId: own, notifyOnCreate: true, statusIds: [ownStatus], userIds: [dave] });
+    await addRule({ boardId: other, notifyOnUnassignedClientReply: true, userIds: [dave] });
+
+    const rules = await loadMatchingRules(db, tenant, { kind: 'client_reply_unassigned', boardId: own });
+    expect(rules.map((r) => r.rule_id)).toEqual([onOwn]);
+    expect(rules[0].notify_on_unassigned_client_reply).toBe(true);
+    const recipients = await resolveUsers(db, tenant, { kind: 'client_reply_unassigned', boardId: own });
+    expect(recipients.map((r) => r.email)).toEqual(['alice@example.com']);
+
+    // The create trigger on the same board sees only the create rule.
+    const created = await loadMatchingRules(db, tenant, { kind: 'created', boardId: own });
+    expect(created.every((rule) => rule.notify_on_create)).toBe(true);
+    expect(created.map((r) => r.rule_id)).not.toContain(onOwn);
   });
 
   it('expands teams at send time, drops inactive members, dedupes direct+team, honours exclusions', async () => {

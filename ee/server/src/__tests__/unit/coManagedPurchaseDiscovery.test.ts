@@ -22,6 +22,7 @@ vi.mock('@alga-psa/db', () => ({
       mocks.tenantDbArgs.push(`${tenant}:${name}`);
       if (name === 'co_managed_seat_trials') return { first: mocks.pilot };
       if (name === 'co_managed_trial_sponsors') return { where: () => ({ first: mocks.trialSponsor }) };
+      if (name === 'co_managed_entitlements') return { first: async () => undefined }; // no pool yet
       return { first: mocks.tenantRow };
     },
   }),
@@ -88,6 +89,10 @@ describe('co-managed first-purchase discovery (commercial eligibility)', () => {
     mocks.trialSponsor.mockResolvedValue({ tenant: 'sponsor' });
 
     expect(await getCoManagedPurchaseDiscoveryAction()).toBe(true);
+    // The trial's one eligibility rule: a sponsor prepare would refuse is not discovered either.
+    mocks.tenantRow.mockResolvedValue({ product_code: 'psa', plan: 'pro', billing_source: 'manual' });
+    expect(await getCoManagedPurchaseDiscoveryAction()).toBe(false);
+    mocks.tenantRow.mockResolvedValue({ product_code: 'psa', plan: 'pro', billing_source: 'stripe' });
     mocks.admits.mockResolvedValue({ admitted: false });
     mocks.surface.mockClear();
     expect(await getCoManagedPurchaseDiscoveryAction()).toBe(false);

@@ -114,7 +114,7 @@
     "sso": {
       "advanced": {
         "title": "Options avancées : routage personnalisé du fournisseur d'identité",
-        "description": "Acheminez la connexion SSO du MSP vers votre propre fournisseur d'identité à l'aide de domaines de connexion vérifiés. Nécessaire uniquement pour les installations personnalisées ou sur site.",
+        "description": "Acheminez la connexion SSO du MSP vers votre propre fournisseur d'identité à l'aide de domaines de connexion vérifiés. Nécessaire lorsque le personnel se connecte via votre propre realm Keycloak ou votre propre application Google ou Microsoft.",
         "inertNotice": "Aucun fournisseur d’identité du locataire n’est configuré ; les revendications de domaine n’ont donc aucun effet pour le moment. Configurez Keycloak ci-dessus, ou dans l’Enterprise Edition les identifiants de votre application Google ou Microsoft, puis revendiquez ici votre domaine de connexion."
       }
     },
@@ -803,10 +803,11 @@
     "providers": {
       "title": "Connecter un fournisseur",
       "description": "Choisissez un fournisseur pour finaliser la liaison SSO. Vous serez redirigé vers le flux de connexion du fournisseur.",
-      "noneConfigured": "Aucun fournisseur SSO n'est configuré pour cet environnement. Demandez à votre administrateur de configurer les identifiants Google ou Microsoft.",
-      "noneConfiguredAdmin": "Aucun fournisseur SSO n'est encore configuré. Configurez d'abord l'application Google ou Microsoft de votre organisation.",
-      "openProviderSetup": "Configurer un fournisseur SSO",
+      "noneConfigured": "Aucun fournisseur SSO n'est configuré pour votre organisation. Demandez à votre administrateur d'en configurer un.",
+      "noneConfiguredAdmin": "Aucun fournisseur SSO n'est encore configuré. Utilisez le lien de configuration de l'un des fournisseurs ci-dessous pour commencer.",
       "notConfigured": "Non configuré",
+      "setUpProvider": "Configurer {{provider}}",
+      "askAdministrator": "Demandez à votre administrateur de le configurer.",
       "branding": {
         "google": "Continuer avec Google",
         "microsoft": "Continuer avec Microsoft",

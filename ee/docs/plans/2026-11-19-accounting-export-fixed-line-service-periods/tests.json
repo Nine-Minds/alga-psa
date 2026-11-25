@@ -1,0 +1,6 @@
+[
+  {"id": "T001", "description": "Unit: shared projection returns one period for N identical detail rows, keeps distinct periods and distinct billing timings apart, skips rows with no start and no end, and sorts by start then end", "implemented": false, "featureIds": ["F001"]},
+  {"id": "T002", "description": "Unit (accountingExportValidation.servicePeriodProjection.test.ts pattern): fixed parent charge with two detail rows for the same period and two expanded service lines whose payload carries the deduplicated period yields no service_period_projection_mismatch and a ready batch; a line whose payload period differs from the details still gets the error", "implemented": false, "featureIds": ["F003", "F004", "F005", "F006"]},
+  {"id": "T003", "description": "DB-backed integration: invoice with a Fixed contract line holding two services for one period goes through the real selector and AccountingExportValidation.ensureMappingsForBatch against migrated schema and the batch ends ready with no open errors", "implemented": false, "featureIds": ["F002", "F003", "F005"]},
+  {"id": "T004", "description": "Existing selector service-period tests (accountingExportInvoiceSelector.servicePeriods.test.ts, invoiceSelection.integration.test.ts) still pass, confirming the selector payload is unchanged", "implemented": false, "featureIds": ["F002"]}
+]

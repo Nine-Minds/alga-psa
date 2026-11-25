@@ -7,8 +7,10 @@ import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossF
 
 /**
  * Opens a document a stage declaration cites, in the same viewer drawer
- * OpportunityDocumentsTile uses. Resolves it from the deal's own document
- * list, so a document no longer attached to the deal simply doesn't open.
+ * OpportunityDocumentsTile uses. Fetches the one cited document through the
+ * authorised single-document action, so it opens however many documents the
+ * deal has. A document that is gone, or that the caller may not read, closes
+ * without rendering.
  */
 export function OpportunityCitationDocument({
   opportunityId,
@@ -20,14 +22,18 @@ export function OpportunityCitationDocument({
   onClose: () => void;
 }) {
   const { data: session } = useSession();
-  const { getDocumentsByEntity, renderDocuments } = useDocumentsCrossFeature();
-  const [documents, setDocuments] = useState<IDocument[]>([]);
+  const { getDocument, renderDocuments } = useDocumentsCrossFeature();
+  const [document, setDocument] = useState<IDocument | null>(null);
 
   useEffect(() => {
     let active = true;
-    getDocumentsByEntity(opportunityId, 'opportunity')
+    setDocument(null);
+    getDocument(documentId)
       .then((result) => {
-        if (active) setDocuments(Array.isArray(result?.documents) ? result.documents : []);
+        if (!active) return;
+        // The action answers a missing document with null and a denied read with { permissionError }.
+        if (result && typeof result === 'object' && 'document_id' in result) setDocument(result as IDocument);
+        else onClose();
       })
       .catch(() => {
         if (active) onClose();
@@ -37,13 +43,12 @@ export function OpportunityCitationDocument({
     };
     // onClose is a fresh closure each render; only the target matters here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getDocumentsByEntity, opportunityId, documentId]);
+  }, [getDocument, documentId]);
 
-  const document = documents.find((candidate) => candidate.document_id === documentId);
   if (!document) return null;
   return renderDocuments({
     id: 'opportunity-citation-document-drawer',
-    documents,
+    documents: [document],
     userId: session?.user?.id || '',
     entityId: opportunityId,
     entityType: 'opportunity',

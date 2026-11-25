@@ -17,6 +17,7 @@ import {
   createOrFindContact,
   saveEmailClientAssociation
 } from '../../actions/emailWorkflowActions';
+import { countNonInlineAttachments } from '../../../services/email/countNonInlineAttachments';
 import { extractEmailDomain } from '../../../lib/email/addressUtils';
 import { hasSubstantiveReplyContent, substantiveReplyBody } from '../../../services/email/inboundReplyBody';
 
@@ -626,8 +627,10 @@ export function registerEmailWorkflowActionsV2(): void {
         author_type: 'contact',
         author_id: input.targetAuthorUserId ?? undefined,
         contact_id: input.targetContactId ?? undefined,
-        // First comment on a new ticket: covered by the TICKET_CREATED email, so keep in-app only.
-        suppressTechEmailNotification: true,
+        // First comment on a new ticket: marked as the opener; implies in-app only
+        // (covered by the TICKET_CREATED email).
+        opensTicket: true,
+        attachmentCount: countNonInlineAttachments(emailData.attachments),
         metadata: withEmailSenderMetadata(input.parsedEmail?.metadata, emailData.from)
       }, tenant);
 

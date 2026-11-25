@@ -35,7 +35,7 @@ function templateModulePaths(): string[] {
  * rather than a hand-written fixture, so the rewrite is exercised against every
  * shape that ships: inline-style layouts and the auth templates' <style> blocks.
  */
-export function loadSystemTemplates(language = 'en'): SystemTemplateFixture[] {
+export function loadAllSystemTemplates(): SystemTemplateFixture[] {
   const templates: SystemTemplateFixture[] = [];
 
   for (const modulePath of templateModulePaths()) {
@@ -44,7 +44,6 @@ export function loadSystemTemplates(language = 'en'): SystemTemplateFixture[] {
 
     const definition = loaded.getTemplate();
     for (const translation of definition.translations ?? []) {
-      if (translation.language !== language) continue;
       templates.push({
         name: definition.templateName,
         language: translation.language,
@@ -56,6 +55,10 @@ export function loadSystemTemplates(language = 'en'): SystemTemplateFixture[] {
   }
 
   return templates;
+}
+
+export function loadSystemTemplates(language = 'en'): SystemTemplateFixture[] {
+  return loadAllSystemTemplates().filter((template) => template.language === language);
 }
 
 export function loadSystemTemplate(name: string, language = 'en'): SystemTemplateFixture {

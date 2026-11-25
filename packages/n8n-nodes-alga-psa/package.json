@@ -16,10 +16,10 @@
     "alga",
     "psa"
   ],
-  "homepage": "https://github.com/alga-psa/alga-psa",
+  "homepage": "https://github.com/Nine-Minds/alga-psa",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/alga-psa/alga-psa.git"
+    "url": "git+https://github.com/Nine-Minds/alga-psa.git"
   },
   "scripts": {
     "clean": "rm -rf dist",

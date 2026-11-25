@@ -100,6 +100,7 @@ function normalizeRecurringBillingRunGroupedTargets(params: {
       billingCycleId: group.billingCycleId,
       expectedUsagePeriodTotals: group.expectedUsagePeriodTotals,
       expectedRecurringPricingSources: group.expectedRecurringPricingSources,
+      billingProfileId: group.billingProfileId,
     }))
     .filter((group) => group.selectorInputs.length > 0);
 }
@@ -246,6 +247,7 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
                 acknowledgeUnreportedUsage: params.acknowledgeUnreportedUsage,
                 expectedUsagePeriodTotals: target.expectedUsagePeriodTotals,
                 expectedRecurringPricingSources: target.expectedRecurringPricingSources,
+                billingProfileId: target.billingProfileId,
               },
               { billingCycleId: target.billingCycleId },
             )
@@ -254,6 +256,7 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
               acknowledgeUnreportedUsage: params.acknowledgeUnreportedUsage,
               expectedUsagePeriodTotals: target.expectedUsagePeriodTotals,
               expectedRecurringPricingSources: target.expectedRecurringPricingSources,
+              billingProfileId: target.billingProfileId,
             });
         if (isRecurringBillingRunActionError(invoice)) {
           if (isDuplicateRecurringInvoiceActionError(invoice)) {
@@ -585,12 +588,13 @@ export async function generateCalendarMonthEndCloseInvoices(params: {
       const invoice = group.billingCycleId
         ? await generateInvoiceForSelectionInputs(
             group.selectorInputs,
-            { allowPoOverage: params.allowPoOverage, invoiceDate: monthEndCloseInvoiceDate },
+            { allowPoOverage: params.allowPoOverage, invoiceDate: monthEndCloseInvoiceDate, billingProfileId: group.billingProfileId },
             { billingCycleId: group.billingCycleId },
           )
         : await generateInvoiceForSelectionInputs(group.selectorInputs, {
             allowPoOverage: params.allowPoOverage,
             invoiceDate: monthEndCloseInvoiceDate,
+            billingProfileId: group.billingProfileId,
           });
 
       // The duplicate guard refuses an already-invoiced period; unlike the
@@ -705,6 +709,7 @@ export async function generateGroupedInvoicesAsRecurringBillingRun(params: {
                 acknowledgeUnreportedUsage: params.acknowledgeUnreportedUsage,
                 expectedUsagePeriodTotals: group.expectedUsagePeriodTotals,
                 expectedRecurringPricingSources: group.expectedRecurringPricingSources,
+                billingProfileId: group.billingProfileId,
               },
               { billingCycleId: group.billingCycleId },
             )
@@ -713,6 +718,7 @@ export async function generateGroupedInvoicesAsRecurringBillingRun(params: {
               acknowledgeUnreportedUsage: params.acknowledgeUnreportedUsage,
               expectedUsagePeriodTotals: group.expectedUsagePeriodTotals,
               expectedRecurringPricingSources: group.expectedRecurringPricingSources,
+              billingProfileId: group.billingProfileId,
             });
         if (isRecurringBillingRunActionError(invoice)) {
           if (isDuplicateRecurringInvoiceActionError(invoice)) {

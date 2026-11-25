@@ -119,6 +119,15 @@ const LINK_ERROR_CODES = [
   "tenant_mismatch",
 ] as const;
 
+// Google / Microsoft applications live on the product's provider page (it
+// differs by product, hence the neutral entry path); the tenant's Keycloak
+// realm is configured under Security → Single Sign-On.
+const KEYCLOAK_SETUP_PATH = "/msp/security-settings?tab=single-sign-on";
+
+function providerSetupPath(providerId: string): string {
+  return providerId === "keycloak" ? KEYCLOAK_SETUP_PATH : PROVIDER_SETUP_ENTRY_PATH;
+}
+
 function isKnownLinkErrorCode(code: string | undefined): code is (typeof LINK_ERROR_CODES)[number] {
   return typeof code === "string" && (LINK_ERROR_CODES as readonly string[]).includes(code);
 }
@@ -393,18 +402,9 @@ export default function ConnectSsoClient({
               <AlertDescription>
                 {canConfigureProviders
                   ? t("connectSso.providers.noneConfiguredAdmin", {
-                      defaultValue: "No SSO providers are configured yet. Set up your organization's Google or Microsoft application first.",
+                      defaultValue: "No SSO providers are configured yet. Use the setup link on a provider below to get started.",
                     })
                   : t("connectSso.providers.noneConfigured")}
-                {canConfigureProviders && (
-                  <div className="mt-2">
-                    {/* Product-neutral: the page that holds provider credentials differs by product. */}
-                    <Button id="connect-sso-open-provider-setup" type="button" variant="link" className="h-auto p-0"
-                      onClick={() => window.location.assign(PROVIDER_SETUP_ENTRY_PATH)}>
-                      {t("connectSso.providers.openProviderSetup", { defaultValue: "Set up an SSO provider" })}
-                    </Button>
-                  </div>
-                )}
               </AlertDescription>
             </Alert>
           )}
@@ -435,7 +435,9 @@ export default function ConnectSsoClient({
                   className={clsx(
                     "p-8 rounded-lg border-2 transition-all duration-200",
                     branding.cardClass,
-                    disabled ? "opacity-50 cursor-not-allowed" : "hover:shadow-md cursor-pointer"
+                    disabled ? "cursor-not-allowed" : "hover:shadow-md cursor-pointer",
+                    // An unconfigured card dims its body only, so the setup hint stays readable.
+                    needsVerification && "opacity-50"
                   )}
                   style={{
                     borderColor:
@@ -453,17 +455,45 @@ export default function ConnectSsoClient({
                   <div className="flex flex-col items-center text-center space-y-4">
                     <div className={clsx(
                       "w-32 h-32 rounded-full flex items-center justify-center flex-shrink-0",
-                      branding.iconBg
+                      branding.iconBg,
+                      !provider.configured && "opacity-50"
                     )}>
                       {branding.icon}
                     </div>
                     <div>
-                      <h3 className="font-semibold text-lg mb-2">{provider.name}</h3>
-                      <p className="text-sm text-muted-foreground">{provider.description}</p>
+                      <div className={clsx(!provider.configured && "opacity-50")}>
+                        <h3 className="font-semibold text-lg mb-2">{provider.name}</h3>
+                        <p className="text-sm text-muted-foreground">{provider.description}</p>
+                      </div>
                       {!provider.configured && (
-                        <p className="text-xs text-destructive mt-2 font-medium">
-                          {t("connectSso.providers.notConfigured")}
-                        </p>
+                        <div id={`provider-${provider.id}-not-configured`} className="mt-2 space-y-1 text-xs">
+                          <p className="text-destructive font-medium">
+                            {t("connectSso.providers.notConfigured")}
+                          </p>
+                          {canConfigureProviders ? (
+                            <Button
+                              id={`provider-${provider.id}-setup`}
+                              type="button"
+                              variant="link"
+                              className="h-auto p-0 text-xs"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                window.location.assign(providerSetupPath(provider.id));
+                              }}
+                            >
+                              {t("connectSso.providers.setUpProvider", {
+                                defaultValue: "Set up {{provider}}",
+                                provider: provider.name,
+                              })}
+                            </Button>
+                          ) : (
+                            <p className="text-muted-foreground">
+                              {t("connectSso.providers.askAdministrator", {
+                                defaultValue: "Ask your administrator to set it up.",
+                              })}
+                            </p>
+                          )}
+                        </div>
                       )}
                     </div>
                     <Button

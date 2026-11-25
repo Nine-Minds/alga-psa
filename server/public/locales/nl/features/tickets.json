@@ -617,6 +617,13 @@
       },
       "unavailable": "Dit ticket is niet beschikbaar.",
       "back": "Terug naar klanttickets"
+    },
+    "opener": {
+      "openedBy": "Geopend via e-mail door {{sender}}",
+      "attachments_one": "{{count}} bijlage",
+      "attachments_other": "{{count}} bijlagen",
+      "show": "Originele e-mail tonen",
+      "hide": "Originele e-mail verbergen"
     }
   },
   "responseState": {

@@ -453,6 +453,8 @@
       },
       "error": {
         "operationConflict": "Esta solicitud ya se envió con datos distintos. Actualice e inicie de nuevo.",
+        "trialClaimUnavailable": "Esta prueba ya está en uso o se inició para otro cliente. Actualice y vuelva a intentarlo.",
+        "trialSponsorNotEligible": "Este espacio de trabajo no es apto para una prueba de Seat. Compruebe el plan y el estado de facturación de la cuenta.",
         "invalidSeats": "Introduzca un número entero de puestos, como mínimo 1.",
         "invalidInvitation": "Elija un contacto al que invitar.",
         "contactNotFound": "Este contacto ya no está disponible. Elija otro contacto.",
@@ -505,8 +507,7 @@
         "save": "Guardar valores de traspaso"
       },
       "client": {
-        "seatArrangement": "Acuerdo de puestos",
-        "summary": "Acuerdo de puestos: {{used}} de {{count}} puestos en uso"
+        "seatArrangement": "Acuerdo de puestos"
       },
       "technicians": {
         "sent": "Invitación enviada.",
@@ -551,6 +552,13 @@
         "addedUnavailable": "{{name}} se añadió pero no se le puede invitar.",
         "unavailable": "No aparecen por estar inactivos, no tener correo o tener ya un puesto o una invitación: {{count}}."
       },
+      "trial": {
+        "available": "Hay una prueba gratuita de 15 días disponible arriba. Los puestos cogestionados se pueden añadir en cualquier momento.",
+        "availableTrialEnables": "Al invitar al técnico se inicia la prueba y se habilita la TI cogestionada para este cliente. Pasados los 15 días, compre un puesto para conservar al técnico.",
+        "pending": "Una invitación a la prueba de 15 días está esperando al técnico. Los puestos cogestionados se pueden añadir en cualquier momento.",
+        "active": "La prueba de 15 días está en curso. Añada puestos cogestionados para conservar al técnico después.",
+        "ended": "La prueba de 15 días ha terminado. Añada puestos cogestionados para conservar al técnico."
+      },
       "chooser": {
         "seat": "Puesto",
         "seatHint": "Los técnicos del cliente trabajan en su PSA, limitados a su empresa.",
@@ -558,7 +566,11 @@
         "workspaceHint": "El equipo de TI del cliente tiene su propio centro de servicio y escala a usted.",
         "description": "Elija cómo trabaja con usted el equipo de TI de este cliente.",
         "shape": "Modalidad cogestionada",
-        "pool": "{{available}} de {{purchased}} puestos disponibles. {{allocated}} asignados."
+        "pool": "{{available}} de {{purchased}} puestos disponibles. {{allocated}} asignados.",
+        "poolEmpty": "Aún no hay puestos cogestionados.",
+        "seatHintAfterTrial": "Añada puestos cogestionados para conservar al técnico después de la prueba de 15 días.",
+        "seatHintTrialCovers": "El puesto de prueba cubre a este técnico hasta el {{date}}. Compre un puesto para conservarlo.",
+        "seatHintTrial": "Gratis durante 15 días. Invite a un técnico para habilitar la TI cogestionada para este cliente."
       },
       "states": {
         "active": "Activo",
@@ -606,8 +618,6 @@
     },
     "client": {
       "awaitingAcceptance": "El administrador del cliente debe aceptar antes de conceder el acceso.",
-      "chooseRelationship": "Elegir relación",
-      "endedHint": "Esta relación ha finalizado. El historial retenido y los archivos siguen disponibles.",
       "endedOn": "Finalizó el {{date}}",
       "failedHint": "La configuración no terminó. Los puestos siguen reservados; reintente para continuarla o cancele la configuración.",
       "forClient": "TI cogestionada para {{name}}",
@@ -616,6 +626,7 @@
       "inconsistentHint": "Una configuración cogestionada de este cliente apunta a un registro de espacio de trabajo que pertenece a otro cliente. No se puede gestionar ni configurar nada aquí hasta que soporte corrija el registro.",
       "invitation": "Invitación del administrador",
       "notEnabled": "TI cogestionada no habilitada",
+      "notEnabledTrialEnables": "La TI cogestionada aún no está habilitada. Al iniciar la prueba gratuita de 15 días de un puesto, se habilita para este cliente.",
       "progress": "Progreso de configuración",
       "provisioningHint": "Los puestos reservados se mantienen hasta que finalice la configuración o se confirme la limpieza.",
       "relationship": "Relación",
@@ -624,7 +635,6 @@
       "setupHint": "Habilite TI cogestionada desde este cliente para reservar técnicos del cliente e invitar a un administrador.",
       "tab": "TI cogestionada",
       "viewDetails": "Ver detalles",
-      "viewHistory": "Ver historial",
       "workspace": "Espacio de trabajo del cliente",
       "seatUsage": "{{used}} de {{count}} puestos de técnico",
       "seatAllocation": "{{count}} puestos de técnico asignados"

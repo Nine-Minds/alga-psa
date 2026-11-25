@@ -43,7 +43,7 @@ vi.mock('@alga-psa/db', () => ({
 vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({ getCurrentUserPermissions: async () => [...state.permissions] }));
 vi.mock('@alga-psa/core/server', () => ({ featureFlags: { isEnabled: async () => true } }));
 
-import { getTenantSettings, getTenantTimezoneAuth, setTenantTimezone, updateExperimentalFeatures, updateTenantOnboardingStatus } from '../../../../../packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions';
+import { getTenantSettings, getTenantTimezoneAuth, setTenantTimezone, updateExperimentalFeatures, updateTenantOnboardingStatus, updateTenantSettings } from '../../../../../packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions';
 
 describe('tenant settings action authorization', () => {
   beforeEach(() => {
@@ -102,6 +102,18 @@ describe('tenant settings action authorization', () => {
     await expect(updateExperimentalFeatures({ aiAssistant: true, arbitrary: { credential: 'attacker' } } as any))
       .resolves.toHaveProperty('actionError');
     expect(state.calls).toEqual([]);
+  });
+
+  it('requires settings:update before the general settings writer reads or persists tenant data', async () => {
+    await expect(updateTenantSettings({ theme: 'private' })).resolves.toHaveProperty('permissionError');
+    expect(state.calls).toEqual([]);
+
+    state.permissions.add('settings:update');
+    await expect(updateTenantSettings({ theme: 'managed' })).resolves.toBeUndefined();
+    expect(state.calls.find((call) => call.operation === 'insert')).toMatchObject({
+      tenant: 'tenant-a',
+      values: { tenant: 'tenant-a', settings: JSON.stringify({ timezone: 'UTC', secret: 'stored-secret', theme: 'managed' }) },
+    });
   });
 
   it('rejects portal and unauthorized mutations, validates timezone, and scopes authorized writes to auth tenant', async () => {

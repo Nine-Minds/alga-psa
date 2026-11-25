@@ -153,7 +153,8 @@
       "endAfterStartPicker": "De eindtijd moet na de starttijd liggen",
       "durationSameDay": "De duur moet op dezelfde dag eindigen",
       "endSameDay": "De eindtijd moet op dezelfde dag vallen als de starttijd",
-      "invalidTimeRange": "Voer een geldig tijdsbereik in"
+      "invalidTimeRange": "Voer een geldig tijdsbereik in",
+      "billableExceedsDuration": "De factureerbare duur mag de totale duur niet overschrijden"
     },
     "serviceSource": {
       "task": "Standaard van taak",
@@ -531,6 +532,12 @@
     "save": {
       "noPeriod": "Geen periode omvat {{date}}. Kies een dag binnen een periode.",
       "sheetLocked": "De urenstaat voor {{date}} heeft de status ‘{{status}}’. Kies een dag op een conceptstaat of een staat met aangevraagde wijzigingen."
+    },
+    "multiDay": {
+      "notice": "Deze timer liep over {{count}} dagen en wordt daarom opgeslagen als één tijdregistratie per dag. Verwijder een dag om de tijd daarvan weg te laten.",
+      "dayHeading": "Dag {{index}} van {{count}} · {{date}}",
+      "remove": "Verwijderen",
+      "total": "Totaal: {{duration}}"
     }
   },
   "launch": {

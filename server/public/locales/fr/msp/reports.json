@@ -2,12 +2,6 @@
   "page": {
     "title": "Rapports"
   },
-  "actions": {
-    "refresh": "Actualiser"
-  },
-  "placeholders": {
-    "selectContract": "Sélectionner un contrat..."
-  },
   "units": {
     "hoursShort": "h",
     "days": "jours",
@@ -433,64 +427,6 @@
       "label": "Colonnes",
       "title": "Colonnes",
       "reset": "Rétablir les colonnes par défaut"
-    }
-  },
-  "contractPerformance": {
-    "title": "Indicateurs de performance des contrats",
-    "errors": {
-      "loadData": "Impossible de charger les données du contrat"
-    },
-    "metrics": {
-      "totalClients": "Clients totaux",
-      "activeClients": "Clients actifs",
-      "totalPlans": "Plans totaux",
-      "averagePlansPerClient": "Moy. de plans par client",
-      "totalRevenue": "Chiffre d'affaires total",
-      "averageRevenuePerClient": "Moy. de chiffre d'affaires par client"
-    },
-    "empty": {
-      "selectContract": "Sélectionnez un contrat pour voir les indicateurs de performance",
-      "noContracts": "Aucun contrat disponible"
-    },
-    "comparison": {
-      "title": "Comparaison des contrats",
-      "table": {
-        "contract": "Contrat",
-        "clients": "Clients",
-        "plans": "Forfaits",
-        "revenue": "Chiffre d'affaires"
-      }
-    }
-  },
-  "contractUsage": {
-    "title": "Rapport d'utilisation des contrats",
-    "errors": {
-      "loadInitialData": "Impossible de charger les données initiales",
-      "loadUsageData": "Impossible de charger les données d'utilisation du contrat"
-    },
-    "empty": {
-      "noClientsUsingContract": "Aucun client n'utilise ce contrat",
-      "selectContract": "Sélectionnez un contrat pour voir les données d'utilisation"
-    },
-    "table": {
-      "client": "Client",
-      "startDate": "Date de début",
-      "endDate": "Date de fin",
-      "contractLines": "Lignes de contrat",
-      "totalBilled": "Total facturé",
-      "status": "Statut"
-    },
-    "statusValues": {
-      "active": "Actif",
-      "inactive": "Inactif",
-      "ongoing": "En cours",
-      "unknownClient": "Client inconnu"
-    },
-    "summary": {
-      "title": "Résumé",
-      "totalClients": "Clients totaux",
-      "activeAssignments": "Affectations actives",
-      "totalBilled": "Total facturé"
     }
   },
   "deferredRevenue": {

@@ -1,0 +1,144 @@
+[
+  {
+    "id": "T001",
+    "description": "DB integration: migrations apply on a clean schema and create the three tables with the dismissal uniqueness constraint",
+    "group": "DB-backed",
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F004"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T002",
+    "description": "DB integration: portal query returns only live notices (before start hidden, within window shown, after end hidden, open-ended shown)",
+    "group": "DB-backed",
+    "featureIds": [
+      "F009",
+      "F018"
+    ],
+    "implemented": false
+  },
+  {
+    "id": "T003",
+    "description": "DB integration: audience resolution for all, explicit client, and tag targets; a client outside the audience gets nothing",
+    "group": "DB-backed",
+    "featureIds": [
+      "F018",
+      "F019"
+    ],
+    "implemented": false
+  },
+  {
+    "id": "T004",
+    "description": "DB integration: tenant isolation \u2014 a notice in one tenant never returned to another tenant's user",
+    "group": "DB-backed",
+    "featureIds": [
+      "F018"
+    ],
+    "implemented": false
+  },
+  {
+    "id": "T005",
+    "description": "DB integration: dismissal hides the notice for that user only, persists, is idempotent, and is cleared when the notice is edited",
+    "group": "DB-backed",
+    "featureIds": [
+      "F015",
+      "F018",
+      "F020"
+    ],
+    "implemented": false
+  },
+  {
+    "id": "T006",
+    "description": "DB integration: critical notice is never returned as dismissible and dismiss on it is refused",
+    "group": "DB-backed",
+    "featureIds": [
+      "F008",
+      "F020"
+    ],
+    "implemented": false
+  },
+  {
+    "id": "T007",
+    "description": "DB integration: create, update (targets replaced), and delete (targets and dismissals removed) round trip",
+    "group": "DB-backed",
+    "featureIds": [
+      "F014",
+      "F015",
+      "F016"
+    ],
+    "implemented": false
+  },
+  {
+    "id": "T008",
+    "description": "Permission guard: user without settings:update cannot create/update/delete; client portal user cannot call MSP actions; list requires settings:read",
+    "group": "Security",
+    "featureIds": [
+      "F012",
+      "F014",
+      "F015",
+      "F016",
+      "F036"
+    ],
+    "implemented": false
+  },
+  {
+    "id": "T009",
+    "description": "Validation unit: link scheme allowlist rejects javascript:, data:, and protocol-relative; accepts https and relative path; end-before-start and over-length rejected",
+    "group": "Unit",
+    "featureIds": [
+      "F006",
+      "F007"
+    ],
+    "implemented": false
+  },
+  {
+    "id": "T010",
+    "description": "Locale resolution unit: translated locale wins, missing locale falls back to default",
+    "group": "Unit",
+    "featureIds": [
+      "F011"
+    ],
+    "implemented": false
+  },
+  {
+    "id": "T011",
+    "description": "Component: notice bar renders severity variants, plain-text message with safe link, dismiss only when dismissible, collapses past three",
+    "group": "Component",
+    "featureIds": [
+      "F022",
+      "F023",
+      "F024",
+      "F025"
+    ],
+    "implemented": false
+  },
+  {
+    "id": "T012",
+    "description": "Component: settings dialog disables dismissible for critical and shows audience pickers by selected type",
+    "group": "Component",
+    "featureIds": [
+      "F029",
+      "F030",
+      "F033"
+    ],
+    "implemented": false
+  },
+  {
+    "id": "T013",
+    "description": "E2E: MSP creates a notice for a client; client user sees it on the portal, dismisses it, reloads and it stays hidden; user of another client never sees it",
+    "group": "E2E",
+    "featureIds": [
+      "F014",
+      "F018",
+      "F021",
+      "F024",
+      "F026",
+      "F028"
+    ],
+    "implemented": false
+  }
+]

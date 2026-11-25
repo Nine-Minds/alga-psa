@@ -286,7 +286,8 @@
     },
     "primary": {
       "title": "Primäre E-Mail",
-      "description": "Diese bleibt die Standardadresse im Kontaktdatensatz"
+      "description": "Diese bleibt die Standardadresse im Kontaktdatensatz",
+      "keepOldEmail": "{{email}} als zusätzliche E-Mail behalten"
     },
     "row": {
       "title": "Zusätzliche E-Mail {{number}}",

@@ -14,12 +14,11 @@ import {
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
-import { getCurrentUser, getUserRolesWithPermissions, getUserClientId } from '@alga-psa/user-composition/actions/userQueryActions';
+import { getCurrentUser, getUserClientId } from '@alga-psa/user-composition/actions/userQueryActions';
 import { getClientById } from '@alga-psa/clients/actions/queryActions';
 import { updateClient, uploadClientLogo, deleteClientLogo, recropClientLogo } from '@alga-psa/clients/actions/clientActions';
 import { clientWebsiteFieldsForSave } from '@alga-psa/clients/lib/clientWebsiteUpdate';
 import { IClient } from '@alga-psa/types';
-import { IPermission } from '@alga-psa/types';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
 import ClientLocations from '@alga-psa/clients/components/clients/ClientLocations';
 import { Text, Flex } from '@radix-ui/themes';
@@ -88,20 +87,10 @@ export function ClientDetailsSettings() {
           return;
         }
 
-        const rolesWithPermissions = await getUserRolesWithPermissions(user.user_id);
-        
-        const hasRequiredPermissions = rolesWithPermissions.some(role => 
-          role.permissions.some((permission: IPermission) => 
-            `${permission.resource}.${permission.action}` === 'client.read' || 
-            `${permission.resource}.${permission.action}` === 'client.update'
-          )
-        );
-
-        if (!hasRequiredPermissions) {
-          setError(tProfile('clientSettings.messages.noPermission', 'You do not have permission to access client settings'));
-          return;
-        }
-
+        // No permission re-check here: the tab is only mounted when resolveClientPortalSettingsSurfaces
+        // permits it (client:read), and getClientById enforces own-client client:read server-side.
+        // (The former check read the user's roles via getUserRolesWithPermissions, which needs user:read,
+        // so a default User was shown a permission error. alga-2026-0003226.)
         const userClientId = await getUserClientId(user.user_id);
         if (!userClientId) {
           setError(tProfile('clientSettings.messages.clientNotFound', 'Client not found'));

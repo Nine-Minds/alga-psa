@@ -63,7 +63,7 @@ function buildArticle(overrides: Partial<IKBArticleWithDocument> = {}): IKBArtic
   };
 }
 
-function renderList(articles: IKBArticleWithDocument[]) {
+function renderList(articles: IKBArticleWithDocument[], extraProps: Partial<React.ComponentProps<typeof KBArticleList>> = {}) {
   const onRefresh = vi.fn();
   render(
     <KBArticleList
@@ -77,6 +77,7 @@ function renderList(articles: IKBArticleWithDocument[]) {
       onPageChange={vi.fn()}
       onPageSizeChange={vi.fn()}
       onRefresh={onRefresh}
+      {...extraProps}
     />
   );
   return onRefresh;
@@ -248,5 +249,27 @@ describe('KBArticleList bulk delete', () => {
     expect(archiveArticleMock.mock.calls.map(([articleId]) => articleId)).toEqual(['draft-a', 'draft-b']);
     expect(toastErrorMock).toHaveBeenCalledWith('Archived 1 article(s); 1 could not be archived');
     expect(screen.getByText('1 selected')).toBeInTheDocument();
+  });
+});
+
+describe('KBArticleList create affordances', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('does not render a toolbar New Article button when onCreateNew is passed', () => {
+    renderList([buildArticle()], { onCreateNew: vi.fn() });
+    expect(document.getElementById('kb-list-create')).toBeNull();
+    expect(document.getElementById('kb-list-create-empty')).toBeNull();
+  });
+
+  it('renders the empty-state create button and wires it to onCreateNew', () => {
+    const onCreateNew = vi.fn();
+    renderList([], { onCreateNew });
+    const button = document.getElementById('kb-list-create-empty');
+    expect(button).not.toBeNull();
+    expect(document.getElementById('kb-list-create')).toBeNull();
+    button!.click();
+    expect(onCreateNew).toHaveBeenCalledTimes(1);
   });
 });

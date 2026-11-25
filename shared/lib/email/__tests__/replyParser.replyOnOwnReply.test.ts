@@ -309,15 +309,29 @@ describe('Gmail reply to the contact’s own reply (alga-2026-0003353)', () => {
     expect(result.appliedHeuristics).toContain(prefix ? 'quote-prefix' : 'provider-header');
   });
 
-  it('still strips a quoted coherent envelope above the explicit boundary', () => {
+  it.each([
+    ['From', 'Sent', 'To', 'Subject'],
+    ['De', 'Envoyé', 'À', 'Objet'],
+  ])('still strips a quoted coherent %s envelope above the explicit boundary', (from, sent, to, subject) => {
     const result = parseEmailReply({
-      text: 'Please investigate.\n> From: Client <client@example.test>\n> Sent: Monday\n'
-        + '> To: Support <support@example.test>\n> Subject: Deployment failure\n'
+      text: `Please investigate.\n> ${from}: Client <client@example.test>\n> ${sent}: Monday\n`
+        + `> ${to}: Support <support@example.test>\n> ${subject}: Deployment failure\n`
         + '> Previous reply\n\n--- Please reply above this line ---\nOld notification',
     });
 
     expect(result.sanitizedText).toBe('Please investigate.');
     expect(result.appliedHeuristics).toContain('quote-prefix');
+  });
+
+  it('preserves a localized pasted report above the explicit boundary', () => {
+    const text = readFixture('authored-forwarded-report.txt')
+      .replace('-----Original Message-----\n', '')
+      .replace('From:', 'De:').replace('Sent:', 'Envoyé:')
+      .replace('To:', 'À:').replace('Subject:', 'Objet:');
+    const result = parseEmailReply({ text });
+
+    expect(result.sanitizedText).toBe(text.split('\n\n--- Please reply above this line ---')[0]);
+    expect(result.appliedHeuristics).not.toContain('provider-header');
   });
 
   it.each(['', '\n--- Please reply above this line ---\nOld notification'])(

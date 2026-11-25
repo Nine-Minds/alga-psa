@@ -453,6 +453,8 @@
       },
       "error": {
         "operationConflict": "Begäran har redan skickats med andra uppgifter. Uppdatera och börja om.",
+        "trialClaimUnavailable": "Den här provperioden används redan eller startades för en annan kund. Uppdatera och försök igen.",
+        "trialSponsorNotEligible": "Den här arbetsytan är inte berättigad till en Seat-provperiod. Kontrollera kontots plan och faktureringsstatus.",
         "invalidSeats": "Ange ett heltal för antal platser, minst 1.",
         "invalidInvitation": "Välj en kontakt att bjuda in.",
         "contactNotFound": "Den här kontakten finns inte längre. Välj en annan kontakt.",
@@ -505,8 +507,7 @@
         "save": "Spara standardvärden för överlämning"
       },
       "client": {
-        "seatArrangement": "Platsavtal",
-        "summary": "Platsavtal: {{used}} av {{count}} platser används"
+        "seatArrangement": "Platsavtal"
       },
       "technicians": {
         "sent": "Inbjudan skickad.",
@@ -551,6 +552,13 @@
         "addedUnavailable": "{{name}} lades till men kan inte bjudas in.",
         "unavailable": "Visas inte eftersom de är inaktiva, saknar e-post eller redan har plats eller inbjudan: {{count}}."
       },
+      "trial": {
+        "available": "En kostnadsfri provperiod på 15 dagar finns ovan. Samhanterade platser kan läggas till när som helst.",
+        "availableTrialEnables": "När teknikern bjuds in startar provperioden och samhanterad IT aktiveras för den här kunden. Köp en plats efter de 15 dagarna för att behålla teknikern.",
+        "pending": "En inbjudan till provperioden på 15 dagar väntar på teknikern. Samhanterade platser kan läggas till när som helst.",
+        "active": "Provperioden på 15 dagar pågår. Lägg till samhanterade platser för att behålla teknikern efteråt.",
+        "ended": "Provperioden på 15 dagar har avslutats. Lägg till samhanterade platser för att behålla teknikern."
+      },
       "chooser": {
         "seat": "Plats",
         "seatHint": "Kundens tekniker arbetar i ert PSA, begränsade till sitt företag.",
@@ -558,7 +566,11 @@
         "workspaceHint": "Kundens IT-team får en egen servicedesk och eskalerar till er.",
         "description": "Välj hur den här kundens IT-team arbetar med er.",
         "shape": "Samhanterad form",
-        "pool": "{{available}} av {{purchased}} platser tillgängliga. {{allocated}} tilldelade."
+        "pool": "{{available}} av {{purchased}} platser tillgängliga. {{allocated}} tilldelade.",
+        "poolEmpty": "Inga samhanterade platser ännu.",
+        "seatHintAfterTrial": "Lägg till samhanterade platser för att behålla teknikern efter provperioden på 15 dagar.",
+        "seatHintTrialCovers": "Provplatsen täcker den här teknikern till {{date}}. Köp en plats för att behålla dem.",
+        "seatHintTrial": "Gratis i 15 dagar. Bjud in en tekniker för att aktivera samhanterad IT för den här kunden."
       },
       "states": {
         "active": "Aktiv",
@@ -606,8 +618,6 @@
     },
     "client": {
       "awaitingAcceptance": "Kundens administratör måste acceptera innan åtkomst beviljas.",
-      "chooseRelationship": "Välj relation",
-      "endedHint": "Den här relationen har avslutats. Sparad historik och sparade arkiv finns kvar.",
       "endedOn": "Avslutades {{date}}",
       "failedHint": "Konfigurationen slutfördes inte. Platserna förblir reserverade; försök igen för att fortsätta eller avbryt konfigurationen.",
       "forClient": "Samhanterad IT för {{name}}",
@@ -616,6 +626,7 @@
       "inconsistentHint": "En samförvaltad konfiguration för den här kunden pekar på en arbetsytepost som tillhör en annan kund. Inget kan hanteras eller konfigureras här förrän supporten har rättat posten.",
       "invitation": "Administratörsinbjudan",
       "notEnabled": "Samhanterad IT är inte aktiverad",
+      "notEnabledTrialEnables": "Samhanterad IT är inte aktiverad ännu. Att starta den kostnadsfria provperioden på 15 dagar för en plats aktiverar den för den här kunden.",
       "progress": "Konfigurationsförlopp",
       "provisioningHint": "Reserverade användarlicenser hålls kvar tills konfigurationen är klar eller rensningen har bekräftats.",
       "relationship": "Relation",
@@ -624,7 +635,6 @@
       "setupHint": "Aktivera samhanterad IT från den här kunden för att reservera kundens tekniker och bjuda in en administratör.",
       "tab": "Samhanterad IT",
       "viewDetails": "Visa detaljer",
-      "viewHistory": "Visa historik",
       "workspace": "Kundarbetsyta",
       "seatUsage": "{{used}} av {{count}} teknikerplatser",
       "seatAllocation": "{{count}} tilldelade teknikerplatser"

@@ -3,6 +3,7 @@ import {
   createOpportunityApiSchema,
   declaredOpportunityEvidenceApiSchema,
   opportunityListQuerySchema,
+  amendOpportunityDeclarationApiSchema,
   setOpportunityStageApiSchema,
   updateOpportunityApiSchema,
   winOpportunityApiSchema,
@@ -109,6 +110,16 @@ describe('opportunity REST schemas', () => {
     // won/lost parse here and are refused by the service with a pointer to /win and /lose.
     expect(setOpportunityStageApiSchema.safeParse({ stage: 'won' }).success).toBe(true);
     expect(setOpportunityStageApiSchema.safeParse({ stage: 'nowhere' }).success).toBe(false);
+  });
+
+  it('takes citations on a stage call, refuses them beside refType/refId, and amends with an optional note and sources', () => {
+    const id = '3f2b8d52-1c4e-4a8e-9a43-0f5b6d7c8e90';
+    expect(setOpportunityStageApiSchema.safeParse({ stage: 'verbal', citations: [{ type: 'document', id }] }).success).toBe(true);
+    expect(setOpportunityStageApiSchema.safeParse({ stage: 'verbal', refType: 'interaction', refId: id }).success).toBe(true);
+    expect(setOpportunityStageApiSchema.safeParse({ stage: 'verbal', citations: [], refType: 'interaction', refId: id }).success).toBe(false);
+    expect(amendOpportunityDeclarationApiSchema.safeParse({}).success).toBe(true);
+    expect(amendOpportunityDeclarationApiSchema.safeParse({ detail: null, citations: [] }).success).toBe(true);
+    expect(amendOpportunityDeclarationApiSchema.safeParse({ citations: [{ type: 'interaction', id: 'nope' }] }).success).toBe(false);
   });
 
   // GET used to answer with a full ISO datetime, so anything coded against that

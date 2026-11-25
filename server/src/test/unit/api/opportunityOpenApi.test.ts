@@ -26,6 +26,7 @@ describe('opportunities v1 OpenAPI registration', () => {
       'POST /api/v1/opportunities/{id}/complete-action',
       'POST /api/v1/opportunities/{id}/evidence',
       'GET /api/v1/opportunities/{id}/evidence',
+      'PUT /api/v1/opportunities/{id}/declarations/{checkpoint}',
       'POST /api/v1/opportunities/{id}/evidence/{evidenceId}/correct',
       'POST /api/v1/opportunities/{id}/quotes/{quoteId}/link',
       'POST /api/v1/opportunities/{id}/quotes/{quoteId}/unlink',
@@ -65,6 +66,7 @@ describe('opportunities v1 OpenAPI registration', () => {
     // PATCH shares the PUT contract; /stage is the documented home for open-stage moves.
     expect(document.paths?.['/api/v1/opportunities/{id}']?.patch).toBeDefined();
     expect(document.paths?.['/api/v1/opportunities/{id}/stage']?.post).toBeDefined();
+    expect(document.paths?.['/api/v1/opportunities/{id}/declarations/{checkpoint}']?.put).toBeDefined();
 
     const baseDocument = generateBaseDocument({
       title: 'Alga API Test',

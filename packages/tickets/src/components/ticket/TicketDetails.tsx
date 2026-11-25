@@ -1417,8 +1417,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }, [savedBoardId]);
 
     // Use pre-fetched options directly
-    const [userMap, setUserMap] = useState<Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>>(initialUserMap);
-    const conversationUserMap = liveUserMap ?? userMap;
+    // Read refreshed author maps from props so an in-place refresh resolves newly encountered authors.
+    const conversationUserMap = liveUserMap ?? initialUserMap;
 
     // Identity stamped into the "Updated … by" header after a local save. The drawer passes a
     // full currentUser; full-page callers do not, so derive one from the session (resolving the
@@ -1438,8 +1438,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             user_type: mapped?.user_type ?? 'internal',
         } as unknown as IUser;
     }, [currentUser, session?.user?.id, session?.user?.name, session?.user?.email, conversationUserMap]);
-    const [contactMap] = useState<Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>>(initialContactMap);
-    const conversationContactMap = liveContactMap ?? contactMap;
+    const conversationContactMap = liveContactMap ?? initialContactMap;
 
     const [availableAgents, setAvailableAgents] = useState<IUserWithRoles[]>(initialAvailableAgents);
     const [additionalAgents, setAdditionalAgents] = useState<ITicketResource[]>(initialAdditionalAgents);

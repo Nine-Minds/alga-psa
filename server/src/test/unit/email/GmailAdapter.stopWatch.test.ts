@@ -3,14 +3,12 @@ import type { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-em
 
 const stopMock = vi.fn();
 
-vi.mock('googleapis', () => ({
-  google: {
-    gmail: vi.fn(() => ({
-      users: {
-        stop: stopMock,
-      },
-    })),
-  },
+vi.mock('googleapis/build/src/apis/gmail/index.js', () => ({
+  gmail: vi.fn(() => ({
+    users: {
+      stop: stopMock,
+    },
+  })),
 }));
 
 import { GmailAdapter } from '@alga-psa/shared/services/email/providers/GmailAdapter';

@@ -25,6 +25,7 @@ import { useTier } from '@/context/TierContext';
 import { TIER_FEATURES } from '@alga-psa/types';
 import { useProduct } from '@/context/ProductContext';
 import { filterMenuSectionsByProduct } from '@/lib/productSurfaceRegistry';
+import { CO_MANAGED_SEAT_SURFACE } from '@shared/services/productSurfaceKinds';
 import { getLicenseStatus } from '@/lib/actions/licenseManagementActions';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
@@ -278,13 +279,26 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
 
     const editionSections = filterNavigationSectionsByEdition(filteredSections, edition);
 
-    return filterMenuSectionsByProduct(
+    const productSections = filterMenuSectionsByProduct(
       { productCode, surfaceKind },
       filterNavigationSectionsByPermission(
         filterNavigationSectionsByFeatureAccess(editionSections, hasFeature),
         userPermissions,
       ),
     );
+
+    if (surfaceKind !== CO_MANAGED_SEAT_SURFACE) return productSections;
+
+    // Seat technicians use one level of navigation. Keep the section's familiar
+    // label for its main destination and promote any other permitted links.
+    return productSections.map((section) => ({
+      ...section,
+      items: section.items.flatMap((item) => item.subItems
+        ? item.subItems.map((subItem, index) => index === 0
+          ? { ...subItem, name: item.name, translationKey: item.translationKey, icon: item.icon }
+          : subItem)
+        : [item]),
+    }));
   }, [canWorkflowAdmin, userPermissions, useNavigationSections, hasFeature, productCode, surfaceKind, edition, marketingEnabled, credentialsVaultEnabled, coManagedServed, servedCapabilities, purchaseNavigation]);
 
   const settingsSections = useMemo<NavigationSection[]>(() => {
