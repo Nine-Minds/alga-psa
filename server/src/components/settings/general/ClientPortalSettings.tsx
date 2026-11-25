@@ -55,6 +55,7 @@ import {
   getClientPortalFeatureSettings,
   updateClientPortalFeatureSettings,
 } from '@alga-psa/client-portal/actions/client-portal-actions/clientPortalFeatureSettingsActions';
+import { DEFAULT_PORTAL_INVITATION_VALIDITY_DAYS } from '@alga-psa/portal-shared/lib/portalInvitationValidity';
 
 const UNSET_LOCALE_VALUE = '__inherit__';
 const DEFAULT_PORTAL_HERO_GRADIENT: PortalHeroGradient = 'primary-shades';
@@ -129,6 +130,9 @@ const ClientPortalSettings = () => {
   const [localeLoading, setLocaleLoading] = useState<boolean>(true);
   const [localeSaving, setLocaleSaving] = useState<boolean>(false);
   const [appointmentsEnabled, setAppointmentsEnabled] = useState(true);
+  const [invitationValidityDays, setInvitationValidityDays] = useState(
+    DEFAULT_PORTAL_INVITATION_VALIDITY_DAYS,
+  );
   const [portalFeaturesLoading, setPortalFeaturesLoading] = useState(true);
   const [portalFeaturesSaving, setPortalFeaturesSaving] = useState(false);
   // File names and crop sources behind each slot; branding only holds the URLs.
@@ -163,6 +167,22 @@ const ClientPortalSettings = () => {
       })),
     ];
   }, [visibleLocales, orgDefaultLocale, t]);
+
+  // A curated set inside the allowed 1–30 days; a validity stored outside it
+  // (an older or hand-edited setting) is offered too rather than silently
+  // reading as something else.
+  const invitationValidityOptions = useMemo<SelectOption[]>(() => {
+    const days = [...new Set([1, 2, 3, 5, 7, 14, 21, 30, invitationValidityDays])]
+      .sort((left, right) => left - right);
+    return days.map((count) => ({
+      value: String(count),
+      label: t('clientPortal.features.invitationValidityOption', {
+        count,
+        defaultValue_one: '{{count}} day',
+        defaultValue_other: '{{count}} days',
+      }),
+    }));
+  }, [invitationValidityDays, t]);
 
   const checkCustomDomain = useCallback(async () => {
     const status = await getPortalDomainStatusAction();
@@ -216,6 +236,7 @@ const ClientPortalSettings = () => {
 
         setClientPortalLocale(clientPortalLocaleSettings?.defaultLocale ?? null);
         setAppointmentsEnabled(portalFeatureSettings.appointmentsEnabled);
+        setInvitationValidityDays(portalFeatureSettings.invitationValidityDays);
       } catch (error) {
         console.error('Failed to load tenant settings:', error);
       } finally {
@@ -315,6 +336,43 @@ const ClientPortalSettings = () => {
       );
     } catch (error) {
       setAppointmentsEnabled(previous);
+      handleError(
+        error,
+        t('clientPortal.features.updateFailed', {
+          defaultValue: 'Failed to update client portal features',
+        }),
+      );
+    } finally {
+      setPortalFeaturesSaving(false);
+    }
+  };
+
+  const handleInvitationValidityDaysChange = async (next: string) => {
+    const days = Number(next);
+    if (!Number.isFinite(days) || days === invitationValidityDays) return;
+
+    const previous = invitationValidityDays;
+    setInvitationValidityDays(days);
+    setPortalFeaturesSaving(true);
+
+    try {
+      const result = await updateClientPortalFeatureSettings({ invitationValidityDays: days });
+      if (isActionPermissionError(result)) {
+        setInvitationValidityDays(previous);
+        handleError(result);
+        return;
+      }
+
+      setInvitationValidityDays(result.invitationValidityDays);
+      toast.success(
+        t('clientPortal.features.invitationValidityUpdated', {
+          count: result.invitationValidityDays,
+          defaultValue_one: 'New invitations will stay valid for {{count}} day',
+          defaultValue_other: 'New invitations will stay valid for {{count}} days',
+        }),
+      );
+    } catch (error) {
+      setInvitationValidityDays(previous);
       handleError(
         error,
         t('clientPortal.features.updateFailed', {
@@ -525,6 +583,31 @@ const ClientPortalSettings = () => {
                 defaultValue: 'Appointments',
               })}
             />
+          </div>
+          <div className="mt-6 flex items-start justify-between gap-6 border-t border-[rgb(var(--color-border-100))] pt-6">
+            <div>
+              <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">
+                {t('clientPortal.features.invitationValidityLabel', {
+                  defaultValue: 'Invitation validity',
+                })}
+              </div>
+              <p className="mt-1 text-sm text-[rgb(var(--color-text-600))]">
+                {t('clientPortal.features.invitationValidityHelp', {
+                  defaultValue:
+                    'How long a client portal invitation link stays usable. Applies to invitations sent from now on; invitations already sent keep the period they were sent with. Resending an invitation gives it the full period again.',
+                })}
+              </p>
+            </div>
+            <div className="w-48 shrink-0">
+              <CustomSelect
+                id="client-portal-invitation-validity-days"
+                value={String(invitationValidityDays)}
+                options={invitationValidityOptions}
+                onValueChange={handleInvitationValidityDaysChange}
+                disabled={portalFeaturesLoading || portalFeaturesSaving}
+                data-automation-id="client-portal-invitation-validity-days-select"
+              />
+            </div>
           </div>
         </CardContent>
       </Card>

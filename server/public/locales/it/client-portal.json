@@ -297,6 +297,7 @@
         "contactNotFound": "Contatto non trovato.",
         "contactMissingEmail": "Il contatto non ha un indirizzo e-mail.",
         "contactInvalidEmail": "Il contatto ha un indirizzo e-mail non valido.",
+        "contactInactive": "Questo contatto non è più attivo. Contatta il tuo fornitore di servizi.",
         "userExistsForContact": "Esiste già un account utente per questo contatto.",
         "portalUserAlreadyExists": "Esiste già un account per questo indirizzo e-mail. Accedi o reimposta la password dalla pagina di accesso.",
         "noDefaultClient": "Nessun cliente predefinito configurato per questo tenant.",
@@ -306,7 +307,9 @@
         "invitationNotFound": "Invito non trovato.",
         "revokeFailed": "Non è stato possibile revocare l'invito. Riprova.",
         "batchLimitExceeded": "Troppi contatti in una sola richiesta. Invita meno contatti alla volta.",
-        "noTargetsSelected": "Seleziona almeno un contatto da invitare."
+        "noTargetsSelected": "Seleziona almeno un contatto da invitare.",
+        "invitationStateMismatch": "Questo invito non è più valido. Richiedine uno nuovo al tuo fornitore di servizi.",
+        "rateLimited": "Troppi tentativi. Attendi qualche minuto e riprova."
       }
     },
     "features": {

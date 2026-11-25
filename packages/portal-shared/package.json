@@ -19,6 +19,10 @@
       "import": "./dist/actions/*.js",
       "types": "./src/actions/*.ts"
     },
+    "./lib/*": {
+      "import": "./dist/lib/*.js",
+      "types": "./src/lib/*.ts"
+    },
     "./types": {
       "import": "./dist/types/index.js",
       "types": "./src/types/index.ts"

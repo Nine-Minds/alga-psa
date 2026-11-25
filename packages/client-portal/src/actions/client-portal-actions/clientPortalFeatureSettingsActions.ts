@@ -6,6 +6,7 @@ import {
   permissionError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { clampPortalInvitationValidityDays } from '@alga-psa/portal-shared/lib/portalInvitationValidity';
 import {
   normalizeTenantSettings,
   resolveClientPortalFeatureSettings,
@@ -44,6 +45,11 @@ export const updateClientPortalFeatureSettings = withAuth(async (
     ...(updated.appointmentsEnabled === undefined
       ? {}
       : { appointmentsEnabled: updated.appointmentsEnabled }),
+    // Clamped on the way in as well as on the way out, so a stray value from a
+    // future caller never reaches the invitations the tenant sends.
+    ...(updated.invitationValidityDays === undefined
+      ? {}
+      : { invitationValidityDays: clampPortalInvitationValidityDays(updated.invitationValidityDays) }),
   };
   const nextSettings = {
     ...settings,

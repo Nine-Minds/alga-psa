@@ -39,4 +39,48 @@ describe('portal invitation action helper tenant-scoped query contract', () => {
     expect(invitationTarget).not.toContain("'pi.tenant': tenant");
     expect(clientUserTarget).not.toContain("'u.tenant': tenant");
   });
+
+  it('reads invitation state tenant-scoped, through the caller\'s own narrowing', () => {
+    const stateQuery = sectionBetween(
+      'export const getPortalInvitationStatesForClient',
+      'export const sendBulkPortalInvitations'
+    );
+
+    expect(stateQuery).toContain('const scopedDb = tenantDb(trx, tenant);');
+    expect(stateQuery).toContain("scopedDb.table('contacts as c')");
+    expect(stateQuery).toContain("(await scope.narrowing('contact', 'c')).apply(query)");
+    expect(stateQuery).toContain('joinContactInvitationState(scopedDb, query)');
+    expect(stateQuery).toContain("canManageClientPortalTargetClient(user, tenant, knex, 'read', normalizedClientId)");
+    expect(stateQuery).toContain("scope.permits('client', normalizedClientId)");
+
+    expect(stateQuery).not.toMatch(/\btrx\('contacts'\)/);
+    expect(stateQuery).not.toContain("'pi.tenant': tenant");
+  });
+
+  it('builds the invitation-state filter and the state read from one predicate', () => {
+    // The rule the MSP filtered on has to be the rule the batch acts on: one
+    // SQL expression, read as a column and reused as the HAVING predicate.
+    expect(source).toContain('invitationStateHaving,');
+    expect(source).toContain('LATEST_INVITATION_STATE_SQL,');
+    expect(source).toContain('${LATEST_INVITATION_STATE_SQL}) as invitation_state');
+    expect(source).toContain('const having = invitationStateHaving(states);');
+    expect(source).toContain('query.groupBy(...groupColumns).havingRaw(having.sql, having.bindings);');
+
+    // Every classification joins every invitation row, because the state of a
+    // contact is the state of its latest invitation.
+    const joins = source.match(/joinContactInvitationState\(scopedDb, query\)/g) ?? [];
+    expect(joins).toHaveLength(3);
+    expect(source).not.toContain("join.andOn(trx.raw('pi.used_at is null'))");
+
+    // …and every contact address the state expression judges a link against,
+    // tenant-scoped like the invitations themselves. Without this join the
+    // expression's `cea` alias would not exist and the read would fail.
+    const joinHelper = sectionBetween(
+      'function joinContactInvitationState',
+      '/** Narrows a grouped contact query'
+    );
+    expect(joinHelper).toContain("scopedDb.tenantJoin(query, 'portal_invitations as pi'");
+    expect(joinHelper).toContain("'contact_additional_email_addresses as cea',");
+    expect(joinHelper).toContain("'cea.contact_name_id',");
+  });
 });

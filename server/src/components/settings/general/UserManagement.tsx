@@ -28,6 +28,8 @@ const PORTAL_INVITE_ERROR_KEYS: Partial<Record<PortalInvitationErrorCode, string
   CONTACT_NOT_FOUND: 'users.messages.error.contactNotFound',
   CONTACT_MISSING_EMAIL: 'users.messages.error.contactMissingEmailGeneric',
   CONTACT_INVALID_EMAIL: 'users.messages.error.contactInvalidEmail',
+  CONTACT_INACTIVE: 'users.messages.error.contactInactive',
+  RATE_LIMITED: 'users.messages.error.invitationRateLimited',
   USER_EXISTS_FOR_CONTACT: 'users.messages.error.portalUserExistsForContact',
   PORTAL_USER_ALREADY_EXISTS: 'users.messages.error.portalUserExists',
   NO_DEFAULT_CLIENT: 'users.messages.error.noDefaultClient',
@@ -38,14 +40,6 @@ const PORTAL_INVITE_ERROR_KEYS: Partial<Record<PortalInvitationErrorCode, string
   PASSWORD_TOO_SHORT: 'users.messages.error.passwordTooShort',
   CREATE_USER_FAILED: 'users.messages.error.createClientPortalUser'
 };
-
-// Catch-all codes whose localized message is generic ("Failed to send
-// invitation"). When the server attached a specific reason, show that instead
-// of masking it with the generic translation.
-const GENERIC_PORTAL_INVITE_ERROR_CODES: ReadonlySet<PortalInvitationErrorCode> = new Set([
-  'INVITATION_FAILED',
-  'CREATE_USER_FAILED'
-]);
 
 // Same idea as PORTAL_INVITE_ERROR_KEYS, but for the internal-team-member
 // email invite flow (sendUserInvitation) — mirrors the client-portal mapping
@@ -102,9 +96,6 @@ const UserManagement = (): React.JSX.Element => {
     defaultKey: string
   ): string => {
     if (result.errorCode) {
-      if (GENERIC_PORTAL_INVITE_ERROR_CODES.has(result.errorCode) && result.error) {
-        return result.error;
-      }
       const key = PORTAL_INVITE_ERROR_KEYS[result.errorCode];
       if (key) {
         return t(key, { defaultValue: result.error ?? undefined });

@@ -297,6 +297,7 @@
         "contactNotFound": "Nie znaleziono kontaktu.",
         "contactMissingEmail": "Kontakt nie ma adresu e-mail.",
         "contactInvalidEmail": "Kontakt ma nieprawidłowy adres e-mail.",
+        "contactInactive": "Ten kontakt nie jest już aktywny. Skontaktuj się z dostawcą usług.",
         "userExistsForContact": "Konto użytkownika już istnieje dla tego kontaktu.",
         "portalUserAlreadyExists": "Konto dla tego adresu e-mail już istnieje. Zaloguj się lub zresetuj hasło na stronie logowania.",
         "noDefaultClient": "Nie skonfigurowano domyślnego klienta dla tej organizacji.",
@@ -306,7 +307,9 @@
         "invitationNotFound": "Nie znaleziono zaproszenia.",
         "revokeFailed": "Nie udało się cofnąć zaproszenia. Spróbuj ponownie.",
         "batchLimitExceeded": "Zbyt wiele kontaktów w jednym żądaniu. Zaproś mniej kontaktów naraz.",
-        "noTargetsSelected": "Wybierz co najmniej jeden kontakt do zaproszenia."
+        "noTargetsSelected": "Wybierz co najmniej jeden kontakt do zaproszenia.",
+        "invitationStateMismatch": "To zaproszenie nie jest już ważne. Poproś dostawcę usług o nowe.",
+        "rateLimited": "Zbyt wiele prób. Odczekaj kilka minut i spróbuj ponownie."
       }
     },
     "features": {
