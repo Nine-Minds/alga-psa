@@ -8,12 +8,12 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import knex, { type Knex } from 'knex';
 import { afterAll, beforeAll, beforeEach, expect, it, vi } from 'vitest';
-import { describeWithDb } from '../../../../server/test-utils/requireDb';
+import { describeWithDb } from '../../../test-utils/requireDb';
 import { USER_RESPONSE_FIELD_NAMES } from '@alga-psa/types';
 import { checkClientPortalContactAvailability, assertClientPortalContactAvailable, addUserRoles, lockClientPortalMutations, runWithTenant } from '@alga-psa/db';
-import { lockTenantSeatState } from '../lib/internalUserLicenseGuard';
+import { lockTenantSeatState } from '../../../../packages/users/src/lib/internalUserLicenseGuard';
 import User from '@alga-psa/db/models/user';
-import { PermissionRoleService } from '../../../../server/src/lib/api/services/PermissionRoleService';
+import { PermissionRoleService } from '../../lib/api/services/PermissionRoleService';
 
 const fixture = vi.hoisted(() => ({ db: null as Knex | null }));
 vi.mock('@alga-psa/auth', () => ({
@@ -36,20 +36,20 @@ vi.mock('@ee/lib/auth/oauthAccountLinks', () => ({
   upsertOAuthAccountLink: async () => undefined,
   OAuthAccountLinkConflictError: class extends Error {},
 }));
-vi.mock('../lib/rateLimiting', () => ({ checkRegistrationLimit: async () => ({ success: true }), formatRateLimitError: () => '' }));
+vi.mock('../../../../packages/users/src/lib/rateLimiting', () => ({ checkRegistrationLimit: async () => ({ success: true }), formatRateLimitError: () => '' }));
 vi.mock('@alga-psa/user-composition/lib/permissions', () => ({ hasPermission: async () => true, throwPermissionError: () => { throw new Error('Permission denied'); } }));
 vi.mock('@alga-psa/db/models/userPreferences', () => ({ default: { upsert: async () => undefined } }));
 vi.mock('next/cache', () => ({ revalidatePath: () => undefined }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishNonCatalogWorkflowEvent: async () => undefined }));
 vi.mock('@alga-psa/core/encryption', () => ({ hashPassword: async () => 'test-hash', verifyPassword: () => true }));
-vi.mock('../lib/internalUserLicenseGuard', async (original) => ({
-  ...await original<typeof import('../lib/internalUserLicenseGuard')>(),
+vi.mock('../../../../packages/users/src/lib/internalUserLicenseGuard', async (original) => ({
+  ...await original<typeof import('../../../../packages/users/src/lib/internalUserLicenseGuard')>(),
   admitInternalUserSeat: async () => ({ ok: true }),
   assertInternalUserSeatsWithinLimit: async () => undefined,
   isInternalUserLicenseLimitRejected: () => false,
 }));
 
-const { UserService } = await import('./UserService');
+const { UserService } = await import('../../../../packages/users/src/services/UserService');
 const describeDb = await describeWithDb();
 const slot = path.basename(process.cwd()).match(/mc\d+$/)?.[0]
   ?? path.basename(path.resolve(__dirname, '../../../..')).match(/mc\d+$/)?.[0] ?? 'ci';
@@ -418,7 +418,7 @@ describeDb('API portal contact ownership', () => {
   it('serializes non-API ownership checks against API creation', async () => {
     const trx = await db.transaction();
     await assertClientPortalContactAvailable(trx, tenant, 'client', 'free-contact');
-    const api = create('api', 'free-contact').then(value => ({ value }), error => ({ error }));
+    const api = create('api', 'free-contact').then((value: unknown) => ({ value }), (error: unknown) => ({ error }));
     try {
       await waitForMutationLock();
       await trx('users').insert({ tenant, user_id: 'invited', user_type: 'client', contact_id: 'free-contact' });
@@ -458,7 +458,7 @@ describeDb('API portal contact ownership', () => {
   });
 
   it('MSP addUser assigns the selected User role and clears the pre-seed', async () => {
-    const { addUser } = await import('../actions/user-actions/userActions');
+    const { addUser } = await import('../../../../packages/users/src/actions/user-actions/userActions');
     const result = await (addUser as any)({ user_id: 'actor', user_type: 'internal' } as any, { tenant } as any, {
       firstName: 'Portal', lastName: 'User', email: 'manual@ownership.test', password: 'password',
       userType: 'client', contactId: 'contact-a', roleId: 'user-role',
@@ -469,7 +469,7 @@ describeDb('API portal contact ownership', () => {
   });
 
   it('registration assigns User and clears a contact admin pre-seed', async () => {
-    const { initiateRegistration } = await import('../actions/user-actions/registrationActions');
+    const { initiateRegistration } = await import('../../../../packages/users/src/actions/user-actions/registrationActions');
     const result = await initiateRegistration(`contact-a-${tenant}@ownership.test`, 'password');
     expect(result).toMatchObject({ success: true });
     expect(await flag('contact-a')).toBe(false);
@@ -490,7 +490,7 @@ describeDb('API portal contact ownership', () => {
   it('manual invitation creation rolls back when no client role resolves', async () => {
     await db('roles').where({ tenant, client: true }).del();
     const before = await snapshot();
-    const { createClientPortalUser } = await import('../../../portal-shared/src/actions/portalInvitationActions');
+    const { createClientPortalUser } = await import('../../../../packages/portal-shared/src/actions/portalInvitationActions');
     const result = await (createClientPortalUser as any)({ user_id: 'actor', user_type: 'internal' }, { tenant }, {
       contactId: 'contact-a', password: 'password123',
     });
@@ -499,7 +499,7 @@ describeDb('API portal contact ownership', () => {
   });
 
   it('manual invitation creation still derives Admin from the pre-seed', async () => {
-    const { createClientPortalUser } = await import('../../../portal-shared/src/actions/portalInvitationActions');
+    const { createClientPortalUser } = await import('../../../../packages/portal-shared/src/actions/portalInvitationActions');
     const result = await (createClientPortalUser as any)({ user_id: 'actor', user_type: 'internal' }, { tenant }, {
       contactId: 'contact-a', password: 'password123',
     });
@@ -513,7 +513,7 @@ describeDb('API portal contact ownership', () => {
     service.logUserActivity = async () => { written.resolve(); await release.promise; };
     const api = create('api', 'contact-a');
     await written.promise;
-    const { createClientPortalUser } = await import('../../../portal-shared/src/actions/portalInvitationActions');
+    const { createClientPortalUser } = await import('../../../../packages/portal-shared/src/actions/portalInvitationActions');
     const invitation = (createClientPortalUser as any)({ user_id: 'actor', user_type: 'internal' }, { tenant }, {
       contactId: 'contact-a', password: 'password123',
     });

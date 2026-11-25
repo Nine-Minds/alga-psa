@@ -5,6 +5,8 @@
  * Enterprise Edition provides real implementations in ee/server.
  */
 
+import type { Knex } from 'knex';
+
 export type OAuthLinkProvider = 'google' | 'microsoft';
 
 export interface OAuthAccountLinkInput {
@@ -40,7 +42,10 @@ export class OAuthAccountLinkConflictError extends Error {
 // These are no longer used - auth uses the registry pattern instead.
 // Kept for any external code that might still import from here.
 
-export async function upsertOAuthAccountLink(_input: OAuthAccountLinkInput): Promise<void> {
+export async function upsertOAuthAccountLink(
+  _input: OAuthAccountLinkInput,
+  _connection?: Knex,
+): Promise<void> {
   throw new Error('OAuth account linking is only available in Enterprise Edition');
 }
 
