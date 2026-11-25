@@ -24,6 +24,19 @@ async function describeInvoiceForCharge(
   }
 }
 
+/** Recurring-seat (per-unit) members are separate sales, so they export under
+ * their service name; bundle members keep the line-level text. An explicit
+ * contract-line invoice description always wins.
+ */
+function resolveChildDescription(
+  parent: Charge,
+  child: { pricing_basis?: string | null; invoice_line_description?: string | null; service_name?: string | null },
+): string | null | undefined {
+  if (child.invoice_line_description?.trim()) return parent.description;
+  if (child.pricing_basis === 'unit' && child.service_name?.trim()) return child.service_name;
+  return parent.description;
+}
+
 /** Expand only canonical fixed-plan parents, using persisted allocations, never rates.
  * Export batch line identity stays the parent; detail identity identifies remote splits.
  * Ordinary generated/manual charges with missing services remain validation errors.
@@ -58,8 +71,13 @@ export async function expandAccountingExportCharges<T extends Charge>(
   if (!parents.length) return { charges: expanded, lines };
   const query = db.table('invoice_charge_details as d');
   db.tenantJoin(query, 'invoice_charge_fixed_details as f', 'd.item_detail_id', 'f.item_detail_id');
+  db.tenantJoin(query, 'contract_line_service_fixed_config as fc', 'fc.config_id', 'd.config_id', { type: 'left' });
+  db.tenantJoin(query, 'contract_line_service_configuration as cfg', 'cfg.config_id', 'd.config_id', { type: 'left' });
+  db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'cfg.contract_line_id', { type: 'left' });
+  db.tenantJoin(query, 'service_catalog as s', 's.service_id', 'd.service_id', { type: 'left' });
   const details = await query.whereIn('d.item_id', parents.map(row => row.item_id))
-    .select('d.item_id', 'd.item_detail_id', 'd.service_id', 'f.allocated_amount', 'f.tax_amount');
+    .select('d.item_id', 'd.item_detail_id', 'd.service_id', 'f.allocated_amount', 'f.tax_amount',
+      'fc.pricing_basis', 'cl.invoice_line_description', 's.service_name');
   const result: AccountingExportLine[] = [];
   for (const line of lines) {
     const parent = charges.get(line.document_line_id ?? '');
@@ -79,6 +97,7 @@ export async function expandAccountingExportCharges<T extends Charge>(
       const amount = Number(child.allocated_amount);
       const taxAmount = Number(child.tax_amount ?? 0);
       expanded.set(child.item_detail_id, { ...parent, item_id: child.item_detail_id,
+        description: resolveChildDescription(parent, child),
         service_id: child.service_id, quantity: 1, unit_price: amount, net_amount: amount,
         tax_amount: taxAmount, total_price: amount + taxAmount,
       });
