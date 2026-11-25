@@ -250,6 +250,10 @@ describe('Gmail reply to the contact’s own reply (alga-2026-0003353)', () => {
     'On Mon, Nov 17, 2026 Dana Tech wrote:',
     'On Nov 17 I emailed jane.client@example.com about the invoice.\nShe wrote:',
     'On Tuesday I emailed jane.client@example.com about the invoice.\nShe wrote:',
+    'Le 17 novembre le script a écrit :',
+    'Am 17. November schrieb das Skript:',
+    'El 17 de noviembre el script escribió:',
+    'On 17. November das Skript schrieb:',
   ])('preserves a trailing authored quotation introduced by %s', (introduction) => {
     const fixture = readFixture('authored-trailing-quotation.txt');
     for (const prefix of [
@@ -264,6 +268,34 @@ describe('Gmail reply to the contact’s own reply (alga-2026-0003353)', () => {
       expect(result.appliedHeuristics).not.toContain('quote-prefix');
     }
   });
+
+  it.each([
+    'Le 17 novembre 2026 Jane Client <jane.client@example.test> a écrit :',
+    'Am 17. November 2026 schrieb Jane Client <jane.client@example.test>:',
+    'El 17 de noviembre de 2026 Jane Client <jane.client@example.test> escribió:',
+    'On 17. November 2026 Jane Client <jane.client@example.test> schrieb:',
+  ])('still strips localized provider attribution %s', (attribution) => {
+    for (const prefix of ['', '> ']) {
+      const result = parseEmailReply({
+        text: `Please investigate.\n${prefix}${attribution}\n> Previous reply\n`
+          + '> More history\n\n--- Please reply above this line ---\nOld notification',
+      });
+
+      expect(result.sanitizedText).toBe('Please investigate.');
+      expect(result.appliedHeuristics).toContain(prefix ? 'quote-prefix' : 'provider-header');
+    }
+  });
+
+  it.each(['-----Original Message-----', 'Begin forwarded message:', 'Forwarded message'])(
+    'preserves a pasted report and subsequent instructions after %s above the boundary', (header) => {
+      const text = readFixture('authored-forwarded-report.txt').replace('-----Original Message-----', header);
+      const result = parseEmailReply({ text });
+
+      expect(result.sanitizedText).toBe(text.split('\n\n--- Please reply above this line ---')[0]);
+      expect(result.appliedHeuristics).not.toContain('forwarded-header');
+      expect(result.appliedHeuristics).not.toContain('provider-header');
+    },
+  );
 
   it.each(['', '> '])('still strips a provider attribution with prefix %j above the explicit boundary', (prefix) => {
     // A timestamp and display name alone remain ambiguous above our boundary;

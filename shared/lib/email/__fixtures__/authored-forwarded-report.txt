@@ -1,0 +1,15 @@
+Please investigate this failed delivery report:
+
+-----Original Message-----
+From: Mail Delivery System <mailer-daemon@example.test>
+Sent: Monday, November 17, 2026 09:15
+To: Jane Client <jane.client@example.test>
+Subject: Undeliverable: Deployment details
+
+Delivery failed: 550 5.1.1 Recipient address rejected.
+Recipient: operations@example.test
+
+This is the recipient we need you to restore. Please call me before making changes.
+
+--- Please reply above this line ---
+Old notification

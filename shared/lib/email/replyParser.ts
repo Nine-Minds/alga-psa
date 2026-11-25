@@ -172,6 +172,8 @@ const attributionDateTimeRegex = new RegExp(
 );
 /** A provider attribution's sender address sits directly before `wrote:`. */
 const providerAttributionTailRegex = /[^\s<>@]+@[^\s<>@]+\.[A-Za-z]{2,}>?\s*wrote:$/i;
+/** Localized providers place the sender before the verb, or after German `schrieb`. */
+const localizedProviderAttributionRegex = /(?:[^\s<>@]+@[^\s<>@]+\.[A-Za-z]{2,}>?\s*(?:a écrit|escribió|schrieb)\s*:|schrieb\s+[^:<>]*<?[^\s<>@]+@[^\s<>@]+\.[A-Za-z]{2,}>?\s*:)$/i;
 
 /**
  * Does a quoted run start here and carry on to the end of the message, or to a signature?
@@ -664,14 +666,16 @@ function stripProviderHeaders(text: string, config: ReplyParserConfig, preserveU
   let heuristic: string | undefined;
   let removedQuoted = false;
   const isProviderHeader = (line: string): boolean => {
-    // Above our boundary, even "On startup at 09:15 the script wrote:" can
-    // introduce authored evidence. Require both the date/time and sender-address
-    // evidence used for wrapped attributions; a date/time alone is ambiguous.
-    if (preserveUnattributedQuotes && /^on .+wrote:$/i.test(line)
-      && (!attributionDateTimeRegex.test(line) || !providerAttributionTailRegex.test(line))) {
-      return false;
+    if (!config.providerReplyHeaders.some((regex) => regex.test(line))) return false;
+    // Above our boundary, a script can have "written" authored evidence in any
+    // supported language. Require a sender address in the provider's attribution
+    // position; dates and times alone do not establish quoted history.
+    if (preserveUnattributedQuotes && !classifyQuotedHeaderField(line)) {
+      return /^on .+wrote:$/i.test(line)
+        ? attributionDateTimeRegex.test(line) && providerAttributionTailRegex.test(line)
+        : localizedProviderAttributionRegex.test(line);
     }
-    return config.providerReplyHeaders.some((regex) => regex.test(line));
+    return true;
   };
 
   for (let i = 0; i < lines.length; i += 1) {
@@ -683,6 +687,13 @@ function stripProviderHeaders(text: string, config: ReplyParserConfig, preserveU
     }
 
     if (config.forwardedReplyHeaders.some((regex) => regex.test(line))) {
+      if (preserveUnattributedQuotes) {
+        // A forwarded report above our explicit boundary may be pasted evidence
+        // with instructions below it. Keep the remainder, including its envelope:
+        // continuing header stripping would cut at the report's From/Sent block.
+        kept.push(...lines.slice(i));
+        break;
+      }
       matched = line;
       heuristic = 'forwarded-header';
       break;

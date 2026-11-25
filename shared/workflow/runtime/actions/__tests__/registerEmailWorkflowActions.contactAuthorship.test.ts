@@ -589,6 +589,28 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
       expectNoLeaks(comment.content);
     });
 
+    it.each([
+      { fixture: 'authored-trailing-quotation.txt', introduction: 'Le 17 novembre le script a écrit :' },
+      { fixture: 'authored-trailing-quotation.txt', introduction: 'Am 17. November schrieb das Skript:' },
+      { fixture: 'authored-forwarded-report.txt', introduction: undefined },
+    ])('stores authored evidence from $fixture ($introduction)', async ({ fixture, introduction }) => {
+      const { parseEmailReply } = await import('../../../../lib/email/replyParser');
+      const fixturePath = new URL(`../../../../lib/email/__fixtures__/${fixture}`, import.meta.url);
+      let text = fs.readFileSync(fixturePath, 'utf8');
+      if (introduction) {
+        text = text.replace('The deployment failed with this error:', `Deployment details:\n${introduction}`);
+      }
+      const authored = text.split('\n\n--- Please reply above this line ---')[0];
+      const body = { text };
+      const comment = await writtenComment(parseEmailReply(body), { ...emailData, body });
+
+      for (const line of authored.split('\n').filter(Boolean)) {
+        expect(visibleText(comment.content)).toContain(line.replace(/^>\s*/, ''));
+      }
+      expect(visibleText(comment.content)).not.toContain('Old notification');
+      expect(visibleText(comment.content)).not.toContain('Please reply above this line');
+    });
+
     // Same judgement the in-app processor makes before a comment exists: a reply that held
     // nothing above the Alga boundary leaves no comment at all, rather than a blank one.
     it('writes no comment at all for an empty parse', async () => {

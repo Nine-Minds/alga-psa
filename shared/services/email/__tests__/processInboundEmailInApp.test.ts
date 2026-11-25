@@ -1724,6 +1724,10 @@ describe('processInboundEmailInApp', () => {
       'Deployment details:\n> On startup at 09:15 the deployment script wrote:',
       'Deployment details:\nOn Nov 17 the deployment script wrote:',
       'Deployment details:\n> On Nov 17 the deployment script wrote:',
+      'Le 17 novembre le script a écrit :',
+      'Deployment details:\n> Le 17 novembre le script a écrit :',
+      'Am 17. November schrieb das Skript:',
+      'Deployment details:\n> Am 17. November schrieb das Skript:',
     ])(
       'stores the trailing error quotation introduced by %s above an explicit reply boundary', async (prefix) => {
         parseEmailReplyBodyMock.mockImplementation(async (body: any) => parseEmailReply(body));
@@ -1739,5 +1743,18 @@ describe('processInboundEmailInApp', () => {
         expect(content).not.toContain('[ALGA-REPLY-TOKEN');
       },
     );
+    it('stores pasted forwarded evidence and the instructions below it', async () => {
+      parseEmailReplyBodyMock.mockImplementation(async (body: any) => parseEmailReply(body));
+      const content = await storedCommentContent('email-forwarded-report', {
+        text: readEmailFixture('authored-forwarded-report.txt') + '\n[ALGA-REPLY-TOKEN OWNREPLY-TOKEN-11]',
+        html: '',
+      });
+
+      expect(content).toContain('Delivery failed: 550 5.1.1 Recipient address rejected.');
+      expect(content).toContain('Recipient: operations@example.test');
+      expect(content).toContain('This is the recipient we need you to restore. Please call me before making changes.');
+      expect(content).not.toContain('Old notification');
+      expect(content).not.toContain('[ALGA-REPLY-TOKEN');
+    });
   });
 });
