@@ -410,6 +410,15 @@
         "used": "Użyte",
         "expired": "Wygasłe",
         "revoked": "Unieważnione"
+      },
+      "lastSentPrefix": "Ostatnio wysłano:",
+      "resendCount_one": "wysłano ponownie raz",
+      "resendCount_few": "wysłano ponownie {{count}} razy",
+      "resendCount_many": "wysłano ponownie {{count}} razy",
+      "resendCount_other": "wysłano ponownie {{count}} razy",
+      "unusable": {
+        "contactInactive": "Ten kontakt jest nieaktywny, więc linku nie można użyć. Aktywuj kontakt ponownie, a potem wyślij nowe zaproszenie.",
+        "emailChanged": "To zaproszenie zostało wysłane na adres, którego kontakt już nie ma, więc link już nie działa. Wyślij je ponownie, aby nowy link trafił na aktualny adres kontaktu."
       }
     },
     "actions": {
@@ -457,13 +466,15 @@
         "contactNotFound": "Kontakt nie został znaleziony.",
         "contactMissingEmail": "Kontakt nie ma adresu e-mail. Przed wysłaniem zaproszenia dodaj adres e-mail do kontaktu.",
         "contactInvalidEmail": "Kontakt ma nieprawidłowy adres e-mail. Przed wysłaniem zaproszenia zaktualizuj kontakt, podając prawidłowy adres e-mail.",
+        "contactInactive": "Ten kontakt jest nieaktywny. Aktywuj kontakt ponownie, zanim zaprosisz go do portalu klienta.",
         "userExistsForContact": "Dla tego kontaktu istnieje już konto użytkownika. Zamiast wysyłać zaproszenie, skorzystaj z resetowania hasła.",
         "portalUserAlreadyExists": "Ten adres e-mail należy już do innego konta użytkownika w tej organizacji.",
         "noDefaultClient": "Brak domyślnego klienta skonfigurowanego dla tego tenanta. Ustaw domyślnego klienta w ustawieniach ogólnych.",
         "noDefaultLocation": "Domyślny klient musi mieć skonfigurowaną domyślną lokalizację, aby wysyłać zaproszenia do portalu.",
         "noLocationEmail": "Lokalizacja domyślnego klienta musi mieć skonfigurowany kontaktowy adres e-mail.",
         "noBaseUrl": "Podstawowy adres URL nie jest skonfigurowany dla zaproszeń do portalu.",
-        "invitationNotFound": "Nie znaleziono zaproszenia lub zostało już wykorzystane."
+        "invitationNotFound": "Nie znaleziono zaproszenia lub zostało już wykorzystane.",
+        "rateLimited": "Zbyt wiele prób zaproszenia tego kontaktu. Spróbuj ponownie później."
       },
       "userNotFound": "Nie znaleziono użytkownika klienta",
       "validationErrorTitle": "Błąd walidacji"
@@ -641,7 +652,8 @@
       "phoneNumber": "Numer telefonu",
       "actions": "Akcje",
       "role": "Rola",
-      "location": "Lokalizacja"
+      "location": "Lokalizacja",
+      "portalInvitation": "Zaproszenie do portalu"
     },
     "filter": {
       "show": "Pokaż:",
@@ -650,7 +662,11 @@
       "all": "Wszystkie kontakty",
       "searchPlaceholder": "Szukaj kontaktów...",
       "allLocations": "Wszystkie lokalizacje",
-      "noLocation": "Brak lokalizacji"
+      "noLocation": "Brak lokalizacji",
+      "allInvitationStates": "Dowolny stan zaproszenia",
+      "invitationExpired": "Wygasłe zaproszenia",
+      "invitationPending": "Oczekujące zaproszenia",
+      "invitationExpiredOrPending": "Wygasłe lub oczekujące"
     },
     "actions": {
       "openMenu": "Otwórz menu",
@@ -659,12 +675,23 @@
       "selectAll": "Zaznacz wszystkie kontakty",
       "selectContact": "Zaznacz {{name}}",
       "inviteSelected": "Zaproś do portalu ({{selected}})",
-      "inviteAllEligible": "Zaproś wszystkich uprawnionych"
+      "inviteAllEligible": "Zaproś wszystkich uprawnionych",
+      "resendExpired": "Wyślij ponownie wygasłe",
+      "resendPending": "Wyślij ponownie oczekujące",
+      "resendOpen": "Wyślij ponownie wygasłe lub oczekujące"
     },
     "errors": {
       "loadFailed": "Nie udało się załadować kontaktów.",
       "loadingTitle": "Błąd podczas ładowania kontaktów",
       "retryFailed": "Nie udało się załadować kontaktów. Spróbuj ponownie."
+    },
+    "invitation": {
+      "none": "Bez zaproszenia",
+      "pendingUntil": "Oczekuje do {{date}}",
+      "expired": "Zaproszenie wygasło",
+      "activeUser": "Aktywny użytkownik portalu",
+      "inactiveUser": "Nieaktywny użytkownik portalu",
+      "contactInactive": "Zaproszenie nie do użycia (kontakt nieaktywny)"
     }
   },
   "bulkPortalInvitation": {
@@ -677,21 +704,59 @@
     "skipReasons": {
       "alreadyHasPortalAccess": "ma już dostęp do portalu",
       "missingEmail": "brak użytecznego adresu e-mail",
-      "sharedMailbox": "skrzynka współdzielona"
+      "sharedMailbox": "skrzynka współdzielona",
+      "emailInUse": "adres e-mail należy już do innego użytkownika",
+      "inactiveContact": "nieaktywny kontakt"
     },
     "actions": {
       "send": "Wyślij {{total}} zaproszeń",
-      "sending": "Wysyłanie..."
+      "sending": "Wysyłanie...",
+      "resendExpired_one": "Wyślij ponownie {{count}} wygasłe zaproszenie",
+      "resendExpired_few": "Wyślij ponownie {{count}} wygasłe zaproszenia",
+      "resendExpired_many": "Wyślij ponownie {{count}} wygasłych zaproszeń",
+      "resendExpired_other": "Wyślij ponownie {{count}} wygasłego zaproszenia",
+      "resendPending_one": "Wyślij ponownie {{count}} oczekujące zaproszenie",
+      "resendPending_few": "Wyślij ponownie {{count}} oczekujące zaproszenia",
+      "resendPending_many": "Wyślij ponownie {{count}} oczekujących zaproszeń",
+      "resendPending_other": "Wyślij ponownie {{count}} oczekującego zaproszenia",
+      "resendOpen_one": "Wyślij ponownie {{count}} wygasłe lub oczekujące zaproszenie",
+      "resendOpen_few": "Wyślij ponownie {{count}} wygasłe lub oczekujące zaproszenia",
+      "resendOpen_many": "Wyślij ponownie {{count}} wygasłych lub oczekujących zaproszeń",
+      "resendOpen_other": "Wyślij ponownie {{count}} wygasłego lub oczekującego zaproszenia"
     },
     "results": {
       "summary": "Wysłano {{sent}}, pominięto {{skipped}}, niepowodzenia: {{failed}}.",
       "sent": "Wysłano",
       "skipped": "Pominięto",
-      "failed": "Niepowodzenie"
+      "failed": "Niepowodzenie",
+      "reasons": {
+        "contactNotFound": "Nie znaleziono kontaktu",
+        "missingEmail": "Kontakt nie ma adresu e-mail",
+        "invalidEmail": "Adres e-mail kontaktu jest nieprawidłowy",
+        "userExists": "Ma już konto w portalu",
+        "emailInUse": "Adres e-mail należy do innego użytkownika",
+        "permissionDenied": "Nie możesz zaprosić tego kontaktu",
+        "stateMismatch": "Zaproszenie nie jest już w wybranym stanie",
+        "inactiveContact": "Kontakt jest nieaktywny",
+        "rateLimited": "Zbyt wiele prób zaproszenia tego kontaktu. Spróbuj ponownie później.",
+        "invitationFailed": "Nie udało się wysłać zaproszenia"
+      }
     },
     "errors": {
       "loadFailed": "Nie udało się ustalić, kogo można zaprosić. Spróbuj ponownie.",
-      "sendFailed": "Nie udało się wysłać zaproszeń. Spróbuj ponownie."
+      "sendFailed": "Nie udało się wysłać zaproszeń. Spróbuj ponownie.",
+      "statesUnavailable": "Nie udało się ustalić, które zaproszenia są otwarte dla tego klienta.",
+      "batchLimitExceeded": "Można zaprosić maksymalnie 500 kontaktów jednocześnie.",
+      "noTargetsSelected": "Wybierz co najmniej jeden kontakt do zaproszenia."
+    },
+    "resendTitle": "Ponowne wysłanie zaproszeń do portalu klienta",
+    "resendCount_one": "{{count}} kontakt otrzyma zaproszenie ponownie, z pełnym okresem ważności.",
+    "resendCount_few": "{{count}} kontakty otrzymają zaproszenie ponownie, z pełnym okresem ważności.",
+    "resendCount_many": "{{count}} kontaktów otrzyma zaproszenie ponownie, z pełnym okresem ważności.",
+    "resendCount_other": "{{count}} kontaktu otrzyma zaproszenie ponownie, z pełnym okresem ważności.",
+    "states": {
+      "pending": "Oczekujące",
+      "expired": "Wygasłe"
     }
   },
   "contactsLayout": {
@@ -812,6 +877,7 @@
       "signedIn": "Portal · ostatnie logowanie {{when}}",
       "neverSignedIn": "Portal · brak logowań",
       "invited": "Portal · wysłano zaproszenie",
+      "invitationExpired": "Portal · zaproszenie wygasło",
       "noAccess": "Brak dostępu do portalu"
     },
     "portal": {
@@ -827,6 +893,7 @@
       "deactivated": "Konto dezaktywowane",
       "activeAccount": "Aktywne konto",
       "invitationSent": "Zaproszenie wysłane",
+      "invitationExpired": "Zaproszenie wygasło",
       "noAccess": "Brak dostępu"
     },
     "tickets": {

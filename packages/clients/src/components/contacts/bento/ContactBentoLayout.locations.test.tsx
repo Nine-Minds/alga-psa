@@ -23,10 +23,10 @@ vi.mock('@alga-psa/ui', () => {
   const toastApi = { toast };
   return { useDrawer: () => drawer, useToast: () => toastApi };
 });
-vi.mock('@alga-psa/ui/lib/i18n/client', () => {
+vi.mock('@alga-psa/ui/lib/i18n/client', async (importOriginal) => {
   const t = (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key;
   const value = { t };
-  return { useTranslation: () => value };
+  return { ...await importOriginal<typeof import('@alga-psa/ui/lib/i18n/client')>(), useTranslation: () => value };
 });
 vi.mock('@alga-psa/core/context/DocumentsCrossFeatureContext', () => {
   const value = { renderDocuments: () => null, getDocumentsByEntity: vi.fn() };

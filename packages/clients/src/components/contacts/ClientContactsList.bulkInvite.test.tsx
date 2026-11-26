@@ -21,6 +21,7 @@ const hoisted = vi.hoisted(() => ({
   searchContactListIds: vi.fn(),
   getCurrentUserAsync: vi.fn(),
   getContactPortalPermissions: vi.fn(),
+  getPortalInvitationStatesForClient: vi.fn(),
   dialogTarget: vi.fn(),
 }));
 
@@ -40,7 +41,15 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => {
     }
     return text;
   };
-  return { useTranslation: () => ({ t }) };
+  return {
+    useTranslation: () => ({ t }),
+    // The app's own locale formatting, stubbed so the assertions do not depend
+    // on the machine's locale or time zone.
+    useFormatters: () => ({
+      formatDate: (value: string | Date) =>
+        new Date(value).toISOString().slice(0, 10),
+    }),
+  };
 });
 
 vi.mock('@alga-psa/clients/actions', () => ({
@@ -48,6 +57,7 @@ vi.mock('@alga-psa/clients/actions', () => ({
   getContactByContactNameId: hoisted.getContactByContactNameId,
   getAllClients: hoisted.getAllClients,
   searchContactListIds: hoisted.searchContactListIds,
+  getPortalInvitationStatesForClient: hoisted.getPortalInvitationStatesForClient,
 }));
 vi.mock('@alga-psa/auth/actions', () => ({
   getContactPortalPermissions: () => hoisted.getContactPortalPermissions(),
@@ -137,6 +147,10 @@ beforeEach(() => {
   hoisted.getAllClients.mockResolvedValue([client]);
   hoisted.getCurrentUserAsync.mockResolvedValue({ user_id: 'user-1' });
   hoisted.getContactPortalPermissions.mockResolvedValue({ canInvite: true, canUpdateRoles: true, canRead: true });
+  hoisted.getPortalInvitationStatesForClient.mockResolvedValue([
+    { contactId: 'contact-a', state: 'expired', expiresAt: null, emailConflict: false },
+    { contactId: 'contact-b', state: 'pending', expiresAt: '2099-01-02T00:00:00.000Z', emailConflict: false },
+  ]);
 });
 
 describe('ClientContactsList bulk portal invitations', () => {
@@ -176,6 +190,168 @@ describe('ClientContactsList bulk portal invitations', () => {
     expect(hoisted.dialogTarget).toHaveBeenLastCalledWith({ mode: 'allEligible' });
   });
 
+  it('shows each contact\'s invitation state on the row', async () => {
+    render(<ClientContactsList clientId="acme" client={client} />);
+    await screen.findByTestId('row-contact-a');
+
+    expect(await screen.findByText('Invitation expired')).toBeInTheDocument();
+    expect(screen.getByText(/^Pending until /)).toBeInTheDocument();
+  });
+
+  it('filters to the contacts that need chasing and resends to exactly those', async () => {
+    render(<ClientContactsList clientId="acme" client={client} />);
+    await screen.findByTestId('row-contact-a');
+    await screen.findByText('Invitation expired');
+
+    fireEvent.change(screen.getByLabelText('contact-invitation-state-filter'), {
+      target: { value: 'expired' },
+    });
+    await waitFor(() => expect(screen.queryByTestId('row-contact-b')).not.toBeInTheDocument());
+
+    fireEvent.click(screen.getByText('Resend expired'));
+
+    // The filter and the batch are the same rule, so the dialog is aimed at the
+    // state the MSP just narrowed to.
+    expect(hoisted.dialogTarget).toHaveBeenLastCalledWith({
+      mode: 'invitationState',
+      states: ['expired'],
+      contactIds: ['contact-a'],
+    });
+  });
+
+  it('names the pending set when the filter asks for it', async () => {
+    render(<ClientContactsList clientId="acme" client={client} />);
+    await screen.findByTestId('row-contact-a');
+    await screen.findByText('Invitation expired');
+
+    fireEvent.change(screen.getByLabelText('contact-invitation-state-filter'), {
+      target: { value: 'open' },
+    });
+    fireEvent.click(await screen.findByText('Resend expired or pending'));
+
+    expect(hoisted.dialogTarget).toHaveBeenLastCalledWith({
+      mode: 'invitationState',
+      states: ['expired', 'pending'],
+      contactIds: ['contact-a', 'contact-b'],
+    });
+  });
+
+  it('resends to the contacts the search left on screen, by name', async () => {
+    hoisted.getContactsByClient.mockResolvedValue([
+      contact('contact-a', 'Ada Lovelace', 'ada@acme.com'),
+      contact('contact-c', 'Cy Lapsed', 'cy@acme.com'),
+    ]);
+    hoisted.getPortalInvitationStatesForClient.mockResolvedValue([
+      { contactId: 'contact-a', state: 'expired', expiresAt: null, emailConflict: false },
+      { contactId: 'contact-c', state: 'expired', expiresAt: null, emailConflict: false },
+    ]);
+
+    render(<ClientContactsList clientId="acme" client={client} />);
+    await screen.findByTestId('row-contact-a');
+    await screen.findAllByText('Invitation expired');
+
+    fireEvent.change(screen.getByPlaceholderText('Search contacts...'), { target: { value: 'Ada' } });
+    await waitFor(() => expect(screen.queryByTestId('row-contact-c')).not.toBeInTheDocument());
+
+    fireEvent.click(screen.getByText('Resend expired'));
+
+    // The batch is what the MSP is looking at: the other expired contact was
+    // filtered away and is not mailed.
+    expect(hoisted.dialogTarget).toHaveBeenLastCalledWith({
+      mode: 'invitationState',
+      states: ['expired'],
+      contactIds: ['contact-a'],
+    });
+  });
+
+  it('leaves a deactivated contact out of the resend and labels its invitation unusable', async () => {
+    hoisted.getContactsByClient.mockResolvedValue([
+      contact('contact-a', 'Ada Lovelace', 'ada@acme.com'),
+      contact('contact-off', 'Otto Off', 'otto@acme.com'),
+    ]);
+    hoisted.getPortalInvitationStatesForClient.mockResolvedValue([
+      { contactId: 'contact-a', state: 'expired', expiresAt: null, emailConflict: false, contactInactive: false },
+      { contactId: 'contact-off', state: 'expired', expiresAt: null, emailConflict: false, contactInactive: true },
+    ]);
+
+    render(<ClientContactsList clientId="acme" client={client} />);
+    await screen.findByTestId('row-contact-off');
+
+    // The send refuses a deactivated contact, so the column says the invitation
+    // cannot be used rather than offering it up for chasing.
+    expect(await screen.findByText('Invitation unusable (contact inactive)')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Resend expired'));
+
+    expect(hoisted.dialogTarget).toHaveBeenLastCalledWith({
+      mode: 'invitationState',
+      states: ['expired'],
+      contactIds: ['contact-a'],
+    });
+  });
+
+  it('does not offer a resend when no contact on screen needs one', async () => {
+    hoisted.getPortalInvitationStatesForClient.mockResolvedValue([
+      { contactId: 'contact-a', state: 'active_user', expiresAt: null, emailConflict: false },
+      { contactId: 'contact-b', state: 'none', expiresAt: null, emailConflict: false },
+    ]);
+
+    render(<ClientContactsList clientId="acme" client={client} />);
+    await screen.findByTestId('row-contact-a');
+    await screen.findByText('Active portal user');
+
+    // An action that can only report "0 contacts" is not an action.
+    expect(screen.queryByText('Resend expired')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    { reason: 'missing email', email: null },
+    { reason: 'invalid email', email: 'not-an-email' },
+    { reason: 'shared mailbox', email: 'ada@acme.com', contact_kind: 'shared_mailbox' },
+    { reason: 'email owned by another user', email: 'ada@acme.com', emailConflict: true },
+  ])('hides resend when the only expired contact has $reason', async (candidate) => {
+    hoisted.getContactsByClient.mockResolvedValue([
+      { ...contact('contact-a', 'Ada Lovelace', candidate.email), contact_kind: candidate.contact_kind },
+    ]);
+    hoisted.getPortalInvitationStatesForClient.mockResolvedValue([
+      { contactId: 'contact-a', state: 'expired', expiresAt: null, emailConflict: candidate.emailConflict ?? false },
+    ]);
+
+    render(<ClientContactsList clientId="acme" client={client} />);
+    await screen.findByText('Invitation expired');
+    await waitFor(() => expect(screen.getByText('Invite all eligible')).toBeInTheDocument());
+
+    expect(screen.queryByText('Resend expired')).not.toBeInTheDocument();
+  });
+
+  it('says when a portal user is deactivated and dates a pending invitation in the app\'s locale', async () => {
+    hoisted.getPortalInvitationStatesForClient.mockResolvedValue([
+      { contactId: 'contact-a', state: 'inactive_user', expiresAt: null, emailConflict: false },
+      { contactId: 'contact-b', state: 'pending', expiresAt: '2099-01-02T00:00:00.000Z', emailConflict: false },
+    ]);
+
+    render(<ClientContactsList clientId="acme" client={client} />);
+    await screen.findByTestId('row-contact-a');
+
+    expect(await screen.findByText('Inactive portal user')).toBeInTheDocument();
+    // Through the shared formatter, not the browser's own toLocaleDateString.
+    expect(screen.getByText('Pending until 2099-01-02')).toBeInTheDocument();
+  });
+
+  it('hides the invitation column when the reader may not see invitation state', async () => {
+    hoisted.getPortalInvitationStatesForClient.mockResolvedValue(null);
+
+    render(<ClientContactsList clientId="acme" client={client} />);
+    await screen.findByTestId('row-contact-a');
+
+    await waitFor(() => expect(hoisted.getPortalInvitationStatesForClient).toHaveBeenCalled());
+    // A refusal is not "nobody was invited", so the column, the filter and the
+    // resend affordance all stay away rather than reporting a state we lack.
+    expect(screen.queryByText('Not invited')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('contact-invitation-state-filter')).not.toBeInTheDocument();
+    expect(screen.queryByText('Resend expired')).not.toBeInTheDocument();
+  });
+
   it('shows no invitation affordance to a reader without user:invite', async () => {
     hoisted.getContactPortalPermissions.mockResolvedValue({ canInvite: false, canUpdateRoles: false, canRead: true });
 
@@ -184,6 +360,7 @@ describe('ClientContactsList bulk portal invitations', () => {
 
     await waitFor(() => expect(hoisted.getContactPortalPermissions).toHaveBeenCalled());
     expect(screen.queryByText('Invite all eligible')).not.toBeInTheDocument();
+    expect(screen.queryByText('Resend expired')).not.toBeInTheDocument();
     // No checkbox either: a selection with nothing to do with it is a dead end.
     expect(screen.queryByLabelText('Select all contacts')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Select Ada Lovelace')).not.toBeInTheDocument();

@@ -16,6 +16,14 @@ import {
   portalEmailOwnerConflictMessage,
   type PortalEmailOwnerRow,
 } from '../lib/portalEmailOwner';
+import { resolvePortalInvitationValidityDays } from '../lib/portalInvitationValidity';
+import {
+  classifyPortalInvitationState,
+  invitationRefusedAtUseTime,
+  invitationStateHaving,
+  LATEST_INVITATION_EXPIRES_AT_SQL,
+  LATEST_INVITATION_STATE_SQL,
+} from '../lib/portalInvitationStateQuery';
 import type { IUserWithRoles, IUser } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import type {
@@ -23,6 +31,7 @@ import type {
   VerifyTokenResult,
   CompleteSetupResult,
   InvitationHistoryItem,
+  InvitationUseTimeRefusal,
   CreateClientPortalUserParams,
   PortalInvitationErrorCode,
   SendPortalInvitationOptions,
@@ -32,6 +41,9 @@ import type {
   BulkSendInvitationItemResult,
   BulkSendInvitationResult,
   SendBulkPortalInvitationsParams,
+  PortalInvitationContactState,
+  PortalInvitationState,
+  PortalInvitationStateTarget,
 } from '../types';
 
 /** One batch never fans out further than this, however many contacts were asked for. */
@@ -113,7 +125,7 @@ function normalizeSendPortalInvitationError(
       return { message, errorCode: 'CONTACT_NOT_FOUND' };
     }
     if (message.startsWith('Too many attempts.')) {
-      return { message, errorCode: 'INVITATION_FAILED' };
+      return { message, errorCode: 'RATE_LIMITED' };
     }
     if (message === 'Failed to create invitation') {
       return { errorCode: 'INVITATION_FAILED' };
@@ -642,6 +654,8 @@ interface PortalInvitationBatchContext {
   supportPhone: string;
   tenantSlug: string;
   portalBaseUrl: string;
+  /** The tenant's invitation validity, resolved once for the batch. */
+  invitationValidityDays: number;
 }
 
 async function resolvePortalInvitationBatchContext(
@@ -710,6 +724,9 @@ async function resolvePortalInvitationBatchContext(
   const tenantSettings = tenantSettingsRow?.settings || {};
   const supportEmail: string = tenantSettings.supportEmail || mspLocation.email;
   const supportPhone: string = tenantSettings.supportPhone || mspLocation.phone || '';
+  // How long these invitations last, from the same settings row: one resolver
+  // supplies the default and the allowed range for the whole product.
+  const invitationValidityDays = resolvePortalInvitationValidityDays(tenantSettingsRow?.settings);
 
   if (!supportEmail) {
     throw new PortalInvitationError(
@@ -744,7 +761,14 @@ async function resolvePortalInvitationBatchContext(
     );
   }
 
-  return { tenantDefaultClient, supportEmail, supportPhone, tenantSlug, portalBaseUrl };
+  return {
+    tenantDefaultClient,
+    supportEmail,
+    supportPhone,
+    tenantSlug,
+    portalBaseUrl,
+    invitationValidityDays,
+  };
 }
 
 /**
@@ -779,6 +803,22 @@ async function sendPortalInvitationForContact(
     return {
       outcome: 'skipped',
       result: { success: false, error: 'Contact not found', errorCode: 'CONTACT_NOT_FOUND' }
+    };
+  }
+
+  // A deactivated contact is refused at use time (PortalInvitationService.verifyToken),
+  // so mailing it a link would report "Sent" for something the recipient can never
+  // open. "Invite all eligible" already skips these; an explicit selection and the
+  // REST endpoint reach here, and are told why.
+  if (contact.is_inactive) {
+    return {
+      outcome: 'skipped',
+      email: contact.email,
+      result: {
+        success: false,
+        error: 'This contact is inactive. Reactivate the contact before inviting it to the client portal.',
+        errorCode: 'CONTACT_INACTIVE'
+      }
     };
   }
 
@@ -857,7 +897,14 @@ async function sendPortalInvitationForContact(
   }
   const relinked = orphanedUserIdToRelink !== null;
 
-  const { tenantDefaultClient, supportEmail, supportPhone, tenantSlug, portalBaseUrl } = batchContext;
+  const {
+    tenantDefaultClient,
+    supportEmail,
+    supportPhone,
+    tenantSlug,
+    portalBaseUrl,
+    invitationValidityDays,
+  } = batchContext;
 
   // Use a transaction to ensure atomicity
   const result: SendInvitationResult = await knex.transaction(async (trx) => {
@@ -870,11 +917,18 @@ async function sendPortalInvitationForContact(
     }
 
     // Create invitation within transaction
-    const invitationResult = await PortalInvitationService.createInvitationWithTransaction(contactId, trx);
+    const invitationResult = await PortalInvitationService.createInvitationWithTransaction(
+      contactId,
+      trx,
+      invitationValidityDays
+    );
     if (!invitationResult.success) {
+      const reason = invitationResult.error ?? '';
       throw new PortalInvitationError(
-        invitationResult.error || 'Portal invitation could not be created. Please try again.',
-        'INVITATION_FAILED'
+        reason || 'Portal invitation could not be created. Please try again.',
+        // The rate limiter's refusal carries its own code so the UI can say
+        // "too many attempts" in the reader's language.
+        reason.startsWith('Too many attempts.') ? 'RATE_LIMITED' : 'INVITATION_FAILED'
       );
     }
 
@@ -899,17 +953,16 @@ async function sendPortalInvitationForContact(
     setupUrl.searchParams.set('tenant', tenantSlug);
     const portalSetupUrl = setupUrl.toString();
 
-    // Calculate expiration time for display
-    const expirationTime = '24 hours';
-
-    // Send portal invitation email - if this fails, transaction will rollback
+    // Send portal invitation email - if this fails, transaction will rollback.
+    // The validity is the one the invitation was just stored with, and the
+    // email renders it in the recipient's own language.
     await sendPortalInvitationEmail({
       email: contact.email,
       contactName: contact.full_name,
       clientName: clientClient?.client_name || tenantDefaultClient.client_name,  // Recipient's own client name
       tenantName: tenantDefaultClient.client_name,  // MSP name (sender of the invitation)
       portalLink: portalSetupUrl,
-      expirationTime: expirationTime,
+      validityDays: invitationValidityDays,
       tenant: tenant,
       supportEmail,  // MSP's support email for reply-to
       supportPhone,  // MSP's support phone
@@ -939,15 +992,54 @@ async function sendPortalInvitationForContact(
 }
 
 /**
+ * Everything the state rule in portalInvitationStateQuery reads about a
+ * contact: every invitation it ever had (alias `pi`) and every additional
+ * address it can receive at (alias `cea`).
+ *
+ * The classification needs the LATEST invitation, so the join cannot pre-filter
+ * to the unused ones — a newer revoked or accepted invitation is exactly what
+ * makes an older lapsed row irrelevant. The addresses travel with it because a
+ * link mailed to an address the MSP later kept as an additional one still
+ * reaches the contact, and the state expression says so.
+ */
+function joinContactInvitationState(
+  scopedDb: ReturnType<typeof tenantDb>,
+  query: Knex.QueryBuilder
+): void {
+  scopedDb.tenantJoin(query, 'portal_invitations as pi', 'pi.contact_id', 'c.contact_name_id', {
+    type: 'left',
+  });
+  scopedDb.tenantJoin(
+    query,
+    'contact_additional_email_addresses as cea',
+    'cea.contact_name_id',
+    'c.contact_name_id',
+    { type: 'left' }
+  );
+}
+
+/** Narrows a grouped contact query to the asked-for invitation states. */
+function applyInvitationStateFilter(
+  query: Knex.QueryBuilder,
+  states: PortalInvitationStateTarget[],
+  groupColumns: string[]
+): void {
+  const having = invitationStateHaving(states);
+  query.groupBy(...groupColumns).havingRaw(having.sql, having.bindings);
+}
+
+/**
  * Contacts without a portal user, narrowed to what this caller may read.
  * Same query shape as getContactsEligibleForInvitation, so "invite all eligible"
  * and the count the confirmation dialog shows come from the same rule.
+ * `invitationStates` narrows that set to the chase-up case.
  */
 async function resolveEligibleContactIdsForInvitation(
   scope: ClientScopeContext,
   tenant: string,
   knex: Knex,
-  clientId: string | null
+  clientId: string | null,
+  invitationStates: PortalInvitationStateTarget[] = []
 ): Promise<string[]> {
   const rows = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const scopedDb = tenantDb(trx, tenant);
@@ -959,11 +1051,17 @@ async function resolveEligibleContactIdsForInvitation(
         join.andOn(trx.raw('u.user_type = ?', ['client']));
       },
     });
+    if (invitationStates.length > 0) {
+      joinContactInvitationState(scopedDb, query);
+    }
     query
       .whereNull('u.user_id')
-      .andWhere('c.is_inactive', false)
+      .whereRaw('coalesce(c.is_inactive, false) = false')
       .modify((qb: Knex.QueryBuilder) => {
         if (clientId) qb.andWhere('c.client_id', clientId);
+        if (invitationStates.length > 0) {
+          applyInvitationStateFilter(qb, invitationStates, ['c.contact_name_id', 'c.full_name']);
+        }
       })
       .select('c.contact_name_id')
       .orderBy('c.full_name', 'asc');
@@ -972,6 +1070,167 @@ async function resolveEligibleContactIdsForInvitation(
 
   return rows.map((row) => row.contact_name_id);
 }
+
+/** Only the states a batch can be aimed at, de-duplicated. */
+function normalizeInvitationStates(states: unknown): PortalInvitationStateTarget[] {
+  if (!Array.isArray(states)) {
+    return [];
+  }
+
+  return Array.from(new Set(
+    states.filter((state): state is PortalInvitationStateTarget =>
+      state === 'pending' || state === 'expired')
+  ));
+}
+
+/**
+ * Which of these contacts the send path would refuse because their email is
+ * already held by a user it cannot adopt. Classified with
+ * `classifyPortalEmailOwner` — the very function sendPortalInvitationForContact
+ * refuses on — so a preview built on this cannot count an invitation the batch
+ * will skip.
+ */
+async function resolvePortalEmailConflicts(
+  db: DbConnection,
+  tenant: string,
+  contacts: Array<{ contact_name_id: string; email: string | null }>
+): Promise<Set<string>> {
+  const byEmail = new Map<string, string[]>();
+  for (const contact of contacts) {
+    const email = String(contact.email ?? '').trim().toLowerCase();
+    if (!email) continue;
+    byEmail.set(email, [...(byEmail.get(email) ?? []), contact.contact_name_id]);
+  }
+  if (byEmail.size === 0) {
+    return new Set();
+  }
+
+  const scopedDb = tenantDb(db, tenant);
+  const ownerQuery = scopedDb.table('users as u')
+    .whereIn(db.raw('lower(u.email)') as unknown as string, [...byEmail.keys()])
+    .select(
+      'u.user_id',
+      'u.user_type',
+      'u.contact_id',
+      'u.username',
+      db.raw('lower(u.email) as owner_email'),
+      'c.contact_name_id as linked_contact_id'
+    );
+  scopedDb.tenantJoin(ownerQuery, 'contacts as c', 'u.contact_id', 'c.contact_name_id', { type: 'left' });
+  const owners = await ownerQuery as unknown as Array<PortalEmailOwnerRow & { owner_email: string }>;
+
+  const conflicted = new Set<string>();
+  for (const owner of owners) {
+    for (const contactId of byEmail.get(owner.owner_email) ?? []) {
+      const status = classifyPortalEmailOwner(owner, contactId);
+      // 'orphaned' is relinked by the send, and 'linked_this_contact' already
+      // reads as a portal user; everything else is a refusal.
+      if (status === 'internal' || status === 'linked_other_contact') {
+        conflicted.add(contactId);
+      }
+    }
+  }
+
+  return conflicted;
+}
+
+/**
+ * Every contact of a client with its invitation state, so the rollout can be
+ * run from the contact list instead of contact by contact. Tenant-scoped and
+ * narrowed by the caller's bundle exactly as the eligible set is.
+ *
+ * `null` means this caller may not read invitation state at all, which is not
+ * the same answer as "nobody has been invited" — a reader who cannot see the
+ * state is shown no column rather than a column of "Not invited".
+ */
+export const getPortalInvitationStatesForClient = withAuth(async (
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
+  clientId: string
+): Promise<PortalInvitationContactState[] | null> => {
+  try {
+    const { knex } = await createTenantKnex();
+    const normalizedClientId = clientId?.trim();
+    if (!normalizedClientId) {
+      return null;
+    }
+
+    const scope = await createClientScopeContext(knex, tenant, user);
+    if (!(
+      await canManageClientPortalTargetClient(user, tenant, knex, 'read', normalizedClientId)
+      && await scope.permits('client', normalizedClientId)
+    )) {
+      return null;
+    }
+
+    const rows = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const scopedDb = tenantDb(trx, tenant);
+      const query = scopedDb.table('contacts as c');
+      (await scope.narrowing('contact', 'c')).apply(query);
+      scopedDb.tenantJoin(query, 'users as u', 'u.contact_id', 'c.contact_name_id', {
+        type: 'left',
+        on(join) {
+          join.andOn(trx.raw('u.user_type = ?', ['client']));
+        },
+      });
+      joinContactInvitationState(scopedDb, query);
+      query
+        .andWhere('c.client_id', normalizedClientId)
+        .groupBy('c.contact_name_id', 'c.full_name', 'c.email', 'c.is_inactive')
+        .orderBy('c.full_name', 'asc')
+        .select('c.contact_name_id')
+        .select('c.email')
+        // A deactivated contact cannot be invited and cannot use a link already
+        // in its mailbox, so the column says so instead of counting down to an
+        // expiry that will never matter. Nullable column, NULL is active.
+        .select(trx.raw('coalesce(c.is_inactive, false) as contact_inactive'))
+        .select(trx.raw('coalesce(bool_or(u.user_id is not null), false) as has_portal_user'))
+        // A portal user that was deactivated is not an active one: the row says
+        // so instead of passing for "Active portal user".
+        .select(trx.raw('coalesce(bool_or(u.user_id is not null and u.is_inactive = false), false) as has_active_portal_user'))
+        .select(trx.raw(`(${LATEST_INVITATION_STATE_SQL}) as invitation_state`))
+        .select(trx.raw(`${LATEST_INVITATION_EXPIRES_AT_SQL} as latest_expires_at`));
+      const contactRows = await query as unknown as Array<{
+        contact_name_id: string;
+        email: string | null;
+        contact_inactive: boolean | null;
+        has_portal_user: boolean | null;
+        has_active_portal_user: boolean | null;
+        invitation_state: string | null;
+        latest_expires_at: Date | string | null;
+      }>;
+
+      // Whose email the send path would refuse, by the same rule it refuses on.
+      // Only the contacts a batch could still be aimed at are looked up: the
+      // conflict is read for invitable candidates only, and the lookup is an
+      // unindexed lower(email) scan over users that runs on every list load.
+      const conflictedContactIds = await resolvePortalEmailConflicts(
+        trx,
+        tenant,
+        contactRows.filter((row) => !row.has_portal_user && !row.contact_inactive)
+      );
+      return { contactRows, conflictedContactIds };
+    });
+
+    return rows.contactRows.map((row) => {
+      const state = classifyPortalInvitationState(row);
+
+      return {
+        contactId: row.contact_name_id,
+        state,
+        expiresAt: state === 'pending' && row.latest_expires_at
+          ? new Date(row.latest_expires_at).toISOString()
+          : null,
+        emailConflict: rows.conflictedContactIds.has(row.contact_name_id),
+        contactInactive: Boolean(row.contact_inactive),
+      };
+    });
+
+  } catch (error) {
+    console.error('Error fetching portal invitation states:', error);
+    return null;
+  }
+});
 
 /**
  * Invite many contacts in one request. Sends sequentially so each contact keeps
@@ -1006,7 +1265,9 @@ export const sendBulkPortalInvitations = withAuth(async (
       (params?.contactIds ?? []).filter((id): id is string => typeof id === 'string' && id.trim() !== '')
     ));
 
-    if (requestedContactIds.length === 0 && !params?.allEligible) {
+    const invitationStates = normalizeInvitationStates(params?.invitationStates);
+
+    if (requestedContactIds.length === 0 && !params?.allEligible && invitationStates.length === 0) {
       return refusal('Select at least one contact to invite', 'NO_TARGETS_SELECTED');
     }
 
@@ -1035,20 +1296,39 @@ export const sendBulkPortalInvitations = withAuth(async (
     let targetContactIds: string[];
 
     if (requestedContactIds.length > 0) {
-      const existingQuery = tenantDb(knex, tenant).table('contacts as c')
-        .whereIn('c.contact_name_id', requestedContactIds)
-        .modify((qb: Knex.QueryBuilder) => {
-          // An id that belongs to another client is not this batch's to invite.
-          if (clientId) qb.andWhere('c.client_id', clientId);
-        })
-        .select('c.contact_name_id');
-      // A contact the caller's bundle hides does not exist for this batch,
-      // exactly as it does not exist for their contact list.
-      (await scope.narrowing('contact', 'c')).apply(existingQuery);
-      const resolvable = new Set(
-        ((await existingQuery) as Array<{ contact_name_id: string }>).map((row) => row.contact_name_id)
+      const scopedDb = tenantDb(knex, tenant);
+      const narrowing = await scope.narrowing('contact', 'c');
+      const requestedContactsQuery = (states: PortalInvitationStateTarget[]) => {
+        const query = scopedDb.table('contacts as c')
+          .whereIn('c.contact_name_id', requestedContactIds)
+          .modify((qb: Knex.QueryBuilder) => {
+            // An id that belongs to another client is not this batch's to invite.
+            if (clientId) qb.andWhere('c.client_id', clientId);
+            if (states.length > 0) {
+              applyInvitationStateFilter(qb, states, ['c.contact_name_id']);
+            }
+          })
+          .select('c.contact_name_id');
+        if (states.length > 0) {
+          joinContactInvitationState(scopedDb, query);
+        }
+        // A contact the caller's bundle hides does not exist for this batch,
+        // exactly as it does not exist for their contact list.
+        narrowing.apply(query);
+        return query as unknown as Promise<Array<{ contact_name_id: string }>>;
+      };
+
+      const resolvable = new Set((await requestedContactsQuery([])).map((row) => row.contact_name_id));
+      // An explicit list that came from a state selection is re-checked here
+      // against the current state: the sender was shown "resend the expired
+      // ones", and anything that has moved on since is not theirs to mail.
+      const inRequestedState = invitationStates.length > 0
+        ? new Set((await requestedContactsQuery(invitationStates)).map((row) => row.contact_name_id))
+        : null;
+
+      targetContactIds = requestedContactIds.filter(
+        (id) => resolvable.has(id) && (!inRequestedState || inRequestedState.has(id))
       );
-      targetContactIds = requestedContactIds.filter((id) => resolvable.has(id));
       for (const contactId of requestedContactIds.filter((id) => !resolvable.has(id))) {
         results.push({
           contactId,
@@ -1057,8 +1337,28 @@ export const sendBulkPortalInvitations = withAuth(async (
           message: 'Contact not found'
         });
       }
+      if (inRequestedState) {
+        for (const contactId of requestedContactIds.filter(
+          (id) => resolvable.has(id) && !inRequestedState.has(id)
+        )) {
+          results.push({
+            contactId,
+            status: 'skipped',
+            errorCode: 'INVITATION_STATE_MISMATCH',
+            message: 'This contact\'s invitation is no longer in the state this batch was aimed at.'
+          });
+        }
+      }
     } else {
-      targetContactIds = await resolveEligibleContactIdsForInvitation(scope, tenant, knex, clientId);
+      // An invitation-state selection is the chase-up case and is narrower than
+      // "all eligible", so it wins when a caller asks for both.
+      targetContactIds = await resolveEligibleContactIdsForInvitation(
+        scope,
+        tenant,
+        knex,
+        clientId,
+        invitationStates
+      );
       if (targetContactIds.length > BULK_PORTAL_INVITATION_LIMIT) {
         return refusal(
           `Too many eligible contacts (${targetContactIds.length}). Invite at most ${BULK_PORTAL_INVITATION_LIMIT} contacts at a time.`,
@@ -1563,14 +1863,41 @@ export const getPortalInvitations = withAuth(async (
 
     const invitations = await PortalInvitationService.getInvitationHistory(contactId);
 
-    return invitations.map(invitation => {
+    return invitations.map((invitation, index) => {
       let status: 'pending' | 'expired' | 'used' | 'revoked' = 'pending';
+      let unusableReason: InvitationUseTimeRefusal | undefined;
 
       if (invitation.used_at) {
         status = invitation.metadata?.revoked ? 'revoked' : 'used';
+      } else if (index > 0) {
+        // A newer row supersedes this token, whether that row is pending,
+        // expired, used or explicitly revoked. verifyToken applies the same rule.
+        status = 'revoked';
       } else if (new Date(invitation.expires_at) < new Date()) {
         status = 'expired';
+      } else {
+        // The expiry is not the only thing that kills a link: verifyToken also
+        // refuses a deactivated contact and an address the contact no longer
+        // has, and with a multi-day validity such a row sits here looking
+        // perfectly live. Reporting it as pending with a future expiry would
+        // tell the MSP there is nothing to do about a link that cannot be
+        // opened, while the client's contact list already calls it expired.
+        // Same rule, one row at a time.
+        unusableReason = invitationRefusedAtUseTime({
+          contactInactive: invitation.contact_inactive,
+          contactEmails: invitation.contact_emails,
+          invitationEmail: invitation.email,
+        }) ?? undefined;
+        if (unusableReason) {
+          status = 'expired';
+        }
       }
+
+      // A resend reuses the row it renews, so "Sent" alone would still read as
+      // the day the invitation was first created; the resend stamps say when it
+      // last went out and how often.
+      const lastSentAt = invitation.metadata?.last_sent_at;
+      const resendCount = Number(invitation.metadata?.resend_count ?? 0);
 
       return {
         invitation_id: invitation.invitation_id,
@@ -1578,7 +1905,10 @@ export const getPortalInvitations = withAuth(async (
         created_at: invitation.created_at.toISOString(),
         expires_at: invitation.expires_at.toISOString(),
         used_at: invitation.used_at?.toISOString(),
-        status
+        last_sent_at: typeof lastSentAt === 'string' ? lastSentAt : undefined,
+        resend_count: resendCount > 0 ? resendCount : undefined,
+        status,
+        unusable_reason: unusableReason
       };
     });
 
