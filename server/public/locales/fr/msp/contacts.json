@@ -410,6 +410,13 @@
         "used": "Utilisé",
         "expired": "Expiré",
         "revoked": "Révoqué"
+      },
+      "lastSentPrefix": "Dernier envoi :",
+      "resendCount_one": "renvoyée une fois",
+      "resendCount_other": "renvoyée {{count}} fois",
+      "unusable": {
+        "contactInactive": "Ce contact est inactif, le lien ne peut donc pas être utilisé. Réactivez le contact, puis envoyez une nouvelle invitation.",
+        "emailChanged": "Cette invitation a été envoyée à une adresse que le contact n'a plus, le lien ne fonctionne donc plus. Renvoyez-la pour qu'un nouveau lien parte vers l'adresse actuelle du contact."
       }
     },
     "actions": {
@@ -457,13 +464,15 @@
         "contactNotFound": "Contact introuvable.",
         "contactMissingEmail": "Le contact n'a pas d'adresse e-mail. Ajoutez une adresse e-mail au contact avant d'envoyer une invitation.",
         "contactInvalidEmail": "Le contact a une adresse e-mail invalide. Mettez à jour le contact avec une adresse e-mail valide avant d'envoyer une invitation.",
+        "contactInactive": "Ce contact est inactif. Réactivez le contact avant de l'inviter au portail client.",
         "userExistsForContact": "Un compte utilisateur existe déjà pour ce contact. Utilisez la réinitialisation de mot de passe au lieu d'envoyer une invitation.",
         "portalUserAlreadyExists": "Cette adresse e-mail appartient déjà à un autre compte utilisateur de cette organisation.",
         "noDefaultClient": "Aucun client par défaut n'est configuré pour ce tenant. Veuillez définir un client par défaut dans les paramètres généraux.",
         "noDefaultLocation": "Le client par défaut doit avoir un emplacement par défaut configuré pour envoyer des invitations au portail.",
         "noLocationEmail": "L'emplacement du client par défaut doit avoir une adresse e-mail de contact configurée.",
         "noBaseUrl": "L'URL de base n'est pas configurée pour les invitations au portail.",
-        "invitationNotFound": "Invitation introuvable ou déjà utilisée."
+        "invitationNotFound": "Invitation introuvable ou déjà utilisée.",
+        "rateLimited": "Trop de tentatives d’invitation pour ce contact. Réessayez plus tard."
       },
       "userNotFound": "Utilisateur du client introuvable",
       "validationErrorTitle": "Erreur de validation"
@@ -641,7 +650,8 @@
       "phoneNumber": "Numéro de téléphone",
       "actions": "Actions",
       "role": "Rôle",
-      "location": "Site"
+      "location": "Site",
+      "portalInvitation": "Invitation au portail"
     },
     "filter": {
       "show": "Afficher :",
@@ -650,7 +660,11 @@
       "all": "Tous les contacts",
       "searchPlaceholder": "Rechercher des contacts...",
       "allLocations": "Tous les sites",
-      "noLocation": "Aucun site"
+      "noLocation": "Aucun site",
+      "allInvitationStates": "Tout état d’invitation",
+      "invitationExpired": "Invitations expirées",
+      "invitationPending": "Invitations en attente",
+      "invitationExpiredOrPending": "Expirées ou en attente"
     },
     "actions": {
       "openMenu": "Ouvrir le menu",
@@ -659,12 +673,23 @@
       "selectAll": "Sélectionner tous les contacts",
       "selectContact": "Sélectionner {{name}}",
       "inviteSelected": "Inviter au portail ({{selected}})",
-      "inviteAllEligible": "Inviter tous les éligibles"
+      "inviteAllEligible": "Inviter tous les éligibles",
+      "resendExpired": "Renvoyer les expirées",
+      "resendPending": "Renvoyer les invitations en attente",
+      "resendOpen": "Renvoyer les expirées ou en attente"
     },
     "errors": {
       "loadFailed": "Impossible de charger les contacts.",
       "loadingTitle": "Erreur lors du chargement des contacts",
       "retryFailed": "Impossible de charger les contacts. Veuillez réessayer."
+    },
+    "invitation": {
+      "none": "Non invité",
+      "pendingUntil": "En attente jusqu’au {{date}}",
+      "expired": "Invitation expirée",
+      "activeUser": "Utilisateur actif du portail",
+      "inactiveUser": "Utilisateur du portail inactif",
+      "contactInactive": "Invitation inutilisable (contact inactif)"
     }
   },
   "bulkPortalInvitation": {
@@ -677,21 +702,51 @@
     "skipReasons": {
       "alreadyHasPortalAccess": "a déjà accès au portail",
       "missingEmail": "aucune adresse e-mail utilisable",
-      "sharedMailbox": "boîte aux lettres partagée"
+      "sharedMailbox": "boîte aux lettres partagée",
+      "emailInUse": "l’adresse e-mail appartient déjà à un autre utilisateur",
+      "inactiveContact": "contact inactif"
     },
     "actions": {
       "send": "Envoyer {{total}} invitations",
-      "sending": "Envoi..."
+      "sending": "Envoi...",
+      "resendExpired_one": "Renvoyer {{count}} invitation expirée",
+      "resendExpired_other": "Renvoyer {{count}} invitations expirées",
+      "resendPending_one": "Renvoyer {{count}} invitation en attente",
+      "resendPending_other": "Renvoyer {{count}} invitations en attente",
+      "resendOpen_one": "Renvoyer {{count}} invitation expirée ou en attente",
+      "resendOpen_other": "Renvoyer {{count}} invitations expirées ou en attente"
     },
     "results": {
       "summary": "{{sent}} envoyées, {{skipped}} ignorées, {{failed}} en échec.",
       "sent": "Envoyée",
       "skipped": "Ignorée",
-      "failed": "Échec"
+      "failed": "Échec",
+      "reasons": {
+        "contactNotFound": "Contact introuvable",
+        "missingEmail": "Aucune adresse e-mail sur le contact",
+        "invalidEmail": "L’adresse e-mail du contact n’est pas valide",
+        "userExists": "Possède déjà un compte du portail",
+        "emailInUse": "L’adresse e-mail appartient à un autre utilisateur",
+        "permissionDenied": "Vous ne pouvez pas inviter ce contact",
+        "stateMismatch": "L’invitation n’est plus dans l’état que vous avez sélectionné",
+        "inactiveContact": "Le contact est inactif",
+        "rateLimited": "Trop de tentatives d’invitation pour ce contact. Réessayez plus tard.",
+        "invitationFailed": "L’invitation n’a pas pu être envoyée"
+      }
     },
     "errors": {
       "loadFailed": "Impossible de déterminer qui peut être invité. Veuillez réessayer.",
-      "sendFailed": "Impossible d’envoyer les invitations. Veuillez réessayer."
+      "sendFailed": "Impossible d’envoyer les invitations. Veuillez réessayer.",
+      "statesUnavailable": "Impossible de déterminer quelles invitations sont en attente pour ce client.",
+      "batchLimitExceeded": "Invitez au maximum 500 contacts à la fois.",
+      "noTargetsSelected": "Sélectionnez au moins un contact à inviter."
+    },
+    "resendTitle": "Renvoyer les invitations au portail client",
+    "resendCount_one": "{{count}} contact recevra à nouveau son invitation, avec la durée de validité complète.",
+    "resendCount_other": "{{count}} contacts recevront à nouveau leur invitation, avec la durée de validité complète.",
+    "states": {
+      "pending": "En attente",
+      "expired": "Expirée"
     }
   },
   "contactsLayout": {
@@ -812,6 +867,7 @@
       "signedIn": "Portail · connexion {{when}}",
       "neverSignedIn": "Portail · aucune connexion",
       "invited": "Portail · invité",
+      "invitationExpired": "Portail · invitation expirée",
       "noAccess": "Aucun accès au portail"
     },
     "portal": {
@@ -827,6 +883,7 @@
       "deactivated": "Désactivé",
       "activeAccount": "Compte actif",
       "invitationSent": "Invitation envoyée",
+      "invitationExpired": "Invitation expirée",
       "noAccess": "Aucun accès"
     },
     "tickets": {

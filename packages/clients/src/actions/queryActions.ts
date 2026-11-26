@@ -365,7 +365,7 @@ export const getContactsByClient = withAuth(async (
         .where('contacts.client_id', clientId)
         .modify(function (queryBuilder: Knex.QueryBuilder) {
           if (status !== 'all') {
-            queryBuilder.where('contacts.is_inactive', status === 'inactive');
+            queryBuilder.whereRaw('coalesce(contacts.is_inactive, false) = ?', [status === 'inactive']);
           }
         })
         .orderBy(CONTACT_SORT_COLUMNS[safeSortBy as keyof typeof CONTACT_SORT_COLUMNS] || 'contacts.full_name', safeSortDirection);
