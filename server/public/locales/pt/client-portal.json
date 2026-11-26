@@ -291,6 +291,7 @@
         "contactNotFound": "Contato não encontrado.",
         "contactMissingEmail": "O contato não possui um endereço de e-mail.",
         "contactInvalidEmail": "O contato tem um endereço de e-mail inválido.",
+        "contactInactive": "Este contato não está mais ativo. Entre em contato com seu provedor de serviços.",
         "userExistsForContact": "Já existe uma conta de usuário para este contato.",
         "portalUserAlreadyExists": "Já existe uma conta para este endereço de e-mail. Faça login ou redefina sua senha na página de login.",
         "noDefaultClient": "Nenhum cliente padrão está configurado para este locatário.",
@@ -300,7 +301,9 @@
         "invitationNotFound": "Convite não encontrado.",
         "revokeFailed": "Falha ao revogar o convite. Por favor, tente novamente.",
         "batchLimitExceeded": "Contatos demais em uma única solicitação. Convide menos contatos por vez.",
-        "noTargetsSelected": "Selecione pelo menos um contato para convidar."
+        "noTargetsSelected": "Selecione pelo menos um contato para convidar.",
+        "invitationStateMismatch": "Este convite não é mais válido. Solicite um novo ao seu provedor de serviços.",
+        "rateLimited": "Muitas tentativas. Aguarde alguns minutos e tente novamente."
       }
     },
     "features": {

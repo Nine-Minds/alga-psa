@@ -1,9 +1,17 @@
+import {
+  DEFAULT_PORTAL_INVITATION_VALIDITY_DAYS,
+  resolvePortalInvitationValidityDays,
+} from '@alga-psa/portal-shared/lib/portalInvitationValidity';
+
 export interface ClientPortalFeatureSettings {
   appointmentsEnabled: boolean;
+  /** Whole days a client portal invitation stays usable. */
+  invitationValidityDays: number;
 }
 
 export const DEFAULT_CLIENT_PORTAL_FEATURE_SETTINGS: ClientPortalFeatureSettings = {
   appointmentsEnabled: true,
+  invitationValidityDays: DEFAULT_PORTAL_INVITATION_VALIDITY_DAYS,
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -33,5 +41,8 @@ export function resolveClientPortalFeatureSettings(value: unknown): ClientPortal
   return {
     appointmentsEnabled:
       clientPortal.appointmentsEnabled !== false,
+    // One resolver owns the validity, so the send path and this card cannot
+    // disagree about how long a tenant's invitations last.
+    invitationValidityDays: resolvePortalInvitationValidityDays(settings),
   };
 }

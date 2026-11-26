@@ -10,11 +10,13 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ContactBentoLayout from './ContactBentoLayout';
+import { DateFormatProvider } from '@alga-psa/ui/lib/dateFormat/useDateFormat';
 
 const hoisted = vi.hoisted(() => ({
   openDrawer: vi.fn(),
   closeDrawer: vi.fn(),
   getClientById: vi.fn(),
+  getContactPortalSummary: vi.fn(),
 }));
 
 // Stable references: the layout lists these in effect dependencies.
@@ -24,10 +26,10 @@ vi.mock('@alga-psa/ui', () => {
   const toastApi = { toast };
   return { useDrawer: () => drawer, useToast: () => toastApi };
 });
-vi.mock('@alga-psa/ui/lib/i18n/client', () => {
+vi.mock('@alga-psa/ui/lib/i18n/client', async (importOriginal) => {
   const t = (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key;
   const value = { t };
-  return { useTranslation: () => value };
+  return { ...await importOriginal<typeof import('@alga-psa/ui/lib/i18n/client')>(), useTranslation: () => value };
 });
 vi.mock('@alga-psa/core/context/DocumentsCrossFeatureContext', () => {
   const value = { renderDocuments: () => null, getDocumentsByEntity: vi.fn() };
@@ -36,15 +38,28 @@ vi.mock('@alga-psa/core/context/DocumentsCrossFeatureContext', () => {
 vi.mock('@alga-psa/clients/actions', () => ({
   updateContact: vi.fn(),
   getClientById: hoisted.getClientById,
+  getContactPortalSummary: hoisted.getContactPortalSummary,
   getInteractionsForEntity: vi.fn().mockResolvedValue([]),
 }));
 vi.mock('@alga-psa/tags/components', () => ({ TagManager: () => null }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), back: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => '/msp/contacts/contact-1',
+}));
 vi.mock('@alga-psa/ui/keyboard-shortcuts', () => ({ usePageCreateShortcut: () => undefined }));
-vi.mock('@alga-psa/ui/components/Dialog', () => ({ Dialog: () => null, DialogContent: () => null }));
+vi.mock('@alga-psa/ui/components/Dialog', () => ({
+  Dialog: ({ isOpen, children }: any) => isOpen ? <div>{children}</div> : null,
+  DialogContent: ({ children }: any) => <div>{children}</div>,
+}));
 vi.mock('../../../context/ClientCrossFeatureContext', () => ({ useOptionalClientCrossFeature: () => null }));
 vi.mock('../../interactions/QuickAddInteraction', () => ({ QuickAddInteraction: () => null }));
 vi.mock('../../interactions/InteractionDetails', () => ({ default: () => null }));
-vi.mock('../ContactPortalTab', () => ({ ContactPortalTab: () => null }));
+vi.mock('../ContactPortalTab', () => ({
+  ContactPortalTab: ({ onInvitationChanged }: any) => (
+    <button onClick={() => onInvitationChanged?.()}>Complete invitation change</button>
+  ),
+}));
 vi.mock('../ContactCredentialsSection', () => ({ ContactCredentialsSection: () => null }));
 vi.mock('../ContactDetailsEdit', () => ({ default: () => null }));
 
@@ -88,6 +103,51 @@ describe('ContactBentoLayout full edit save', () => {
     expect(hoisted.closeDrawer).toHaveBeenCalledTimes(1);
     expect(onChangesSaved).toHaveBeenCalledTimes(1);
     expect(onContactUpdated).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['resend', 'expired', 'pending', 'Invitation sent', 'Portal · invited'],
+    ['invite', 'none', 'pending', 'Invitation sent', 'Portal · invited'],
+    ['revoke', 'pending', 'none', 'No access', 'No portal access'],
+  ])('refreshes the full-page summary after %s without a parent callback', async (_action, before, after, status, chip) => {
+    const summary = { hasAccount: false, lastSignIn: null, invitedAt: null, invitationState: before } as any;
+    hoisted.getContactPortalSummary.mockResolvedValue({ ...summary, invitationState: after });
+    render(<ContactBentoLayout contact={contact} clientName="Triage Co" portalSummary={summary} userPermissions={{ canRead: true, canInvite: true, canUpdateRoles: false }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Manage' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Complete invitation change' }));
+
+    expect(await screen.findByText(status)).toBeInTheDocument();
+    expect(screen.getByText(chip)).toBeInTheDocument();
+    expect(hoisted.getContactPortalSummary).toHaveBeenCalledWith('contact-1');
+    expect(screen.queryByText('Invitation expired')).not.toBeInTheDocument();
+  });
+
+  it.each([false, true])('formats the refreshed resend date using the app country (quickView=%s)', async (quickView) => {
+    const summary = { hasAccount: false, accountInactive: false, lastSignIn: null, invitedAt: '2026-11-01T12:00:00.000Z', invitationState: 'expired' } as const;
+    hoisted.getContactPortalSummary.mockResolvedValue({
+      ...summary, invitationState: 'pending', invitedAt: '2026-12-01T12:00:00.000Z',
+    });
+    render(
+      <DateFormatProvider countryCode="DE">
+        <ContactBentoLayout contact={contact} clientName="Triage Co" quickView={quickView} portalSummary={summary} userPermissions={{ canRead: true, canInvite: true, canUpdateRoles: false }} />
+      </DateFormatProvider>,
+    );
+    expect(screen.getByText('Invited').nextElementSibling).toHaveTextContent('01.11.2026');
+    fireEvent.click(screen.getByRole('button', { name: 'Manage' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Complete invitation change' }));
+    await waitFor(() => expect(screen.getByText('Invited').nextElementSibling).toHaveTextContent('01.12.2026'));
+    expect(hoisted.getContactPortalSummary).toHaveBeenCalledWith('contact-1');
+  });
+
+  it('also notifies the contacts list after an invitation change in quick view', async () => {
+    const onChangesSaved = vi.fn();
+    hoisted.getContactPortalSummary.mockResolvedValue({ hasAccount: false, invitationState: 'pending' });
+    render(<ContactBentoLayout contact={contact} clientName="Triage Co" quickView onChangesSaved={onChangesSaved} userPermissions={{ canRead: true, canInvite: true, canUpdateRoles: false }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Manage' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Complete invitation change' }));
+    expect(onChangesSaved).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText('Invitation sent')).toBeInTheDocument();
   });
 
   it('shows the supplied client name without a lookup', () => {
