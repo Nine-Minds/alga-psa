@@ -634,6 +634,11 @@
     "title": "Asset Form",
     "description": "Primary asset create and edit form with identity, lifecycle, contract, and metadata fields",
     "heading": "Edit Asset",
+    "typeChangeConfirmation": {
+      "title": "Change asset type?",
+      "message": "Changing the asset type and saving will permanently delete the saved hardware details for this asset. This cannot be undone. Continue?",
+      "confirm": "Change type"
+    },
     "loading": {
       "assetDetails": "Loading asset details..."
     },

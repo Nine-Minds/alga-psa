@@ -634,6 +634,11 @@
     "title": "Modulo asset",
     "description": "Modulo principale per creare e modificare asset, con campi per identità, ciclo di vita, contratto e metadati",
     "heading": "Modifica asset",
+    "typeChangeConfirmation": {
+      "title": "Modificare il tipo di asset?",
+      "message": "Se modifichi il tipo di asset e salvi, i dettagli hardware salvati verranno eliminati definitivamente. L’operazione non può essere annullata. Continuare?",
+      "confirm": "Modifica tipo"
+    },
     "loading": {
       "assetDetails": "Caricamento dei dettagli dell'asset..."
     },

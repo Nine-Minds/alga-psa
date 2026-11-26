@@ -10,7 +10,7 @@
 
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import AssetForm from './AssetForm';
@@ -90,6 +90,17 @@ vi.mock('@alga-psa/ui', () => ({
 
 vi.mock('@alga-psa/ui/ui-reflection/useRegisterUIComponent', () => ({
   useRegisterUIComponent: () => ({}),
+}));
+
+vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
+  ConfirmationDialog: ({ isOpen, id, message, onConfirm, onClose, confirmLabel }: any) =>
+    isOpen ? (
+      <div id={id}>
+        <p>{message}</p>
+        <button type="button" onClick={onConfirm}>{confirmLabel}</button>
+        <button type="button" onClick={onClose}>Cancel</button>
+      </div>
+    ) : null,
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => {
@@ -500,7 +511,16 @@ describe('AssetForm custom asset types', () => {
 
     expect(screen.getByText('Workstation Details')).toBeTruthy();
 
+    // A saved hardware record asks before switching; cancelling keeps the type.
     await user.selectOptions(typeSelect, 'cloud_account');
+    const confirmation = () => within(document.getElementById('asset-type-change-confirmation-dialog')!);
+    expect(confirmation().getByText(/permanently delete the saved hardware details/)).toBeTruthy();
+    await user.click(confirmation().getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByText('Workstation Details')).toBeTruthy();
+    expect(screen.queryByLabelText('asset-edit-field-account_name')).toBeNull();
+
+    await user.selectOptions(typeSelect, 'cloud_account');
+    await user.click(confirmation().getByRole('button', { name: 'Change type' }));
 
     // Extension panel hides, schema panel shows.
     expect(screen.queryByText('Workstation Details')).toBeNull();

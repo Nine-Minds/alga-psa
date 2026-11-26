@@ -634,6 +634,11 @@
     "title": "Formulario de activo",
     "description": "Formulario de creación y edición de activos principales con campos de identidad, ciclo de vida, contrato y metadatos",
     "heading": "Editar activo",
+    "typeChangeConfirmation": {
+      "title": "¿Cambiar el tipo de activo?",
+      "message": "Al cambiar el tipo de activo y guardar, se eliminarán permanentemente los detalles de hardware guardados. Esta acción no se puede deshacer. ¿Continuar?",
+      "confirm": "Cambiar tipo"
+    },
     "loading": {
       "assetDetails": "Cargando detalles del activo..."
     },
