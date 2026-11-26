@@ -18,16 +18,28 @@ describe('client portal feature settings', () => {
   it('disables appointments only when explicitly configured as false', () => {
     expect(resolveClientPortalFeatureSettings({
       clientPortal: { appointmentsEnabled: false },
-    })).toEqual({ appointmentsEnabled: false });
+    })).toEqual({ appointmentsEnabled: false, invitationValidityDays: 7 });
     expect(resolveClientPortalFeatureSettings({
       clientPortal: { appointmentsEnabled: true },
-    })).toEqual({ appointmentsEnabled: true });
+    })).toEqual({ appointmentsEnabled: true, invitationValidityDays: 7 });
+  });
+
+  it('reports the tenant\'s invitation validity, clamped to the allowed range', () => {
+    expect(resolveClientPortalFeatureSettings({
+      clientPortal: { invitationValidityDays: 14 },
+    }).invitationValidityDays).toBe(14);
+    expect(resolveClientPortalFeatureSettings({
+      clientPortal: { invitationValidityDays: 90 },
+    }).invitationValidityDays).toBe(30);
+    expect(resolveClientPortalFeatureSettings({
+      clientPortal: { invitationValidityDays: 'nonsense' },
+    }).invitationValidityDays).toBe(7);
   });
 
   it('normalizes JSON strings and ignores malformed settings', () => {
     expect(resolveClientPortalFeatureSettings(
-      JSON.stringify({ clientPortal: { appointmentsEnabled: false } }),
-    )).toEqual({ appointmentsEnabled: false });
+      JSON.stringify({ clientPortal: { appointmentsEnabled: false, invitationValidityDays: 3 } }),
+    )).toEqual({ appointmentsEnabled: false, invitationValidityDays: 3 });
     expect(normalizeTenantSettings('{not-json')).toEqual({});
   });
 });
