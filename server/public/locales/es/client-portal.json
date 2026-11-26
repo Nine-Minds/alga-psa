@@ -297,6 +297,7 @@
         "contactNotFound": "Contacto no encontrado.",
         "contactMissingEmail": "El contacto no tiene una dirección de correo electrónico.",
         "contactInvalidEmail": "El contacto tiene una dirección de correo electrónico no válida.",
+        "contactInactive": "Este contacto ya no está activo. Póngase en contacto con su proveedor de servicios.",
         "userExistsForContact": "Ya existe una cuenta de usuario para este contacto.",
         "portalUserAlreadyExists": "Ya existe una cuenta para esta dirección de correo electrónico. Inicie sesión o restablezca su contraseña desde la página de inicio de sesión.",
         "noDefaultClient": "No hay un cliente predeterminado configurado para este inquilino.",
@@ -306,7 +307,9 @@
         "invitationNotFound": "Invitación no encontrada.",
         "revokeFailed": "No se pudo revocar la invitación. Inténtelo de nuevo.",
         "batchLimitExceeded": "Demasiados contactos en una sola solicitud. Invite a menos contactos a la vez.",
-        "noTargetsSelected": "Seleccione al menos un contacto para invitar."
+        "noTargetsSelected": "Seleccione al menos un contacto para invitar.",
+        "invitationStateMismatch": "Esta invitación ya no es válida. Solicite una nueva a su proveedor de servicios.",
+        "rateLimited": "Demasiados intentos. Espere unos minutos e inténtelo de nuevo."
       }
     },
     "features": {
