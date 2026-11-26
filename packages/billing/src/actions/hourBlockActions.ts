@@ -22,6 +22,7 @@ import {
   computeRemainingBlockValueMinor,
 } from '@alga-psa/shared/billingClients/hourBlockService';
 import { toCalendarDateString } from '@alga-psa/core';
+import { settleManualExpirationDate } from '../lib/hourBlockExpiration';
 import { generateInvoiceNumber } from './invoiceGeneration';
 import { getDueDate } from './billingAndTax';
 import { getInitialInvoiceTaxSource } from './taxSourceActions';
@@ -592,21 +593,36 @@ export const manuallyExpireHourBlock = withAuth(async (
       if (block.status === 'voided') throw new Error('Cannot expire a voided hour block');
       if (block.status === 'pending') throw new Error('Cannot expire a pending hour block; void its draft invoice instead');
 
-      await tenantScopedTable(trx, tenant, 'hour_blocks')
+      // Stamp the settlement date when the block has none (or one still in
+      // the future): reports key expiration off expiration_date, and a block
+      // marked expired without it would otherwise never leave the liability.
+      const nowIso = new Date().toISOString();
+      const today = toCalendarDateString(nowIso) ?? nowIso.slice(0, 10);
+      const currentExpiry = block.expiration_date ? toCalendarDateString(block.expiration_date) : null;
+      const expirationDate = settleManualExpirationDate(currentExpiry, today);
+
+      const [updated] = await tenantScopedTable(trx, tenant, 'hour_blocks')
         .where({ block_id: blockId, tenant })
-        .update({ status: 'expired', updated_at: new Date().toISOString() });
+        .update({ status: 'expired', expiration_date: expirationDate, updated_at: nowIso })
+        .returning('*');
+      if (!updated) throw new Error(`Hour block with ID ${blockId} could not be expired`);
 
       await writeAudit(trx, tenant, {
         blockId,
         type: 'manual_expiration',
         createdBy: user.user_id,
         reason: reason.trim(),
-        metadata: { remaining_minutes_at_expiration: Number(block.remaining_minutes) },
+        metadata: {
+          remaining_minutes_at_expiration: Number(block.remaining_minutes),
+          // The stamp above can overwrite a scheduled future date; record both
+          // sides so the original schedule stays auditable and recoverable, and
+          // flag which one applied so debugging doesn't have to diff the dates.
+          previous_expiration_date: currentExpiry,
+          new_expiration_date: expirationDate,
+          expiration_date_settled_for_reporting: currentExpiry !== expirationDate,
+        },
       });
 
-      const updated = await tenantScopedTable(trx, tenant, 'hour_blocks')
-        .where({ block_id: blockId, tenant })
-        .first();
       return updated as IHourBlock;
     });
   });
