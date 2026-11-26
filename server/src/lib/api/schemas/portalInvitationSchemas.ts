@@ -14,20 +14,35 @@ export const MAX_BULK_PORTAL_INVITATIONS = 500;
 
 export const portalInvitationStatusSchema = z.enum(['sent', 'skipped', 'failed']);
 
+/**
+ * The invitation states a batch can be aimed at, same rule as the MSP UI's
+ * filter: the state of the contact's latest invitation. Combined with
+ * contact_ids it narrows that list rather than being ignored.
+ */
+export const portalInvitationStateSchema = z.enum(['expired', 'pending']);
+
 /** POST /api/v1/clients/{id}/portal-invitations */
 export const clientPortalInvitationRequestSchema = z
   .object({
     contact_ids: z.array(uuidSchema).min(1).max(MAX_BULK_PORTAL_INVITATIONS).optional(),
-    all_eligible: z.boolean().optional()
+    all_eligible: z.boolean().optional(),
+    invitation_states: z.array(portalInvitationStateSchema).min(1).optional()
   })
   .refine(
-    (body) => (body.contact_ids?.length ?? 0) > 0 || body.all_eligible === true,
-    { message: 'Provide contact_ids, or set all_eligible to true to invite every eligible contact' }
+    (body) => (body.contact_ids?.length ?? 0) > 0
+      || body.all_eligible === true
+      || (body.invitation_states?.length ?? 0) > 0,
+    {
+      message:
+        'Provide contact_ids, set all_eligible to true to invite every eligible contact, '
+        + 'or invitation_states to resend to the contacts in those states'
+    }
   );
 
 /** POST /api/v1/portal-invitations/bulk */
 export const bulkPortalInvitationRequestSchema = z.object({
-  contact_ids: z.array(uuidSchema).min(1).max(MAX_BULK_PORTAL_INVITATIONS)
+  contact_ids: z.array(uuidSchema).min(1).max(MAX_BULK_PORTAL_INVITATIONS),
+  invitation_states: z.array(portalInvitationStateSchema).min(1).optional()
 });
 
 export const portalInvitationResultSchema = z.object({

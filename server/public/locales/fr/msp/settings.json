@@ -286,6 +286,8 @@
         "contactNotFound": "Contact introuvable.",
         "contactMissingEmailGeneric": "Le contact n'a pas d'adresse e-mail. Ajoutez une adresse e-mail au contact avant d'envoyer une invitation.",
         "contactInvalidEmail": "Le contact a une adresse e-mail invalide. Mettez à jour le contact avec une adresse e-mail valide avant d'envoyer une invitation.",
+        "contactInactive": "Ce contact est inactif. Réactivez le contact avant de l'inviter au portail client.",
+        "invitationRateLimited": "Trop de tentatives d’invitation pour ce contact. Réessayez plus tard.",
         "invalidEmail": "Veuillez saisir une adresse e-mail valide",
         "noDefaultClient": "Aucun client par défaut n'est configuré pour ce tenant. Veuillez définir un client par défaut dans les paramètres généraux.",
         "noDefaultLocation": "Le client par défaut doit avoir un emplacement par défaut configuré pour envoyer des invitations au portail.",
@@ -1433,7 +1435,13 @@
       "appointmentsHelp": "Permettez aux clients de consulter et de demander des rendez-vous depuis le portail client.",
       "appointmentsEnabled": "Les rendez-vous sont désormais disponibles dans le portail client",
       "appointmentsDisabled": "Les rendez-vous sont désormais masqués dans le portail client",
-      "updateFailed": "Impossible de mettre à jour les fonctionnalités du portail client"
+      "updateFailed": "Impossible de mettre à jour les fonctionnalités du portail client",
+      "invitationValidityLabel": "Validité de l’invitation",
+      "invitationValidityHelp": "Durée pendant laquelle un lien d’invitation au portail client reste utilisable. S’applique aux invitations envoyées à partir de maintenant ; les invitations déjà envoyées conservent la durée avec laquelle elles ont été envoyées. Un renvoi redonne à l’invitation la durée complète.",
+      "invitationValidityOption_one": "{{count}} jour",
+      "invitationValidityOption_other": "{{count}} jours",
+      "invitationValidityUpdated_one": "Les nouvelles invitations resteront valides pendant {{count}} jour",
+      "invitationValidityUpdated_other": "Les nouvelles invitations resteront valides pendant {{count}} jours"
     },
     "branding": {
       "title": "Image de marque et apparence",

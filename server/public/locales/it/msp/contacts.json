@@ -410,6 +410,13 @@
         "used": "Usato",
         "expired": "Scaduto",
         "revoked": "Revocato"
+      },
+      "lastSentPrefix": "Ultimo invio:",
+      "resendCount_one": "inviato di nuovo una volta",
+      "resendCount_other": "inviato di nuovo {{count}} volte",
+      "unusable": {
+        "contactInactive": "Questo contatto è inattivo, quindi il link non può essere usato. Riattiva il contatto e invia poi un nuovo invito.",
+        "emailChanged": "Questo invito è stato inviato a un indirizzo che il contatto non ha più, quindi il link non funziona più. Invialo di nuovo per far arrivare un nuovo link all'indirizzo attuale del contatto."
       }
     },
     "actions": {
@@ -457,13 +464,15 @@
         "contactNotFound": "Contatto non trovato.",
         "contactMissingEmail": "Il contatto non ha un indirizzo e-mail. Aggiungi un indirizzo e-mail al contatto prima di inviare un invito.",
         "contactInvalidEmail": "Il contatto ha un indirizzo e-mail non valido. Aggiorna il contatto con un indirizzo e-mail valido prima di inviare un invito.",
+        "contactInactive": "Questo contatto è inattivo. Riattiva il contatto prima di invitarlo al portale clienti.",
         "userExistsForContact": "Esiste già un account utente per questo contatto. Usa il reimposta password invece di inviare un invito.",
         "portalUserAlreadyExists": "Questo indirizzo e-mail appartiene già a un altro account utente di questa organizzazione.",
         "noDefaultClient": "Nessun client predefinito configurato per questo tenant. Imposta un client predefinito nelle Impostazioni generali.",
         "noDefaultLocation": "Il client predefinito deve avere una sede predefinita configurata per inviare inviti al portale.",
         "noLocationEmail": "La sede del client predefinito deve avere un indirizzo e-mail di contatto configurato.",
         "noBaseUrl": "L'URL di base non è configurato per gli inviti al portale.",
-        "invitationNotFound": "Invito non trovato o già utilizzato."
+        "invitationNotFound": "Invito non trovato o già utilizzato.",
+        "rateLimited": "Troppi tentativi di invito per questo contatto. Riprova più tardi."
       },
       "userNotFound": "Utente cliente non trovato",
       "validationErrorTitle": "Errore di convalida"
@@ -641,7 +650,8 @@
       "phoneNumber": "Numero di telefono",
       "actions": "Azioni",
       "role": "Ruolo",
-      "location": "Sede"
+      "location": "Sede",
+      "portalInvitation": "Invito al portale"
     },
     "filter": {
       "show": "Mostra:",
@@ -650,7 +660,11 @@
       "all": "Tutti i contatti",
       "searchPlaceholder": "Cerca contatti...",
       "allLocations": "Tutte le sedi",
-      "noLocation": "Nessuna sede"
+      "noLocation": "Nessuna sede",
+      "allInvitationStates": "Qualsiasi stato dell’invito",
+      "invitationExpired": "Inviti scaduti",
+      "invitationPending": "Inviti in attesa",
+      "invitationExpiredOrPending": "Scaduti o in attesa"
     },
     "actions": {
       "openMenu": "Apri menu",
@@ -659,12 +673,23 @@
       "selectAll": "Seleziona tutti i contatti",
       "selectContact": "Seleziona {{name}}",
       "inviteSelected": "Invita al portale ({{selected}})",
-      "inviteAllEligible": "Invita tutti gli idonei"
+      "inviteAllEligible": "Invita tutti gli idonei",
+      "resendExpired": "Invia di nuovo gli scaduti",
+      "resendPending": "Invia di nuovo quelli in attesa",
+      "resendOpen": "Invia di nuovo scaduti o in attesa"
     },
     "errors": {
       "loadFailed": "Impossibile caricare i contatti.",
       "loadingTitle": "Errore durante il caricamento dei contatti",
       "retryFailed": "Impossibile caricare i contatti. Riprova."
+    },
+    "invitation": {
+      "none": "Non invitato",
+      "pendingUntil": "In attesa fino al {{date}}",
+      "expired": "Invito scaduto",
+      "activeUser": "Utente attivo del portale",
+      "inactiveUser": "Utente del portale inattivo",
+      "contactInactive": "Invito non utilizzabile (contatto inattivo)"
     }
   },
   "bulkPortalInvitation": {
@@ -677,21 +702,51 @@
     "skipReasons": {
       "alreadyHasPortalAccess": "ha già accesso al portale",
       "missingEmail": "nessun indirizzo e-mail utilizzabile",
-      "sharedMailbox": "casella condivisa"
+      "sharedMailbox": "casella condivisa",
+      "emailInUse": "l’indirizzo email appartiene già a un altro utente",
+      "inactiveContact": "contatto inattivo"
     },
     "actions": {
       "send": "Invia {{total}} inviti",
-      "sending": "Invio..."
+      "sending": "Invio...",
+      "resendExpired_one": "Invia di nuovo {{count}} invito scaduto",
+      "resendExpired_other": "Invia di nuovo {{count}} inviti scaduti",
+      "resendPending_one": "Invia di nuovo {{count}} invito in attesa",
+      "resendPending_other": "Invia di nuovo {{count}} inviti in attesa",
+      "resendOpen_one": "Invia di nuovo {{count}} invito scaduto o in attesa",
+      "resendOpen_other": "Invia di nuovo {{count}} inviti scaduti o in attesa"
     },
     "results": {
       "summary": "{{sent}} inviati, {{skipped}} ignorati, {{failed}} non riusciti.",
       "sent": "Inviato",
       "skipped": "Ignorato",
-      "failed": "Non riuscito"
+      "failed": "Non riuscito",
+      "reasons": {
+        "contactNotFound": "Contatto non trovato",
+        "missingEmail": "Nessun indirizzo email sul contatto",
+        "invalidEmail": "L’indirizzo email del contatto non è valido",
+        "userExists": "Ha già un account del portale",
+        "emailInUse": "L’indirizzo email appartiene a un altro utente",
+        "permissionDenied": "Non puoi invitare questo contatto",
+        "stateMismatch": "L’invito non è più nello stato selezionato",
+        "inactiveContact": "Il contatto è inattivo",
+        "rateLimited": "Troppi tentativi di invito per questo contatto. Riprova più tardi.",
+        "invitationFailed": "Non è stato possibile inviare l’invito"
+      }
     },
     "errors": {
       "loadFailed": "Non è stato possibile determinare chi invitare. Riprovare.",
-      "sendFailed": "Non è stato possibile inviare gli inviti. Riprovare."
+      "sendFailed": "Non è stato possibile inviare gli inviti. Riprovare.",
+      "statesUnavailable": "Non è stato possibile determinare quali inviti sono in sospeso per questo cliente.",
+      "batchLimitExceeded": "Invita al massimo 500 contatti alla volta.",
+      "noTargetsSelected": "Seleziona almeno un contatto da invitare."
+    },
+    "resendTitle": "Invia di nuovo gli inviti al portale clienti",
+    "resendCount_one": "{{count}} contatto riceverà di nuovo il suo invito, con il periodo di validità completo.",
+    "resendCount_other": "{{count}} contatti riceveranno di nuovo il loro invito, con il periodo di validità completo.",
+    "states": {
+      "pending": "In attesa",
+      "expired": "Scaduto"
     }
   },
   "contactsLayout": {
@@ -812,6 +867,7 @@
       "signedIn": "Portale · ultimo accesso {{when}}",
       "neverSignedIn": "Portale · accesso mai effettuato",
       "invited": "Portale · invitato",
+      "invitationExpired": "Portale · invito scaduto",
       "noAccess": "Nessun accesso al portale"
     },
     "portal": {
@@ -827,6 +883,7 @@
       "deactivated": "Disattivato",
       "activeAccount": "Account attivo",
       "invitationSent": "Invito inviato",
+      "invitationExpired": "Invito scaduto",
       "noAccess": "Nessun accesso"
     },
     "tickets": {
