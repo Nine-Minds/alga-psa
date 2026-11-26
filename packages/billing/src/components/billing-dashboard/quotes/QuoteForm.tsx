@@ -37,6 +37,9 @@ import { addQuoteItem, approveQuote, convertQuoteToContract, convertQuoteToInvoi
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
 import { getContactsForPicker } from '@alga-psa/user-composition/actions/contactQueryActions';
 import QuoteLineItemsEditor from './QuoteLineItemsEditor';
+import { QuoteTaxUnresolvedNote } from './QuoteTaxUnresolvedNote';
+import { useQuoteDraftTax } from './useQuoteDraftTax';
+import { getTaxRegions } from '../../../actions/taxSettingsActions';
 import {
   pickDefaultLocation,
   collectDistinctLocationIds,
@@ -47,7 +50,7 @@ import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipi
 import QuoteMarkAcceptedDialog from './QuoteMarkAcceptedDialog';
 import QuoteSoleApproverNotice from './QuoteSoleApproverNotice';
 import QuoteStatusBadge from './QuoteStatusBadge';
-import { buildDraftLocalId, calculateDraftCadenceSummary, calculateDraftMonthlyRecurringNet, calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
+import { buildDraftLocalId, calculateDraftCadenceSummary, calculateDraftMonthlyRecurringNet, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
 import { QuoteTermsContent, TextEditor } from '@alga-psa/ui/editor';
 import type { PartialBlock } from '@blocknote/core';
 import { flattenBlockContentToPlainText } from '@alga-psa/formatting/blocknoteUtils';
@@ -320,6 +323,26 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     void loadFormData();
   }, [quoteId]);
 
+  // Region names for the "No tax rate for <region>" badge: a line stores its
+  // region code, the badge shows the region's name.
+  const [taxRegionNames, setTaxRegionNames] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const regions = await getTaxRegions();
+        if (cancelled || !Array.isArray(regions)) return;
+        setTaxRegionNames(Object.fromEntries(regions.map((region) => [region.region_code, region.region_name])));
+      } catch (regionError) {
+        console.error('Failed to load tax regions:', regionError);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Load locations whenever the selected client changes so the picker is fresh.
   // The previous client's list is dropped first: until the new one arrives the
   // pickers and "+ Add location" must offer nothing rather than a foreign site.
@@ -588,7 +611,19 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     return contacts.filter((contact) => contact.client_id === form.client_id);
   }, [contacts, form.client_id]);
 
-  const draftTotals = useMemo(() => calculateDraftQuoteTotals(lineItems), [lineItems]);
+  // Tax and totals come from the server's tax engine (caps, brackets, composite
+  // rates, unresolved regions), debounced on every line-item change. The browser
+  // computes no tax: while a request is in flight the last engine result stays
+  // on screen (dimmed), and before the first one arrives a placeholder shows.
+  const draftTax = useQuoteDraftTax({
+    items: lineItems,
+    clientId: form.client_id || null,
+    quoteId: isEditMode ? quoteId : null,
+    quoteDate: form.quote_date || null,
+    currencyCode: form.currency_code || null,
+    enabled: !isLoading,
+  });
+  const draftTotals = draftTax.result?.totals ?? null;
 
   // Derived: recurring per-month figure after the shared discount allocation,
   // expressed in the quote's minor currency units. Used for the sidebar "$X
@@ -1595,14 +1630,22 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   // Render helpers
   // ---------------------------------------------------------------------------
 
-  const formattedTotal = formatDraftQuoteMoney(draftTotals.total_amount, form.currency_code);
-  const formattedSubtotal = formatDraftQuoteMoney(draftTotals.subtotal, form.currency_code);
-  const formattedDiscount = formatDraftQuoteMoney(draftTotals.discount_total, form.currency_code);
-  const formattedTax = formatDraftQuoteMoney(draftTotals.tax, form.currency_code);
+  const PENDING_TAX_PLACEHOLDER = '—';
+  // A failed engine call leaves the previous figures stale: show the placeholder
+  // instead of them, plus an alert, until the next successful result.
+  const draftTaxFailed = Boolean(draftTax.error);
+  const formatEngineMoney = (minorUnits: number | undefined): string =>
+    draftTotals && !draftTaxFailed && minorUnits !== undefined
+      ? formatDraftQuoteMoney(minorUnits, form.currency_code)
+      : PENDING_TAX_PLACEHOLDER;
+  const formattedTotal = formatEngineMoney(draftTotals?.total_amount);
+  const formattedSubtotal = formatEngineMoney(draftTotals?.subtotal);
+  const formattedDiscount = formatEngineMoney(draftTotals?.discount_total);
+  const formattedTax = formatEngineMoney(draftTotals?.tax);
   const formattedRecurringMonthly = recurringMonthlySubtotal > 0
     ? formatDraftQuoteMoney(recurringMonthlySubtotal, form.currency_code)
     : null;
-  const formattedOptionalTotal = draftTotals.optional_total > 0
+  const formattedOptionalTotal = draftTotals && draftTotals.optional_total > 0
     ? formatDraftQuoteMoney(draftTotals.optional_total, form.currency_code)
     : null;
   const formattedCadenceSummary = cadenceSummary
@@ -1702,7 +1745,20 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                 <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {t('quoteForm.header.quoteTotalLabel', { defaultValue: 'Quote total' })}
                 </div>
-                <div className="text-2xl font-semibold text-foreground">{formattedTotal}</div>
+                <div
+                  id="quote-form-header-total"
+                  className={`text-2xl font-semibold text-foreground${draftTax.isLoading ? ' opacity-60' : ''}`}
+                  aria-busy={draftTax.isLoading}
+                >
+                  {formattedTotal}
+                </div>
+                {draftTaxFailed && (
+                  <p id="quote-form-header-total-error" role="alert" className="mt-1 max-w-xs text-xs text-destructive">
+                    {t('quoteForm.header.totalsError', {
+                      defaultValue: 'Tax and total are not current — try editing the line items again or reload.',
+                    })}
+                  </p>
+                )}
               </div>
             )}
             <div className="flex flex-wrap items-center justify-end gap-2">
@@ -2010,6 +2066,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
               <QuoteLineItemsEditor
                 items={lineItems}
                 currencyCode={form.currency_code}
+                taxRegionNames={taxRegionNames}
+                rowTaxById={draftTax.result?.rows}
                 onChange={setLineItems}
                 disabled={isSaving || isReadOnly}
                 locations={clientLocations}
@@ -2177,7 +2235,22 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                 <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {t('quoteForm.sidebar.quoteTotal', { defaultValue: 'Quote total' })}
                 </div>
-                <div className="mt-1 text-2xl font-semibold">{formattedTotal}</div>
+                <div
+                  id="quote-form-sidebar-total"
+                  className={`mt-1 text-2xl font-semibold${draftTax.isLoading ? ' opacity-60' : ''}`}
+                  aria-busy={draftTax.isLoading}
+                >
+                  {formattedTotal}
+                </div>
+                {draftTaxFailed && (
+                  <Alert id="quote-form-sidebar-total-error" variant="destructive" className="mt-3">
+                    <AlertDescription>
+                      {t('quoteForm.sidebar.totalsError', {
+                        defaultValue: 'Tax and total could not be updated. The figures shown may be out of date.',
+                      })}
+                    </AlertDescription>
+                  </Alert>
+                )}
                 {formattedRecurringMonthly && (
                   <div className="mt-1 text-sm text-muted-foreground">
                     {t('quoteForm.sidebar.recurringPerMonth', { defaultValue: '{{amount}} recurring / month', amount: formattedRecurringMonthly })}
@@ -2190,12 +2263,13 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                   </div>
                   <div className="flex items-center justify-between">
                     <dt className="text-muted-foreground">{t('quoteForm.sidebar.discounts', { defaultValue: 'Discounts' })}</dt>
-                    <dd>{draftTotals.discount_total > 0 ? `−${formattedDiscount}` : formattedDiscount}</dd>
+                    <dd>{draftTotals && draftTotals.discount_total > 0 ? `−${formattedDiscount}` : formattedDiscount}</dd>
                   </div>
                   <div className="flex items-center justify-between">
                     <dt className="text-muted-foreground">{t('quoteForm.sidebar.tax', { defaultValue: 'Tax' })}</dt>
                     <dd>{formattedTax}</dd>
                   </div>
+                  <QuoteTaxUnresolvedNote items={lineItems} rowTaxById={draftTax.result?.rows} />
                   {formattedCadenceSummary.map((entry) => (
                     <div key={entry.cadence_key} className="flex items-center justify-between">
                       <dt className="text-muted-foreground">

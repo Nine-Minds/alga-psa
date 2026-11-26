@@ -17,6 +17,7 @@ const actions = vi.hoisted(() => ({
   convertQuoteToInvoice: vi.fn(),
   convertQuoteToSalesOrder: vi.fn(),
   createQuote: vi.fn(),
+  calculateQuoteDraftTax: vi.fn(),
   createQuoteFromTemplate: vi.fn(),
   createQuoteRevision: vi.fn(),
   downloadQuotePdf: vi.fn(),
@@ -65,7 +66,7 @@ vi.mock('@alga-psa/billing/actions/billingSettingsActions', () => ({
 }));
 
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
-  isActionMessageError: (value: any) => Boolean(value && value.messageKey),
+  isActionMessageError: (value: any) => Boolean(value && (value.messageKey || typeof value.actionError === 'string')),
   isActionPermissionError: (value: any) => Boolean(value && value.permissionError),
   getErrorMessage: (value: any) =>
     (value && (value.permissionError || value.message)) || 'error',
@@ -240,15 +241,10 @@ vi.mock('../../src/components/billing-dashboard/quotes/quoteLineItemDraft', () =
     is_taxable: item.is_taxable ?? true,
     location_id: null,
   }),
-  calculateDraftQuoteTotals: () => ({
-    subtotal: 0,
-    discount_total: 0,
-    tax: 0,
-    total_amount: 0,
-    optional_subtotal: 0,
-    optional_tax: 0,
-    optional_total: 0,
-  }),
+  draftBaseItemId: (item: any) => item.quote_item_id ?? item.local_id,
+  draftTaxRowKey: (item: any) => item.quote_item_id ?? item.local_id,
+  toDraftTaxItem: (item: any) => ({ id: item.quote_item_id ?? item.local_id, quantity: item.quantity, unit_price: item.unit_price }),
+  calculateDraftNetTotals: () => ({ subtotal: 0, discount_total: 0, optional_subtotal: 0 }),
   calculateDraftMonthlyRecurringNet: () => 0,
   calculateDraftCadenceSummary: () => [],
   formatDraftQuoteMoney: (value: number) => `$${(Number(value ?? 0) / 100).toFixed(2)}`,
@@ -817,5 +813,93 @@ describe('QuoteForm quote status change callback', () => {
 
     await waitFor(() => expect(screen.getByText('Resend exploded')).toBeTruthy());
     expect(onQuoteStatusChanged).not.toHaveBeenCalled();
+  });
+});
+describe('QuoteForm engine-sourced totals (alga-2026-0003321)', () => {
+  // QTX-CAP-1: region QTX-CAP at 10% capped at $25, lines $1,000 and $100. The
+  // stale persisted tax_rate on the rows is 10, so any client-side rate x amount
+  // arithmetic would show Tax $110 / Total $1,210. The engine says $35 / $1,135.
+  const capQuote = {
+    ...editQuote,
+    currency_code: 'USD',
+    quote_items: [
+      { quote_item_id: 'cap-1', description: 'Managed service', quantity: 1, unit_price: 100000, tax_rate: 10, is_taxable: true },
+      { quote_item_id: 'cap-2', description: 'Add-on', quantity: 1, unit_price: 10000, tax_rate: 10, is_taxable: true },
+    ],
+  };
+  const engineResult = {
+    rows: {},
+    totals: {
+      subtotal: 110000, discount_total: 0, tax: 3500, total_amount: 113500,
+      optional_subtotal: 0, optional_tax: 0, optional_total: 0,
+    },
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    lineItemsEditorMock.current = null;
+    actions.listQuotes.mockResolvedValue({ data: [] });
+    getQuoteDocumentTemplatesMock.mockResolvedValue([]);
+    actions.getQuoteApprovalSettings.mockResolvedValue({ approvalRequired: false });
+    getDefaultBillingSettingsMock.mockResolvedValue({ defaultCurrencyCode: 'USD' });
+    clientCatalog.current = [];
+    getActiveLocationsMock.mockResolvedValue([]);
+    getContactsMock.mockResolvedValue([]);
+    actions.getQuote.mockResolvedValue(capQuote);
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('shows the engine total, never a value computed in the browser, and asks with the quote currency', async () => {
+    const pending = createDeferred<typeof engineResult>();
+    actions.calculateQuoteDraftTax.mockReturnValue(pending.promise);
+
+    renderForm({ quoteId: 'quote-1' });
+    await screen.findByLabelText('Title');
+
+    // Request in flight, nothing returned yet: a placeholder, not a computed figure.
+    await waitFor(() => expect(actions.calculateQuoteDraftTax).toHaveBeenCalled(), { timeout: 3000 });
+    expect(document.getElementById('quote-form-header-total')?.textContent).toBe('—');
+    expect(document.body.textContent).not.toContain('$1210.00');
+
+    pending.resolve(engineResult);
+    await waitFor(() => expect(document.getElementById('quote-form-header-total')?.textContent).toBe('$1135.00'));
+    expect(document.getElementById('quote-form-sidebar-total')?.textContent).toBe('$1135.00');
+    expect(document.body.textContent).toContain('$35.00');
+    expect(document.body.textContent).not.toContain('$1210.00');
+    expect(document.body.textContent).not.toContain('$110.00');
+
+    const request = actions.calculateQuoteDraftTax.mock.calls.at(-1)![0];
+    expect(request.currency_code).toBe('USD');
+    expect(request.quote_id).toBe('quote-1');
+    expect(request.items.map((item: any) => item.id)).toEqual(['cap-1', 'cap-2']);
+  });
+  it.each([
+    ['a rejected call', () => actions.calculateQuoteDraftTax.mockRejectedValue(new Error('boom'))],
+    ['a permission error', () => actions.calculateQuoteDraftTax.mockResolvedValue({ permissionError: 'Permission denied' })],
+    ['a message error', () => actions.calculateQuoteDraftTax.mockResolvedValue({ actionError: 'nope' })],
+  ])('tells the user the totals are not current after %s, never showing the old figures', async (_label, arrange) => {
+    actions.calculateQuoteDraftTax.mockResolvedValueOnce(engineResult);
+    renderForm({ quoteId: 'quote-1' });
+    await screen.findByLabelText('Title');
+    await waitFor(() => expect(document.getElementById('quote-form-header-total')?.textContent).toBe('$1135.00'), { timeout: 3000 });
+    expect(document.getElementById('quote-form-header-total-error')).toBeNull();
+
+    // Next engine call fails (the edit that triggers it is simulated by the line-items editor stub).
+    arrange();
+    await act(async () => {
+      (lineItemsEditorMock.current as any)?.onChange?.([
+        ...capQuote.quote_items.map((q) => ({ ...q, local_id: q.quote_item_id })),
+        { local_id: 'new', description: 'x', quantity: 1, unit_price: 5, is_taxable: true },
+      ]);
+    });
+
+    await waitFor(() => expect(document.getElementById('quote-form-header-total-error')).not.toBeNull(), { timeout: 3000 });
+    expect(document.getElementById('quote-form-header-total-error')?.textContent).toContain('not current');
+    expect(document.body.textContent).toContain('Tax and total could not be updated');
+    expect(document.getElementById('quote-form-header-total')?.textContent).toBe('—');
+    expect(document.getElementById('quote-form-sidebar-total')?.textContent).toBe('—');
   });
 });

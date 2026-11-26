@@ -275,7 +275,8 @@
       "editQuote": "Angebot bearbeiten",
       "newQuote": "Neues Angebot",
       "version": "v{{version}}",
-      "quoteTotalLabel": "Angebotsgesamtbetrag"
+      "quoteTotalLabel": "Angebotsgesamtbetrag",
+      "totalsError": "Steuer und Gesamtsumme sind nicht aktuell – bearbeiten Sie die Positionen erneut oder laden Sie die Seite neu."
     },
     "breadcrumb": {
       "billing": "Abrechnung",
@@ -387,7 +388,8 @@
       "standardLayout": "Standard",
       "customLayout": "Benutzerdefiniert",
       "tenantDefault": "Mandanten-Standard",
-      "changeLayout": "Ändern"
+      "changeLayout": "Ändern",
+      "totalsError": "Steuer und Gesamtsumme konnten nicht aktualisiert werden. Die angezeigten Beträge sind möglicherweise veraltet."
     },
     "sectionTitles": {
       "title": "Abschnittstitel für gruppierte Angebote",
@@ -606,6 +608,10 @@
       "needMoreLocations": "Dieser Kunde hat nur einen aktiven Standort. Fügen Sie in den Kundeneinstellungen einen zweiten Standort hinzu, um Multi-Site-Angebote zu aktivieren.",
       "allLocationsInUse": "Jeder aktive Standort dieses Kunden hat auf diesem Angebot bereits eine Gruppe.",
       "emptyGroup": "Noch keine Positionen für diesen Standort."
+    },
+    "taxUnresolved": {
+      "badge": "Kein Steuersatz für {{region}}",
+      "totalsNote": "Für einige Positionen konnte die Steuer nicht berechnet werden. Diese Positionen zeigen 0 Steuer."
     }
   },
   "quoteRecipients": {

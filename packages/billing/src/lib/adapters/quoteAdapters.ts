@@ -16,7 +16,7 @@ import {
   resolveCadenceKey,
 } from '../quoteItemCadence';
 import { isPendingOptional, isQuoteItemIncluded, isSelected } from '../quoteItemInclusion';
-import { presentedTaxAmount } from '../quoteItemTax';
+import { resolveItemTaxesIfIncluded } from '../../services/quoteCalculationService';
 import { allocateIncludedQuoteDiscounts, summarizeQuoteTotals } from '../quoteTotals';
 import { buildQuoteViewModelAcceptance, loadQuoteAcceptance, toAcceptanceIso, type QuoteAcceptanceDetails } from '../quoteAcceptance';
 
@@ -404,6 +404,7 @@ function buildCadenceGroups(
   discountAllocations: Map<string, QuoteDiscountItemAllocation[]>,
   baseMeta: Map<string, CadenceBaseMeta>,
   customBandNames: Record<string, string | null> = {},
+  ifSelectedTaxById: Map<string, number> = new Map(),
 ): { groups: QuoteViewModelCadenceGroup[]; optionalGroups: QuoteViewModelCadenceGroup[] } {
   const groupsByKey = new Map<string, QuoteViewModelCadenceGroup>();
 
@@ -500,7 +501,7 @@ function buildCadenceGroups(
     group.tax = group.items.reduce((sum, item) => sum + toFiniteNumber(item.tax_amount), 0);
     group.total = group.subtotal + group.tax;
     group.optional_subtotal = group.optional_items.reduce((sum, item) => sum + toFiniteNumber(item.total_price), 0);
-    group.optional_tax = group.optional_items.reduce((sum, item) => sum + presentedTaxAmount(item), 0);
+    group.optional_tax = group.optional_items.reduce((sum, item) => sum + (ifSelectedTaxById.get(item.quote_item_id) ?? 0), 0);
     group.optional_total = group.optional_subtotal + group.optional_tax;
   }
 
@@ -727,6 +728,21 @@ export async function mapLoadedQuoteToViewModel(
   }
 
   const mappedItems = rawItems.map((item) => mapQuoteItemToViewModel(item, locationsById));
+
+  // "Optional (if selected)" tax comes from the engine, resolved for the row's
+  // own amount: a pending row persists tax_amount 0, so its would-be tax is
+  // never derived here.
+  const pendingRows = rawItems.filter((item) => !item.is_discount && isPendingOptional(item));
+  const ifSelectedTaxById = new Map<string, number>();
+  if (pendingRows.length > 0) {
+    const resolvedIfSelected = await resolveItemTaxesIfIncluded(
+      knexOrTrx,
+      tenant,
+      quote as Parameters<typeof resolveItemTaxesIfIncluded>[2],
+      pendingRows as unknown as Parameters<typeof resolveItemTaxesIfIncluded>[3],
+    );
+    for (const [id, resolved] of resolvedIfSelected) ifSelectedTaxById.set(id, resolved.taxAmount);
+  }
   const resolvedDiscounts = resolveQuoteItemDiscounts(rawItems);
 
   const baseMeta = new Map<string, CadenceBaseMeta>();
@@ -766,7 +782,7 @@ export async function mapLoadedQuoteToViewModel(
   const cadenceGroups = buildCadenceGroups(lineItems, resolvedDiscounts.allocationsByDiscountId, baseMeta, {
     [QUOTE_CADENCE_MONTHLY]: quote.recurring_section_title?.trim() || null,
     [QUOTE_CADENCE_ONE_TIME]: quote.onetime_section_title?.trim() || null,
-  });
+  }, ifSelectedTaxById);
 
   // Overall financials are derived from the same included bases and resolved
   // discounts the groups show, through the shared `summarizeQuoteTotals`:
@@ -781,7 +797,10 @@ export async function mapLoadedQuoteToViewModel(
   // same way (`recalculateQuoteFinancials` shares this derivation).
   const totals = summarizeQuoteTotals(rawItems, {
     amountOf: (item) => toFiniteNumber(item.total_price),
-    taxOf: (item) => presentedTaxAmount(item),
+    // Included rows: the persisted engine figure. Pending optional rows: the engine's if-selected figure.
+    taxOf: (item) => (isQuoteItemIncluded(item)
+      ? toFiniteNumber(item.tax_amount)
+      : (ifSelectedTaxById.get(item.quote_item_id) ?? 0)),
     discountTotal: resolvedDiscounts.totalDiscount,
   });
 

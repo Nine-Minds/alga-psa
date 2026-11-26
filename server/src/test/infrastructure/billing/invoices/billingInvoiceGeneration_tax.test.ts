@@ -18,6 +18,7 @@ import { generateManualInvoice as generateManualInvoiceRaw } from '@alga-psa/bil
 import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { BillingEngine } from '@alga-psa/billing/services';
 import { initializeClientDefaultTax } from '@alga-psa/shared/billingClients/defaultTaxRate';
+import { calculateTaxForAmount } from '@alga-psa/shared/billingClients/taxEngine';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { v4 as uuidv4 } from 'uuid';
 import { Temporal } from '@js-temporal/polyfill';
@@ -197,6 +198,87 @@ describe('Billing Invoice Tax Calculations', () => {
   }, 30000);
 
   describe('Tax Calculation', () => {
+    it('taxes a client that has no client_tax_settings row exactly as before: the invoice side provisions the defaults, the engine does not', async () => {
+      const gstRate = await tenantTable(context, 'tax_rates')
+        .where({ tenant: context.tenantId, region_code: 'US-NY', is_active: true })
+        .first('tax_rate_id');
+      const gstRateId = gstRate!.tax_rate_id as string;
+      await tenantTable(context, 'tenant_settings')
+        .insert({ tenant: context.tenantId, default_tax_rate_id: gstRateId })
+        .onConflict('tenant')
+        .merge({ default_tax_rate_id: gstRateId });
+
+      // A legacy client: no settings row and no client-wide default association.
+      const clientId = await context.createEntity<IClient>('clients', {
+        client_name: 'No Settings Row Client',
+        billing_cycle: 'monthly',
+        client_id: uuidv4(),
+        region_code: 'US-NY',
+        is_tax_exempt: false,
+        created_at: Temporal.Now.plainDateISO().toString(),
+        updated_at: Temporal.Now.plainDateISO().toString(),
+        url: '',
+        is_inactive: false
+      }, 'client_id');
+      await ensureClientBillingEmail(context, clientId);
+      const settingsRows = () => tenantTable(context, 'client_tax_settings').where({ client_id: clientId });
+      const defaultAssociations = () =>
+        tenantTable(context, 'client_tax_rates').where({ client_id: clientId, is_default: true });
+      expect(await settingsRows()).toHaveLength(0);
+      expect(await defaultAssociations()).toHaveLength(0);
+
+      // The shared engine alone writes nothing, but it prices the client at the
+      // default provisioning would create (the tenant default, 10%), so a caller
+      // that does not provision (quotes) agrees with the invoice side below.
+      const engineOutcome = await calculateTaxForAmount(context.db, context.tenantId, {
+        clientId, netAmount: 10000, date: '2026-06-01',
+      });
+      expect(engineOutcome).toMatchObject({ resolved: true, taxAmount: 1000 });
+      expect(await settingsRows()).toHaveLength(0);
+      expect(await defaultAssociations()).toHaveLength(0);
+
+      // The invoice-side TaxService reads the same client the way it always did:
+      // it provisions the defaults, then taxes at the tenant default (10%).
+      const { TaxService } = await import('@alga-psa/billing/services/taxService');
+      expect(await new TaxService().calculateTax(clientId, 10000, '2026-06-01'))
+        .toEqual({ taxAmount: 1000, taxRate: 10 });
+      expect(await settingsRows()).toHaveLength(1);
+      expect(await defaultAssociations()).toHaveLength(1);
+
+      // End to end through invoice generation for a second such client.
+      const secondClientId = await context.createEntity<IClient>('clients', {
+        client_name: 'No Settings Row Client 2',
+        billing_cycle: 'monthly',
+        client_id: uuidv4(),
+        region_code: 'US-NY',
+        is_tax_exempt: false,
+        created_at: Temporal.Now.plainDateISO().toString(),
+        updated_at: Temporal.Now.plainDateISO().toString(),
+        url: '',
+        is_inactive: false
+      }, 'client_id');
+      await ensureClientBillingEmail(context, secondClientId);
+      const service = await createTestService(context, {
+        service_name: 'Legacy Client Service',
+        billing_method: 'fixed',
+        default_rate: 10000,
+        unit_of_measure: 'unit',
+        tax_region: 'US-NY',
+        tax_rate_id: gstRateId
+      });
+      const invoice = await generateManualInvoice({
+        clientId: secondClientId,
+        items: [{ service_id: service, description: 'Legacy Client Service', quantity: 1, rate: 10000 }]
+      });
+      await finalizeInvoice(invoice.invoice_id);
+      const saved = await tenantTable(context, 'invoices')
+        .where({ invoice_id: invoice.invoice_id, tenant: context.tenantId })
+        .first();
+      expect(Number(saved!.tax)).toBe(1000);
+      expect(Number(saved!.total_amount)).toBe(11000);
+      expect(await tenantTable(context, 'client_tax_settings').where({ client_id: secondClientId })).toHaveLength(1);
+    });
+
     it('should verify total calculation when subtotal is zero but tax is positive', async () => {
       // Create test client
       const client_id = await context.createEntity<IClient>('clients', {

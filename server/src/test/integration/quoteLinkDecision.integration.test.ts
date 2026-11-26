@@ -91,7 +91,10 @@ async function setup(opts: { status?: string } = {}) {
     { tenant: tenantId, quote_item_id: required, quote_id: quoteId, description: 'Core', quantity: 1, unit_price: 15000, total_price: 15000, net_amount: 15000, is_optional: false, is_selected: true, display_order: 0 },
     { tenant: tenantId, quote_item_id: optional, quote_id: quoteId, description: 'Optional', quantity: 1, unit_price: 5000, total_price: 5000, net_amount: 5000, is_optional: true, is_selected: true, display_order: 1 },
   ]);
-  const { QuoteAccessLinks } = await import('@alga-psa/billing/services');
+  // A sent quote's stored totals match the engine's (the editor's save wrote them): the submit
+  // path reconciles stored totals with the engine, so a fixture must not leave them at zero.
+  const { recalculateQuoteFinancials, QuoteAccessLinks } = await import('@alga-psa/billing/services');
+  await recalculateQuoteFinancials(db, tenantId, quoteId);
   const { link, token } = await QuoteAccessLinks.mint(db, tenantId, {
     quote: { quote_id: quoteId, valid_until: null },
     recipient: { contactId, email },
@@ -202,6 +205,8 @@ describe('submitQuoteLinkDecision (alga-2026-0002820 4/6)', () => {
       description: 'Test tax', start_date: '2025-01-01T00:00:00.000Z', is_active: true,
     });
     await tt(s.tenantId, 'clients').where({ client_id: s.clientId }).update({ region_code: 'TST-LINK', is_tax_exempt: false });
+    // The MSP's save stored totals at the configured tax.
+    await (await import('@alga-psa/billing/services')).recalculateQuoteFinancials(db, s.tenantId, s.quoteId);
 
     const { loadPublicQuoteView } = await import('@alga-psa/billing/services');
     const { computePublicQuotePreview } = await import(
@@ -242,6 +247,8 @@ describe('submitQuoteLinkDecision (alga-2026-0002820 4/6)', () => {
       description: 'Test tax', start_date: '2025-01-01T00:00:00.000Z', is_active: true,
     });
     await tt(s.tenantId, 'clients').where({ client_id: s.clientId }).update({ region_code: 'TST-LINK', is_tax_exempt: false });
+    // The MSP's save stored totals at the configured tax.
+    await (await import('@alga-psa/billing/services')).recalculateQuoteFinancials(db, s.tenantId, s.quoteId);
     const { loadPublicQuoteView, computePublicQuoteFingerprint } = await import('@alga-psa/billing/services');
     const { computePublicQuotePreview } = await import(
       '../../../../packages/client-portal/src/components/billing/publicQuotePreview'
@@ -454,6 +461,36 @@ describe('submitQuoteLinkDecision (alga-2026-0002820 4/6)', () => {
     expect((await quoteRow(s.tenantId, s.quoteId)).status).toBe('sent');
     expect(await decisionRows(s.tenantId, s.quoteId)).toHaveLength(0);
     expect(onQuoteAcceptedSpy).not.toHaveBeenCalled();
+  });
+
+  it('stored tax that differs from the engine: "changed" once with corrected totals persisted, then the reloaded page submits', async () => {
+    const s = await setup();
+    await tt(s.tenantId, 'tax_regions').insert({ tenant: s.tenantId, region_code: 'TST-LINK', region_name: 'Test', is_active: true });
+    await tt(s.tenantId, 'tax_rates').insert({
+      tax_rate_id: uuidv4(), tenant: s.tenantId, region_code: 'TST-LINK', tax_percentage: 10,
+      description: 'Test tax', start_date: '2025-01-01T00:00:00.000Z', is_active: true,
+    });
+    await tt(s.tenantId, 'clients').where({ client_id: s.clientId }).update({ region_code: 'TST-LINK', is_tax_exempt: false });
+    // The quote was saved before this rate existed: stored tax 0, engine tax 10% of 20000 = 2000.
+    expect(Number((await quoteRow(s.tenantId, s.quoteId)).tax)).toBe(0);
+    const renderedBefore = await fingerprintOf(s);
+
+    const first: any = await submit(s.token, await acceptInput({ quoteFingerprint: renderedBefore }));
+    expect(first).toEqual({ status: 'changed' });
+    const corrected = await quoteRow(s.tenantId, s.quoteId);
+    expect(corrected.status).toBe('sent');
+    expect(Number(corrected.subtotal)).toBe(20000);
+    expect(Number(corrected.tax)).toBe(2000);
+    expect(Number(corrected.total_amount)).toBe(22000);
+    expect(await decisionRows(s.tenantId, s.quoteId)).toHaveLength(0);
+    expect(onQuoteAcceptedSpy).not.toHaveBeenCalled();
+
+    // The client reloads the page (fresh fingerprint over the corrected figures) and submits again.
+    expect(await fingerprintOf(s)).not.toBe(renderedBefore);
+    const second: any = await submit(s.token, await acceptInput({ selectedOptionalQuoteItemRefs: ['item-1'] }));
+    expect(second.status).toBe('decided');
+    expect(second.committed).toMatchObject({ tax: 2000, total_amount: 22000 });
+    expect(await decisionRows(s.tenantId, s.quoteId)).toHaveLength(1);
   });
 
   it('5c. the signed content fingerprint is stored on the decision row', async () => {

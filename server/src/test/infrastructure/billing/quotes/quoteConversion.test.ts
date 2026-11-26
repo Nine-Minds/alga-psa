@@ -26,9 +26,9 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { createTestService, setupClientTaxConfiguration } from '../../../../../test-utils/billingTestHelpers';
-import { recalculateQuoteFinancials } from '../../../../../../packages/billing/src/services/quoteCalculationService';
+import { recalculateQuoteFinancials, resolveQuoteDraftTax } from '../../../../../../packages/billing/src/services/quoteCalculationService';
 import { mapLoadedQuoteToViewModel } from '../../../../../../packages/billing/src/lib/adapters/quoteAdapters';
-import { calculateDraftQuoteTotals, type DraftQuoteItem } from '../../../../../../packages/billing/src/components/billing-dashboard/quotes/quoteLineItemDraft';
+import { toDraftTaxItem, type DraftQuoteItem } from '../../../../../../packages/billing/src/components/billing-dashboard/quotes/quoteLineItemDraft';
 import Quote from '../../../../../../packages/billing/src/models/quote';
 import QuoteItem from '../../../../../../packages/billing/src/models/quoteItem';
 import {
@@ -1574,10 +1574,17 @@ describe('Quote conversion infrastructure', () => {
       expect(viewModel.tax).toBe(Number(stored.tax));
       expect(viewModel.optional_total).toBe(expectedOptional);
 
-      // 3. Editor draft built from the persisted rows.
-      const draft = calculateDraftQuoteTotals((loaded.quote_items ?? []).map(toDraft));
-      expect(draft.total_amount).toBe(expectedTotal);
-      expect(draft.optional_total).toBe(expectedOptional);
+      // 3. Editor figures: the engine's answer for the draft built from the
+      //    persisted rows (the same server action the editor calls).
+      const draft = await resolveQuoteDraftTax(context.db, context.tenantId, {
+        client_id: loaded.client_id,
+        quote_id: loaded.quote_id,
+        quote_date: loaded.quote_date as string,
+        currency_code: loaded.currency_code,
+        items: (loaded.quote_items ?? []).map((item) => toDraftTaxItem(toDraft(item))),
+      });
+      expect(draft.totals.total_amount).toBe(expectedTotal);
+      expect(draft.totals.optional_total).toBe(expectedOptional);
 
       // 4. Conversion converts exactly the included rows: recurring lines to
       //    the contract at their quoted rates, one-time rows to the invoice.

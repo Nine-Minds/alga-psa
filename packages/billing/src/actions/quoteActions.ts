@@ -14,7 +14,7 @@ import type { IContract, IInvoice, TemplateAst, IQuote, IQuoteItem, IQuoteListIt
 import Quote, { type QuoteListOptions } from '../models/quote';
 import QuoteActivity from '../models/quoteActivity';
 import QuoteItem from '../models/quoteItem';
-import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
+import { recalculateQuoteFinancials, resolveQuoteDraftTax, type QuoteDraftTaxInput, type QuoteDraftTaxResult } from '../services/quoteCalculationService';
 import { resolveInvoiceBillingRecipient } from '../services/invoiceBillingRecipientService';
 import { decideQuote, listQuoteDecisions } from '../services/quoteDecisionService';
 import { renderResolvedQuoteEmail, resolveQuoteEmail, type QuoteTemplateName } from '../lib/quoteEmailRendering';
@@ -1021,6 +1021,51 @@ export const getQuote = withAuth(async (
   }
 
   return quote;
+});
+
+/**
+ * The editor's tax and totals for its draft rows, straight from the tax engine
+ * (caps, brackets, composite rates, region fallbacks, unresolved regions). The
+ * same resolution `recalculateQuoteFinancials` stores, so the editor shows what
+ * saving will store. Read-only: runs in a tenant-scoped connection and writes
+ * nothing, so it is safe to call on every (debounced) edit.
+ */
+export const calculateQuoteDraftTax = withAuth(async (
+  user,
+  { tenant },
+  input: QuoteDraftTaxInput
+): Promise<QuoteDraftTaxResult | ActionPermissionError> => {
+  const denied = await requireBillingReadPermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+  // The draft's tax is billing data about its client, so it is authorized as a
+  // quote read: the saved quote (when there is one) and the draft as the editor
+  // holds it (its client may have been changed but not yet saved).
+  const billingUser = user as BillingAuthUser;
+  const readDenied = () => permissionError('Permission denied: Cannot read quotes', 'msp/quotes:errors.permissions.read');
+  let saved: IQuote | null = null;
+  if (input.quote_id) {
+    saved = await getAuthorizedQuoteForRead(knex, tenant, billingUser, input.quote_id);
+    if (!saved) {
+      return readDenied();
+    }
+  }
+  const draftClientId = input.client_id ?? saved?.client_id ?? null;
+  if (draftClientId && draftClientId !== saved?.client_id) {
+    const { decision } = await authorizeQuoteReadDecision(knex, tenant, billingUser, {
+      quote_id: saved?.quote_id,
+      created_by: saved?.created_by ?? billingUser.user_id,
+      client_id: draftClientId,
+    });
+    if (!decision.allowed) {
+      return readDenied();
+    }
+  }
+
+  return resolveQuoteDraftTax(knex, tenant, input);
 });
 
 /**

@@ -1,0 +1,91 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: engine parity with TaxService for a capped regional rate, two regional rates with one capped, bracketed rates with a non-zero first minimum and a gap, a composite rate mixing compound and non-compound components, a tax holiday, a currency-specific rate, an exempt client and a reverse-charge client",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "DB: the engine returns unresolved for a taxable amount in a region with no active rate; TaxService.calculateTax raises NO_TAX_RATE with the same message and details as before for the same inputs",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F006"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "DB: calculating tax for a client with no client_tax_settings row returns default-settings tax and the engine leaves the table unchanged (the invoice-side TaxService provisions the row, as it always did); for a client with two billing profiles, the default profile's reverse-charge setting is the one applied",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F005"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Regression: the existing TaxService and invoice tax test suites pass without modification",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "DB: recalculating a quote for a client with a capped rate, bracketed rates and a compound composite rate stores the same per-line tax an invoice calculation gives for the same inputs",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "DB: the workflow quote recalculation produces the same totals as the billing recalculation for that quote",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Build: the workflow worker import validation passes, and quoteCalculationService.ts and crmWorkerDal.ts contain no tax arithmetic",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F009",
+      "F010"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "DB: the migration applies on a migrated schema; recalculating a quote with a taxable line in a rate-less region sets tax_unresolved with 0 tax, adding a rate and recalculating clears it, and quote reads return the flag",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F012",
+      "F013"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "DB: converting a quote with an unresolved included one-time row to an invoice is refused with the NO_TAX_RATE message and creates nothing; the same quote converts once the row is resolved; an unresolved unselected optional row does not block",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Component: the quote line editor marks an unresolved line with the region's name, and the totals show the note",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F016"
+    ]
+  }
+]

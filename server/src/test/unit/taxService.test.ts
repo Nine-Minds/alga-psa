@@ -15,7 +15,8 @@ const db = vi.hoisted(() => ({
     queriedTables: [] as string[],
 }));
 
-vi.mock('@alga-psa/db', () => {
+vi.mock('@alga-psa/db', async () => {
+    const { modelBackedTenantDb } = await import('../../../../packages/billing/tests/tax/helpers/modelBackedTenantDb');
     const makeBuilder = (table: string) => {
         const builder: Record<string, unknown> = {};
         for (const method of [
@@ -34,11 +35,11 @@ vi.mock('@alga-psa/db', () => {
     (knex as unknown as { fn: { now: () => string } }).fn = { now: () => 'now()' };
     return {
   tenantDb: (conn: any, _tenant: string) => ({
-    table: (t: string) => conn(t),
     scoped: (t: string) => conn(t),
     subquery: (t: string) => conn(t),
-    parentScopedTable: (t: string) => conn(t),
-    unscoped: (t: string) => conn(t),
+    // Settings, composite components, brackets and holidays are read by the
+    // shared tax engine through tenantDb; route them to the model stubs.
+    ...modelBackedTenantDb(conn),
     tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
       o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
     tenantJoinSubquery: (q: any, sub: any, _l?: any, _r?: any, o: any = {}) =>

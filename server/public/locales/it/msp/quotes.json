@@ -275,7 +275,8 @@
       "editQuote": "Modifica preventivo",
       "newQuote": "Nuovo preventivo",
       "version": "v{{version}}",
-      "quoteTotalLabel": "Totale preventivo"
+      "quoteTotalLabel": "Totale preventivo",
+      "totalsError": "Imposte e totale non sono aggiornati: modifica di nuovo le voci o ricarica la pagina."
     },
     "breadcrumb": {
       "billing": "Fatturazione",
@@ -387,7 +388,8 @@
       "standardLayout": "Standard",
       "customLayout": "Personalizzato",
       "tenantDefault": "Predefinito tenant",
-      "changeLayout": "Modifica"
+      "changeLayout": "Modifica",
+      "totalsError": "Impossibile aggiornare imposte e totale. Gli importi mostrati potrebbero non essere aggiornati."
     },
     "sectionTitles": {
       "title": "Titoli delle sezioni del preventivo raggruppato",
@@ -606,6 +608,10 @@
       "needMoreLocations": "Questo cliente ha una sola sede attiva. Aggiungi una seconda sede nelle impostazioni cliente per abilitare i preventivi multi-sede.",
       "allLocationsInUse": "Ogni sede attiva di questo cliente ha già un gruppo in questo preventivo.",
       "emptyGroup": "Ancora nessuna voce per questa sede."
+    },
+    "taxUnresolved": {
+      "badge": "Nessuna aliquota fiscale per {{region}}",
+      "totalsNote": "Non è stato possibile calcolare l'imposta per alcune righe. Tali righe mostrano 0 di imposta."
     }
   },
   "quoteRecipients": {

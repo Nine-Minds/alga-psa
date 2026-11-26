@@ -25,7 +25,8 @@ const db = vi.hoisted(() => ({
   queriedTables: [] as string[],
 }));
 
-vi.mock('@alga-psa/db', () => {
+vi.mock('@alga-psa/db', async () => {
+  const { modelBackedTenantDb } = await import('../../../../packages/billing/tests/tax/helpers/modelBackedTenantDb');
   const makeBuilder = (table: string) => {
     const builder: Record<string, unknown> = {};
     for (const method of [
@@ -47,9 +48,7 @@ vi.mock('@alga-psa/db', () => {
     runWithTenant: async (_tenant: string, fn: () => unknown) => fn(),
     withTransaction: async (knexOrTrx: unknown, fn: (trx: unknown) => unknown) => fn(knexOrTrx),
     getTenantContext: async () => 'test-tenant-id',
-    tenantDb: (conn: any, _tenant: string) => ({
-      table: (t: string) => conn(t),
-    }),
+    tenantDb: (conn: any, _tenant: string) => modelBackedTenantDb(conn),
   };
 });
 

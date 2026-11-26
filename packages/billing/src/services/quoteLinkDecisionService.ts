@@ -19,6 +19,7 @@ import {
 } from '../lib/quoteAgreement';
 import { decideQuote } from './quoteDecisionService';
 import { computePublicQuoteFingerprint, loadPublicQuoteItemReferenceMap } from './publicQuoteView';
+import { reconcileQuoteTotalsWithEngine } from './quoteCalculationService';
 import { QuoteAccessLinks, isWellFormedQuoteAccessToken } from './quoteAccessLinks';
 
 export const QUOTE_LINK_DECISION_LIMITS = {
@@ -274,6 +275,14 @@ async function decideInTransaction(
   }
   const shapeProblem = validateShape(input);
   if (shapeProblem) return { status: 'invalid_input', problem: shapeProblem };
+  // Tax check, before the fingerprint: the fingerprint binds the signer to what the page showed,
+  // but the stored totals may predate the current tax engine. Recompute them through it; if they
+  // disagree, persist the corrected figures and report `changed` -- once. The reloaded page then
+  // shows the corrected total under a fresh fingerprint, and submitting that succeeds. The write
+  // commits with this transaction (a non-throwing return).
+  if (await reconcileQuoteTotalsWithEngine(trx, tenant, quote.quote_id)) {
+    return { status: 'changed' };
+  }
   const fingerprint = await computePublicQuoteFingerprint(trx, tenant, quote.quote_id);
   if (!fingerprint || input.quoteFingerprint !== fingerprint) {
     return { status: 'changed' };

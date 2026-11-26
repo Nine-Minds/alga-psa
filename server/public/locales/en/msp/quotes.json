@@ -275,7 +275,8 @@
       "editQuote": "Edit Quote",
       "newQuote": "New Quote",
       "version": "v{{version}}",
-      "quoteTotalLabel": "Quote total"
+      "quoteTotalLabel": "Quote total",
+      "totalsError": "Tax and total are not current — try editing the line items again or reload."
     },
     "breadcrumb": {
       "billing": "Billing",
@@ -387,7 +388,8 @@
       "standardLayout": "Standard",
       "customLayout": "Custom",
       "tenantDefault": "Tenant default",
-      "changeLayout": "Change"
+      "changeLayout": "Change",
+      "totalsError": "Tax and total could not be updated. The figures shown may be out of date."
     },
     "sectionTitles": {
       "title": "Grouped quote section titles",
@@ -606,6 +608,10 @@
       "needMoreLocations": "This client only has one active location. Add a second location in Client settings to enable multi-site quoting.",
       "allLocationsInUse": "Every active location for this client already has a group on this quote.",
       "emptyGroup": "No items yet for this location."
+    },
+    "taxUnresolved": {
+      "badge": "No tax rate for {{region}}",
+      "totalsNote": "Tax could not be calculated for some lines. Those lines show 0 tax."
     }
   },
   "quoteRecipients": {

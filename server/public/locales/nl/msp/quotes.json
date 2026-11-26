@@ -275,7 +275,8 @@
       "editQuote": "Offerte bewerken",
       "newQuote": "Nieuwe offerte",
       "version": "v{{version}}",
-      "quoteTotalLabel": "Offertetotaal"
+      "quoteTotalLabel": "Offertetotaal",
+      "totalsError": "Belasting en totaal zijn niet actueel: pas de regels opnieuw aan of laad de pagina opnieuw."
     },
     "breadcrumb": {
       "billing": "Facturering",
@@ -387,7 +388,8 @@
       "standardLayout": "Standaard",
       "customLayout": "Aangepast",
       "tenantDefault": "Tenant-standaard",
-      "changeLayout": "Wijzigen"
+      "changeLayout": "Wijzigen",
+      "totalsError": "Belasting en totaal konden niet worden bijgewerkt. De getoonde bedragen zijn mogelijk verouderd."
     },
     "sectionTitles": {
       "title": "Sectietitels voor gegroepeerde offertes",
@@ -606,6 +608,10 @@
       "needMoreLocations": "Deze klant heeft maar één actieve locatie. Voeg in klantinstellingen een tweede locatie toe voor offertes met meerdere locaties.",
       "allLocationsInUse": "Elke actieve locatie van deze klant heeft al een groep op deze offerte.",
       "emptyGroup": "Nog geen items voor deze locatie."
+    },
+    "taxUnresolved": {
+      "badge": "Geen belastingtarief voor {{region}}",
+      "totalsNote": "De belasting kon niet worden berekend voor sommige regels. Die regels tonen 0 belasting."
     }
   },
   "quoteRecipients": {

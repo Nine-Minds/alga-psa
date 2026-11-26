@@ -275,7 +275,8 @@
       "editQuote": "Edytuj ofertę",
       "newQuote": "Nowa oferta",
       "version": "v{{version}}",
-      "quoteTotalLabel": "Suma oferty"
+      "quoteTotalLabel": "Suma oferty",
+      "totalsError": "Podatek i suma są nieaktualne – edytuj pozycje ponownie lub odśwież stronę."
     },
     "breadcrumb": {
       "billing": "Rozliczenia",
@@ -387,7 +388,8 @@
       "standardLayout": "Standardowy",
       "customLayout": "Niestandardowy",
       "tenantDefault": "Domyślny dla organizacji",
-      "changeLayout": "Zmień"
+      "changeLayout": "Zmień",
+      "totalsError": "Nie udało się zaktualizować podatku i sumy. Wyświetlane kwoty mogą być nieaktualne."
     },
     "sectionTitles": {
       "title": "Tytuły sekcji oferty grupowanej",
@@ -606,6 +608,10 @@
       "needMoreLocations": "Ten klient ma tylko jedną aktywną lokalizację. Dodaj drugą lokalizację w ustawieniach klienta, aby włączyć oferty wielolokalizacyjne.",
       "allLocationsInUse": "Każda aktywna lokalizacja tego klienta ma już grupę w tej ofercie.",
       "emptyGroup": "Brak pozycji dla tej lokalizacji."
+    },
+    "taxUnresolved": {
+      "badge": "Brak stawki podatku dla {{region}}",
+      "totalsNote": "Nie można obliczyć podatku dla niektórych pozycji. Te pozycje pokazują podatek 0."
     }
   },
   "quoteRecipients": {

@@ -34,6 +34,9 @@ import {
 import { allocateIncludedQuoteDiscounts } from '../../../../billingClients/quoteDiscountAllocation';
 import { deriveServiceTaxTreatment } from '../../../../billingClients/serviceTaxTreatment';
 import { getEffectiveTaxSourceForClient } from '../../../../billingClients/taxSettings';
+import { calculateTaxForAmount } from '../../../../billingClients/taxEngine';
+import { toQuoteTaxDate } from '../../../../billingClients/quoteTaxResolution';
+import { resolveQuoteConversionTax, type QuoteConversionTax } from '../../../../billingClients/quoteRowTax';
 import { prepareQuoteTermsForDb } from '../../../../lib/quoteTerms';
 import { SharedNumberingService } from '../../../../services/numberingService';
 
@@ -61,12 +64,6 @@ function tenantScopedTable(
 ): Knex.QueryBuilder {
   return tenantDb(knexOrTrx, tenant).table(table);
 }
-
-type TaxThresholdRow = {
-  min_amount: number | string;
-  max_amount?: number | string | null;
-  rate: number | string;
-};
 
 const createQuoteBaseSchema = z.object({
   client_id: z.string().guid().optional().nullable(),
@@ -168,15 +165,6 @@ function toNumber(value: unknown): number {
   return Number(value ?? 0);
 }
 
-function toQuoteDate(value?: string | Date | null): string {
-  if (!value) {
-    return new Date().toISOString();
-  }
-
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
-}
-
 function isQuoteItemIncluded(item: { is_optional?: boolean | null; is_selected?: boolean | null }): boolean {
   if (!item.is_optional) return true;
   return item.is_selected === true;
@@ -191,193 +179,6 @@ function calculateDiscountAmount(
   }
 
   return Math.abs(toNumber(item.quantity || 1) * toNumber(item.unit_price));
-}
-
-function isDateApplicable(row: { start_date?: string | Date | null; end_date?: string | Date | null }, date: string): boolean {
-  const currentDate = new Date(date);
-  if (row.start_date && new Date(row.start_date) > currentDate) return false;
-  if (row.end_date && new Date(row.end_date) < currentDate) return false;
-  return true;
-}
-
-function calculateThresholdBasedTax(
-  thresholds: Array<{ min_amount: number | string; max_amount?: number | string | null; rate: number | string }>,
-  netAmount: number
-): { taxAmount: number; taxRate: number } {
-  let taxAmount = 0;
-  let remainingAmount = netAmount;
-
-  for (const threshold of thresholds) {
-    if (remainingAmount <= 0) break;
-
-    const minAmount = toNumber(threshold.min_amount);
-    const maxAmount = threshold.max_amount == null ? null : toNumber(threshold.max_amount);
-    const taxableAmount = maxAmount == null
-      ? remainingAmount
-      : Math.min(remainingAmount, Math.max(maxAmount - minAmount, 0));
-
-    taxAmount += Math.ceil((taxableAmount * toNumber(threshold.rate)) / 100);
-    remainingAmount -= taxableAmount;
-  }
-
-  return {
-    taxAmount,
-    taxRate: netAmount > 0 ? (taxAmount / netAmount) * 100 : 0,
-  };
-}
-
-async function getApplicableTaxHoliday(
-  knexOrTrx: Knex | Knex.Transaction,
-  tenant: string,
-  taxRateId: string,
-  date: string
-): Promise<Record<string, unknown> | undefined> {
-  const currentDate = new Date(date);
-  const holidays = await tenantDb(knexOrTrx, tenant)
-    .parentScopedTable('tax_holidays')
-    .where({ tax_rate_id: taxRateId })
-    .orderBy('start_date');
-
-  return holidays.find((holiday) =>
-    new Date(holiday.start_date) <= currentDate && new Date(holiday.end_date) >= currentDate
-  );
-}
-
-async function calculateComponentTax(
-  knexOrTrx: Knex | Knex.Transaction,
-  tenant: string,
-  component: Record<string, unknown>,
-  amount: number,
-  date: string
-): Promise<number> {
-  const holiday = await getApplicableTaxHoliday(knexOrTrx, tenant, String(component.tax_rate_id), date);
-  if (holiday) return 0;
-  return Math.ceil((amount * toNumber(component.rate)) / 100);
-}
-
-async function calculateTaxWithConnection(
-  knexOrTrx: Knex | Knex.Transaction,
-  tenant: string,
-  clientId: string,
-  netAmount: number,
-  date: string,
-  regionCode: string | undefined,
-  isTaxable: boolean,
-  currencyCode?: string | null
-): Promise<{ taxAmount: number; taxRate: number }> {
-  const client = await tenantScopedTable(knexOrTrx, tenant, 'clients')
-    .where('client_id', clientId)
-    .select('is_tax_exempt')
-    .first();
-
-  if (!client) {
-    throw new Error(`Client ${clientId} not found in tenant ${tenant}`);
-  }
-
-  if (client.is_tax_exempt || !isTaxable) {
-    return { taxAmount: 0, taxRate: 0 };
-  }
-
-  const taxSettings = await tenantScopedTable(knexOrTrx, tenant, 'client_tax_settings')
-    .where('client_id', clientId)
-    .select('is_reverse_charge_applicable')
-    .first();
-  if (taxSettings?.is_reverse_charge_applicable) {
-    return { taxAmount: 0, taxRate: 0 };
-  }
-
-  if (regionCode) {
-    const applicableRates = await tenantScopedTable(knexOrTrx, tenant, 'tax_rates')
-      .where({ region_code: regionCode, is_active: true })
-      .andWhere('start_date', '<=', date)
-      .andWhere(function dateRange() {
-        this.whereNull('end_date').orWhere('end_date', '>', date);
-      })
-      .andWhere(function currencyRange() {
-        this.whereNull('currency_code');
-        if (currencyCode) this.orWhere('currency_code', currencyCode);
-      })
-      .select('tax_percentage');
-
-    const combinedTaxRate = applicableRates.reduce(
-      (sum: number, rate: { tax_percentage?: unknown }) => sum + toNumber(rate.tax_percentage),
-      0
-    );
-    return {
-      taxAmount: netAmount > 0 ? Math.ceil((netAmount * combinedTaxRate) / 100) : 0,
-      taxRate: combinedTaxRate,
-    };
-  }
-
-  const defaultRateAssoc = await tenantScopedTable(knexOrTrx, tenant, 'client_tax_rates')
-    .where({ client_id: clientId, is_default: true })
-    .whereNull('location_id')
-    .select('tax_rate_id')
-    .first();
-
-  if (!defaultRateAssoc) {
-    return { taxAmount: 0, taxRate: 0 };
-  }
-
-  const taxRate = await tenantScopedTable(knexOrTrx, tenant, 'tax_rates')
-    .where({ tax_rate_id: defaultRateAssoc.tax_rate_id, is_active: true })
-    .andWhere('start_date', '<=', date)
-    .andWhere(function dateRange() {
-      this.whereNull('end_date').orWhere('end_date', '>', date);
-    })
-    .andWhere(function currencyRange() {
-      this.whereNull('currency_code');
-      if (currencyCode) this.orWhere('currency_code', currencyCode);
-    })
-    .first();
-
-  if (!taxRate) {
-    return { taxAmount: 0, taxRate: 0 };
-  }
-
-  if (taxRate.is_composite) {
-    const facade = tenantDb(knexOrTrx, tenant);
-    const componentsQuery = facade.parentScopedTable('composite_tax_mappings as ctm')
-      .where('ctm.composite_tax_id', taxRate.tax_rate_id)
-      .orderBy('ctm.sequence');
-    facade.tenantJoin(componentsQuery, 'tax_components as tc', 'ctm.tax_component_id', 'tc.tax_component_id', {
-      tenantPredicate: 'literal',
-    });
-    const components = await componentsQuery.select('tc.*') as Record<string, unknown>[];
-
-    let totalTaxAmount = 0;
-    let taxableAmount = netAmount;
-    for (const component of components) {
-      if (!isDateApplicable(component, date)) continue;
-      const componentTax = await calculateComponentTax(knexOrTrx, tenant, component, taxableAmount, date);
-      totalTaxAmount += componentTax;
-      if (component.is_compound) taxableAmount += componentTax;
-    }
-
-    return {
-      taxAmount: totalTaxAmount,
-      taxRate: netAmount > 0 ? (totalTaxAmount / netAmount) * 100 : 0,
-    };
-  }
-
-  const thresholds = await tenantDb(knexOrTrx, tenant)
-    .parentScopedTable<TaxThresholdRow>('tax_rate_thresholds')
-    .where('tax_rate_id', taxRate.tax_rate_id)
-    .orderBy('min_amount');
-
-  if (thresholds.length > 0) {
-    return calculateThresholdBasedTax(thresholds, netAmount);
-  }
-
-  if (netAmount <= 0) {
-    return { taxAmount: 0, taxRate: toNumber(taxRate.tax_percentage) };
-  }
-
-  const taxRatePercentage = toNumber(taxRate.tax_percentage);
-  return {
-    taxAmount: Math.ceil((netAmount * taxRatePercentage) / 100),
-    taxRate: taxRatePercentage,
-  };
 }
 
 async function recalculateQuoteFinancials(
@@ -438,7 +239,7 @@ async function recalculateQuoteFinancials(
     }
   }
 
-  const quoteDate = toQuoteDate(quote.quote_date);
+  const quoteDate = toQuoteTaxDate(quote.quote_date);
   const currencyCode = quote.currency_code ?? 'USD';
   const taxSource = quote.tax_source ?? 'internal';
   const includedBaseItems = items.filter((item) => !item.is_discount && isQuoteItemIncluded(item));
@@ -457,7 +258,7 @@ async function recalculateQuoteFinancials(
     );
   }
 
-  // LEVERAGE: pattern quote-recalc-dup — this mirrors recalculateQuoteFinancials in packages/billing; discount-before-tax had to be applied in both.
+  // LEVERAGE: pattern quote-recalc-dup — tax now comes from the shared engine (billingClients/taxEngine), so only the surrounding recalculation is still duplicated: this mirrors recalculateQuoteFinancials in packages/billing (discount allocation before tax, row totals, quote totals persistence).
   // Discount reduction each base row absorbs (same allocation as
   // recalculateQuoteFinancials); tax is computed on the discounted base.
   const shareByBaseId = new Map<string, number>();
@@ -488,6 +289,7 @@ async function recalculateQuoteFinancials(
     const netAmount = isIncludedInTotals ? resolvedTotalPrice : 0;
     let taxAmount = 0;
     let taxRate = isIncludedInTotals ? toNumber(item.tax_rate) : 0;
+    let taxUnresolved = false;
 
     if (isDiscount) {
       discountTotal += isIncludedInTotals ? resolvedTotalPrice : 0;
@@ -495,21 +297,26 @@ async function recalculateQuoteFinancials(
       subtotal += isIncludedInTotals ? resolvedTotalPrice : 0;
 
       if (isIncludedInTotals && quote.client_id && taxSource === 'internal') {
-        const taxResult = await calculateTaxWithConnection(
-          knexOrTrx,
-          tenant,
-          quote.client_id,
-          Math.max(0, netAmount - (shareByBaseId.get(item.quote_item_id) ?? 0)),
-          quoteDate,
-          taxRegion ?? undefined,
-          item.is_taxable !== false,
-          currencyCode
-        );
+        const taxResult = await calculateTaxForAmount(knexOrTrx, tenant, {
+          clientId: quote.client_id,
+          netAmount: Math.max(0, netAmount - (shareByBaseId.get(item.quote_item_id) ?? 0)),
+          date: quoteDate,
+          regionCode: taxRegion ?? undefined,
+          isTaxable: item.is_taxable !== false,
+          currencyCode,
+        });
 
-        taxAmount = taxResult.taxAmount;
-        // Store the exact percentage: rounding 6.875 to 7 displayed a rate the
-        // line was never charged at. `quote_items.tax_rate` is numeric.
-        taxRate = Number(taxResult.taxRate ?? 0);
+        if (taxResult.resolved) {
+          taxAmount = taxResult.taxAmount;
+          // Store the exact percentage: rounding 6.875 to 7 displayed a rate the
+          // line was never charged at. `quote_items.tax_rate` is numeric.
+          taxRate = Number(taxResult.taxRate ?? 0);
+        } else {
+          // No active rate for the region: store 0 and flag the row.
+          taxAmount = 0;
+          taxRate = 0;
+          taxUnresolved = true;
+        }
       } else if (taxSource !== 'internal') {
         taxAmount = 0;
         taxRate = 0;
@@ -526,6 +333,7 @@ async function recalculateQuoteFinancials(
         tax_amount: taxAmount,
         tax_region: taxRegion,
         tax_rate: taxRate,
+        tax_unresolved: taxUnresolved,
         updated_at: knexOrTrx.fn.now(),
       });
   }
@@ -539,6 +347,32 @@ async function recalculateQuoteFinancials(
       total_amount: subtotal - discountTotal + tax,
       updated_at: knexOrTrx.fn.now(),
     });
+}
+
+/**
+ * Refuse to bill a quote whose included one-time row has no tax rate, from a
+ * fresh engine resolution (never the persisted `tax_unresolved` flag). Read-only.
+ * The error carries the `NO_TAX_RATE` code and the same message invoice
+ * generation gives for a region with no rate.
+ */
+async function resolveQuoteConversionTaxOrRefuse(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quote: IQuote
+): Promise<QuoteConversionTax> {
+  const resolved = await resolveQuoteConversionTax(
+    knexOrTrx,
+    tenant,
+    quote as Parameters<typeof resolveQuoteConversionTax>[2],
+    (quote.quote_items ?? []) as unknown as Parameters<typeof resolveQuoteConversionTax>[3],
+  );
+  if (resolved.blocker) {
+    throw Object.assign(new Error(resolved.blocker.message), {
+      code: 'NO_TAX_RATE',
+      params: { region: resolved.blocker.region, date: resolved.blocker.date },
+    });
+  }
+  return resolved;
 }
 
 function normalizeQuoteItem(row: Record<string, unknown>): IQuoteItem {
@@ -555,6 +389,7 @@ function normalizeQuoteItem(row: Record<string, unknown>): IQuoteItem {
     cost: row.cost == null ? null : Number(row.cost),
     cost_currency: row.cost_currency ?? null,
     catalog_description: row.catalog_description ?? null,
+    tax_unresolved: row.tax_unresolved === true,
   } as IQuoteItem;
 }
 
@@ -1368,6 +1203,11 @@ async function convertQuoteToDraftInvoiceRecords(
     throw new Error('Quotes must be linked to a client before they can be converted to an invoice');
   }
 
+  // Same fresh engine resolution and refusal as the billing conversion (one
+  // shared resolver): decided from the engine now, never from the persisted
+  // `tax_unresolved` flag.
+  const { rowTaxes: freshRowTaxes } = await resolveQuoteConversionTaxOrRefuse(knexOrTrx, tenant, quote);
+
   const oneTimeItems = getSelectedOneTimeItems(quote.quote_items ?? []);
   if (oneTimeItems.length === 0) {
     throw new Error('Quote does not contain any one-time items selected for invoice conversion');
@@ -1427,7 +1267,14 @@ async function convertQuoteToDraftInvoiceRecords(
       ? -allocatedOneTimeAmountFor(discountShares, item.quote_item_id, oneTimeBaseIds)
       : Number(item.net_amount ?? (item.quantity * item.unit_price));
     // Pending-external charges carry no tax (matching calculateAndDistributeTax).
-    const taxAmount = item.is_discount || delegatesTax ? 0 : Number(item.tax_amount ?? 0);
+    // Same rule as the billing conversion: the quote's own tax, except a row it
+    // recorded as unresolved, whose stored 0 was never a tax.
+    const freshTax = !item.is_discount && item.tax_unresolved === true
+      ? freshRowTaxes.get(item.quote_item_id)
+      : undefined;
+    const taxAmount = item.is_discount || delegatesTax
+      ? 0
+      : (freshTax ? freshTax.taxAmountIfIncluded : Number(item.tax_amount ?? 0));
 
     return {
       tenant,
@@ -1443,7 +1290,7 @@ async function convertQuoteToDraftInvoiceRecords(
       net_amount: netAmount,
       tax_amount: taxAmount,
       tax_region: item.tax_region ?? null,
-      tax_rate: delegatesTax ? 0 : (item.tax_rate ?? 0),
+      tax_rate: delegatesTax ? 0 : (freshTax ? freshTax.taxRate : (item.tax_rate ?? 0)),
       total_price: netAmount + taxAmount,
       is_manual: true,
       is_taxable: item.is_discount ? false : (item.is_taxable ?? true),
@@ -1534,6 +1381,8 @@ async function convertQuoteToDraftContractAndInvoiceRecords(
   if (quote.converted_contract_id || quote.converted_invoice_id) {
     throw new Error('Quote has already started conversion and cannot be converted to both again');
   }
+
+  await resolveQuoteConversionTaxOrRefuse(knexOrTrx, tenant, quote);
 
   const recurringItems = getSelectedRecurringItems(quote.quote_items ?? []);
   const oneTimeItems = getSelectedOneTimeItems(quote.quote_items ?? []);

@@ -275,7 +275,8 @@
       "editQuote": "Modifier le devis",
       "newQuote": "Nouveau devis",
       "version": "v{{version}}",
-      "quoteTotalLabel": "Total du devis"
+      "quoteTotalLabel": "Total du devis",
+      "totalsError": "La taxe et le total ne sont pas à jour : modifiez à nouveau les lignes ou rechargez la page."
     },
     "breadcrumb": {
       "billing": "Facturation",
@@ -387,7 +388,8 @@
       "standardLayout": "Standard",
       "customLayout": "Personnalisé",
       "tenantDefault": "Valeur par défaut du locataire",
-      "changeLayout": "Modifier"
+      "changeLayout": "Modifier",
+      "totalsError": "Impossible de mettre à jour la taxe et le total. Les montants affichés peuvent être obsolètes."
     },
     "sectionTitles": {
       "title": "Titres des sections du devis groupé",
@@ -606,6 +608,10 @@
       "needMoreLocations": "Ce client n'a qu'un seul emplacement actif. Ajoutez un deuxième emplacement dans les paramètres du client pour activer les devis multi-sites.",
       "allLocationsInUse": "Chaque emplacement actif de ce client a déjà un groupe sur ce devis.",
       "emptyGroup": "Aucun élément pour cet emplacement pour le moment."
+    },
+    "taxUnresolved": {
+      "badge": "Aucun taux de taxe pour {{region}}",
+      "totalsNote": "La taxe n'a pas pu être calculée pour certaines lignes. Ces lignes affichent 0 de taxe."
     }
   },
   "quoteRecipients": {

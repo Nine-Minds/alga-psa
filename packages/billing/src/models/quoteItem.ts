@@ -26,6 +26,7 @@ function normalizeQuoteItem(row: Record<string, any>): IQuoteItem {
     cost: row.cost == null ? null : Number(row.cost),
     cost_currency: row.cost_currency ?? null,
     catalog_description: row.catalog_description ?? null,
+    tax_unresolved: row.tax_unresolved === true,
   } as IQuoteItem;
 }
 
