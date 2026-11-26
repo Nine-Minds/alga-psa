@@ -39,7 +39,12 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => {
     }
     return text;
   };
-  return { useTranslation: () => ({ t }) };
+  return {
+    useTranslation: () => ({ t }),
+    useFormatters: () => ({
+      formatDate: (value: string | Date) => new Date(value).toISOString().slice(0, 10),
+    }),
+  };
 });
 
 vi.mock('@alga-psa/clients/actions', () => ({
@@ -47,6 +52,7 @@ vi.mock('@alga-psa/clients/actions', () => ({
   getContactByContactNameId: hoisted.getContactByContactNameId,
   getAllClients: hoisted.getAllClients,
   searchContactListIds: hoisted.searchContactListIds,
+  getPortalInvitationStatesForClient: async () => [],
 }));
 vi.mock('@alga-psa/auth/actions', () => ({
   getContactPortalPermissions: async () => ({ canInvite: true, canUpdateRoles: true, canRead: true }),
