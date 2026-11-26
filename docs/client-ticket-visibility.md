@@ -103,4 +103,6 @@ The setting only supplies the starting value. An agent can untick (or tick) the
 box for any single action and that choice is what is saved; the default never
 overwrites a deliberate selection. If the settings read fails, the checkboxes
 fall back to unticked. The mobile app receives the same flag through its
-capabilities endpoint, so an older server simply leaves mobile checkboxes off.
+capabilities endpoint and refreshes it when the status picker opens, so a saved
+change takes effect in an already-open app. An older server leaves mobile
+checkboxes off.

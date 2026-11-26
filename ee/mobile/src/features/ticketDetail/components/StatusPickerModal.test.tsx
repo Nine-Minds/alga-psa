@@ -3,7 +3,10 @@ import { Text } from "react-native";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ alert: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  alert: vi.fn(),
+  dontNotifyCustomerDefault: false,
+}));
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -18,6 +21,9 @@ vi.mock("../../../ui/ThemeContext", async () => {
   const { lightTheme } = await import("../../../ui/themes");
   return { useTheme: () => lightTheme };
 });
+vi.mock("../../../capabilities/CapabilitiesContext", () => ({
+  useDontNotifyCustomerDefault: () => mocks.dontNotifyCustomerDefault,
+}));
 
 import { StatusPickerModal } from "./StatusPickerModal";
 
@@ -53,7 +59,10 @@ const apply = (r: ReactTestRenderer) => r.root.find((n) => n.props?.testID === "
 const texts = (r: ReactTestRenderer) => r.root.findAllByType(Text).map((n) => [].concat(n.props.children).join(""));
 
 describe("StatusPickerModal", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.dontNotifyCustomerDefault = false;
+  });
 
   it("marks the current status and lists open/closed labels", () => {
     const { renderer } = render();
@@ -91,6 +100,21 @@ describe("StatusPickerModal", () => {
     });
     act(() => apply(renderer).props.onPress());
     expect(props.onApply).toHaveBeenCalledWith("s-wip", { suppressContactNotifications: true, suppressInternalNotifications: false });
+  });
+
+  it("starts with the tenant's customer-suppression default for status changes", () => {
+    mocks.dontNotifyCustomerDefault = true;
+    const { renderer, props } = render();
+
+    expect(renderer.root.find((node) => node.props?.testID === "ticket-suppress-contact-notifications").props.value).toBe(true);
+    expect(renderer.root.find((node) => node.props?.testID === "ticket-suppress-internal-notifications").props.value).toBe(false);
+
+    act(() => byLabel(renderer, "statusPicker.setStatus:In Progress").props.onPress());
+    act(() => apply(renderer).props.onPress());
+    expect(props.onApply).toHaveBeenCalledWith("s-wip", {
+      suppressContactNotifications: true,
+      suppressInternalNotifications: false,
+    });
   });
 
   it("shows loading, saving and error states and disables rows while busy", () => {

@@ -46,6 +46,7 @@ function renderStatusHook(opts?: {
   client?: ApiClient | null;
   session?: any;
   boardId?: string | null;
+  refreshCapabilities?: () => Promise<void>;
   onChecklistBlocked?: () => void;
 }) {
   const showToast = vi.fn();
@@ -63,6 +64,7 @@ function renderStatusHook(opts?: {
       showToast,
       t,
       fetchTicket,
+      refreshCapabilities: opts?.refreshCapabilities ?? vi.fn().mockResolvedValue(undefined),
       boardId,
       onChecklistBlocked: opts?.onChecklistBlocked,
     });
@@ -132,6 +134,25 @@ describe("useTicketStatus", () => {
       expect(h.result.statusOptions).toEqual(statuses);
       expect(h.result.statusOptionsLoading).toBe(false);
       expect(mockSetCached).toHaveBeenCalledWith("ten-1:board:b-1", statuses);
+    });
+
+    it("refreshes tenant capabilities before loading statuses for the picker", async () => {
+      const events: string[] = [];
+      const refreshCapabilities = vi.fn(async () => {
+        events.push("capabilities");
+      });
+      mockGetStatuses.mockImplementationOnce(async () => {
+        events.push("statuses");
+        return { ok: true, data: { data: statuses } };
+      });
+      const h = renderStatusHook({ refreshCapabilities });
+
+      await act(async () => {
+        await h.result.openStatusPicker();
+      });
+
+      expect(events).toEqual(["capabilities", "statuses"]);
+      expect(refreshCapabilities).toHaveBeenCalledTimes(1);
     });
 
     it("uses tenant-only cache key and no board filter without a board, falling back to unknownTenant", async () => {

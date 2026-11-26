@@ -91,53 +91,58 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<MobileTheme | null>(null);
   const [defaultCountry, setDefaultCountry] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
-  const inFlight = useRef(false);
+  const inFlight = useRef<Promise<void> | null>(null);
   const signedIn = Boolean(session?.accessToken);
 
   // Keyed on the session handle, not the token: a rotation must not refetch.
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(() => {
     const accessToken = session?.accessToken;
-    if (!accessToken || !baseUrl || inFlight.current) return;
-    inFlight.current = true;
-    try {
-      const client = createApiClient({
-        baseUrl,
-        getAccessToken: () => session?.accessToken,
-        getTenantId: () => session?.tenantId,
-        getUserAgentTag: () => `mobile/${Platform.OS}/capabilities`,
-        onAuthError: refreshSession,
-      });
-      const result = await getMyCapabilities(client, { apiKey: accessToken });
-      if (result.ok) {
-        const parsedFeatures = parseFeatureCapabilities(result.data.data?.features);
-        setFeatures(parsedFeatures);
-        setOperationalScope(parsedFeatures.operationalOnly ? parseOperationalScope(result.data.data?.operationalScope) : null);
-        applyServerDateFormat(result.data.data?.formatting);
-        const country = result.data.data?.formatting?.country;
-        setDefaultCountry(typeof country === "string" && country.trim() ? country.trim().toUpperCase() : null);
-        // Older servers send no theme block; the app keeps the Alga pair.
-        const themeBlock = result.data.data?.theme;
-        const parsedTheme = parseMobileTheme(themeBlock);
-        if (themeBlock && !parsedTheme) {
-          logger.warn("capabilities.theme_rejected", { pairId: (themeBlock as { pairId?: unknown }).pairId });
+    if (!accessToken || !baseUrl) return Promise.resolve();
+    if (inFlight.current) return inFlight.current;
+
+    const request = Promise.resolve().then(async () => {
+      try {
+        const client = createApiClient({
+          baseUrl,
+          getAccessToken: () => session?.accessToken,
+          getTenantId: () => session?.tenantId,
+          getUserAgentTag: () => `mobile/${Platform.OS}/capabilities`,
+          onAuthError: refreshSession,
+        });
+        const result = await getMyCapabilities(client, { apiKey: accessToken });
+        if (result.ok) {
+          const parsedFeatures = parseFeatureCapabilities(result.data.data?.features);
+          setFeatures(parsedFeatures);
+          setOperationalScope(parsedFeatures.operationalOnly ? parseOperationalScope(result.data.data?.operationalScope) : null);
+          applyServerDateFormat(result.data.data?.formatting);
+          const country = result.data.data?.formatting?.country;
+          setDefaultCountry(typeof country === "string" && country.trim() ? country.trim().toUpperCase() : null);
+          // Older servers send no theme block; the app keeps the Alga pair.
+          const themeBlock = result.data.data?.theme;
+          const parsedTheme = parseMobileTheme(themeBlock);
+          if (themeBlock && !parsedTheme) {
+            logger.warn("capabilities.theme_rejected", { pairId: (themeBlock as { pairId?: unknown }).pairId });
+          } else {
+            logger.info("capabilities.theme", { pairId: parsedTheme?.pairId ?? null, version: parsedTheme?.version ?? null });
+          }
+          setTheme(parsedTheme);
         } else {
-          logger.info("capabilities.theme", { pairId: parsedTheme?.pairId ?? null, version: parsedTheme?.version ?? null });
+          // Older servers have no endpoint (404) — every feature stays off.
+          // The theme is left alone: a flaky network should not repaint the app.
+          setFeatures(EMPTY_FEATURE_CAPABILITIES);
+          setOperationalScope(null);
+          applyServerDateFormat(null);
+          if (result.error.kind !== "http" && result.error.kind !== "network") {
+            logger.warn("capabilities.fetch_failed", { kind: result.error.kind });
+          }
         }
-        setTheme(parsedTheme);
-      } else {
-        // Older servers have no endpoint (404) — every feature stays off.
-        // The theme is left alone: a flaky network should not repaint the app.
-        setFeatures(EMPTY_FEATURE_CAPABILITIES);
-        setOperationalScope(null);
-        applyServerDateFormat(null);
-        if (result.error.kind !== "http" && result.error.kind !== "network") {
-          logger.warn("capabilities.fetch_failed", { kind: result.error.kind });
-        }
+      } finally {
+        inFlight.current = null;
+        setLoaded(true);
       }
-    } finally {
-      inFlight.current = false;
-      setLoaded(true);
-    }
+    });
+    inFlight.current = request;
+    return request;
   }, [session, baseUrl, refreshSession]);
 
   useEffect(() => {

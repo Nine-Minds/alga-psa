@@ -77,6 +77,52 @@ describe("CapabilitiesProvider", () => {
     expect(value.theme?.version).toBe("forest-v1");
   });
 
+  it("loads the tenant's customer-notification default from capabilities", async () => {
+    getMyCapabilities.mockResolvedValue({
+      ok: true,
+      data: { data: { features: { dontNotifyCustomerDefault: true } } },
+    });
+
+    await renderProvider();
+
+    expect(value.features.dontNotifyCustomerDefault).toBe(true);
+  });
+
+  it("waits for the initial capabilities request when a screen requests a refresh", async () => {
+    let resolveResponse!: (response: unknown) => void;
+    getMyCapabilities.mockReturnValue(new Promise((resolve) => {
+      resolveResponse = resolve;
+    }));
+
+    let renderer!: ReturnType<typeof create>;
+    await act(async () => {
+      renderer = create(
+        <CapabilitiesProvider>
+          <Probe />
+        </CapabilitiesProvider>,
+      );
+    });
+
+    expect(getMyCapabilities).toHaveBeenCalledTimes(1);
+    let refreshFinished = false;
+    const refresh = value.refresh().then(() => {
+      refreshFinished = true;
+    });
+    await Promise.resolve();
+    expect(refreshFinished).toBe(false);
+
+    await act(async () => {
+      resolveResponse({
+        ok: true,
+        data: { data: { features: { dontNotifyCustomerDefault: true } } },
+      });
+      await refresh;
+    });
+
+    expect(value.features.dontNotifyCustomerDefault).toBe(true);
+    act(() => renderer.unmount());
+  });
+
   it("logs the pair it applied so a theme mismatch is visible in Metro", async () => {
     const info = vi.spyOn(logger, "info").mockImplementation(() => {});
     getMyCapabilities.mockResolvedValue({

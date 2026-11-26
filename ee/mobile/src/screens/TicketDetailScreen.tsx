@@ -144,7 +144,7 @@ export function TicketDetailBody({
   const { colors, spacing, typography } = theme;
   const { showToast } = useToast();
   const { t } = useTranslation("tickets");
-  const { features } = useCapabilities();
+  const { features, refresh: refreshCapabilities } = useCapabilities();
   // A co-managed seat technician: no user directory, client notes, tags, interactions or materials.
   const operationalOnly = features.operationalOnly;
   const [newContactOpen, setNewContactOpen] = useState(false);
@@ -274,6 +274,7 @@ export function TicketDetailBody({
   const statusHook = useTicketStatus({
     ...deps,
     fetchTicket,
+    refreshCapabilities,
     boardId,
     onChecklistBlocked: () => {
       void checklistHook.fetchChecklist();

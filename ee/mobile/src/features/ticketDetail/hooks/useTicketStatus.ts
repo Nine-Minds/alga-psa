@@ -41,11 +41,12 @@ export function extractBundlePropagationDetails(
 export function useTicketStatus(
   deps: TicketDetailDeps & {
     fetchTicket: () => Promise<void>;
+    refreshCapabilities: () => Promise<void>;
     boardId?: string | null;
     onChecklistBlocked?: () => void;
   },
 ) {
-  const { client, session, ticketId, showToast, t, fetchTicket, boardId, onChecklistBlocked } = deps;
+  const { client, session, ticketId, showToast, t, fetchTicket, refreshCapabilities, boardId, onChecklistBlocked } = deps;
 
   const [statusPickerOpen, setStatusPickerOpen] = useState(false);
   const [statusOptions, setStatusOptions] = useState<TicketStatus[]>([]);
@@ -67,17 +68,19 @@ export function useTicketStatus(
   const openStatusPicker = async () => {
     if (!client || !session) return;
     setStatusPickerOpen(true);
-    if (statusOptions.length > 0) return;
-    const tenantKey = session.tenantId ?? "unknownTenant";
-    const cacheKey = boardId ? `${tenantKey}:board:${boardId}` : tenantKey;
-    const cached = getCachedTicketStatuses(cacheKey);
-    if (Array.isArray(cached) && cached.length > 0) {
-      setStatusOptions(cached as TicketStatus[]);
-      return;
-    }
     setStatusOptionsLoading(true);
     setStatusOptionsError(null);
     try {
+      // The tenant setting can change on web while this mobile session stays open.
+      await refreshCapabilities();
+      if (statusOptions.length > 0) return;
+      const tenantKey = session.tenantId ?? "unknownTenant";
+      const cacheKey = boardId ? `${tenantKey}:board:${boardId}` : tenantKey;
+      const cached = getCachedTicketStatuses(cacheKey);
+      if (Array.isArray(cached) && cached.length > 0) {
+        setStatusOptions(cached as TicketStatus[]);
+        return;
+      }
       const res = await getTicketStatuses(client, {
         apiKey: session.accessToken,
         board_id: boardId ?? undefined,
