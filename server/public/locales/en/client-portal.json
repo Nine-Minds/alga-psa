@@ -297,6 +297,7 @@
         "contactNotFound": "Contact not found.",
         "contactMissingEmail": "The contact doesn't have an email address.",
         "contactInvalidEmail": "The contact has an invalid email address.",
+        "contactInactive": "This contact is no longer active. Please contact your service provider.",
         "userExistsForContact": "A user account already exists for this contact.",
         "portalUserAlreadyExists": "An account already exists for this email address. Please sign in, or reset your password from the sign-in page.",
         "noDefaultClient": "No default client is configured for this tenant.",
@@ -306,7 +307,9 @@
         "invitationNotFound": "Invitation not found.",
         "revokeFailed": "Failed to revoke the invitation. Please try again.",
         "batchLimitExceeded": "Too many contacts in one request. Please invite fewer contacts at a time.",
-        "noTargetsSelected": "Select at least one contact to invite."
+        "noTargetsSelected": "Select at least one contact to invite.",
+        "invitationStateMismatch": "This invitation is no longer valid. Please ask your service provider for a new one.",
+        "rateLimited": "Too many attempts. Please wait a few minutes and try again."
       }
     },
     "features": {

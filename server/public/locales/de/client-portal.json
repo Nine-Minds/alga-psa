@@ -297,6 +297,7 @@
         "contactNotFound": "Kontakt nicht gefunden.",
         "contactMissingEmail": "Der Kontakt hat keine E-Mail-Adresse.",
         "contactInvalidEmail": "Der Kontakt hat eine ungültige E-Mail-Adresse.",
+        "contactInactive": "Dieser Kontakt ist nicht mehr aktiv. Bitte wenden Sie sich an Ihren Dienstleister.",
         "userExistsForContact": "Für diesen Kontakt existiert bereits ein Benutzerkonto.",
         "portalUserAlreadyExists": "Für diese E-Mail-Adresse existiert bereits ein Konto. Bitte melden Sie sich an oder setzen Sie Ihr Passwort auf der Anmeldeseite zurück.",
         "noDefaultClient": "Für diesen Mandanten ist kein Standard-Kunde konfiguriert.",
@@ -306,7 +307,9 @@
         "invitationNotFound": "Einladung nicht gefunden.",
         "revokeFailed": "Die Einladung konnte nicht widerrufen werden. Bitte versuche es erneut.",
         "batchLimitExceeded": "Zu viele Kontakte in einer Anfrage. Bitte laden Sie weniger Kontakte auf einmal ein.",
-        "noTargetsSelected": "Wählen Sie mindestens einen Kontakt zum Einladen aus."
+        "noTargetsSelected": "Wählen Sie mindestens einen Kontakt zum Einladen aus.",
+        "invitationStateMismatch": "Diese Einladung ist nicht mehr gültig. Bitte fordern Sie eine neue bei Ihrem Dienstleister an.",
+        "rateLimited": "Zu viele Versuche. Bitte warten Sie einige Minuten und versuchen Sie es erneut."
       }
     },
     "features": {

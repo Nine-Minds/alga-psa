@@ -53,7 +53,7 @@ import { useToast } from '@alga-psa/ui';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const PORTAL_INVITE_ERROR_KEYS: Partial<Record<PortalInvitationErrorCode, string>> = {
   PERMISSION_DENIED_INVITE: 'contactPortalTab.toast.errors.permissionDeniedInvite',
@@ -61,6 +61,7 @@ const PORTAL_INVITE_ERROR_KEYS: Partial<Record<PortalInvitationErrorCode, string
   CONTACT_NOT_FOUND: 'contactPortalTab.toast.errors.contactNotFound',
   CONTACT_MISSING_EMAIL: 'contactPortalTab.toast.errors.contactMissingEmail',
   CONTACT_INVALID_EMAIL: 'contactPortalTab.toast.errors.contactInvalidEmail',
+  CONTACT_INACTIVE: 'contactPortalTab.toast.errors.contactInactive',
   USER_EXISTS_FOR_CONTACT: 'contactPortalTab.toast.errors.userExistsForContact',
   PORTAL_USER_ALREADY_EXISTS: 'contactPortalTab.toast.errors.portalUserAlreadyExists',
   NO_DEFAULT_CLIENT: 'contactPortalTab.toast.errors.noDefaultClient',
@@ -69,16 +70,10 @@ const PORTAL_INVITE_ERROR_KEYS: Partial<Record<PortalInvitationErrorCode, string
   BASE_URL_NOT_CONFIGURED: 'contactPortalTab.toast.errors.noBaseUrl',
   INVITATION_FAILED: 'contactPortalTab.toast.sendInviteFailed',
   INVITATION_NOT_FOUND: 'contactPortalTab.toast.errors.invitationNotFound',
-  REVOKE_FAILED: 'contactPortalTab.toast.revokeInviteFailed'
+  REVOKE_FAILED: 'contactPortalTab.toast.revokeInviteFailed',
+  RATE_LIMITED: 'contactPortalTab.toast.errors.rateLimited'
 };
 
-// Catch-all codes whose localized message is generic ("Failed to send
-// invitation"). When the server attached a specific reason, show that instead
-// of masking it with the generic translation.
-const GENERIC_PORTAL_INVITE_ERROR_CODES: ReadonlySet<PortalInvitationErrorCode> = new Set([
-  'INVITATION_FAILED',
-  'REVOKE_FAILED'
-]);
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
   isActionMessageError(value) || isActionPermissionError(value);
 
@@ -101,6 +96,13 @@ interface ContactPortalTabProps {
     canUpdateRoles: boolean;
     canRead: boolean;
   };
+  /**
+   * Called after an invitation is sent, resent or revoked here. Whoever opened
+   * this tab (the contact list behind a drawer, for one) shows the contact's
+   * invitation state elsewhere, and that state is stale the moment this tab
+   * changes it.
+   */
+  onInvitationChanged?: () => void;
 }
 
 interface ClientRole {
@@ -113,8 +115,13 @@ interface UserRole {
   role_name: string;
 }
 
-export function ContactPortalTab({ contact, currentUserPermissions }: ContactPortalTabProps) {
+export function ContactPortalTab({
+  contact,
+  currentUserPermissions,
+  onInvitationChanged
+}: ContactPortalTabProps) {
   const { t } = useTranslation(['msp/contacts', 'msp/settings']);
+  const { formatDate: formatLocalizedDate } = useFormatters();
 
   const translatePortalInvitationError = (
     result: { error?: string; errorCode?: PortalInvitationErrorCode },
@@ -122,15 +129,12 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
     defaultValue: string
   ): string => {
     if (result.errorCode) {
-      if (GENERIC_PORTAL_INVITE_ERROR_CODES.has(result.errorCode) && result.error) {
-        return result.error;
-      }
       const key = PORTAL_INVITE_ERROR_KEYS[result.errorCode];
       if (key) {
-        return t(key, { defaultValue: result.error ?? defaultValue });
+        return t(key, { defaultValue });
       }
     }
-    return result.error || t(defaultKey, { defaultValue });
+    return t(defaultKey, { defaultValue });
   };
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -446,10 +450,11 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       if (result.success) {
         toast({
           title: t('contactPortalTab.toast.successTitle', { defaultValue: 'Success' }),
-          description: result.message || t('contactPortalTab.toast.sendInviteSuccess', { defaultValue: 'Portal invitation sent successfully!' })
+          description: t('contactPortalTab.toast.sendInviteSuccess', { defaultValue: 'Portal invitation sent successfully!' })
         });
         // Reload invitation history to show the new invitation
         await loadData();
+        onInvitationChanged?.();
       } else {
         toast({
           title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
@@ -481,6 +486,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
         });
         // Reload invitation history
         await loadData();
+        onInvitationChanged?.();
       } else {
         toast({
           title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
@@ -517,9 +523,10 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       if (result.success) {
         toast({
           title: t('contactPortalTab.toast.successTitle', { defaultValue: 'Success' }),
-          description: result.message || t('contactPortalTab.toast.resendInviteSuccess', { defaultValue: 'Portal invitation resent successfully!' })
+          description: t('contactPortalTab.toast.resendInviteSuccess', { defaultValue: 'Portal invitation resent successfully!' })
         });
         await loadData();
+        onInvitationChanged?.();
       } else {
         toast({
           title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
@@ -540,8 +547,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
   };
 
   const formatDate = (dateValue: string | Date) => {
-    const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
-    return date.toLocaleDateString('en-US', {
+    return formatLocalizedDate(dateValue, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -1257,6 +1263,21 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {t('contactPortalTab.history.sentPrefix', { defaultValue: 'Sent:' })} {formatDate(invitation.created_at)}
+                          {/* A resend renews this same invitation, so without
+                              this the history would still show only the day it
+                              was first created. */}
+                          {invitation.last_sent_at && (
+                            <span> • {t('contactPortalTab.history.lastSentPrefix', { defaultValue: 'Last sent:' })} {formatDate(invitation.last_sent_at)}</span>
+                          )}
+                          {/* How many times it was sent again, so "Last sent"
+                              is not the only trace of a chase-up. */}
+                          {invitation.resend_count ? (
+                            <span> • {t('contactPortalTab.history.resendCount', {
+                              count: invitation.resend_count,
+                              defaultValue_one: 'sent again once',
+                              defaultValue_other: 'sent again {{count}} times',
+                            })}</span>
+                          ) : null}
                           {invitation.status === 'pending' && (
                             <span> • {t('contactPortalTab.history.expiresPrefix', { defaultValue: 'Expires:' })} {formatDate(invitation.expires_at)}</span>
                           )}
@@ -1264,6 +1285,21 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                             <span> • {t('contactPortalTab.history.usedPrefix', { defaultValue: 'Used:' })} {formatDate(invitation.used_at)}</span>
                           )}
                         </div>
+                        {/* The link is refused when it is opened even though
+                            its expiry has not passed, so the row says why
+                            instead of leaving the MSP to wonder why an
+                            invitation sent yesterday reads as expired. */}
+                        {invitation.unusable_reason && (
+                          <div className="text-xs text-[rgb(var(--color-status-warning))]">
+                            {invitation.unusable_reason === 'contact_inactive'
+                              ? t('contactPortalTab.history.unusable.contactInactive', {
+                                defaultValue: 'This contact is inactive, so the link cannot be used. Reactivate the contact, then send a new invitation.',
+                              })
+                              : t('contactPortalTab.history.unusable.emailChanged', {
+                                defaultValue: 'This invitation was sent to an address the contact no longer has, so the link no longer works. Resend it to mail a new link to the contact\'s current address.',
+                              })}
+                          </div>
+                        )}
                       </div>
 
                       {currentUserPermissions.canInvite && (
