@@ -53,6 +53,8 @@ describe('contactActions tenant-scoped query contract', () => {
     expect(invitationSection).toContain("scopedDb.tenantJoin(q, 'clients as comp'");
     expect(invitationSection).not.toContain("trx('contacts as c')");
     expect(invitationSection).not.toContain(".where('c.tenant', tenant)");
+    // NULL active flags have the same eligibility in preview and batch sends.
+    expect(invitationSection).toContain("qb.whereRaw('coalesce(c.is_inactive, false) = ?', [status === 'inactive'])");
 
     expect(phoneTypeSection).toContain("tenantScopedTable(trx, 'contact_phone_type_definitions', tenant)");
     expect(phoneTypeSection).not.toContain("trx('contact_phone_type_definitions')");
