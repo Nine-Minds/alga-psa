@@ -633,7 +633,7 @@ export const getContactsEligibleForInvitation = withAuth(async (
         .whereNull('u.user_id')
         .modify((qb: Knex.QueryBuilder) => {
           if (clientId) qb.andWhere('c.client_id', clientId);
-          if (status !== 'all') qb.andWhere('c.is_inactive', status === 'inactive');
+          if (status !== 'all') qb.whereRaw('coalesce(c.is_inactive, false) = ?', [status === 'inactive']);
         })
         .select('c.*', 'comp.client_name')
         .orderBy('c.full_name', 'asc');
