@@ -178,7 +178,8 @@ function actAsUiApprover(f: Awaited<ReturnType<typeof seed>>, actorId = f.actor)
 async function queueTwoUiApprovalsBehindSheetLock(
   tenantId: string,
   sheetId: string,
-  start: () => Promise<unknown>[]
+  startWinner: () => Promise<unknown>,
+  startCompetitor: () => Promise<unknown>
 ): Promise<unknown[]> {
   let release!: () => void;
   let locked!: () => void;
@@ -191,11 +192,10 @@ async function queueTwoUiApprovalsBehindSheetLock(
   });
   await lockAcquired;
   const pending: Promise<unknown>[] = [];
-  try {
-    pending.push(...start());
+  const waitForBlockedQueries = async (minimum: number) => {
     const deadline = Date.now() + 5000;
     let blockedQueries = 0;
-    while (Date.now() < deadline && blockedQueries < 2) {
+    while (Date.now() < deadline && blockedQueries < minimum) {
       const query = await db.raw(`
         SELECT count(*)::int AS count
         FROM pg_stat_activity
@@ -204,9 +204,15 @@ async function queueTwoUiApprovalsBehindSheetLock(
           AND query ILIKE '%time_sheets%'
       `);
       blockedQueries = Number(query.rows[0]?.count ?? 0);
-      if (blockedQueries < 2) await new Promise((resolve) => setTimeout(resolve, 25));
+      if (blockedQueries < minimum) await new Promise((resolve) => setTimeout(resolve, 25));
     }
-    expect(blockedQueries).toBeGreaterThanOrEqual(2);
+    expect(blockedQueries).toBeGreaterThanOrEqual(minimum);
+  };
+  try {
+    pending.push(startWinner());
+    await waitForBlockedQueries(1);
+    pending.push(startCompetitor());
+    await waitForBlockedQueries(2);
     release();
     await lockHolder;
     return await Promise.all(pending);
@@ -796,13 +802,18 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     grants.byUser.set(f.actor, new Set(['time_sheet:approve', 'time_sheet:read_all']));
     grants.byUser.set(otherApprover, new Set(['time_sheet:approve', 'time_sheet:read_all']));
 
-    const [singleResult, bulkResult] = await queueTwoUiApprovalsBehindSheetLock(f.tenantId, sheetId, () => {
-      actAsUiApprover(f, f.actor);
-      const single = approveTimeSheetAction(sheetId, f.actor);
-      actAsUiApprover(f, otherApprover);
-      const bulk = bulkApproveTimeSheets([sheetId], otherApprover);
-      return [single, bulk];
-    });
+    const [singleResult, bulkResult] = await queueTwoUiApprovalsBehindSheetLock(
+      f.tenantId,
+      sheetId,
+      () => {
+        actAsUiApprover(f, f.actor);
+        return approveTimeSheetAction(sheetId, f.actor);
+      },
+      () => {
+        actAsUiApprover(f, otherApprover);
+        return bulkApproveTimeSheets([sheetId], otherApprover);
+      }
+    );
 
     expect(singleResult).toBeUndefined();
     expect(bulkResult).toMatchObject({ actionError: expect.any(String) });
@@ -821,13 +832,18 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     grants.byUser.set(f.actor, new Set(['time_sheet:approve', 'time_sheet:read_all']));
     grants.byUser.set(otherApprover, new Set(['time_sheet:approve', 'time_sheet:read_all']));
 
-    const [firstResult, staleResult] = await queueTwoUiApprovalsBehindSheetLock(f.tenantId, sheetId, () => {
-      actAsUiApprover(f, f.actor);
-      const first = bulkApproveTimeSheets([sheetId], f.actor);
-      actAsUiApprover(f, otherApprover);
-      const stale = bulkApproveTimeSheets([sheetId], otherApprover);
-      return [first, stale];
-    });
+    const [firstResult, staleResult] = await queueTwoUiApprovalsBehindSheetLock(
+      f.tenantId,
+      sheetId,
+      () => {
+        actAsUiApprover(f, f.actor);
+        return bulkApproveTimeSheets([sheetId], f.actor);
+      },
+      () => {
+        actAsUiApprover(f, otherApprover);
+        return bulkApproveTimeSheets([sheetId], otherApprover);
+      }
+    );
 
     expect(firstResult).toEqual({ success: true });
     expect(staleResult).toMatchObject({ actionError: expect.any(String) });
