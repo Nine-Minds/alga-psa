@@ -22,6 +22,7 @@ import { POST as bulkApprovalRoute } from '@/app/api/v1/time-sheets/bulk/route';
 import { POST as rejectTimeSheetRoute } from '@/app/api/v1/time-sheets/[id]/reject/route';
 import { GET as exportTimeSheetsRoute } from '@/app/api/v1/time-sheets/export/route';
 import { reverseTimeSheetApproval } from '@alga-psa/scheduling/actions/timeSheetActions';
+import { approveTimeSheet as approveTimeSheetAction } from '@alga-psa/scheduling/actions/timeSheetActions';
 import { registerTimeSource, resetTimeSourcesForTests } from '@alga-psa/scheduling/lib/timeSource';
 
 /**
@@ -52,12 +53,21 @@ const grants = vi.hoisted(() => ({
   has: async (user: { user_id: string }, resource: string, action: string) =>
     grants.byUser.get(user.user_id)?.has(`${resource}:${action}`) ?? false,
 }));
+const uiActionActor = vi.hoisted(() => ({ user: null as any }));
 const approvalBundleRules = vi.hoisted(() => ({ rules: [] as Array<Record<string, unknown>> }));
-vi.mock('@alga-psa/auth', async (importOriginal) => ({
-  ...(await importOriginal<Record<string, unknown>>()),
+vi.mock('@alga-psa/auth', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, any>>();
+  return {
+  ...actual,
+  withAuth: (handler: (...args: any[]) => Promise<any>) => (...args: any[]) => {
+    const user = uiActionActor.user;
+    if (!user) return actual.withAuth(handler)(...args);
+    return runWithTenant(user.tenant, () => handler(user, { tenant: user.tenant }, ...args));
+  },
   hasPermission: vi.fn(async (user: { user_id: string }, resource: string, action: string) =>
     grants.has(user, resource, action)),
-}));
+  };
+});
 vi.mock('@/lib/auth/rbac', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   hasPermission: vi.fn(async (user: { user_id: string }, resource: string, action: string) =>
@@ -136,6 +146,35 @@ function serviceFor(tenantId: string): TimeSheetService {
 const contextFor = (tenantId: string, userId: string) =>
   ({ tenant: tenantId, userId, user: { user_id: userId, tenant: tenantId, user_type: 'internal' } }) as any;
 
+async function seedUiApprovalSheet(f: Awaited<ReturnType<typeof seed>>, status: 'DRAFT' | 'CHANGES_REQUESTED' | 'SUBMITTED', subjectId = f.subject) {
+  const periodId = uuidv4();
+  await tenantTable(f.tenantId, 'time_periods').insert({
+    period_id: periodId, tenant: f.tenantId, start_date: '2026-03-02', end_date: '2026-03-09',
+  });
+  const sheetId = uuidv4();
+  await tenantTable(f.tenantId, 'time_sheets').insert({
+    id: sheetId, tenant: f.tenantId, user_id: subjectId, period_id: periodId,
+    approval_status: status, submitted_at: status === 'SUBMITTED' ? db.fn.now() : null,
+  });
+  const entryId = uuidv4();
+  await tenantTable(f.tenantId, 'time_entries').insert({
+    tenant: f.tenantId, entry_id: entryId, user_id: subjectId, time_sheet_id: sheetId,
+    start_time: new Date('2026-03-03T10:00:00Z'), end_time: new Date('2026-03-03T11:00:00Z'),
+    work_date: '2026-03-03', work_timezone: 'UTC', approval_status: status,
+    billable_duration: 60, created_at: db.fn.now(), updated_at: db.fn.now(),
+  });
+  await tenantTable(f.tenantId, 'time_sheet_comments').insert({
+    tenant: f.tenantId, comment_id: uuidv4(), time_sheet_id: sheetId, user_id: subjectId,
+    comment: 'seed comment', is_approver: false, created_at: db.fn.now(),
+  });
+  return { sheetId, entryId };
+}
+
+function actAsUiApprover(f: Awaited<ReturnType<typeof seed>>, actorId = f.actor) {
+  uiActionActor.user = { user_id: actorId, tenant: f.tenantId, user_type: 'internal' };
+  vi.spyOn(algaDb, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: f.tenantId } as any);
+}
+
 const sheetsFor = (tenantId: string, userId: string) =>
   tenantTable(tenantId, 'time_sheets').where({ user_id: userId }).select('*');
 
@@ -182,6 +221,7 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
 
   afterEach(async () => {
     resetTimeSourcesForTests();
+    uiActionActor.user = null;
     vi.mocked(publishUnregisteredEventType).mockClear();
     grants.byUser.clear();
     approvalBundleRules.rules = [];
@@ -620,6 +660,109 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: sheet.id }).first()).toEqual(submittedSheetBeforeApproval);
     expect(await tenantTable(f.tenantId, 'time_entries').where({ entry_id: entryId }).first()).toEqual(submittedEntryBeforeApproval);
     expect(await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: sheet.id }).select('*')).toEqual(submittedCommentsBeforeApproval);
+  });
+
+  it.each(['DRAFT', 'CHANGES_REQUESTED'] as const)(
+    'UI approval rejects %s and leaves sheet, entries, and comments unchanged', async (status) => {
+      const f = await seed();
+      const { sheetId } = await seedUiApprovalSheet(f, status);
+      actAsUiApprover(f);
+      grants.byUser.set(f.actor, new Set(['time_sheet:approve', 'time_sheet:read_all']));
+      const beforeSheet = await tenantTable(f.tenantId, 'time_sheets').where({ id: sheetId }).first();
+      const beforeEntries = await tenantTable(f.tenantId, 'time_entries').where({ time_sheet_id: sheetId }).orderBy('entry_id').select('*');
+      const beforeComments = await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: sheetId }).orderBy('comment_id').select('*');
+
+      const result = await approveTimeSheetAction(sheetId, f.actor);
+
+      expect(result).toMatchObject({ actionError: expect.any(String) });
+      expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: sheetId }).first()).toEqual(beforeSheet);
+      expect(await tenantTable(f.tenantId, 'time_entries').where({ time_sheet_id: sheetId }).orderBy('entry_id').select('*')).toEqual(beforeEntries);
+      expect(await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: sheetId }).orderBy('comment_id').select('*')).toEqual(beforeComments);
+    }
+  );
+
+  it('UI approval persists the authorized approval for another subject', async () => {
+    const f = await seed();
+    const { sheetId, entryId } = await seedUiApprovalSheet(f, 'SUBMITTED');
+    actAsUiApprover(f);
+    grants.byUser.set(f.actor, new Set(['time_sheet:approve', 'time_sheet:read_all']));
+
+    const result = await approveTimeSheetAction(sheetId, f.actor);
+
+    expect(result).toBeUndefined();
+    expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: sheetId }).first())
+      .toMatchObject({ approval_status: 'APPROVED', approved_by: f.actor });
+    expect((await tenantTable(f.tenantId, 'time_sheets').where({ id: sheetId }).first()).approved_at).not.toBeNull();
+    expect(await tenantTable(f.tenantId, 'time_entries').where({ entry_id: entryId }).first())
+      .toMatchObject({ approval_status: 'APPROVED' });
+    expect(await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: sheetId }).orderBy('created_at'))
+      .toMatchObject([{ comment: 'seed comment', is_approver: false }, { comment: 'Time sheet approved', user_id: f.actor, is_approver: true }]);
+  });
+
+  it('UI approval serializes concurrent requests that both wait on the submitted row', async () => {
+    const f = await seed();
+    const { sheetId } = await seedUiApprovalSheet(f, 'SUBMITTED');
+    actAsUiApprover(f);
+    grants.byUser.set(f.actor, new Set(['time_sheet:approve', 'time_sheet:read_all']));
+
+    let release!: () => void;
+    let locked!: () => void;
+    const releaseLock = new Promise<void>((resolve) => { release = resolve; });
+    const lockAcquired = new Promise<void>((resolve) => { locked = resolve; });
+    const lockHolder = db.transaction(async (trx) => {
+      await tenantDb(trx, f.tenantId).table('time_sheets').where({ id: sheetId }).forUpdate().first();
+      locked();
+      await releaseLock;
+    });
+    await lockAcquired;
+    try {
+      const first = approveTimeSheetAction(sheetId, f.actor);
+      const second = approveTimeSheetAction(sheetId, f.actor);
+      const deadline = Date.now() + 5000;
+      let blockedQueries = 0;
+      while (Date.now() < deadline && blockedQueries < 2) {
+        const query = await db.raw(`
+          SELECT count(*)::int AS count
+          FROM pg_stat_activity
+          WHERE datname = current_database()
+            AND wait_event_type = 'Lock'
+            AND query ILIKE '%time_sheets%'
+        `);
+        blockedQueries = Number(query.rows[0]?.count ?? 0);
+        if (blockedQueries < 2) await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      expect(blockedQueries).toBeGreaterThanOrEqual(2);
+      release();
+      await lockHolder;
+      const results = await Promise.all([first, second]);
+      expect(results.filter((result) => result === undefined)).toHaveLength(1);
+      expect(results.filter((result) => result !== undefined)).toHaveLength(1);
+    } finally {
+      release();
+      await lockHolder;
+    }
+
+    expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: sheetId }).first())
+      .toMatchObject({ approval_status: 'APPROVED', approved_by: f.actor });
+    expect(await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: sheetId, is_approver: true })).toHaveLength(1);
+  });
+
+  it('UI approval keeps self-approval and subject authorization restrictions', async () => {
+    const f = await seed();
+    const self = await seedUiApprovalSheet(f, 'SUBMITTED', f.actor);
+    const unrelated = await seedUiApprovalSheet(f, 'SUBMITTED');
+    actAsUiApprover(f);
+    grants.byUser.set(f.actor, new Set(['time_sheet:approve']));
+
+    const selfBefore = await tenantTable(f.tenantId, 'time_sheets').where({ id: self.sheetId }).first();
+    const selfResult = await approveTimeSheetAction(self.sheetId, f.actor);
+    expect(selfResult).toMatchObject({ permissionError: expect.any(String) });
+    expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: self.sheetId }).first()).toEqual(selfBefore);
+
+    const unrelatedBefore = await tenantTable(f.tenantId, 'time_sheets').where({ id: unrelated.sheetId }).first();
+    const unrelatedResult = await approveTimeSheetAction(unrelated.sheetId, f.actor);
+    expect(unrelatedResult).toMatchObject({ permissionError: expect.any(String) });
+    expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: unrelated.sheetId }).first()).toEqual(unrelatedBefore);
   });
 
   it('enforces approval bundle rules through REST single and bulk approval without partial writes', async () => {

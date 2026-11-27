@@ -11,6 +11,77 @@ export class TimeSheetReversalError extends Error {
   }
 }
 
+export interface TimeSheetApprovalResult {
+  timeSheetId: string;
+  employeeId: string;
+  entryCount: number | string;
+  totalHours: number | string | null;
+}
+
+/**
+ * Approve a submitted sheet through the shared, row-locked lifecycle path.
+ * Authorization runs after the tenant-scoped sheet lock is acquired and before
+ * any lifecycle state is inspected or changed.
+ */
+export async function approveSubmittedTimeSheet(input: {
+  knex: Knex;
+  tenant: string;
+  timeSheetId: string;
+  actorId: string;
+  comment?: string;
+  authorize: (trx: Knex.Transaction, sheet: Record<string, any>) => Promise<void>;
+}): Promise<TimeSheetApprovalResult> {
+  const { knex, tenant, timeSheetId, actorId, comment, authorize } = input;
+  let result!: TimeSheetApprovalResult;
+
+  await withTransaction(knex, async (trx) => {
+    const scopedDb = tenantDb(trx, tenant);
+    const sheet = await scopedDb.table('time_sheets').where({ id: timeSheetId }).forUpdate().first();
+    if (!sheet) throw new Error('Time sheet not found');
+
+    await authorize(trx, sheet);
+    if (sheet.approval_status !== 'SUBMITTED') {
+      throw new Error(`Time sheet ${timeSheetId} is not in a submitted state (current state: ${sheet.approval_status})`);
+    }
+
+    const entriesInfo = await scopedDb.table('time_entries')
+      .where({ time_sheet_id: timeSheetId })
+      .select(trx.raw('COUNT(*) as entry_count'), trx.raw('SUM(billable_duration) / 60 as total_hours'))
+      .first();
+
+    const now = new Date();
+    await scopedDb.table('time_sheets').where({ id: timeSheetId }).update({
+      approval_status: 'APPROVED',
+      approved_at: now,
+      approved_by: actorId,
+    });
+    await scopedDb.table('time_entries').where({ time_sheet_id: timeSheetId }).update({
+      approval_status: 'APPROVED',
+      updated_at: now,
+    });
+    if (comment) {
+      await scopedDb.table('time_sheet_comments').insert({
+        comment_id: uuidv4(),
+        time_sheet_id: timeSheetId,
+        user_id: actorId,
+        comment,
+        created_at: trx.fn.now(),
+        is_approver: true,
+        tenant,
+      });
+    }
+
+    result = {
+      timeSheetId,
+      employeeId: sheet.user_id,
+      entryCount: entriesInfo?.entry_count ?? 0,
+      totalHours: entriesInfo?.total_hours ?? 0,
+    };
+  });
+
+  return result;
+}
+
 /** Shared, atomic lifecycle transition used by REST and the server action. */
 export async function reverseApprovedTimeSheet(input: {
   knex: Knex;

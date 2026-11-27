@@ -54,7 +54,7 @@ import {
   type CalendarAccess,
 } from '@alga-psa/scheduling/lib/calendarAccess';
 import { assertCanActOnBehalf, assertCanApproveSubject, resolveManagedSubjectUserIds } from '@alga-psa/scheduling/actions/timeEntryDelegationAuth';
-import { reverseApprovedTimeSheet, TimeSheetReversalError } from '@alga-psa/scheduling/lib/timeSheetApprovalTransition';
+import { approveSubmittedTimeSheet, reverseApprovedTimeSheet, TimeSheetReversalError } from '@alga-psa/scheduling/lib/timeSheetApprovalTransition';
 import { loadVisibleCalendars } from '@alga-psa/scheduling/lib/visibleCalendars';
 import type { IVisibleCalendar } from '@alga-psa/types';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
@@ -716,7 +716,34 @@ export class TimeSheetService extends BaseService<any> {
   async approveTimeSheet(id: string, data: ApproveTimeSheetData, context: ServiceContext): Promise<any> {
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'approveTimeSheet', [id, data, context]);
     if (delegated.handled) return delegated.value;
-    const result = await this.transitionTimeSheet(id, 'APPROVED', data, context);
+    const { knex } = await this.getKnex();
+    try {
+      await approveSubmittedTimeSheet({
+        knex,
+        tenant: context.tenant,
+        timeSheetId: id,
+        actorId: context.userId,
+        comment: data.approval_notes || undefined,
+        authorize: async (trx, sheet) => {
+          if (!await this.canApproveTimeSheets(context, trx)) {
+            throw new ForbiddenError('Permission denied: Cannot approve time sheets');
+          }
+          try {
+            await assertCanApproveSubject(context.user as any, context.tenant, sheet.user_id, trx);
+          } catch {
+            throw new ForbiddenError('Permission denied: Cannot act on this time sheet');
+          }
+          await assertHumanWorkOwner(trx, context.tenant, context.userId, 'approved_by');
+        },
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('not in a submitted state')) {
+        throw new ConflictError(`Cannot transition time sheet from ${error.message.split('(current state: ')[1]?.replace(/\)$/, '') ?? 'current state'} to APPROVED`);
+      }
+      if (error instanceof Error && error.message === 'Time sheet not found') throw new NotFoundError(error.message);
+      throw error;
+    }
+    const result = await this.getById(id, context);
     await publishUnregisteredEventType({ eventType: 'TIME_SHEET_APPROVED', payload: { tenantId: context.tenant, timeSheetId: id, approvedBy: context.userId, timestamp: new Date().toISOString() } });
     return result;
   }
