@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { verifyRepositoryInventory, vitestInventoryArtifacts } from '../lib/repository-inventory-artifacts.mjs';
+import { hasCurrentManualRunnerReview } from '../lib/vitest-inventory-collection.mjs';
 
 test('same-revision artifact inventory covers every lane and rejects stale, missing, empty and orphaned inputs', t => {
   const root = realpathSync(mkdtempSync(path.join(tmpdir(), 'repository-inventory-')));
@@ -72,4 +73,33 @@ test('same-revision artifact inventory covers every lane and rejects stale, miss
   assert.ok(check().failures.some(f => f.includes('ENOENT')));
   manualRunners[0].expires = '2000-01-01';
   assert.ok(check().failures.some(f => f.includes('unexpired review')));
+});
+
+test('inventory verification accepts a manual review on its expiry day, matching collection', t => {
+  // Manual collection accepted reviews expiring 2026-11-27 on that day, then
+  // the inventory verifier rejected the same reviews with a stricter copy of the check.
+  const root = realpathSync(mkdtempSync(path.join(tmpdir(), 'repository-inventory-expiry-')));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const input = path.join(root, 'artifacts'), revision = 'c'.repeat(40);
+  const source = { before: { revision, dirty: false, changes: [] }, after: { revision, dirty: false, changes: [] } };
+  const write = (file, value) => { mkdirSync(path.dirname(file), { recursive: true }); writeFileSync(file, JSON.stringify(value)); };
+  const manualFile = 'manual.test.js';
+  write(path.join(root, manualFile), {});
+  const manualDir = path.join(input, 'manual-test-inventory');
+  write(path.join(manualDir, 'evidence.json'), { source, sourceRoot: root, status: 'passed', executionVerified: false });
+  write(path.join(manualDir, 'manual', 'collected.json'), [manualFile]);
+  write(path.join(manualDir, 'manual', 'collected-tests.json'), [{ file: manualFile, name: 'manual case' }]);
+  const runner = { runner: 'manual', mandatory: false, owner: 'Fixture owner', runtime: 'Manual',
+    reason: 'Reviewed fixture', issue: 'fixture-1', expires: '2026-11-27' };
+  const manualFailures = (now, expires = runner.expires) => verifyRepositoryInventory({ root, revision, input,
+    candidates: [manualFile], manualRunners: [{ ...runner, expires }], exclusions: [], now })
+    .failures.filter(f => f.startsWith('manual:'));
+  const expiryDay = new Date('2026-11-27T20:35:48Z');
+
+  assert.equal(hasCurrentManualRunnerReview(runner, expiryDay), true);
+  assert.deepEqual(manualFailures(expiryDay), []);
+  assert.deepEqual(manualFailures(new Date('2026-11-28T00:00:00Z')),
+    ['manual: Manual suite requires an owned, unexpired review: manual']);
+  assert.deepEqual(manualFailures(expiryDay, '2026-11-26'),
+    ['manual: Manual suite requires an owned, unexpired review: manual']);
 });
