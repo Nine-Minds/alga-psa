@@ -1063,5 +1063,25 @@
     "doc": "sdk/docs/openapi/alga-openapi.ee.json",
     "pointer": "/paths/~1api~1v1~1users~1bulk~1deactivate/put/requestBody/content/application~1json/schema/$ref",
     "reason": "alga-2026-0003355: the body is now AccessBulkDeactivateUsersBodyV1 (user_ids[1..100] plus deactivate) instead of the single-user AccessUpdateUserBodyV1 the mis-wired route documented. That wiring read the literal path segment 'bulk' as {id} and rejected every request with 'Invalid user ID format' before it looked at the body, so no caller can have depended on the update shape."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetStatsPayload/properties/data",
+    "reason": "alga-2026-0003448 (PR 4542): AssetStatsPayload documented a nested `data` object and `_links` that GET /api/v1/assets/stats never returned (createApiResponse puts the statistics object itself in `data`, with no links). The schema now describes the body the route actually sends, so these two properties leave the document; no caller ever received them."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetStatsPayload/properties/_links",
+    "reason": "alga-2026-0003448 (PR 4542): AssetStatsPayload documented a nested `data` object and `_links` that GET /api/v1/assets/stats never returned (createApiResponse puts the statistics object itself in `data`, with no links). The schema now describes the body the route actually sends, so these two properties leave the document; no caller ever received them."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetStatsPayload/properties/data",
+    "reason": "alga-2026-0003448 (PR 4542): AssetStatsPayload documented a nested `data` object and `_links` that GET /api/v1/assets/stats never returned (createApiResponse puts the statistics object itself in `data`, with no links). The schema now describes the body the route actually sends, so these two properties leave the document; no caller ever received them."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetStatsPayload/properties/_links",
+    "reason": "alga-2026-0003448 (PR 4542): AssetStatsPayload documented a nested `data` object and `_links` that GET /api/v1/assets/stats never returned (createApiResponse puts the statistics object itself in `data`, with no links). The schema now describes the body the route actually sends, so these two properties leave the document; no caller ever received them."
   }
 ]
