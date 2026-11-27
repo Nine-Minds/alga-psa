@@ -1712,13 +1712,24 @@ export const checkExistingEmails = withAuth(async (
     }
 
     const existingEmails = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const primaryEmails = await tenantScopedTable(trx, 'contacts', tenant)
-        .select('email')
-        .whereIn('email', sanitizedEmails);
+      const narrowing = await (await createClientScopeContext(trx, tenant, user)).narrowing('contact', 'contacts');
 
-      const additionalEmails = await tenantScopedTable(trx, 'contact_additional_email_addresses', tenant)
-        .select('normalized_email_address')
-        .whereIn('normalized_email_address', sanitizedEmails);
+      const primaryQuery = tenantScopedTable(trx, 'contacts', tenant)
+        .select('contacts.email')
+        .whereIn('contacts.email', sanitizedEmails);
+      const primaryEmails = await narrowing.apply(primaryQuery);
+
+      // The additional-email leg is joined to its contact so the same contact read scope applies.
+      const additionalQuery = tenantScopedTable(trx, 'contact_additional_email_addresses', tenant)
+        .select('contact_additional_email_addresses.normalized_email_address')
+        .whereIn('contact_additional_email_addresses.normalized_email_address', sanitizedEmails);
+      tenantDb(trx, tenant).tenantJoin(
+        additionalQuery,
+        'contacts',
+        'contacts.contact_name_id',
+        'contact_additional_email_addresses.contact_name_id'
+      );
+      const additionalEmails = await narrowing.apply(additionalQuery);
 
       return [
         ...primaryEmails.map((contact: { email: string }) => contact.email),

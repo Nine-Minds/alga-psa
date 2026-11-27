@@ -12,6 +12,8 @@ const testState = vi.hoisted(() => ({
 }));
 
 // The client-scope create gate needs a real connection; its decisions are covered by the T008 integration test.
+vi.mock('@alga-psa/authorization/clientScopeAuthorization', () => ({ createClientScopeContext: async () => ({ narrowing: async () => ({ narrowed: false, apply: (query: unknown) => query }), permits: async () => true }) }));
+
 vi.mock('@alga-psa/authorization/recordCreateAuthorization', () => ({
   assertRecordCreateAllowed: testState.assertRecordCreateAllowedMock,
 }));
