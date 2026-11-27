@@ -196,6 +196,7 @@ function emailTemplateDefs() {
   defs.push(require(path.join(migrationsDir, 'utils/templates/email/billing/prepaidBucketThresholdReached.cjs')).getTemplate());
   defs.push(require(path.join(migrationsDir, 'utils/templates/email/tickets/ticketCommentAddedClient.cjs')).getTemplate());
   defs.push(require(path.join(migrationsDir, 'utils/templates/email/tickets/ticketClosedClient.cjs')).getTemplate());
+  defs.push(require(path.join(migrationsDir, 'utils/templates/email/system/userMentioned.cjs')).getTemplate());
   return defs;
 }
 

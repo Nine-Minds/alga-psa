@@ -32,6 +32,12 @@ vi.mock('@alga-psa/formatting/blocknoteUtils', () => ({
 vi.mock('@alga-psa/notifications/notifications/emailLocaleResolver', () => ({ getTenantDefaultLocale: async () => 'en' }));
 vi.mock('@alga-psa/notifications', () => ({ getEmailEventChannel: () => 'email' }));
 vi.mock('../../../notifications/sendEventEmail', () => ({ sendEventEmail: async (request: any) => { state.emails.push(request); } }));
+vi.mock('../../../notifications/mentionEmailDelivery', () => ({
+  deliverUserMentionEmail: vi.fn(async (_db: unknown, _tenantId: string, userId: string, input: any) => {
+    state.emails.push({ to: `${userId}@example.test`, context: input });
+    return true;
+  }),
+}));
 vi.mock('@alga-psa/tenancy/server', () => ({ resolveTenantAppBase: async () => ({ source: 'canonical', baseUrl: 'https://example.test' }) }));
 vi.mock('@alga-psa/core', () => ({ isValidEmail: (email: string) => email.includes('@') }));
 vi.mock('@alga-psa/core/logger', () => ({ default: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } }));
@@ -51,6 +57,10 @@ function fakeDb() {
         if (name === 'project_tasks') return { task_id: 'task-1', task_name: 'Secret task', assigned_to: state.primaryAssignee, phase_id: 'phase-1', project_id: 'resolved-project', project_name: 'Secret project' };
         if (name === 'users' && where?.user_id === 'author') return { user_id: 'author', first_name: 'Author', last_name: 'User', email: 'author@example.test' };
         if (name === 'users' && where?.user_id === 'primary') return { user_id: 'primary', email: 'primary@example.test' };
+        if (name === 'users' && where?.user_id) return { user_id: where.user_id, email: `${where.user_id}@example.test` };
+        if (name === 'notification_settings') return { is_enabled: true };
+        if (name === 'notification_subtypes') return { id: 42, category_id: 7, is_enabled: true };
+        if (name === 'notification_categories') return { is_enabled: true };
         return undefined;
       },
       insert: async () => undefined,
@@ -107,6 +117,13 @@ describe('task comment notification audience', () => {
     expect(state.notifications.map((request) => request.user_id)).toEqual(['allowed', 'primary', 'additional']);
     expect(state.notifications.some((request) => request.user_id === 'author' || request.user_id === 'denied')).toBe(false);
     expect(state.notifications.find((request) => request.user_id === 'allowed')?.metadata.commentText).toBe('secret comment body');
+    expect(state.emails.map((email) => email.to)).toEqual(['allowed@example.test']);
+    expect(state.emails[0]?.context).toEqual(expect.objectContaining({
+      entityType: 'task comment',
+      entityName: 'Secret task',
+      commentPreview: 'secret comment body',
+      url: '/task',
+    }));
   });
 
   it('gates added-comment primary and additional assignee notifications without mention deduplication', async () => {

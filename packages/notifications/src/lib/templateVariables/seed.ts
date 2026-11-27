@@ -5760,6 +5760,76 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
         ]
       }
     ]
+  },
+  {
+    "category": "system",
+    "templates": [
+      {
+        "templateName": "user-mentioned",
+        "variables": [
+          {
+            "path": "mention.author",
+            "type": "string",
+            "description": "Name of the person who @-mentioned the recipient.",
+            "example": "Jordan Lee",
+            "availability": "used"
+          },
+          {
+            "path": "mention.entityName",
+            "type": "string",
+            "description": "What the mention is on: the ticket number with a leading #, the task name, or the document name.",
+            "example": "#TIC-1042",
+            "availability": "used"
+          },
+          {
+            "path": "mention.contextName",
+            "type": "string",
+            "description": "Ticket title for a ticket mention, project name for a task mention; empty for a document.",
+            "example": "Email not syncing on front desk PC",
+            "availability": "used",
+            "notes": "Optional. Used inside {{#if mention.contextName}}."
+          },
+          {
+            "path": "mention.isTicket",
+            "type": "boolean",
+            "description": "True when the mention is in a ticket comment.",
+            "example": "true",
+            "availability": "used",
+            "notes": "Branch on it with {{#if mention.isTicket}}…{{else}}…{{/if}}."
+          },
+          {
+            "path": "mention.isTask",
+            "type": "boolean",
+            "description": "True when the mention is in a project task comment.",
+            "example": "false",
+            "availability": "used",
+            "notes": "A mention that is neither a ticket nor a task is in a document."
+          },
+          {
+            "path": "mention.isDocument",
+            "type": "boolean",
+            "description": "True when the mention is in a document.",
+            "example": "false",
+            "availability": "used"
+          },
+          {
+            "path": "mention.commentPreview",
+            "type": "string",
+            "description": "Plain-text excerpt of the comment containing the mention; empty for documents.",
+            "example": "@Sam can you check the mailbox quota on this one before we call the client back?",
+            "availability": "used",
+            "notes": "Optional. Used inside {{#if mention.commentPreview}}."
+          },
+          {
+            "path": "mention.url",
+            "type": "url",
+            "description": "Deep link that opens the ticket, task, or document where the mention was made.",
+            "example": "https://app.example.com/msp/tickets/sample-ticket-id",
+            "availability": "used"
+          }
+        ]
+      }
+    ]
   }
 ];
 

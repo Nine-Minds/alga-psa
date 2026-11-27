@@ -17,6 +17,7 @@ const CATEGORIES = [
   { name: 'Appointments', description: 'Appointment request and scheduling notifications', is_enabled: true, is_default_enabled: true },
   { name: 'SLA', description: 'SLA-related email notifications', is_enabled: true, is_default_enabled: true },
   { name: 'Prepaid Alerts', description: 'Low-balance alerts for prepaid credit and bucket hours', is_enabled: true, is_default_enabled: true },
+  { name: 'System', description: 'System and administrative notifications, including @-mentions', is_enabled: true, is_default_enabled: true },
 ];
 
 const SUBTYPES = [
@@ -88,6 +89,8 @@ const SUBTYPES = [
   { category: 'Prepaid Alerts', name: 'prepaid-credit-low-balance', description: 'When a client prepaid credit balance drops below its configured floor' },
   { category: 'Prepaid Alerts', name: 'prepaid-bucket-threshold-reached', description: 'When a client prepaid hour bucket reaches its configured consumption threshold' },
   { category: 'Prepaid Alerts', name: 'prepaid-replenishment-created', description: 'When an automatic prepaid replenishment invoice is created or issued' },
+  // System
+  { category: 'System', name: 'user-mentioned', description: 'When you are mentioned with @ in a task comment, ticket comment, or document' },
 ];
 
 /**
