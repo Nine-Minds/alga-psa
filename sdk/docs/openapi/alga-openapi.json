@@ -5047,9 +5047,20 @@
                 ],
                 "description": "Rounded average age in days from purchase_date, or null when unavailable."
               },
+              "asset_value_by_currency": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "description": "Sum of assets.purchase_cost grouped by purchase_cost_currency (assets without a currency count under the tenant default currency; assets with no purchase_cost are not counted). Amounts in different currencies are never added together. Omitted when purchase_cost is redacted or closed to the caller."
+              },
               "total_asset_value": {
                 "type": "number",
-                "description": "Sum of purchase_price values, treating null as zero."
+                "description": "Sum of purchase_cost across all valued assets. Present only when every valued asset shares one currency (see total_asset_value_currency); omitted for mixed-currency inventories or when purchase_cost is redacted or closed to the caller."
+              },
+              "total_asset_value_currency": {
+                "type": "string",
+                "description": "Currency code of total_asset_value. Present exactly when total_asset_value is present."
               },
               "assets_by_type": {
                 "type": "object",
@@ -5093,7 +5104,6 @@
               "total_assets",
               "assets_added_this_month",
               "average_asset_age_days",
-              "total_asset_value",
               "assets_by_type",
               "assets_by_status",
               "assets_by_client",

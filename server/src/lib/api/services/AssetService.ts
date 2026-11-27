@@ -810,6 +810,39 @@ export class AssetService extends BaseService<any> {
     return (settings?.default_currency_code as string | undefined) || 'USD';
   }
 
+  /** Tenant default currency, read through the tenant-scoped query builder. */
+  async getTenantDefaultCurrency(context: ServiceContext): Promise<string> {
+    const knex = await this.getDbForContext(context);
+    return this.resolveTenantCurrency(knex, context.tenant);
+  }
+
+  /**
+   * Asset value is never summed across currencies: amounts are grouped by purchase_cost_currency (a missing
+   * currency takes the tenant default). The single total is only reported when one currency is in play.
+   * Shared by the projection and SQL statistics paths so both return the same shape.
+   */
+  private summarizeAssetValue(
+    entries: Array<{ currency: string | null | undefined; amount: number }>,
+    tenantCurrency: string | undefined,
+  ): Record<string, any> {
+    const byCurrency: Record<string, number> = {};
+    for (const { currency, amount } of entries) {
+      const code = currency || tenantCurrency;
+      // Without a currency to file the amount under, any figure would be partial: omit rather than guess.
+      if (!code) return {};
+      byCurrency[code] = (byCurrency[code] ?? 0) + amount;
+    }
+    const codes = Object.keys(byCurrency);
+    if (codes.length > 1) return { asset_value_by_currency: byCurrency };
+    const totalCurrency = codes[0] ?? tenantCurrency;
+    return {
+      asset_value_by_currency: byCurrency,
+      ...(totalCurrency
+        ? { total_asset_value: byCurrency[totalCurrency] ?? 0, total_asset_value_currency: totalCurrency }
+        : {}),
+    };
+  }
+
   private async assertAssetExists(
     knex: Knex | Knex.Transaction,
     tenant: string,
@@ -1612,10 +1645,12 @@ export class AssetService extends BaseService<any> {
   }
 
   /** Aggregates only caller-authorized, already projected asset records. */
+  // LEVERAGE: pattern asset-stats-dual-path — value grouping shared via summarizeAssetValue; getBasicStatistics (SQL) is the second path.
   getStatisticsFromProjections(
     assets: Array<Record<string, any>>,
     deployableStatusSlugs: readonly string[],
     now = new Date(),
+    tenantCurrency?: string,
   ): Record<string, any> {
     const deployableStatuses = new Set(deployableStatusSlugs);
     const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
@@ -1649,13 +1684,20 @@ export class AssetService extends BaseService<any> {
       const purchasedAt = dateValue(asset.purchase_date);
       return purchasedAt ? [Math.floor((now.getTime() - purchasedAt.getTime()) / 86_400_000)] : [];
     });
-    // Purchase cost is summed only when every authorized asset exposes it: a cost hidden by redaction or closed
-    // to the caller's seat omits the aggregate rather than reporting a partial or zero total.
-    const assetValueReadable = assets.every((asset) => Object.hasOwn(asset, 'purchase_cost'));
-    const totalAssetValue = assets.reduce((sum, asset) => {
-      const value = Number(asset.purchase_cost ?? 0);
-      return sum + (Number.isFinite(value) ? value : 0);
-    }, 0);
+    // Value is reported only when every authorized asset exposes its cost and currency: a cost hidden by
+    // redaction or closed to the caller's seat omits all value fields rather than reporting a partial total.
+    const assetValueReadable = assets.every((asset) =>
+      Object.hasOwn(asset, 'purchase_cost') && Object.hasOwn(asset, 'purchase_cost_currency'));
+    const assetValue = assetValueReadable
+      ? this.summarizeAssetValue(
+          assets.flatMap((asset) => {
+            if (asset.purchase_cost === null || asset.purchase_cost === undefined) return [];
+            const amount = Number(asset.purchase_cost);
+            return Number.isFinite(amount) ? [{ currency: asset.purchase_cost_currency, amount }] : [];
+          }),
+          tenantCurrency,
+        )
+      : {};
 
     let warrantyExpiringSoon = 0;
     let warrantyExpired = 0;
@@ -1687,7 +1729,7 @@ export class AssetService extends BaseService<any> {
       average_asset_age_days: visibleAges.length
         ? Math.round(visibleAges.reduce((sum, age) => sum + age, 0) / visibleAges.length)
         : null,
-      ...(assetValueReadable ? { total_asset_value: totalAssetValue } : {}),
+      ...assetValue,
       assets_by_type: countBy('asset_type'),
       assets_by_status: countBy('status', 'Unknown'),
       assets_by_client: countBy('client_name', 'Unknown'),
@@ -1933,9 +1975,24 @@ export class AssetService extends BaseService<any> {
         knex.raw('COUNT(*) as total_assets'),
         knex.raw(`COUNT(CASE WHEN created_at >= date_trunc('month', NOW()) THEN 1 END) as assets_added_this_month`),
         knex.raw('AVG(EXTRACT(DAYS FROM NOW() - purchase_date)) as average_asset_age_days'),
-        ...(includeAssetValue ? [knex.raw('SUM(COALESCE(purchase_cost, 0)) as total_asset_value')] : [])
       ])
       .first();
+
+    // LEVERAGE: pattern asset-stats-dual-path — SQL GROUP BY feeding the same summarizeAssetValue as the projection path.
+    let assetValue: Record<string, any> = {};
+    if (includeAssetValue) {
+      const valueRows: Array<{ currency: string | null; amount: string | null }> = await scopedTable(
+        knex, context.tenant, this.tableName
+      )
+        .modify((query) => this.applyAssetScopeFromContext(query, context))
+        .whereNotNull('purchase_cost')
+        .groupBy('purchase_cost_currency')
+        .select(['purchase_cost_currency as currency', knex.raw('SUM(purchase_cost) as amount')]);
+      assetValue = this.summarizeAssetValue(
+        valueRows.map((row) => ({ currency: row.currency, amount: parseFloat(row.amount ?? '0') })),
+        await this.resolveTenantCurrency(knex, context.tenant),
+      );
+    }
 
     // FR-B5: "deployed" is every status whose kind is `deployable`, so a
     // tenant's custom "In use" counts and the literal `active` slug does not
@@ -1954,7 +2011,7 @@ export class AssetService extends BaseService<any> {
       deployed_assets: parseInt(String(deployed?.count ?? '0')),
       assets_added_this_month: parseInt(stats?.assets_added_this_month || '0'),
       average_asset_age_days: stats?.average_asset_age_days ? Math.round(parseFloat(stats.average_asset_age_days)) : null,
-      ...(includeAssetValue ? { total_asset_value: parseFloat(stats?.total_asset_value || '0') } : {}),
+      ...assetValue,
     };
   }
 
