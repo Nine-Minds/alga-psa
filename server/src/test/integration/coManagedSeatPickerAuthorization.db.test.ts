@@ -303,11 +303,12 @@ describeDb('seat pickers and actions return only what the operation allows', { s
     as(s.cX.userId, 'client');
     expect(ids(((await searchAssociations('client', '', 1, 50)) as any).options)).toEqual([s.clientX]);
     // The Documents contact loader now applies that same own-client rule to a portal user whose role grants
-    // document:read and contact:read; before this change it returned every active contact in the tenant.
+    // document:read and contact:read (AlgaDesk's stock client Admin and User roles do); before this change it
+    // returned every active contact in the tenant. No portal screen renders this picker; the action is callable.
     const portalPicker = await getAssociationContacts() as any[];
     expect(portalPicker.map((row) => row.contact_name_id)).toEqual([s.cX.contactId]);
     expect(portalPicker.map((row) => row.client_id)).toEqual([s.clientX]);
-    // A stock portal role (document:read, no contact:read) gets no contacts, before and after this change.
+    // A PSA stock portal role (client document:read, no client contact:read) gets no contacts, before and after.
     testState.grantsByUser.set(s.cX.userId, new Set(['document:read', 'document:create', 'document:update']));
     try {
       expect(await getAssociationContacts()).toEqual([]);
