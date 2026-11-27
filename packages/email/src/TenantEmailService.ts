@@ -85,6 +85,10 @@ export class TenantEmailService extends BaseEmailService {
   private mailboxStateKey: string | null = null;
   private providerStateQueue: Promise<void> = Promise.resolve();
   private usingSystemProvider = false;
+  // True only when the system provider is in use because the tenant's selected
+  // provider failed to initialize (EE). A tenant with no outbound provider
+  // configured uses the system provider deliberately and leaves this false.
+  private usingFallbackSystemProvider = false;
 
   private constructor(tenantId: string) {
     super();
@@ -437,6 +441,7 @@ export class TenantEmailService extends BaseEmailService {
             const systemProvider = await SystemEmailProviderFactory.createProvider();
             if (systemProvider) {
               this.usingSystemProvider = true;
+              this.usingFallbackSystemProvider = true;
               return systemProvider;
             }
           } catch (fallbackError) {
@@ -761,10 +766,11 @@ export class TenantEmailService extends BaseEmailService {
       const mailboxKey = JSON.stringify(mailboxState);
       const fingerprint = TenantEmailService.getProviderSettingsFingerprint(settings);
 
-      // A cached provider survives mailbox changes. A null one is retried when
-      // the mailbox changed or the retry window ended, so failures stay bounded.
+      // A healthy cached provider survives mailbox changes. A null provider or a
+      // fallback system provider is degraded: it is retried when the mailbox
+      // changed or the retry window ended, so failures stay bounded.
       const settingsUnchanged = this.initialized && fingerprint === this.providerSettingsFingerprint;
-      const reusable = this.emailProvider !== null
+      const reusable = (this.emailProvider !== null && !this.usingFallbackSystemProvider)
         || (this.failedProviderInitAt !== null
           && mailboxKey === this.mailboxStateKey
           && Date.now() - this.failedProviderInitAt < FAILED_PROVIDER_RETRY_MS);
@@ -791,7 +797,9 @@ export class TenantEmailService extends BaseEmailService {
       await this.initialize();
       this.providerSettingsFingerprint = fingerprint;
       this.mailboxStateKey = mailboxKey;
-      this.failedProviderInitAt = this.emailProvider === null ? Date.now() : null;
+      this.failedProviderInitAt = this.emailProvider === null || this.usingFallbackSystemProvider
+        ? Date.now()
+        : null;
       return {
         emailProvider: this.emailProvider,
         providerInitError: this.providerInitError,
@@ -815,6 +823,7 @@ export class TenantEmailService extends BaseEmailService {
     this.failedProviderInitAt = null;
     this.mailboxStateKey = null;
     this.usingSystemProvider = false;
+    this.usingFallbackSystemProvider = false;
   }
 
   // Strict, tenant-scoped read; errors propagate rather than meaning "no mailbox".

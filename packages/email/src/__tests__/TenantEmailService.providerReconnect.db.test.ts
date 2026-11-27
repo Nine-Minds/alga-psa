@@ -4,6 +4,7 @@ import { createFakeKnex, tenantDbMock } from './helpers/fakeKnex';
 // Only the Graph send boundary is stubbed; EmailProviderManager's real Microsoft
 // readiness check (status / is_active on email_providers) decides connectedness.
 const graph = vi.hoisted(() => ({ inits: 0, inFlight: 0, maxInFlight: 0, sent: [] as any[] }));
+const ee = vi.hoisted(() => ({ enabled: false, systemSent: 0, systemCreates: 0 }));
 const db = vi.hoisted(() => ({ knex: null as any, queries: [] as Array<{ table: string; tenant?: unknown }> }));
 
 vi.mock('@alga-psa/core/logger', () => ({
@@ -13,9 +14,20 @@ vi.mock('@alga-psa/core/rateLimit', () => ({
   TokenBucketRateLimiter: { getInstance: () => ({ isReady: () => false }) },
 }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({}));
-vi.mock('../features', () => ({ isEnterprise: false }));
+vi.mock('../features', () => ({ get isEnterprise() { return ee.enabled; } }));
 vi.mock('../system/SystemEmailProviderFactory', () => ({
-  SystemEmailProviderFactory: { createProvider: vi.fn(async () => null), getConfigFingerprint: () => 'system' },
+  SystemEmailProviderFactory: { createProvider: vi.fn(async () => {
+    if (!ee.enabled) return null;
+    ee.systemCreates += 1;
+    return {
+      providerId: 'system', providerType: 'resend', capabilities: {},
+      initialize: async () => {},
+      sendEmail: async () => {
+        ee.systemSent += 1;
+        return { success: true, messageId: `system-${ee.systemSent}`, providerId: 'system', providerType: 'resend', sentAt: new Date() };
+      },
+    };
+  }), getConfigFingerprint: () => 'system' },
 }));
 vi.mock('@alga-psa/db', () => ({
   getConnection: vi.fn(async () => db.knex),
@@ -237,5 +249,77 @@ describe('TenantEmailService Microsoft mailbox reconnect', () => {
     const mailboxQueries = db.queries.filter((q) => q.table === 'email_providers');
     expect(mailboxQueries.length).toBeGreaterThan(0);
     expect(mailboxQueries.every((q) => q.tenant === tenantA || q.tenant === tenantB)).toBe(true);
+  });
+});
+
+describe('TenantEmailService Enterprise system fallback after mailbox reconnect', () => {
+  let tables: any;
+  const tenant = 'tenant-ee-fallback';
+
+  beforeEach(async () => {
+    vi.useFakeTimers();
+    vi.stubEnv('EMAIL_FROM', 'noreply@system.example.test');
+    ee.enabled = true; ee.systemSent = 0; ee.systemCreates = 0;
+    graph.inits = 0; graph.inFlight = 0; graph.maxInFlight = 0; graph.sent.length = 0;
+    db.queries.length = 0;
+    tables = tenantTables(tenant, DOWN);
+    db.knex = createFakeKnex(tables);
+    await TenantEmailService.invalidateTenantSettings(tenant);
+  });
+
+  afterEach(() => {
+    ee.enabled = false;
+    vi.unstubAllEnvs();
+    vi.useRealTimers();
+  });
+
+  it('falls back, switches to Graph on reconnect, reuses it, and stays bounded while down', async () => {
+    // (a) disconnected: system provider once, no Graph
+    await expect(send(tenant)).resolves.toMatchObject({ success: true });
+    expect(ee.systemSent).toBe(1);
+    expect(graph.sent).toHaveLength(0);
+
+    // (d) bounded while down: no Microsoft re-init inside the window
+    // Each failed Microsoft init attempt builds exactly one system fallback provider.
+    const microsoftInits = () => ee.systemCreates;
+    expect(microsoftInits()).toBe(1);
+    await send(tenant);
+    await send(tenant);
+    expect(microsoftInits()).toBe(1);
+    expect(ee.systemSent).toBe(3);
+    vi.advanceTimersByTime(FAILED_PROVIDER_RETRY_MS + 1);
+    await send(tenant);
+    expect(microsoftInits()).toBe(2);
+    expect(ee.systemSent).toBe(4);
+    expect(graph.sent).toHaveLength(0);
+
+    // (b) reconnect only the mailbox row
+    reconnect(tables, tenant);
+    expect(tables.tenant_email_settings[0].updated_at).toBe(SETTINGS_UPDATED_AT);
+    await expect(send(tenant)).resolves.toMatchObject({ success: true });
+    expect(graph.sent).toHaveLength(1);
+    expect(ee.systemSent).toBe(4);
+
+    // (c) healthy reuse: same provider, no re-init
+    await send(tenant);
+    expect(graph.sent).toHaveLength(2);
+    expect(graph.inits).toBe(1);
+    expect(ee.systemSent).toBe(4);
+  });
+
+  it('keeps reusing the deliberate system provider when no outbound provider is configured', async () => {
+    tables.tenant_email_settings[0].provider_configs = [];
+    await send(tenant);
+    const createsAfterFirst = ee.systemCreates;
+    const queriesAfterFirst = db.queries.length;
+    vi.advanceTimersByTime(FAILED_PROVIDER_RETRY_MS * 3);
+    await send(tenant);
+    await send(tenant);
+    expect(ee.systemSent).toBe(3);
+    expect(ee.systemCreates).toBe(createsAfterFirst);
+    expect(graph.inits).toBe(0);
+    // Only the per-send settings/mailbox reads; no extra provider initialization.
+    expect(db.queries.filter((q) => q.table === 'microsoft_email_provider_config')).toHaveLength(0);
+    expect(db.queries.length).toBeGreaterThanOrEqual(queriesAfterFirst);
   });
 });
