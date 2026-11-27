@@ -29,6 +29,10 @@ import {
   resolveTenantCompanyName,
 } from './senderIdentity';
 
+// A failed provider init is cached only briefly so a reconnect that does not
+// move email_providers.updated_at is still picked up without a stampede.
+export const FAILED_PROVIDER_RETRY_MS = 5000;
+
 export interface SendEmailParams {
   tenantId: string;
   to: string | EmailAddress;
@@ -77,6 +81,7 @@ export class TenantEmailService extends BaseEmailService {
   private tenantSettings: TenantEmailSettings | null = null;
   private tenantSettingsLoaded = false;
   private providerSettingsFingerprint: string | null = null;
+  private failedProviderInitAt: number | null = null;
   private providerStateQueue: Promise<void> = Promise.resolve();
   private usingSystemProvider = false;
 
@@ -749,9 +754,15 @@ export class TenantEmailService extends BaseEmailService {
       // a transient database error into "no settings" and accidentally replace
       // a working tenant provider with the system fallback.
       const settings = await TenantEmailService.loadTenantEmailSettings(this.tenantId, knex);
-      const fingerprint = TenantEmailService.getProviderSettingsFingerprint(settings);
+      // Mailbox lifecycle is part of the key: a reconnect changes only the
+      // email_providers row, never the tenant settings.
+      const mailboxState = await TenantEmailService.loadMicrosoftMailboxState(this.tenantId, settings, knex);
+      const fingerprint = TenantEmailService.getProviderSettingsFingerprint(settings, mailboxState);
 
-      if (this.initialized && fingerprint === this.providerSettingsFingerprint) {
+      // Never pin a null provider: reuse it only until the retry window ends.
+      const reusable = this.emailProvider !== null
+        || (this.failedProviderInitAt !== null && Date.now() - this.failedProviderInitAt < FAILED_PROVIDER_RETRY_MS);
+      if (this.initialized && fingerprint === this.providerSettingsFingerprint && reusable) {
         // Retain the freshly-normalized object even when its provider-relevant
         // values are unchanged so From resolution never depends on old state.
         this.tenantSettings = settings;
@@ -772,6 +783,7 @@ export class TenantEmailService extends BaseEmailService {
       this.tenantSettingsLoaded = true;
       await this.initialize();
       this.providerSettingsFingerprint = fingerprint;
+      this.failedProviderInitAt = this.emailProvider === null ? Date.now() : null;
       return {
         emailProvider: this.emailProvider,
         providerInitError: this.providerInitError,
@@ -792,10 +804,48 @@ export class TenantEmailService extends BaseEmailService {
     this.tenantSettings = null;
     this.tenantSettingsLoaded = false;
     this.providerSettingsFingerprint = null;
+    this.failedProviderInitAt = null;
     this.usingSystemProvider = false;
   }
 
-  private static getProviderSettingsFingerprint(settings: TenantEmailSettings | null): string {
+  // Strict, tenant-scoped read; errors propagate rather than meaning "no mailbox".
+  private static async loadMicrosoftMailboxState(
+    tenantId: string,
+    settings: TenantEmailSettings | null,
+    knex: Knex | Knex.Transaction
+  ): Promise<Array<Record<string, unknown>>> {
+    if (settings?.emailProvider?.toLowerCase() !== 'microsoft') return [];
+
+    const ids = new Set<string>();
+    for (const config of settings.providerConfigs ?? []) {
+      if (config.providerType !== 'microsoft' || !config.isEnabled) continue;
+      const inboundId = config.config?.inboundProviderId;
+      ids.add(typeof inboundId === 'string' ? inboundId : config.providerId);
+    }
+    for (const sender of settings.outboundSenders ?? []) {
+      if (sender.microsoft_provider_id) ids.add(sender.microsoft_provider_id);
+    }
+    if (ids.size === 0) return [];
+
+    const rows = await tenantDb(knex, tenantId).table('email_providers')
+      .whereIn('id', [...ids])
+      .where({ provider_type: 'microsoft' })
+      .select('id', 'is_active', 'status', 'updated_at');
+
+    return rows
+      .map((row: any) => ({
+        id: row.id,
+        isActive: row.is_active,
+        status: row.status,
+        updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : row.updated_at ?? null,
+      }))
+      .sort((a: any, b: any) => String(a.id).localeCompare(String(b.id)));
+  }
+
+  private static getProviderSettingsFingerprint(
+    settings: TenantEmailSettings | null,
+    mailboxState: Array<Record<string, unknown>> = []
+  ): string {
     const providerState = {
       defaultFromDomain: settings?.defaultFromDomain ?? null,
       emailProvider: settings?.emailProvider ?? null,
@@ -804,6 +854,7 @@ export class TenantEmailService extends BaseEmailService {
       // explicit cross-process refresh signal even if the submitted provider
       // values happen to be identical to the prior values.
       updatedAt: settings?.updatedAt ?? null,
+      mailboxState,
       // Enterprise tenant mail can fall back directly to the system provider,
       // so its environment-backed credentials are part of this snapshot too.
       systemProvider: isEnterprise
