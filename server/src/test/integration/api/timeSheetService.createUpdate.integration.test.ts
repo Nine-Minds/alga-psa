@@ -22,7 +22,7 @@ import { POST as bulkApprovalRoute } from '@/app/api/v1/time-sheets/bulk/route';
 import { POST as rejectTimeSheetRoute } from '@/app/api/v1/time-sheets/[id]/reject/route';
 import { GET as exportTimeSheetsRoute } from '@/app/api/v1/time-sheets/export/route';
 import { reverseTimeSheetApproval } from '@alga-psa/scheduling/actions/timeSheetActions';
-import { approveTimeSheet as approveTimeSheetAction } from '@alga-psa/scheduling/actions/timeSheetActions';
+import { approveTimeSheet as approveTimeSheetAction, bulkApproveTimeSheets } from '@alga-psa/scheduling/actions/timeSheetActions';
 import { registerTimeSource, resetTimeSourcesForTests } from '@alga-psa/scheduling/lib/timeSource';
 
 /**
@@ -173,6 +173,48 @@ async function seedUiApprovalSheet(f: Awaited<ReturnType<typeof seed>>, status: 
 function actAsUiApprover(f: Awaited<ReturnType<typeof seed>>, actorId = f.actor) {
   uiActionActor.user = { user_id: actorId, tenant: f.tenantId, user_type: 'internal' };
   vi.spyOn(algaDb, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: f.tenantId } as any);
+}
+
+async function queueTwoUiApprovalsBehindSheetLock(
+  tenantId: string,
+  sheetId: string,
+  start: () => Promise<unknown>[]
+): Promise<unknown[]> {
+  let release!: () => void;
+  let locked!: () => void;
+  const releaseLock = new Promise<void>((resolve) => { release = resolve; });
+  const lockAcquired = new Promise<void>((resolve) => { locked = resolve; });
+  const lockHolder = db.transaction(async (trx) => {
+    await tenantDb(trx, tenantId).table('time_sheets').where({ id: sheetId }).forUpdate().first();
+    locked();
+    await releaseLock;
+  });
+  await lockAcquired;
+  const pending: Promise<unknown>[] = [];
+  try {
+    pending.push(...start());
+    const deadline = Date.now() + 5000;
+    let blockedQueries = 0;
+    while (Date.now() < deadline && blockedQueries < 2) {
+      const query = await db.raw(`
+        SELECT count(*)::int AS count
+        FROM pg_stat_activity
+        WHERE datname = current_database()
+          AND wait_event_type = 'Lock'
+          AND query ILIKE '%time_sheets%'
+      `);
+      blockedQueries = Number(query.rows[0]?.count ?? 0);
+      if (blockedQueries < 2) await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    expect(blockedQueries).toBeGreaterThanOrEqual(2);
+    release();
+    await lockHolder;
+    return await Promise.all(pending);
+  } finally {
+    release();
+    await lockHolder;
+    await Promise.allSettled(pending);
+  }
 }
 
 const sheetsFor = (tenantId: string, userId: string) =>
@@ -745,6 +787,74 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: sheetId }).first())
       .toMatchObject({ approval_status: 'APPROVED', approved_by: f.actor });
     expect(await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: sheetId, is_approver: true })).toHaveLength(1);
+  });
+
+  it('UI bulk approval cannot overwrite a single approval that wins the row lock', async () => {
+    const f = await seed();
+    const otherApprover = await seedUser(f.tenantId, 'OtherApprover');
+    const { sheetId, entryId } = await seedUiApprovalSheet(f, 'SUBMITTED');
+    grants.byUser.set(f.actor, new Set(['time_sheet:approve', 'time_sheet:read_all']));
+    grants.byUser.set(otherApprover, new Set(['time_sheet:approve', 'time_sheet:read_all']));
+
+    const [singleResult, bulkResult] = await queueTwoUiApprovalsBehindSheetLock(f.tenantId, sheetId, () => {
+      actAsUiApprover(f, f.actor);
+      const single = approveTimeSheetAction(sheetId, f.actor);
+      actAsUiApprover(f, otherApprover);
+      const bulk = bulkApproveTimeSheets([sheetId], otherApprover);
+      return [single, bulk];
+    });
+
+    expect(singleResult).toBeUndefined();
+    expect(bulkResult).toMatchObject({ actionError: expect.any(String) });
+    expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: sheetId }).first())
+      .toMatchObject({ approval_status: 'APPROVED', approved_by: f.actor });
+    expect(await tenantTable(f.tenantId, 'time_entries').where({ entry_id: entryId }).first())
+      .toMatchObject({ approval_status: 'APPROVED' });
+    expect(await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: sheetId, is_approver: true }))
+      .toMatchObject([{ user_id: f.actor, comment: 'Time sheet approved' }]);
+  });
+
+  it('UI bulk approvals serialize competing batches without overwriting the first approver', async () => {
+    const f = await seed();
+    const otherApprover = await seedUser(f.tenantId, 'OtherApprover');
+    const { sheetId, entryId } = await seedUiApprovalSheet(f, 'SUBMITTED');
+    grants.byUser.set(f.actor, new Set(['time_sheet:approve', 'time_sheet:read_all']));
+    grants.byUser.set(otherApprover, new Set(['time_sheet:approve', 'time_sheet:read_all']));
+
+    const [firstResult, staleResult] = await queueTwoUiApprovalsBehindSheetLock(f.tenantId, sheetId, () => {
+      actAsUiApprover(f, f.actor);
+      const first = bulkApproveTimeSheets([sheetId], f.actor);
+      actAsUiApprover(f, otherApprover);
+      const stale = bulkApproveTimeSheets([sheetId], otherApprover);
+      return [first, stale];
+    });
+
+    expect(firstResult).toEqual({ success: true });
+    expect(staleResult).toMatchObject({ actionError: expect.any(String) });
+    expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: sheetId }).first())
+      .toMatchObject({ approval_status: 'APPROVED', approved_by: f.actor });
+    expect(await tenantTable(f.tenantId, 'time_entries').where({ entry_id: entryId }).first())
+      .toMatchObject({ approval_status: 'APPROVED' });
+    expect(await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: sheetId, is_approver: true })).toHaveLength(0);
+  });
+
+  it('UI bulk approval rolls back earlier sheet transitions when a later sheet is stale', async () => {
+    const f = await seed();
+    const submitted = await seedUiApprovalSheet(f, 'SUBMITTED');
+    const draft = await seedUiApprovalSheet(f, 'DRAFT');
+    actAsUiApprover(f);
+    grants.byUser.set(f.actor, new Set(['time_sheet:approve', 'time_sheet:read_all']));
+    const ids = [submitted.sheetId, draft.sheetId];
+    const beforeSheets = await tenantTable(f.tenantId, 'time_sheets').whereIn('id', ids).orderBy('id').select('*');
+    const beforeEntries = await tenantTable(f.tenantId, 'time_entries').whereIn('time_sheet_id', ids).orderBy('entry_id').select('*');
+    const beforeComments = await tenantTable(f.tenantId, 'time_sheet_comments').whereIn('time_sheet_id', ids).orderBy('comment_id').select('*');
+
+    const result = await bulkApproveTimeSheets(ids, f.actor);
+
+    expect(result).toMatchObject({ actionError: expect.any(String) });
+    expect(await tenantTable(f.tenantId, 'time_sheets').whereIn('id', ids).orderBy('id').select('*')).toEqual(beforeSheets);
+    expect(await tenantTable(f.tenantId, 'time_entries').whereIn('time_sheet_id', ids).orderBy('entry_id').select('*')).toEqual(beforeEntries);
+    expect(await tenantTable(f.tenantId, 'time_sheet_comments').whereIn('time_sheet_id', ids).orderBy('comment_id').select('*')).toEqual(beforeComments);
   });
 
   it('UI approval keeps self-approval and subject authorization restrictions', async () => {

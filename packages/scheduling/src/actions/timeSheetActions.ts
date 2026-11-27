@@ -58,12 +58,6 @@ interface DbTimeSheet {
   period_end_date?: string;
 }
 
-// Type for Knex raw query results with aggregate functions
-interface TimeEntriesInfo {
-  entry_count: number | string;
-  total_hours: number | string | null;
-}
-
 // Helper function to convert database time period to interface time period
 function toTimePeriod(dbPeriod: Pick<DbTimePeriod, 'period_id' | 'start_date' | 'end_date' | 'tenant'>): ITimePeriod {
   const startDate = toPlainDate(dbPeriod.start_date);
@@ -254,72 +248,34 @@ export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheet
   try {
     const { knex: db } = await createTenantKnex();
 
-    if (!await hasPermission(user, 'time_sheet', 'approve', db)) {
-      throw new Error('Permission denied: Cannot approve timesheets');
-    }
-
-    if (managerId !== user.user_id) {
-      throw new Error('Permission denied: Invalid approver');
-    }
-
     const approvedSheets: any[] = [];
 
     await db.transaction(async (trx) => {
-      const scopedDb = tenantDb(trx, tenant) as any;
+      if (!await hasPermission(user, 'time_sheet', 'approve', trx)) {
+        throw new Error('Permission denied: Cannot approve timesheets');
+      }
+      if (managerId !== user.user_id) {
+        throw new Error('Permission denied: Invalid approver');
+      }
+
       for (const id of timeSheetIds) {
-        const timeSheet = await scopedDb.table('time_sheets')
-          .where({
-            id: id,
-            approval_status: 'SUBMITTED',
-            tenant
-          })
-          .first();
-
-        if (!timeSheet) {
-          throw new Error(`Time sheet ${id} is not in a submitted state or does not exist`);
-        }
-
-        await assertCanApproveSubject(user, tenant, timeSheet.user_id, trx);
-        // Human-work guard: approval requires a human approver.
-        await assertHumanWorkOwner(trx, tenant, user.user_id, 'approved_by');
-
-        // Get analytics data before approval
-        const entriesInfo = await scopedDb.table('time_entries')
-          .where({
-            time_sheet_id: id,
-            tenant
-          })
-          .select(
-            trx.raw('COUNT(*) as entry_count'),
-            trx.raw('SUM(billable_duration) / 60 as total_hours')
-          )
-          .first() as unknown as TimeEntriesInfo | undefined;
-
-        // Update time sheet status
-        await scopedDb.table('time_sheets')
-          .where({
-            id: id,
-            tenant
-          })
-          .update({
-            approval_status: 'APPROVED',
-            approved_by: user.user_id,
-            approved_at: new Date()
-          });
-
-        // Update all time entries to approved status
-        await scopedDb.table('time_entries')
-          .where({
-            time_sheet_id: id,
-            tenant
-          })
-          .update({ approval_status: 'APPROVED' });
+        const approval = await approveSubmittedTimeSheet({
+          knex: trx,
+          tenant,
+          timeSheetId: id,
+          actorId: user.user_id,
+          authorize: async (approvalTrx, timeSheet) => {
+            await assertCanApproveSubject(user, tenant, timeSheet.user_id, approvalTrx);
+            // Human-work guard: approval requires a human approver.
+            await assertHumanWorkOwner(approvalTrx, tenant, user.user_id, 'approved_by');
+          },
+        });
 
         approvedSheets.push({
           time_sheet_id: id,
-          user_id: timeSheet.user_id,
-          entry_count: entriesInfo?.entry_count || 0,
-          total_hours: parseFloat(String(entriesInfo?.total_hours ?? '0'))
+          user_id: approval.employeeId,
+          entry_count: approval.entryCount || 0,
+          total_hours: parseFloat(String(approval.totalHours ?? '0'))
         });
       }
     });
