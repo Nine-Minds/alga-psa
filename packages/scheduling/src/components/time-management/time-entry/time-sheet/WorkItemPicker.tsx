@@ -9,7 +9,7 @@ import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { IWorkItem, IExtendedWorkItem, WorkItemWithStatus, WorkItemType } from '@alga-psa/types';
 import { ITimePeriodView } from '@alga-psa/types';
-import { searchPickerWorkItems, createWorkItem } from '@alga-psa/scheduling/actions';
+import { searchPickerWorkItems, createWorkItem, getWorkItemPickerOptions } from '@alga-psa/scheduling/actions';
 import { Button } from '@alga-psa/ui/components/Button';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
@@ -68,6 +68,19 @@ export function WorkItemPicker({ onSelect, availableWorkItems, initialWorkItemId
     end?: string;
   }>({});
   const [searchType, setSearchType] = useState<WorkItemType | 'all'>('all');
+  // What this viewer may be offered, decided by the server (a seat technician: tickets and project tasks only).
+  // Narrowest until it resolves, so a control is never shown to a viewer who may not use it.
+  const [offered, setOffered] = useState<{ types: WorkItemType[]; canCreateAdHoc: boolean }>({
+    types: ['ticket', 'project_task'],
+    canCreateAdHoc: false,
+  });
+  useEffect(() => {
+    let cancelled = false;
+    getWorkItemPickerOptions()
+      .then((result) => { if (!cancelled && !isReturnedActionError(result)) setOffered(result); })
+      .catch(() => { /* stay narrow; the server remains the boundary */ });
+    return () => { cancelled = true; };
+  }, []);
   const [selectedWorkItemId, setSelectedWorkItemId] = useState<string | null>(initialWorkItemId ?? null);
 
   const initialWorkItem = useMemo(() => {
@@ -293,7 +306,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, initialWorkItemId
     <div className="flex flex-col h-auto max-h-[70vh] min-h-[200px] transition-all duration-300 ease-in-out">
       <div className="flex-none bg-white pb-4 overflow-visible">
         <div className="flex justify-between items-center mb-4">
-          {!showAdHocForm ? (
+          {!offered.canCreateAdHoc ? null : !showAdHocForm ? (
             <Button
               onClick={() => setShowAdHocForm(true)}
               variant="outline"
@@ -544,7 +557,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, initialWorkItemId
                     { value: 'project_task', label: t('common.types.projectTasks', { defaultValue: 'Project Tasks' }) },
                     { value: 'interaction', label: t('common.types.interactions', { defaultValue: 'Interactions' }) },
                     { value: 'ad_hoc', label: t('common.types.adHocEntries', { defaultValue: 'Ad-hoc Entries' }) }
-                  ]}
+                  ].filter((option) => option.value === 'all' || offered.types.includes(option.value as WorkItemType))}
                 />
               </div>
               <div className="flex items-center flex-1 min-w-10 max-w-44">

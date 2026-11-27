@@ -6,7 +6,8 @@ import { withAuth } from '@alga-psa/auth';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import type { DeletionValidationResult } from '@alga-psa/types';
-import { IStatus, ItemType } from '@alga-psa/types';
+import { IStatus, ItemType, type IUserWithRoles } from '@alga-psa/types';
+import { readableBoardIdsForOptions } from '@alga-psa/shared/lib/boardOptionAccess';
 import { createWorkItemStatusNameFilterValue } from './workItemStatusFilter';
 import { actionError } from '@alga-psa/ui/lib/errorHandling';
 import { statusActionErrorFrom, type StatusActionError } from './statusActionErrors';
@@ -80,12 +81,18 @@ export const getStatuses = withAuth(async (_user, { tenant }, type?: ItemType, b
   }
 });
 
-export const getTicketStatuses = withAuth(async (_user, { tenant }, boardId?: string | null) => {
+export const getTicketStatuses = withAuth(async (user, { tenant }, boardId?: string | null) => {
   try {
     // Get the database connection with tenant
     const {knex: db} = await createTenantKnex();
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      // A board's statuses follow the board: a seat technician gets them only for a board it may read, and with
+      // no board named gets the statuses of the boards it may read, never the tenant's whole set.
+      const readableBoardIds = await readableBoardIdsForOptions(trx, tenant, user as IUserWithRoles);
+      if (readableBoardIds && (boardId ? !readableBoardIds.includes(boardId) : readableBoardIds.length === 0)) {
+        return [] as IStatus[];
+      }
       // Fetch statuses for the current tenant
       const statuses = await statusesQuery(trx, tenant)
         .where({
@@ -94,6 +101,8 @@ export const getTicketStatuses = withAuth(async (_user, { tenant }, boardId?: st
         .modify((queryBuilder) => {
           if (boardId) {
             queryBuilder.andWhere({ board_id: boardId });
+          } else if (readableBoardIds) {
+            queryBuilder.whereIn('board_id', readableBoardIds);
           }
         })
         .select('*')

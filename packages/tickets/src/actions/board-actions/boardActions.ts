@@ -6,7 +6,10 @@ import {
   countLiveCoManagedEscalationsForBoard,
 } from '@alga-psa/core/config/deletion';
 
-import { IBoard } from '@alga-psa/types';
+import { IBoard, type IUserWithRoles } from '@alga-psa/types';
+import { isResolverGovernedUser } from '@alga-psa/authorization/recordCreateAuthorization';
+import type { ScopedOperation } from '@alga-psa/authorization/operationScope';
+import { listBoardsForOperation } from '../../lib/operationBoards';
 import Board from '../../models/board';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -175,10 +178,20 @@ export const findBoardById = withAuth(async (_user, { tenant }, id: string): Pro
   }
 });
 
-export const getAllBoards = withAuth(async (_user, { tenant }, includeAll: boolean = true): Promise<IBoard[]> => {
+/**
+ * The administrative board listing: every board of the tenant, for the screens that configure or report on boards.
+ * A subject a built-in resolver governs (a co-managed seat technician) is never offered the tenant's boards by
+ * this listing; it gets the boards its ticket read scope names, the same set a filter offers.
+ * Pickers that act on a board use `getBoardsForOperation`.
+ */
+export const getAllBoards = withAuth(async (user, { tenant }, includeAll: boolean = true): Promise<IBoard[]> => {
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (await isResolverGovernedUser(trx, { tenant, user })) {
+        const boards = await listBoardsForOperation(trx, tenant, user as IUserWithRoles, 'read', { includeInactive: includeAll });
+        return boards.map((board) => normalizeBoardStopwatchSetting(board));
+      }
       const boards = await tenantDb(trx, tenant).table<IBoard>('boards')
         .where(includeAll ? {} : { is_inactive: false })
         .orderBy('display_order', 'asc')
@@ -187,6 +200,33 @@ export const getAllBoards = withAuth(async (_user, { tenant }, includeAll: boole
     });
   } catch (error) {
     console.error('Failed to fetch boards:', error);
+    return [];
+  }
+});
+
+/**
+ * The boards a picker may offer for one operation (`create`: Add Ticket, `read`: ticket-list filters,
+ * `update`: the destination of an existing ticket). Each answer comes from the authorization layer for that
+ * operation, so a board a seat technician may read but not create on is a filter option and not an Add Ticket one.
+ */
+export const getBoardsForOperation = withAuth(async (
+  user,
+  { tenant },
+  operation: ScopedOperation,
+  includeAll: boolean = true,
+): Promise<IBoard[]> => {
+  if (operation !== 'read' && operation !== 'create' && operation !== 'update') return [];
+  const { knex: db } = await createTenantKnex();
+  try {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      // The operation's own RBAC permission first (a caller who may not create tickets is offered no board to
+      // create on), then the operation's board scope.
+      if (!await hasPermission(user, 'ticket', operation, trx)) return [];
+      const boards = await listBoardsForOperation(trx, tenant, user as IUserWithRoles, operation, { includeInactive: includeAll });
+      return boards.map((board) => normalizeBoardStopwatchSetting(board));
+    });
+  } catch (error) {
+    console.error('Failed to fetch boards for operation:', error);
     return [];
   }
 });

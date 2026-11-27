@@ -20,6 +20,7 @@ import {
   TicketWatcherPermissionError,
   TicketWatcherTicketNotFoundError,
 } from '../lib/ticketRecordAuthorization';
+import { projectWatchEntriesForCaller } from '../lib/watchListProjection';
 
 /**
  * UI write path for ticket watchers. Every call goes through TicketWatcherService
@@ -43,13 +44,16 @@ async function runWatcherWrite(
         throw new Error('Permission denied: Cannot update ticket watchers');
       }
       // Record-level ticket:update decision, then the watcher write, one trx.
-      return runAuthorizedTicketWatcherWrite({
+      const written = await runAuthorizedTicketWatcherWrite({
         trx,
         tenant,
         ticketId,
         principal: { user: user as any },
         write,
       });
+      // The service's watchers carry every stored email (delivery needs them); the answer is the list as the
+      // caller may read it, so a seat technician never receives a board-default MSP recipient.
+      return { ...written, watchers: await projectWatchEntriesForCaller(trx, tenant, user, written.watchers) };
     });
 
     if (result.changed) {

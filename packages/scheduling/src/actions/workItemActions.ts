@@ -4,6 +4,12 @@
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { narrowTicketsToReadable } from '../lib/ticketReadNarrowing';
+import { RequestLocalAuthorizationCache } from '@alga-psa/authorization/kernel';
+import { isResolverGovernedUser } from '@alga-psa/authorization/recordCreateAuthorization';
+import { narrowQueryToReadable, resolveClosedFields } from '@alga-psa/authorization/operationScope';
+import { resolveClientReadScope } from '@alga-psa/authorization/clientReadScope';
+import { createInteractionRelationshipSqlAdapter, createProjectRelationshipSqlAdapter } from '@alga-psa/authorization/clientScopeSqlAdapters';
+import { resolveSeatAssigneeAudience } from '@alga-psa/shared/lib/humanWork/seatAssigneeAudience';
 import { canReadScheduleEntry } from '../lib/scheduleEntryReadMask';
 import { IWorkItem, IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
@@ -385,6 +391,23 @@ export const searchPickerWorkItems = withAuth(async (
     const offset = (page - 1) * pageSize;
     const availableWorkItemIds = sanitizeWorkItemIdsForUuidColumns(options.availableWorkItemIds);
 
+    // What THIS viewer may be offered, decided before any branch is built. A subject a built-in resolver governs (a
+    // co-managed seat technician) is offered authorized tickets and tasks in shared projects only: interactions are
+    // the MSP's own record of a client and ad hoc schedule entries are the MSP's scheduling, so neither branch is
+    // built. The project's commercial columns the resolver closes (its service) are never selected.
+    // LEVERAGE: pattern branch-read-scope — each union branch (ticket, project task, interaction, ad hoc) applies its own resource's read scope by hand; a union builder taking (resource, adapter) per branch would own this.
+    // One request cache for every authorization read below, so the tenant probe runs once for the whole search.
+    const requestCache = new RequestLocalAuthorizationCache();
+    const governed = await isResolverGovernedUser(db, { tenant, user, requestCache });
+    const closedProjectFields = new Set(await resolveClosedFields(db, { tenant, user, resourceType: 'project', requestCache }));
+    const taskServiceId = closedProjectFields.has('service_id') ? 'NULL::uuid' : effectiveServiceIdSql(PICKER_SERVICE_ALIASES);
+    const taskServiceSource = closedProjectFields.has('service_id') ? 'NULL::text' : effectiveServiceSourceSql(PICKER_SERVICE_ALIASES);
+
+    // A bundle parent is shown (its number, its id) only when this viewer may read the parent ticket itself: the
+    // child is readable on its own, and its parent is a different record under the same read policy.
+    const readableParents = tenantScopedDb.table('tickets as mt').select('mt.tenant', 'mt.ticket_id', 'mt.ticket_number');
+    await narrowTicketsToReadable(db, tenant, user, readableParents, 'mt', requestCache);
+
     let ticketsQuery = tenantScopedDb.table('tickets as t')
       .whereNotIn('t.ticket_id', availableWorkItemIds)
       .leftJoin(
@@ -447,7 +470,7 @@ export const searchPickerWorkItems = withAuth(async (
          db.raw("t.attributes ->> 'description' as description"),
          db.raw("'ticket' as type"),
          't.ticket_number',
-         't.master_ticket_id as master_ticket_id',
+         'mt.ticket_id as master_ticket_id',
          'mt.ticket_number as master_ticket_number',
          't.title',
          db.raw('NULL::text as project_name'),
@@ -466,9 +489,11 @@ export const searchPickerWorkItems = withAuth(async (
        );
       tenantScopedDb.tenantJoin(ticketsQuery, 'clients as c', 't.client_id', 'c.client_id');
       tenantScopedDb.tenantJoin(ticketsQuery, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
-      tenantScopedDb.tenantJoin(ticketsQuery, 'tickets as mt', 't.master_ticket_id', 'mt.ticket_id', { type: 'left' });
+      ticketsQuery.leftJoin(readableParents.as('mt'), function() {
+        this.on('t.master_ticket_id', '=', 'mt.ticket_id').andOn('t.tenant', '=', 'mt.tenant');
+      });
       tenantScopedDb.tenantJoin(ticketsQuery, 'users as u_assignee', 't.assigned_to', 'u_assignee.user_id', { type: 'left' });
-      await narrowTicketsToReadable(db, tenant, user, ticketsQuery);
+      await narrowTicketsToReadable(db, tenant, user, ticketsQuery, 't', requestCache);
 
       let projectTasksQuery = tenantScopedDb.table('project_tasks as pt')
       .whereNotIn('pt.task_id', availableWorkItemIds)
@@ -565,8 +590,8 @@ export const searchPickerWorkItems = withAuth(async (
          db.raw("u_assignee.first_name || ' ' || u_assignee.last_name as assigned_to_name"),
          db.raw('ARRAY[pt.assigned_to] as assigned_user_ids'),
          'tr.additional_user_ids as additional_user_ids',
-         db.raw(`${effectiveServiceIdSql(PICKER_SERVICE_ALIASES)} as service_id`),
-         db.raw(`${effectiveServiceSourceSql(PICKER_SERVICE_ALIASES)} as service_source`)
+         db.raw(`${taskServiceId} as service_id`),
+         db.raw(`${taskServiceSource} as service_source`)
        );
       tenantScopedDb.tenantJoin(projectTasksQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
       tenantScopedDb.tenantJoin(projectTasksQuery, 'projects as p', 'pp.project_id', 'p.project_id');
@@ -585,10 +610,15 @@ export const searchPickerWorkItems = withAuth(async (
         },
       });
       tenantScopedDb.tenantJoin(projectTasksQuery, 'users as u_assignee', 'pt.assigned_to', 'u_assignee.user_id', { type: 'left' });
+      // The owning project's read policy (a seat technician: its client's explicitly shared projects), compiled
+      // into this branch's query so its rows, its count and its page are all in scope before the union.
+      await narrowQueryToReadable(db, {
+        tenant, user, resourceType: 'project', adapter: createProjectRelationshipSqlAdapter('p'), requestCache,
+      }, projectTasksQuery);
 
 
     let adHocQuery;
-    if (!options.type || options.type === 'all' || options.type === 'ad_hoc') {
+    if (!governed && (!options.type || options.type === 'all' || options.type === 'ad_hoc')) {
       adHocQuery = tenantScopedDb.table('schedule_entries as se')
         .whereNotIn('se.entry_id', availableWorkItemIds)
         .where('work_item_type', 'ad_hoc')
@@ -655,7 +685,7 @@ export const searchPickerWorkItems = withAuth(async (
 
     // Add interactions query
     let interactionsQuery;
-    if (!options.type || options.type === 'all' || options.type === 'interaction') {
+    if (!governed && (!options.type || options.type === 'all' || options.type === 'interaction')) {
       interactionsQuery = tenantScopedDb.table('interactions as i')
         .whereNotIn('i.interaction_id', availableWorkItemIds)
         .whereILike('i.title', db.raw('?', [`%${searchTerm}%`]))
@@ -685,6 +715,12 @@ export const searchPickerWorkItems = withAuth(async (
       tenantScopedDb.tenantJoin(interactionsQuery, 'clients as c', 'i.client_id', 'c.client_id', { type: 'left' });
       tenantScopedDb.tenantJoin(interactionsQuery, 'interaction_types as it', 'i.type_id', 'it.type_id', { type: 'left' });
       tenantScopedDb.tenantJoin(interactionsQuery, 'users as u_interaction_assignee', 'i.user_id', 'u_interaction_assignee.user_id', { type: 'left' });
+
+      // The interaction read policy of a viewer whose reads a bundle narrows by client.
+      const interactionScope = await resolveClientReadScope(db, {
+        tenant, user, resourceType: 'interaction', createAdapter: () => createInteractionRelationshipSqlAdapter('i'), requestCache,
+      });
+      interactionScope.apply(interactionsQuery);
 
       // Apply filters
       if (options.assignedTo) {
@@ -717,6 +753,11 @@ export const searchPickerWorkItems = withAuth(async (
     }
     if (interactionsQuery && (!options.type || options.type === 'all' || options.type === 'interaction')) {
         queriesToUnion.push(interactionsQuery);
+    }
+
+    // A type filter naming only branches this viewer is never offered (a seat technician asking for interactions).
+    if (queriesToUnion.length === 0) {
+      return { items: [], total: 0 };
     }
 
     let query = db.union(queriesToUnion, true);
@@ -771,8 +812,23 @@ export const searchPickerWorkItems = withAuth(async (
     }
 
 
+    // A project task's people are the MSP's: a seat technician is shown itself and the other technicians of its
+    // client (the people it may assign), and no MSP staff member's id or name.
+    const seatAudience = governed ? new Set(await resolveSeatAssigneeAudience(db, tenant, user) ?? []) : null;
+    const forViewer = (item: any) => {
+      if (!seatAudience || item.type !== 'project_task') return item;
+      const known = (ids: Array<string | null> | null) => (ids ?? []).filter((id): id is string => Boolean(id) && seatAudience.has(id as string));
+      const assigned = known(item.assigned_user_ids);
+      return {
+        ...item,
+        assigned_user_ids: assigned,
+        additional_user_ids: known(item.additional_user_ids),
+        assigned_to_name: assigned.length > 0 ? item.assigned_to_name : null,
+      };
+    };
+
     // Format results
-    const workItems = results.map((item: any): Omit<IExtendedWorkItem, "tenant"> => {
+    const workItems = results.map(forViewer).map((item: any): Omit<IExtendedWorkItem, "tenant"> => {
 
       const result: Omit<IExtendedWorkItem, "tenant"> = {
         work_item_id: item.work_item_id,
@@ -827,6 +883,11 @@ export const createWorkItem = withAuth(async (
 ): Promise<WorkItemActionResult<Omit<IExtendedWorkItem, "tenant">>> => {
   try {
     const {knex: db} = await createTenantKnex();
+
+    // Ad hoc schedule entries are the MSP's scheduling, closed to a seat technician (the picker does not offer them).
+    if (await isResolverGovernedUser(db, { tenant, user })) {
+      throw new Error('Permission denied: Cannot create schedule entries');
+    }
 
     if (!item.startTime || !item.endTime) {
       throw new Error('Start time and end time are required for ad-hoc entries');
@@ -1145,4 +1206,20 @@ export const getWorkItemById = withAuth(async (
     if (expected) return expected;
     throw error;
   }
+});
+
+
+/**
+ * What the Add Work Item picker may offer THIS viewer: the work item types it searches and whether it may create an
+ * ad hoc entry. A seat technician is offered tickets and project tasks only; everyone else is offered every type.
+ */
+export const getWorkItemPickerOptions = withAuth(async (
+  user,
+  { tenant },
+): Promise<{ types: WorkItemType[]; canCreateAdHoc: boolean }> => {
+  const { knex: db } = await createTenantKnex();
+  const governed = await isResolverGovernedUser(db, { tenant, user });
+  return governed
+    ? { types: ['ticket', 'project_task'], canCreateAdHoc: false }
+    : { types: ['ticket', 'project_task', 'interaction', 'ad_hoc'], canCreateAdHoc: true };
 });

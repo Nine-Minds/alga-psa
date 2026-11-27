@@ -56,6 +56,8 @@ export interface ResolveReadableScopeInput {
   clientResources: readonly string[];
   /** Resource whose `read` rules bound the boards the subject may see (tickets). */
   boardResource?: string;
+  /** The operation whose rules bound the boards (default `read`): `create` and `update` carry their own board rules. */
+  boardAction?: string;
   requestCache?: AuthorizationRequestCache;
 }
 
@@ -74,10 +76,11 @@ async function allowedIds(
   resource: string,
   candidates: readonly string[],
   record: (id: string) => { clientId?: string; boardId?: string },
+  action: string = 'read',
 ): Promise<string[] | null> {
   const provider = new BundleAuthorizationKernelProvider({ resolveRules: async () => rules });
   const evaluate = async (id: string) =>
-    !(await provider.evaluateNarrowing({ subject, resource: { type: resource, action: 'read' }, record: record(id) })).scope.denied;
+    !(await provider.evaluateNarrowing({ subject, resource: { type: resource, action }, record: record(id) })).scope.denied;
 
   // A resource this facet does not restrict allows the probe id too.
   if (await evaluate(NO_SUCH_ID)) return null;
@@ -121,7 +124,7 @@ export async function resolveReadableScope(
     const boardRules = onlyFacet(rules, BOARD_TEMPLATES);
     const named = rules.filter((rule) => rule.resource === input.boardResource && rule.templateKey === 'selected_boards')
       .flatMap((rule) => rule.selectedBoardIds ?? []);
-    boardIds = await allowedIds(boardRules, subject, input.boardResource, named, (boardId) => ({ boardId }));
+    boardIds = await allowedIds(boardRules, subject, input.boardResource, named, (boardId) => ({ boardId }), input.boardAction ?? 'read');
   }
 
   return { clientIdsByResource, boardIds };

@@ -1,6 +1,8 @@
 'use server';
 
 import { assertTicketCreateAllowed, assertTicketUpdateAllowed } from '../lib/ticketCreateAuthorization';
+import { projectTicketWatchListForCaller } from '../lib/watchListProjection';
+import { assertAssigneesInActorProjection } from '@alga-psa/authorization/recordCreateAuthorization';
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import {
   assertActorMayAssign,
@@ -774,6 +776,11 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
 
       // Watchers go into `attributes.watch_list`, so they are written by the same insert as the ticket.
       if (extras.watcherIds.length > 0) {
+        // A selected watcher must be someone the caller may name for this ticket: for a seat technician, the people
+        // its projection lists (the same set the picker offers), never any internal user whose id it supplies.
+        await assertAssigneesInActorProjection(trx, {
+          tenant, user, assigneeIds: extras.watcherIds, kinds: ['msp_staff', 'client_technician'],
+        }, 'watchers');
         const attributes: Record<string, unknown> = { ...(createTicketInput.attributes ?? {}) };
         const watcherRows = await tenantScopedTable(trx, 'users', tenant)
           .whereIn('user_id', extras.watcherIds)
@@ -977,7 +984,9 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       // Server-specific: Revalidate cache paths
       revalidatePath('/msp/tickets');
 
-      return convertDates(fullTicket);
+      // The stored watch list (board defaults included) keeps every recipient's email for notification delivery.
+      // What leaves this action is the row as the caller may read it.
+      return convertDates(await projectTicketWatchListForCaller(trx, tenant, user, fullTicket));
     });
   } catch (error) {
     const expected = ticketActionErrorFrom(error);

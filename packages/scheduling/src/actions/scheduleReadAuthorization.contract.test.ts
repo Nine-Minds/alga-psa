@@ -49,7 +49,7 @@ describe('ticket lookups and work item search apply ticket read narrowing', () =
   });
 
   it('every ticket branch of the dispatch and picker searches and getWorkItemById narrows', () => {
-    expect(workItemActions.match(/narrowTicketsToReadable\(db, tenant, user, /g)).toHaveLength(3);
+    expect(workItemActions.match(/narrowTicketsToReadable\(db, tenant, user, /g)).toHaveLength(4);
   });
 
   it('getSchedulingTicketById narrows; the time sheet ticket list is left to S10 so entries and rows stay paired', () => {

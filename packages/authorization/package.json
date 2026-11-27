@@ -110,6 +110,10 @@
       "import": "./dist/knowledgeBaseReadAuthorization.js",
       "types": "./src/knowledgeBaseReadAuthorization.ts"
     },
+    "./operationScope": {
+      "import": "./dist/operationScope.js",
+      "types": "./src/operationScope.ts"
+    },
     "./readScope": {
       "import": "./dist/readScope.js",
       "types": "./src/readScope.ts"

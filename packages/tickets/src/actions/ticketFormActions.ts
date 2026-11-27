@@ -2,7 +2,7 @@
 
 import type { IUser, IBoard, ITicketStatus, IPriority, IContact } from '@alga-psa/types';
 import { getAllUsers } from '@alga-psa/user-composition/actions/userQueryActions';
-import { getAllBoards } from './board-actions';
+import { getBoardsForOperation } from './board-actions';
 import { getAllPriorities, getPrioritiesByBoardType } from '@alga-psa/reference-data/actions/priorityActions';
 import { getClientById, getContactsByClient } from './clientLookupActions';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
@@ -32,7 +32,8 @@ export const getTicketFormData = withAuth(async (_user, _ctx, prefilledClientId?
         console.error('Error fetching users:', error);
         return [];
       }),
-      getAllBoards().catch(error => {
+      // Add Ticket offers the boards the caller may create tickets on, not every board they may read.
+      getBoardsForOperation('create').catch(error => {
         console.error('Error fetching boards:', error);
         return [];
       }),

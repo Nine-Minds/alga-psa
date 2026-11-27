@@ -10,7 +10,7 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 vi.mock('@alga-psa/db', () => ({ createTenantKnex: vi.fn(), tenantDb: vi.fn(), withTransaction: vi.fn() }));
 vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({ getAllUsers: vi.fn().mockResolvedValue([]) }));
-vi.mock('./board-actions', () => ({ getAllBoards: vi.fn().mockResolvedValue([{ board_id: 'b1' }]) }));
+vi.mock('./board-actions', () => ({ getBoardsForOperation: vi.fn().mockResolvedValue([{ board_id: 'b1' }]) }));
 vi.mock('@alga-psa/reference-data/actions/priorityActions', () => ({
   getAllPriorities: vi.fn().mockResolvedValue([{ priority_id: 'p1' }]),
   getPrioritiesByBoardType: vi.fn(),

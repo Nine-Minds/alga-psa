@@ -1,5 +1,6 @@
 'use client';
 
+import { assignableAgentsOf } from '../../../lib/assignableAgents';
 import type { ComposerAudience } from '../CommentAudienceControl';
 import React, { Suspense, useRef } from 'react';
 import type { PartialBlock } from '@blocknote/core';
@@ -569,7 +570,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
               isProcessingAgentsRef.current = false;
             }
           }}
-          users={props.availableAgents.filter((agent) => agent.user_id !== ticket.assigned_to)}
+          users={assignableAgentsOf(props.availableAgents).filter((agent) => agent.user_id !== ticket.assigned_to)}
           size="sm"
           placeholder={t('bento.tiles.addAgentsOrTeam', 'Add agents or a team…')}
           onUserClick={props.onAgentClick}

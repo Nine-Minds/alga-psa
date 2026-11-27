@@ -15,7 +15,8 @@ describe('bundled ticket selection (static)', () => {
     expect(pickerStart).toBeGreaterThan(0);
     const pickerSrc = src.slice(pickerStart);
 
-    expect(pickerSrc).toMatch(/master_ticket_id\s+as\s+master_ticket_id/);
+    // The parent id is projected through the viewer-readable parent join (mt), so an unreadable parent is NULL.
+    expect(pickerSrc).toMatch(/(?:t\.master_ticket_id|mt\.ticket_id)\s+as\s+master_ticket_id/);
     expect(pickerSrc).toMatch(/master_ticket_number/);
   });
 

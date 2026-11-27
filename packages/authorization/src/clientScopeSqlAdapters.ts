@@ -74,3 +74,39 @@ export function createTicketRelationshipSqlAdapter(alias: string = 't'): Relatio
     },
   };
 }
+
+/**
+ * `projects` mapping for the read-authorization SQL compiler (`alias` is the alias the query gives `projects`).
+ * A project has an id (so a record-selecting rule, a seat's shared projects, names the rows it admits), a client
+ * and a primary owner. It carries no board and no team, so those templates deny, as they do for the project record.
+ */
+export function createProjectRelationshipSqlAdapter(alias: string = 'p'): RelationshipSqlAdapter {
+  return {
+    idColumn: `${alias}.project_id`,
+    clientColumn: `${alias}.client_id`,
+    ownerColumn: `${alias}.assigned_to`,
+    boardColumn: `${alias}.project_id`,
+    teamColumn: `${alias}.project_id`,
+    applyAssignedUsers(query, userIds) {
+      const ids = Array.from(new Set(userIds.filter((value): value is string => typeof value === 'string' && value.length > 0)));
+      if (ids.length === 0) query.whereRaw('1 = 0');
+      else query.whereIn(`${alias}.assigned_to`, ids);
+    },
+    applyTeams: (query) => query.whereRaw('1 = 0'),
+    applyBoards: (query) => query.whereRaw('1 = 0'),
+  };
+}
+
+/** `interactions` mapping: an interaction belongs to a client and is owned by the user who logged it. */
+export function createInteractionRelationshipSqlAdapter(alias: string = 'i'): RelationshipSqlAdapter {
+  return {
+    idColumn: `${alias}.interaction_id`,
+    clientColumn: `${alias}.client_id`,
+    ownerColumn: `${alias}.user_id`,
+    applyAssignedUsers(query, userIds) {
+      const ids = Array.from(new Set(userIds.filter((value): value is string => typeof value === 'string' && value.length > 0)));
+      if (ids.length === 0) query.whereRaw('1 = 0');
+      else query.whereIn(`${alias}.user_id`, ids);
+    },
+  };
+}

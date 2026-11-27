@@ -1,5 +1,6 @@
 'use client';
 
+import { assignableAgentsOf } from '../../../lib/assignableAgents';
 import { ticketCreatorName } from '../ticketCreatorName';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PartialBlock } from '@blocknote/core';
@@ -39,7 +40,7 @@ import { useRegisterUnsavedChanges, useOptionalActivityCrossFeature } from '@alg
 import { useDefaultNotificationSuppression } from '../../../lib/notificationSuppressionDefaults';
 import { useRegisterDismissGuard } from '@alga-psa/ui/components/DismissGuard';
 import { buildTicketAssignmentKey } from '../../../lib/ticketAssignmentKey';
-import { unresolvedAssigneeLabel } from '../../../lib/assigneeDisplay';
+import { savedAssigneeName, unresolvedAssigneeLabel } from '../../../lib/assigneeDisplay';
 import { usePageSaveShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
@@ -1096,7 +1097,7 @@ export function BentoHero({
                 onTeamSelect={async (teamId) => {
                   await onAssignTeam?.(teamId);
                 }}
-                users={availableAgents}
+                users={assignableAgentsOf(availableAgents)}
                 // LEVERAGE: pattern client-it-picker-group — TicketInfo and BentoHero each build the same Client IT userGroups from clientItUserIds
                 userGroups={clientItUserIds?.length
                   ? [{ label: t('info.clientItGroup', 'Client IT'), userIds: clientItUserIds }]
@@ -1110,9 +1111,9 @@ export function BentoHero({
                 size="sm"
                 placeholder={unresolvedAssigneeLabel({
                   savedAssigneeId: ticket.assigned_to,
-                  savedAssigneeName: ticket.assigned_to_name,
+                  savedAssigneeName: savedAssigneeName(ticket.assigned_to, ticket.assigned_to_name, availableAgents),
                   currentValue: displayValue('assigned_to'),
-                  selectableUserIds: availableAgents.map((user) => user.user_id),
+                  selectableUserIds: assignableAgentsOf(availableAgents).map((user) => user.user_id),
                 }) ?? t('bento.hero.notAssigned', 'Not assigned')}
                 disabled={workflowLocked || isFrozen('assigned_to')}
               />

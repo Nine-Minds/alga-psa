@@ -6,6 +6,8 @@ let statusRows: Array<Record<string, unknown>> = [];
 const createTenantKnexMock = vi.fn();
 const withTransactionMock = vi.fn();
 
+// Status reads are board-scoped for restricted callers only; a plain MSP caller is unrestricted.
+vi.mock('@alga-psa/shared/lib/boardOptionAccess', () => ({ readableBoardIdsForOptions: vi.fn().mockResolvedValue(null) }));
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
     action(currentUser, { tenant: currentUser.tenant }, ...args),
