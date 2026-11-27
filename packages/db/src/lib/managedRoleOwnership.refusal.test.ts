@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('./tenantDb', () => ({
   tenantDb: () => ({ table: () => ({ whereNotNull: () => ({ select: async () => [] }) }) }),
@@ -12,6 +12,9 @@ const insertManaged = () => admitManagedRoleWrite({
 });
 
 describe('managed role refusal', () => {
+  // The registry is process-global and the server lane shuffles tests: start each one unregistered.
+  beforeEach(() => { delete (globalThis as { __algaManagedRoleState?: unknown }).__algaManagedRoleState; });
+
   it('fails closed with a dependency-free refusal when no factory is registered', async () => {
     const error = await insertManaged().then(() => undefined, (e) => e);
     expect(error).toBeInstanceOf(Error);
