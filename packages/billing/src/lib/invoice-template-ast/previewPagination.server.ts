@@ -1,4 +1,4 @@
-import { createRequire } from 'node:module';
+import nodeModule from 'node:module';
 import path from 'node:path';
 
 import type { Browser, BrowserContext } from 'puppeteer';
@@ -51,12 +51,14 @@ const BREAK_CLASS_CSS = `.${BREAK_BEFORE_CLASS} { break-before: page; }
  * `exports` map hides the dist path. Resolved twice over: from this module in a plain Node process,
  * and from the app root when this module has been bundled somewhere node_modules is not a sibling.
  */
-const resolvePagedPolyfillPath = (): string => {
+export const resolvePagedPolyfillPath = (): string => {
   const roots = [import.meta.url, path.join(process.cwd(), 'package.json')];
   for (const root of roots) {
     try {
       // pagedjs → <root>/lib/index.cjs
-      const packageRoot = path.resolve(path.dirname(createRequire(root).resolve('pagedjs')), '..');
+      // Use the module object: webpack rewrites a named createRequire import's
+      // .resolve() to a numeric module ID, but this must remain a filesystem path.
+      const packageRoot = path.resolve(path.dirname(nodeModule.createRequire(root).resolve('pagedjs')), '..');
       return path.join(packageRoot, 'dist', 'paged.polyfill.min.js');
     } catch {
       // Try the next root.

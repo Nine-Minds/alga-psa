@@ -6,19 +6,17 @@ import { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.i
 const historyListMock = vi.fn();
 const messageGetMock = vi.fn();
 
-vi.mock('googleapis', () => ({
-  google: {
-    gmail: vi.fn(() => ({
-      users: {
-        history: {
-          list: historyListMock
-        },
-        messages: {
-          get: messageGetMock,
-        },
-      }
-    }))
-  }
+vi.mock('googleapis/build/src/apis/gmail/index.js', () => ({
+  gmail: vi.fn(() => ({
+    users: {
+      history: {
+        list: historyListMock
+      },
+      messages: {
+        get: messageGetMock,
+      },
+    }
+  }))
 }));
 
 describe('GmailAdapter.listMessagesSince', () => {

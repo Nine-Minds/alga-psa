@@ -408,6 +408,13 @@
         "used": "Gebruikt",
         "expired": "Verlopen",
         "revoked": "Ingetrokken"
+      },
+      "lastSentPrefix": "Laatst verzonden:",
+      "resendCount_one": "eenmaal opnieuw verzonden",
+      "resendCount_other": "{{count}} keer opnieuw verzonden",
+      "unusable": {
+        "contactInactive": "Dit contact is inactief, dus de link kan niet worden gebruikt. Activeer het contact opnieuw en verstuur daarna een nieuwe uitnodiging.",
+        "emailChanged": "Deze uitnodiging is naar een adres gestuurd dat het contact niet meer heeft, dus de link werkt niet meer. Verstuur de uitnodiging opnieuw zodat er een nieuwe link naar het huidige adres van het contact gaat."
       }
     },
     "actions": {
@@ -455,13 +462,15 @@
         "contactNotFound": "Contactpersoon niet gevonden.",
         "contactMissingEmail": "Het contactpersoon heeft geen e-mailadres. Voeg een e-mailadres toe aan het contactpersoon voordat u een uitnodiging verstuurt.",
         "contactInvalidEmail": "Het contactpersoon heeft een ongeldig e-mailadres. Werk het contactpersoon bij met een geldig e-mailadres voordat u een uitnodiging verstuurt.",
+        "contactInactive": "Dit contact is inactief. Activeer het contact opnieuw voordat u het uitnodigt voor het klantenportaal.",
         "userExistsForContact": "Er bestaat al een gebruikersaccount voor dit contactpersoon. Gebruik wachtwoord herstellen in plaats van een uitnodiging te versturen.",
         "portalUserAlreadyExists": "Dit e-mailadres hoort al bij een ander gebruikersaccount in deze organisatie.",
         "noDefaultClient": "Geen standaardklant geconfigureerd voor deze tenant. Stel een standaardklant in bij Algemene instellingen.",
         "noDefaultLocation": "De standaardklant moet een standaardlocatie hebben om portaluitnodigingen te versturen.",
         "noLocationEmail": "De locatie van de standaardklant moet een contact-e-mailadres hebben geconfigureerd.",
         "noBaseUrl": "Basis-URL is niet geconfigureerd voor portaluitnodigingen.",
-        "invitationNotFound": "Uitnodiging niet gevonden of al gebruikt."
+        "invitationNotFound": "Uitnodiging niet gevonden of al gebruikt.",
+        "rateLimited": "Te veel uitnodigingspogingen voor dit contact. Probeer het later opnieuw."
       },
       "userNotFound": "Klantgebruiker niet gevonden",
       "validationErrorTitle": "Validatiefout"
@@ -637,7 +646,8 @@
       "phoneNumber": "Telefoonnummer",
       "actions": "Acties",
       "role": "Rol",
-      "location": "Locatie"
+      "location": "Locatie",
+      "portalInvitation": "Portaaluitnodiging"
     },
     "filter": {
       "show": "Toon:",
@@ -646,7 +656,11 @@
       "all": "Alle contacten",
       "searchPlaceholder": "Contacten zoeken...",
       "allLocations": "Alle locaties",
-      "noLocation": "Geen locatie"
+      "noLocation": "Geen locatie",
+      "allInvitationStates": "Elke uitnodigingsstatus",
+      "invitationExpired": "Verlopen uitnodigingen",
+      "invitationPending": "Openstaande uitnodigingen",
+      "invitationExpiredOrPending": "Verlopen of openstaand"
     },
     "actions": {
       "openMenu": "Menu openen",
@@ -655,12 +669,23 @@
       "selectAll": "Alle contactpersonen selecteren",
       "selectContact": "{{name}} selecteren",
       "inviteSelected": "Uitnodigen voor portaal ({{selected}})",
-      "inviteAllEligible": "Alle in aanmerking komende uitnodigen"
+      "inviteAllEligible": "Alle in aanmerking komende uitnodigen",
+      "resendExpired": "Verlopen opnieuw verzenden",
+      "resendPending": "Openstaande opnieuw verzenden",
+      "resendOpen": "Verlopen of openstaande opnieuw verzenden"
     },
     "errors": {
       "loadFailed": "Contacten konden niet worden geladen.",
       "loadingTitle": "Fout bij laden van contacten",
       "retryFailed": "Contacten konden niet worden geladen. Probeer het opnieuw."
+    },
+    "invitation": {
+      "none": "Niet uitgenodigd",
+      "pendingUntil": "Openstaand tot {{date}}",
+      "expired": "Uitnodiging verlopen",
+      "activeUser": "Actieve portaalgebruiker",
+      "inactiveUser": "Inactieve portaalgebruiker",
+      "contactInactive": "Uitnodiging onbruikbaar (contact inactief)"
     }
   },
   "bulkPortalInvitation": {
@@ -673,21 +698,51 @@
     "skipReasons": {
       "alreadyHasPortalAccess": "heeft al portaaltoegang",
       "missingEmail": "geen bruikbaar e-mailadres",
-      "sharedMailbox": "gedeelde postbus"
+      "sharedMailbox": "gedeelde postbus",
+      "emailInUse": "e-mailadres hoort al bij een andere gebruiker",
+      "inactiveContact": "inactief contact"
     },
     "actions": {
       "send": "{{total}} uitnodigingen verzenden",
-      "sending": "Verzenden..."
+      "sending": "Verzenden...",
+      "resendExpired_one": "{{count}} verlopen uitnodiging opnieuw verzenden",
+      "resendExpired_other": "{{count}} verlopen uitnodigingen opnieuw verzenden",
+      "resendPending_one": "{{count}} openstaande uitnodiging opnieuw verzenden",
+      "resendPending_other": "{{count}} openstaande uitnodigingen opnieuw verzenden",
+      "resendOpen_one": "{{count}} verlopen of openstaande uitnodiging opnieuw verzenden",
+      "resendOpen_other": "{{count}} verlopen of openstaande uitnodigingen opnieuw verzenden"
     },
     "results": {
       "summary": "{{sent}} verzonden, {{skipped}} overgeslagen, {{failed}} mislukt.",
       "sent": "Verzonden",
       "skipped": "Overgeslagen",
-      "failed": "Mislukt"
+      "failed": "Mislukt",
+      "reasons": {
+        "contactNotFound": "Contact niet gevonden",
+        "missingEmail": "Geen e-mailadres bij het contact",
+        "invalidEmail": "Het e-mailadres van het contact is ongeldig",
+        "userExists": "Heeft al een portaalaccount",
+        "emailInUse": "Het e-mailadres hoort bij een andere gebruiker",
+        "permissionDenied": "U mag dit contact niet uitnodigen",
+        "stateMismatch": "De uitnodiging heeft niet langer de status die u koos",
+        "inactiveContact": "Het contact is inactief",
+        "rateLimited": "Te veel uitnodigingspogingen voor dit contact. Probeer het later opnieuw.",
+        "invitationFailed": "De uitnodiging kon niet worden verzonden"
+      }
     },
     "errors": {
       "loadFailed": "Kon niet bepalen wie kan worden uitgenodigd. Probeer het opnieuw.",
-      "sendFailed": "Kon de uitnodigingen niet verzenden. Probeer het opnieuw."
+      "sendFailed": "Kon de uitnodigingen niet verzenden. Probeer het opnieuw.",
+      "statesUnavailable": "Kon niet bepalen welke uitnodigingen voor deze klant openstaan.",
+      "batchLimitExceeded": "Nodig maximaal 500 contacten tegelijk uit.",
+      "noTargetsSelected": "Selecteer ten minste één contact om uit te nodigen."
+    },
+    "resendTitle": "Uitnodigingen voor het klantenportaal opnieuw verzenden",
+    "resendCount_one": "{{count}} contactpersoon krijgt de uitnodiging opnieuw, met de volledige geldigheidsperiode.",
+    "resendCount_other": "{{count}} contactpersonen krijgen hun uitnodiging opnieuw, met de volledige geldigheidsperiode.",
+    "states": {
+      "pending": "Openstaand",
+      "expired": "Verlopen"
     }
   },
   "contactsLayout": {
@@ -808,6 +863,7 @@
       "signedIn": "Portaal · aangemeld {{when}}",
       "neverSignedIn": "Portaal · nooit aangemeld",
       "invited": "Portaal · uitgenodigd",
+      "invitationExpired": "Portaal · uitnodiging verlopen",
       "noAccess": "Geen portaaltoegang"
     },
     "portal": {
@@ -823,6 +879,7 @@
       "deactivated": "Gedeactiveerd",
       "activeAccount": "Actief account",
       "invitationSent": "Uitnodiging verzonden",
+      "invitationExpired": "Uitnodiging verlopen",
       "noAccess": "Geen toegang"
     },
     "tickets": {

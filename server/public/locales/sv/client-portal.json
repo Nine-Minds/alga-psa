@@ -297,6 +297,7 @@
         "contactNotFound": "Kontakten hittades inte.",
         "contactMissingEmail": "Kontakten saknar e-postadress.",
         "contactInvalidEmail": "Kontakten har en ogiltig e-postadress.",
+        "contactInactive": "Den här kontakten är inte längre aktiv. Kontakta din tjänsteleverantör.",
         "userExistsForContact": "Det finns redan ett användarkonto för den här kontakten.",
         "portalUserAlreadyExists": "Det finns redan ett konto för den här e-postadressen. Logga in eller återställ ditt lösenord på inloggningssidan.",
         "noDefaultClient": "Ingen standardkund har konfigurerats för den här organisationen.",
@@ -306,7 +307,9 @@
         "invitationNotFound": "Inbjudan hittades inte.",
         "revokeFailed": "Det gick inte att återkalla inbjudan. Försök igen.",
         "batchLimitExceeded": "För många kontakter i en begäran. Bjud in färre kontakter åt gången.",
-        "noTargetsSelected": "Välj minst en kontakt att bjuda in."
+        "noTargetsSelected": "Välj minst en kontakt att bjuda in.",
+        "invitationStateMismatch": "Den här inbjudan är inte längre giltig. Be din tjänsteleverantör om en ny.",
+        "rateLimited": "För många försök. Vänta några minuter och försök igen."
       }
     },
     "features": {

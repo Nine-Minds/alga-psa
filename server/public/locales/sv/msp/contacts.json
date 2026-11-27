@@ -410,6 +410,13 @@
         "used": "Använd",
         "expired": "Utgången",
         "revoked": "Återkallad"
+      },
+      "lastSentPrefix": "Senast skickad:",
+      "resendCount_one": "skickad igen en gång",
+      "resendCount_other": "skickad igen {{count}} gånger",
+      "unusable": {
+        "contactInactive": "Den här kontakten är inaktiv, så länken kan inte användas. Aktivera kontakten igen och skicka sedan en ny inbjudan.",
+        "emailChanged": "Den här inbjudan skickades till en adress som kontakten inte längre har, så länken fungerar inte längre. Skicka om den så att en ny länk går till kontaktens aktuella adress."
       }
     },
     "actions": {
@@ -457,13 +464,15 @@
         "contactNotFound": "Kontakten hittades inte.",
         "contactMissingEmail": "Kontakten saknar e-postadress. Lägg till en e-postadress för kontakten innan du skickar en inbjudan.",
         "contactInvalidEmail": "Kontakten har en ogiltig e-postadress. Uppdatera kontakten med en giltig e-postadress innan du skickar en inbjudan.",
+        "contactInactive": "Den här kontakten är inaktiv. Aktivera kontakten igen innan du bjuder in den till kundportalen.",
         "userExistsForContact": "Ett användarkonto finns redan för den här kontakten. Använd lösenordsåterställning i stället för att skicka en inbjudan.",
         "portalUserAlreadyExists": "Den här e-postadressen tillhör redan ett annat användarkonto i den här organisationen.",
         "noDefaultClient": "Ingen standardkund har konfigurerats för den här organisationen. Ange en standardkund i Allmänna inställningar.",
         "noDefaultLocation": "Standardkunden måste ha en standardplats konfigurerad för att portalinbjudningar ska kunna skickas.",
         "noLocationEmail": "Standardkundens plats måste ha en konfigurerad kontakt-e-postadress.",
         "noBaseUrl": "Bas-URL har inte konfigurerats för portalinbjudningar.",
-        "invitationNotFound": "Inbjudan hittades inte eller har redan använts."
+        "invitationNotFound": "Inbjudan hittades inte eller har redan använts.",
+        "rateLimited": "För många inbjudningsförsök för den här kontakten. Försök igen senare."
       },
       "userNotFound": "Kundanvändaren hittades inte",
       "validationErrorTitle": "Valideringsfel"
@@ -641,7 +650,8 @@
       "phoneNumber": "Telefonnummer",
       "actions": "Åtgärder",
       "role": "Roll",
-      "location": "Plats"
+      "location": "Plats",
+      "portalInvitation": "Portalinbjudan"
     },
     "filter": {
       "show": "Visa:",
@@ -650,7 +660,11 @@
       "all": "Alla kontakter",
       "searchPlaceholder": "Sök kontakter…",
       "allLocations": "Alla platser",
-      "noLocation": "Ingen plats"
+      "noLocation": "Ingen plats",
+      "allInvitationStates": "Alla inbjudningsstatusar",
+      "invitationExpired": "Utgångna inbjudningar",
+      "invitationPending": "Väntande inbjudningar",
+      "invitationExpiredOrPending": "Utgångna eller väntande"
     },
     "actions": {
       "openMenu": "Öppna meny",
@@ -659,12 +673,23 @@
       "selectAll": "Markera alla kontakter",
       "selectContact": "Markera {{name}}",
       "inviteSelected": "Bjud in till portalen ({{selected}})",
-      "inviteAllEligible": "Bjud in alla behöriga"
+      "inviteAllEligible": "Bjud in alla behöriga",
+      "resendExpired": "Skicka utgångna igen",
+      "resendPending": "Skicka väntande igen",
+      "resendOpen": "Skicka utgångna eller väntande igen"
     },
     "errors": {
       "loadFailed": "Det gick inte att läsa in kontakterna.",
       "loadingTitle": "Fel vid inläsning av kontakter",
       "retryFailed": "Det gick inte att läsa in kontakterna. Försök igen."
+    },
+    "invitation": {
+      "none": "Inte inbjuden",
+      "pendingUntil": "Väntande till {{date}}",
+      "expired": "Inbjudan har gått ut",
+      "activeUser": "Aktiv portalanvändare",
+      "inactiveUser": "Inaktiv portalanvändare",
+      "contactInactive": "Inbjudan kan inte användas (kontakten är inaktiv)"
     }
   },
   "bulkPortalInvitation": {
@@ -677,21 +702,51 @@
     "skipReasons": {
       "alreadyHasPortalAccess": "har redan portalåtkomst",
       "missingEmail": "ingen användbar e-postadress",
-      "sharedMailbox": "delad brevlåda"
+      "sharedMailbox": "delad brevlåda",
+      "emailInUse": "e-postadressen tillhör redan en annan användare",
+      "inactiveContact": "inaktiv kontakt"
     },
     "actions": {
       "send": "Skicka {{total}} inbjudningar",
-      "sending": "Skickar…"
+      "sending": "Skickar…",
+      "resendExpired_one": "Skicka {{count}} utgången inbjudan igen",
+      "resendExpired_other": "Skicka {{count}} utgångna inbjudningar igen",
+      "resendPending_one": "Skicka {{count}} väntande inbjudan igen",
+      "resendPending_other": "Skicka {{count}} väntande inbjudningar igen",
+      "resendOpen_one": "Skicka {{count}} utgången eller väntande inbjudan igen",
+      "resendOpen_other": "Skicka {{count}} utgångna eller väntande inbjudningar igen"
     },
     "results": {
       "summary": "{{sent}} skickade, {{skipped}} överhoppade, {{failed}} misslyckade.",
       "sent": "Skickad",
       "skipped": "Överhoppad",
-      "failed": "Misslyckad"
+      "failed": "Misslyckad",
+      "reasons": {
+        "contactNotFound": "Kontakten hittades inte",
+        "missingEmail": "Kontakten har ingen e-postadress",
+        "invalidEmail": "Kontaktens e-postadress är ogiltig",
+        "userExists": "Har redan ett portalkonto",
+        "emailInUse": "E-postadressen tillhör en annan användare",
+        "permissionDenied": "Du får inte bjuda in den här kontakten",
+        "stateMismatch": "Inbjudan har inte längre den status du valde",
+        "inactiveContact": "Kontakten är inaktiv",
+        "rateLimited": "För många inbjudningsförsök för den här kontakten. Försök igen senare.",
+        "invitationFailed": "Inbjudan kunde inte skickas"
+      }
     },
     "errors": {
       "loadFailed": "Kunde inte avgöra vilka som kan bjudas in. Försök igen.",
-      "sendFailed": "Kunde inte skicka inbjudningarna. Försök igen."
+      "sendFailed": "Kunde inte skicka inbjudningarna. Försök igen.",
+      "statesUnavailable": "Kunde inte avgöra vilka inbjudningar som är utestående för den här kunden.",
+      "batchLimitExceeded": "Bjud in högst 500 kontakter åt gången.",
+      "noTargetsSelected": "Välj minst en kontakt att bjuda in."
+    },
+    "resendTitle": "Skicka inbjudningar till kundportalen igen",
+    "resendCount_one": "{{count}} kontakt får sin inbjudan igen, med hela giltighetsperioden.",
+    "resendCount_other": "{{count}} kontakter får sin inbjudan igen, med hela giltighetsperioden.",
+    "states": {
+      "pending": "Väntande",
+      "expired": "Utgången"
     }
   },
   "contactsLayout": {
@@ -812,6 +867,7 @@
       "signedIn": "Portal · inloggad {{when}}",
       "neverSignedIn": "Portal · aldrig inloggad",
       "invited": "Portal · inbjuden",
+      "invitationExpired": "Portal · inbjudan har gått ut",
       "noAccess": "Ingen portalåtkomst"
     },
     "portal": {
@@ -827,6 +883,7 @@
       "deactivated": "Inaktiverad",
       "activeAccount": "Aktivt konto",
       "invitationSent": "Inbjudan skickad",
+      "invitationExpired": "Inbjudan har gått ut",
       "noAccess": "Ingen åtkomst"
     },
     "tickets": {

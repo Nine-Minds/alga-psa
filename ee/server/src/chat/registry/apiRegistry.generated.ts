@@ -17742,7 +17742,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/clients/{id}/portal-invitations",
     "displayName": "Invite a client's contacts to the client portal",
     "summary": "Invite a client's contacts to the client portal",
-    "description": "Sends client portal invitations for one client: either every eligible contact (all_eligible) or a named subset (contact_ids) validated against the client in the path. Invitations go out one at a time, so a contact that cannot be invited never costs the rest of the batch theirs; the response reports each contact's outcome and the request is a 200 even when some were skipped or failed.",
+    "description": "Sends client portal invitations for one client: every eligible contact (all_eligible), only those whose invitation expired or is still pending (invitation_states), or a named subset (contact_ids) validated against the client in the path. Invitations go out one at a time, so a contact that cannot be invited never costs the rest of the batch theirs; the response reports each contact's outcome and the request is a 200 even when some were skipped or failed.",
     "tags": [
       "Portal Invitations"
     ],
@@ -17788,9 +17788,21 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "all_eligible": {
           "type": "boolean",
           "description": "Invite every active contact of the client that has no client portal user yet. Ignored when contact_ids is given."
+        },
+        "invitation_states": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "expired",
+              "pending"
+            ]
+          },
+          "minItems": 1,
+          "description": "Narrows the contacts to those whose latest invitation is expired and/or still pending — the chase-up case. A contact whose latest invitation was used or revoked is in neither state, whatever older invitations it has. A resend renews the link for the tenant's full invitation validity. Narrower than all_eligible, and it also narrows contact_ids: an id whose invitation is no longer in one of these states comes back as skipped with INVITATION_STATE_MISMATCH."
         }
       },
-      "description": "Supply contact_ids, or all_eligible=true. One of the two is required."
+      "description": "Supply contact_ids, all_eligible=true, or invitation_states. One of the three is required."
     },
     "responseBodySchema": {
       "type": "object",
@@ -17842,7 +17854,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/portal-invitations/bulk",
     "displayName": "Invite contacts to the client portal in bulk",
     "summary": "Invite contacts to the client portal in bulk",
-    "description": "Sends client portal invitations for the named contacts, which may belong to different clients; each contact is authorized against its own client before anything is sent. Same per-contact result envelope as the client-scoped endpoint.",
+    "description": "Sends client portal invitations for the named contacts, which may belong to different clients; each contact is authorized against its own client before anything is sent. Optional invitation_states narrows contact_ids to expired and/or pending invitations using the same latest-invitation rule as the client-scoped endpoint. Same per-contact result envelope as the client-scoped endpoint.",
     "tags": [
       "Portal Invitations"
     ],
@@ -17873,6 +17885,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "minItems": 1,
           "maxItems": 500,
           "description": "Contacts to invite, in any client. Each contact is authorized against its own client."
+        },
+        "invitation_states": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "expired",
+              "pending"
+            ]
+          },
+          "minItems": 1,
+          "description": "Narrows the contacts to those whose latest invitation is expired and/or still pending — the chase-up case. A contact whose latest invitation was used or revoked is in neither state, whatever older invitations it has. A resend renews the link for the tenant's full invitation validity. It narrows contact_ids: an id whose invitation is no longer in one of these states comes back as skipped with INVITATION_STATE_MISMATCH."
         }
       },
       "required": [

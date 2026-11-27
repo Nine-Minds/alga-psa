@@ -24,6 +24,8 @@ export type PortalInvitationErrorCode =
   | 'CONTACT_NOT_FOUND'
   | 'CONTACT_MISSING_EMAIL'
   | 'CONTACT_INVALID_EMAIL'
+  /** The contact is deactivated, so a link mailed to it could never be used. */
+  | 'CONTACT_INACTIVE'
   | 'USER_EXISTS_FOR_CONTACT'
   | 'PORTAL_USER_ALREADY_EXISTS'
   | 'NO_DEFAULT_CLIENT'
@@ -33,7 +35,11 @@ export type PortalInvitationErrorCode =
   | 'INVITATION_NOT_FOUND'
   | 'REVOKE_FAILED'
   | 'BATCH_LIMIT_EXCEEDED'
-  | 'NO_TARGETS_SELECTED';
+  | 'NO_TARGETS_SELECTED'
+  /** The contact's latest invitation is no longer in the state the batch targeted. */
+  | 'INVITATION_STATE_MISMATCH'
+  /** Too many invitations were attempted for this contact; the UI translates the wait. */
+  | 'RATE_LIMITED';
 
 export interface SendInvitationResult {
   success: boolean;
@@ -72,6 +78,42 @@ export interface BulkSendInvitationResult {
   errorCode?: PortalInvitationErrorCode;
 }
 
+/**
+ * A contact's standing with the client portal, as the MSP running a rollout
+ * needs to see it: no outstanding invitation, an invitation that is still
+ * usable, an invitation that lapsed unused, a live portal user, or a portal
+ * user that was deactivated. Derived from the contact's latest invitation only.
+ */
+export type PortalInvitationState =
+  | 'none'
+  | 'pending'
+  | 'expired'
+  | 'active_user'
+  | 'inactive_user';
+
+/** The invitation states a batch can be aimed at. */
+export type PortalInvitationStateTarget = Extract<PortalInvitationState, 'pending' | 'expired'>;
+
+export interface PortalInvitationContactState {
+  contactId: string;
+  state: PortalInvitationState;
+  /** When a pending invitation lapses; null in every other state. */
+  expiresAt: string | null;
+  /**
+   * True when the contact's email is already held by a user the invitation
+   * cannot adopt (an internal user, or another contact's portal user), which is
+   * the same rule the send path refuses on. Lets a preview count only what will
+   * actually be mailed.
+   */
+  emailConflict: boolean;
+  /**
+   * True when the contact is deactivated. Such a contact cannot be invited and
+   * cannot use a link already in its mailbox, so an outstanding invitation on it
+   * is reported as unusable rather than as something to chase up.
+   */
+  contactInactive: boolean;
+}
+
 export interface SendBulkPortalInvitationsParams {
   /** Restricts the batch to one client, and validates every explicit contact against it. */
   clientId?: string;
@@ -79,6 +121,14 @@ export interface SendBulkPortalInvitationsParams {
   contactIds?: string[];
   /** Invite every contact without a portal user (optionally within `clientId`). */
   allEligible?: boolean;
+  /**
+   * Narrows the batch to contacts whose latest invitation is in one of these
+   * states — the chase-up case ("resend everything that expired"). Narrower
+   * than `allEligible`, and it also narrows an explicit `contactIds` list: an
+   * id whose invitation is no longer in one of these states is skipped rather
+   * than mailed, so the batch can never outrun what the sender was shown.
+   */
+  invitationStates?: PortalInvitationStateTarget[];
 }
 
 export interface PortalInvitationEntraPrelink {
@@ -118,13 +168,31 @@ export type ClientUserActionError =
   | { readonly actionError: string }
   | { readonly permissionError: string };
 
+/**
+ * Why a link that is neither used nor past its expiry would still be refused
+ * when it is opened: the contact was deactivated, or its email address moved on
+ * from the one the invitation was mailed to.
+ */
+export type InvitationUseTimeRefusal = 'contact_inactive' | 'email_changed';
+
 export interface InvitationHistoryItem {
   invitation_id: string;
   email: string;
   created_at: string;
   expires_at: string;
   used_at?: string;
+  /** When the invitation was last mailed again; absent until it is resent. */
+  last_sent_at?: string;
+  /** How many times the invitation was mailed again after it was created. */
+  resend_count?: number;
   status: 'pending' | 'expired' | 'used' | 'revoked';
+  /**
+   * Set when the stored link is refused at use time although its expiry has not
+   * passed. Such an invitation is reported as `expired` rather than `pending` —
+   * the link really is dead, and a resend is what repairs it — and the reason
+   * says which refusal it ran into.
+   */
+  unusable_reason?: InvitationUseTimeRefusal;
 }
 
 export interface CreateClientPortalUserParams {

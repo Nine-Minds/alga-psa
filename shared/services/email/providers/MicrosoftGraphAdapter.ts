@@ -118,6 +118,7 @@ export interface MicrosoftGraphSendMailResult {
 
 // Graph caps Outlook message subscriptions at 4,230 minutes; keep a safe 60-hour window.
 const MICROSOFT_MESSAGE_SUBSCRIPTION_EXPIRATION_MS = 60 * 60 * 60 * 1000;
+const ORPHAN_EXPIRATION_GRACE_MS = 5 * 60 * 1000;
 
 export interface MicrosoftGraphAdapterOptions {
   /** Keep refreshed credentials in memory without writing them to provider storage. */
@@ -777,15 +778,31 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     );
     if (candidates.length === 0) return 0;
 
+    // Untracked does not mean obsolete: a live subscription can be untracked after
+    // local ID loss or while a registration has not yet saved its ID. Only rows
+    // with a parseable expirationDateTime already past (plus a grace margin) are
+    // provably stale; everything else is kept.
+    const staleBefore = Date.now() - ORPHAN_EXPIRATION_GRACE_MS;
+    const staleCandidates = candidates.filter((subscription: any) => {
+      const expiresAt =
+        typeof subscription.expirationDateTime === 'string' ? Date.parse(subscription.expirationDateTime) : NaN;
+      if (Number.isFinite(expiresAt) && expiresAt < staleBefore) return true;
+      this.log('info', 'Keeping Microsoft subscription because staleness is unproven', {
+        subscriptionId: subscription.id,
+      });
+      return false;
+    });
+    if (staleCandidates.length === 0) return 0;
+
     // An OAuth application and callback can be shared across mailbox providers.
     const knex = await getAdminConnection();
     const trackedIds = await tenantDb(knex, this.config.tenant)
       .unscoped('microsoft_email_provider_config', 'protect subscription IDs tracked by any mailbox provider')
-      .whereIn('webhook_subscription_id', candidates.map((subscription: { id: string }) => subscription.id))
+      .whereIn('webhook_subscription_id', staleCandidates.map((subscription: { id: string }) => subscription.id))
       .pluck('webhook_subscription_id');
 
     let deleted = 0;
-    for (const orphan of candidates) {
+    for (const orphan of staleCandidates) {
       if (trackedIds.includes(orphan.id)) continue;
       try {
         await this.httpClient.delete(`/subscriptions/${encodeURIComponent(String(orphan.id))}`);
