@@ -232,12 +232,14 @@
         "configAlert": {
           "title": "Microsoft provider settings are not configured.",
           "body": "Configure Providers first in Settings → Integrations → Providers, then return here to connect Outlook Calendar.",
-          "openSettings": "Open Providers Settings"
+          "openSettings": "Open Providers Settings",
+          "suppliedApp": "In Providers you can set up Microsoft with the application AlgaPSA supplies. No Entra app registration is required."
         },
         "setupReason": {
           "unsupported_consumer": "Unsupported Microsoft consumer type for Calendar.",
           "binding_not_configured": "Calendar is not yet bound to a Microsoft profile. Configure Providers first, then return here to connect Outlook Calendar.",
           "profile_missing": "The Microsoft profile bound to Calendar is missing or archived. Select an active profile in Providers, then return here.",
+          "profile_capability_missing": "The Microsoft profile bound to Calendar is not enabled for Calendar. Update the profile in Providers, then return here.",
           "profile_credentials_missing": "The Microsoft profile bound to Calendar is missing required credentials. Update the profile in Providers, then return here."
         },
         "defaults": {
@@ -253,12 +255,16 @@
           "copyFailed": "Could not copy",
           "unavailable": "Unavailable",
           "permissions": "Delegated permissions (Microsoft Graph)",
+          "suppliedIntro": "Outlook Calendar connects with the Microsoft application supplied by AlgaPSA. You will be asked to sign in with your Microsoft account.",
           "tenancy": "The app can be single-tenant or multitenant. Sign-in follows the directory (tenant) ID on the Microsoft profile bound to Calendar.",
           "openProviders": "Open Microsoft provider settings"
         },
         "adminConsentPending": {
           "title": "Administrator approval is pending.",
           "body": "A Microsoft 365 administrator still has to approve the app registration bound to Calendar. Ask them to grant admin consent for the permissions listed below, then return here to connect Outlook Calendar.",
+          "bodySupplied": "A Microsoft administrator for your organization must approve calendar access for the Microsoft application AlgaPSA supplies. Once they have approved it, return here to connect Outlook Calendar.",
+          "approve": "Approve calendar access",
+          "linkFailed": "Could not create the Microsoft approval link.",
           "openSettings": "Open Microsoft Provider Settings"
         }
       }

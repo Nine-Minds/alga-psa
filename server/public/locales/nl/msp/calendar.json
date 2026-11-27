@@ -232,12 +232,14 @@
         "configAlert": {
           "title": "De instellingen van de Microsoft-provider zijn niet geconfigureerd.",
           "body": "Configureer eerst de providers in Instellingen → Integraties → Providers en kom dan terug om Outlook Calendar te verbinden.",
-          "openSettings": "Providerinstellingen openen"
+          "openSettings": "Providerinstellingen openen",
+          "suppliedApp": "Onder Providers kunt u Microsoft instellen met de toepassing die AlgaPSA levert. Een Entra-app-registratie is niet nodig."
         },
         "setupReason": {
           "unsupported_consumer": "Niet-ondersteund Microsoft-consumententype voor Agenda.",
           "binding_not_configured": "De agenda is nog niet gekoppeld aan een Microsoft-profiel. Configureer eerst de providers en kom dan terug om Outlook Calendar te verbinden.",
           "profile_missing": "Het aan de agenda gekoppelde Microsoft-profiel ontbreekt of is gearchiveerd. Selecteer een actief profiel in Providers en kom dan terug.",
+          "profile_capability_missing": "Het aan de agenda gekoppelde Microsoft-profiel is niet ingeschakeld voor de agenda. Werk het profiel bij in Providers en kom dan terug.",
           "profile_credentials_missing": "Het aan de agenda gekoppelde Microsoft-profiel mist de vereiste inloggegevens. Werk het profiel bij in Providers en kom dan terug."
         },
         "defaults": {
@@ -253,12 +255,16 @@
           "copyFailed": "Kopiëren mislukt",
           "unavailable": "Niet beschikbaar",
           "permissions": "Gedelegeerde machtigingen (Microsoft Graph)",
+          "suppliedIntro": "Outlook Calendar wordt verbonden met de Microsoft-toepassing die AlgaPSA levert. U wordt gevraagd u aan te melden met uw Microsoft-account.",
           "tenancy": "De app kan single-tenant of multitenant zijn. Aanmelden volgt de map-ID (tenant-ID) van het Microsoft-profiel dat aan Calendar is gekoppeld.",
           "openProviders": "Microsoft-providerinstellingen openen"
         },
         "adminConsentPending": {
           "title": "Goedkeuring door een beheerder is nog in behandeling.",
           "body": "Een Microsoft 365-beheerder moet de aan Calendar gekoppelde app-registratie nog goedkeuren. Vraag deze beheerder beheerderstoestemming te verlenen voor de onderstaande machtigingen en kom daarna terug om Outlook Calendar te verbinden.",
+          "bodySupplied": "Een Microsoft-beheerder van uw organisatie moet agendatoegang goedkeuren voor de Microsoft-toepassing die AlgaPSA levert. Kom na de goedkeuring hier terug om Outlook Calendar te verbinden.",
+          "approve": "Agendatoegang goedkeuren",
+          "linkFailed": "De Microsoft-goedkeuringslink kon niet worden gemaakt.",
           "openSettings": "Microsoft-providerinstellingen openen"
         }
       }

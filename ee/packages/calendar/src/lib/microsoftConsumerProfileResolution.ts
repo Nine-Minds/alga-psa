@@ -1,3 +1,4 @@
+// LEVERAGE: pattern microsoft-consumer-resolver-fork — forked resolver (also packages/integrations/src/lib/microsoftConsumerProfileResolution.ts); the calendar copy returns `reasonCode` (drives the form's setupReason copy) which the shared one lacks, so the calendar status cannot yet use the shared resolver. Source/offered flags are derived outside it (client id vs platform client id).
 import { randomUUID } from 'node:crypto';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { tenantDb } from '@alga-psa/db';

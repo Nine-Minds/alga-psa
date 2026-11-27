@@ -232,12 +232,14 @@
         "configAlert": {
           "title": "Ustawienia dostawcy Microsoft nie są skonfigurowane.",
           "body": "Najpierw skonfiguruj dostawców w Ustawienia → Integracje → Dostawcy, a następnie wróć tutaj, aby połączyć Outlook Calendar.",
-          "openSettings": "Otwórz ustawienia dostawców"
+          "openSettings": "Otwórz ustawienia dostawców",
+          "suppliedApp": "W sekcji Dostawcy możesz skonfigurować Microsoft przy użyciu aplikacji udostępnianej przez AlgaPSA. Rejestracja aplikacji Entra nie jest wymagana."
         },
         "setupReason": {
           "unsupported_consumer": "Nieobsługiwany typ konsumenta Microsoft dla kalendarza.",
           "binding_not_configured": "Kalendarz nie jest jeszcze powiązany z profilem Microsoft. Najpierw skonfiguruj dostawców, a następnie wróć tutaj, aby połączyć Outlook Calendar.",
           "profile_missing": "Profil Microsoft powiązany z kalendarzem nie istnieje lub jest zarchiwizowany. Wybierz aktywny profil w Dostawcach i wróć tutaj.",
+          "profile_capability_missing": "Profil Microsoft powiązany z kalendarzem nie jest włączony dla kalendarza. Zaktualizuj profil w Dostawcach i wróć tutaj.",
           "profile_credentials_missing": "Profilowi Microsoft powiązanemu z kalendarzem brakuje wymaganych poświadczeń. Zaktualizuj profil w Dostawcach i wróć tutaj."
         },
         "defaults": {
@@ -253,12 +255,16 @@
           "copyFailed": "Nie udało się skopiować",
           "unavailable": "Niedostępne",
           "permissions": "Uprawnienia delegowane (Microsoft Graph)",
+          "suppliedIntro": "Outlook Calendar łączy się za pomocą aplikacji Microsoft udostępnianej przez AlgaPSA. Zostaniesz poproszony o zalogowanie się kontem Microsoft.",
           "tenancy": "Aplikacja może obsługiwać jedną organizację lub wiele organizacji. Logowanie korzysta z identyfikatora katalogu (organizacji) z profilu Microsoft powiązanego z Calendar.",
           "openProviders": "Otwórz ustawienia dostawców Microsoft"
         },
         "adminConsentPending": {
           "title": "Zatwierdzenie przez administratora jest w toku.",
           "body": "Administrator Microsoft 365 musi jeszcze zatwierdzić rejestrację aplikacji powiązaną z Calendar. Poproś o udzielenie zgody administratora na wymienione poniżej uprawnienia, a następnie wróć tutaj, aby połączyć Outlook Calendar.",
+          "bodySupplied": "Administrator Microsoft w Twojej organizacji musi zatwierdzić dostęp do kalendarza dla aplikacji Microsoft udostępnianej przez AlgaPSA. Po zatwierdzeniu wróć tutaj, aby połączyć Outlook Calendar.",
+          "approve": "Zatwierdź dostęp do kalendarza",
+          "linkFailed": "Nie można utworzyć linku zatwierdzenia Microsoft.",
           "openSettings": "Otwórz ustawienia dostawców Microsoft"
         }
       }

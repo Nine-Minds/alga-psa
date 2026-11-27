@@ -1,3 +1,4 @@
+// LEVERAGE: pattern microsoft-consumer-resolver-fork — third copy (see packages/integrations/src/lib/microsoftConsumerProfileResolution.ts and ee/packages/calendar/src/lib/microsoftConsumerProfileResolution.ts).
 import { randomUUID } from 'node:crypto';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { tenantDb } from '@alga-psa/db';

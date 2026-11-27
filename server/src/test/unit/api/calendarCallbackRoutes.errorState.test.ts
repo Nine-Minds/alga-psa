@@ -72,6 +72,38 @@ describe('calendar OAuth callbacks: error responses honor isPopup from state', (
     });
   });
 
+  it.each([
+    ['interaction_required with admin approval wording', 'interaction_required', 'AADSTS50158: Need admin approval for this application'],
+    ['bare consent_required', 'consent_required', ''],
+  ])('microsoft: %s maps to pending_admin_consent and logs the classification', async (_label, error, description) => {
+    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    info.mockClear();
+    const res = await microsoftGet(
+      request('microsoft', { error, error_description: description, state: popupState('microsoft') })
+    );
+    expect(decodeEmbeddedPayload(await res.text())).toMatchObject({ success: false, error: 'pending_admin_consent' });
+    expect(info).toHaveBeenCalledWith(
+      'Microsoft Calendar OAuth failure classified as admin consent required',
+      expect.objectContaining({ stage: 'authorize', oauthError: error })
+    );
+  });
+
+  it.each([
+    ['access_denied', 'The user cancelled the sign-in'],
+    ['interaction_required', 'Session expired, sign in again'],
+    ['invalid_request', 'AADSTS900144: The request body must contain client_id'],
+  ])('microsoft: %s keeps the generic error code and logs no consent classification', async (error, description) => {
+    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    info.mockClear();
+    const res = await microsoftGet(
+      request('microsoft', { error, error_description: description, state: popupState('microsoft') })
+    );
+    const payload = decodeEmbeddedPayload(await res.text());
+    expect(payload).toMatchObject({ success: false, error });
+    expect(payload.error).not.toBe('pending_admin_consent');
+    expect(info).not.toHaveBeenCalled();
+  });
+
   it('microsoft: consent error with no state and no popup param still redirects to the profile Calendar tab', async () => {
     const res = await microsoftGet(
       request('microsoft', {

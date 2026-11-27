@@ -232,12 +232,14 @@
         "configAlert": {
           "title": "Le impostazioni del provider Microsoft non sono configurate.",
           "body": "Configura prima i provider in Impostazioni → Integrazioni → Provider, poi torna qui per collegare Outlook Calendar.",
-          "openSettings": "Apri impostazioni provider"
+          "openSettings": "Apri impostazioni provider",
+          "suppliedApp": "In Provider puoi configurare Microsoft con l'applicazione fornita da AlgaPSA. Non è richiesta alcuna registrazione di app Entra."
         },
         "setupReason": {
           "unsupported_consumer": "Tipo di consumatore Microsoft non supportato per il calendario.",
           "binding_not_configured": "Il calendario non è ancora associato a un profilo Microsoft. Configura prima i provider e torna qui per collegare Outlook Calendar.",
           "profile_missing": "Il profilo Microsoft associato al calendario è mancante o archiviato. Seleziona un profilo attivo in Provider e torna qui.",
+          "profile_capability_missing": "Il profilo Microsoft associato al calendario non è abilitato per il calendario. Aggiorna il profilo in Provider e torna qui.",
           "profile_credentials_missing": "Al profilo Microsoft associato al calendario mancano le credenziali richieste. Aggiorna il profilo in Provider e torna qui."
         },
         "defaults": {
@@ -253,12 +255,16 @@
           "copyFailed": "Impossibile copiare",
           "unavailable": "Non disponibile",
           "permissions": "Autorizzazioni delegate (Microsoft Graph)",
+          "suppliedIntro": "Outlook Calendar si collega con l'applicazione Microsoft fornita da AlgaPSA. Ti verrà chiesto di accedere con il tuo account Microsoft.",
           "tenancy": "L'app può essere a tenant singolo o multi-tenant. L'accesso segue l'ID directory (tenant) del profilo Microsoft associato a Calendar.",
           "openProviders": "Apri le impostazioni dei provider Microsoft"
         },
         "adminConsentPending": {
           "title": "L'approvazione dell'amministratore è in sospeso.",
           "body": "Un amministratore di Microsoft 365 deve ancora approvare la registrazione dell'app associata a Calendar. Chiedigli di concedere il consenso amministratore per le autorizzazioni elencate di seguito, poi torna qui per connettere Outlook Calendar.",
+          "bodySupplied": "Un amministratore Microsoft della tua organizzazione deve approvare l'accesso al calendario per l'applicazione Microsoft fornita da AlgaPSA. Dopo l'approvazione, torna qui per collegare Outlook Calendar.",
+          "approve": "Approva l'accesso al calendario",
+          "linkFailed": "Impossibile creare il link di approvazione Microsoft.",
           "openSettings": "Apri le impostazioni dei provider Microsoft"
         }
       }

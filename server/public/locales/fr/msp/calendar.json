@@ -232,12 +232,14 @@
         "configAlert": {
           "title": "Les paramètres du fournisseur Microsoft ne sont pas configurés.",
           "body": "Configurez d'abord les fournisseurs dans Paramètres → Intégrations → Fournisseurs, puis revenez ici pour connecter Outlook Calendar.",
-          "openSettings": "Ouvrir les paramètres des fournisseurs"
+          "openSettings": "Ouvrir les paramètres des fournisseurs",
+          "suppliedApp": "Dans Fournisseurs, vous pouvez configurer Microsoft avec l'application fournie par AlgaPSA. Aucune inscription d'application Entra n'est nécessaire."
         },
         "setupReason": {
           "unsupported_consumer": "Type de consommateur Microsoft non pris en charge pour le calendrier.",
           "binding_not_configured": "Le calendrier n'est pas encore lié à un profil Microsoft. Configurez d'abord les fournisseurs, puis revenez ici pour connecter Outlook Calendar.",
           "profile_missing": "Le profil Microsoft lié au calendrier est absent ou archivé. Sélectionnez un profil actif dans Fournisseurs, puis revenez ici.",
+          "profile_capability_missing": "Le profil Microsoft lié au calendrier n'est pas activé pour le calendrier. Mettez à jour le profil dans Fournisseurs, puis revenez ici.",
           "profile_credentials_missing": "Le profil Microsoft lié au calendrier ne dispose pas des identifiants requis. Mettez à jour le profil dans Fournisseurs, puis revenez ici."
         },
         "defaults": {
@@ -253,12 +255,16 @@
           "copyFailed": "Copie impossible",
           "unavailable": "Indisponible",
           "permissions": "Autorisations déléguées (Microsoft Graph)",
+          "suppliedIntro": "Outlook Calendar se connecte avec l'application Microsoft fournie par AlgaPSA. Vous devrez vous connecter avec votre compte Microsoft.",
           "tenancy": "L'application peut être mono-locataire ou multilocataire. La connexion suit l'ID de l'annuaire (locataire) du profil Microsoft lié à Calendar.",
           "openProviders": "Ouvrir les paramètres des fournisseurs Microsoft"
         },
         "adminConsentPending": {
           "title": "L'approbation de l'administrateur est en attente.",
           "body": "Un administrateur Microsoft 365 doit encore approuver l'inscription d'application liée à Calendar. Demandez-lui d'accorder le consentement administrateur pour les autorisations ci-dessous, puis revenez ici pour connecter Outlook Calendar.",
+          "bodySupplied": "Un administrateur Microsoft de votre organisation doit approuver l'accès au calendrier pour l'application Microsoft fournie par AlgaPSA. Une fois l'approbation donnée, revenez ici pour connecter Outlook Calendar.",
+          "approve": "Approuver l'accès au calendrier",
+          "linkFailed": "Impossible de créer le lien d'approbation Microsoft.",
           "openSettings": "Ouvrir les paramètres des fournisseurs Microsoft"
         }
       }

@@ -2,10 +2,17 @@
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth } from '@alga-psa/auth/withAuth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import {
   resolveMicrosoftConsumerProfileConfig,
   type MicrosoftConsumerProfileReasonCode,
 } from '../../microsoftConsumerProfileResolution';
+import {
+  getMicrosoftPlatformClientId,
+  isMicrosoftPlatformAppOffered,
+  isMicrosoftPlatformClientId,
+  reconcileMicrosoftPlatformAppProfile,
+} from '@alga-psa/shared/services/email/microsoftPlatformApp';
 import { resolveCalendarRedirectUri } from '../../utils/calendar/redirectUri';
 
 const GOOGLE_CLIENT_ID_SECRET = 'google_client_id';
@@ -61,6 +68,8 @@ export const getGoogleCalendarSetupStatus = withAuth(async (
   }
 });
 
+export type MicrosoftCalendarCredentialSource = 'platform' | 'tenant_app';
+
 export const getMicrosoftCalendarSetupStatus = withAuth(async (
   user,
   { tenant }
@@ -74,6 +83,15 @@ export const getMicrosoftCalendarSetupStatus = withAuth(async (
   profileId?: string | null;
   message?: string;
   reasonCode?: MicrosoftConsumerProfileReasonCode;
+  /** Whose app the bound profile is: the AlgaPSA-supplied app or a tenant-owned one. Set only when ready. */
+  source?: MicrosoftCalendarCredentialSource;
+  /** Whether the AlgaPSA-supplied Microsoft app is offered on this deployment. */
+  platformOffered?: boolean;
+  /**
+   * Whether this user may manage Microsoft provider settings (the same check
+   * those settings use: system_settings:update). Gates the admin consent link.
+   */
+  canManageProviderSettings?: boolean;
 }> => {
   try {
     if ((user as any)?.user_type === 'client') {
@@ -89,7 +107,24 @@ export const getMicrosoftCalendarSetupStatus = withAuth(async (
       hosted: false,
     });
 
-    const profile = await resolveMicrosoftConsumerProfileConfig(tenant, 'calendar');
+    // Bring a consented supplied-app profile up to what the platform app serves
+    // (adds Calendar capability/binding when absent, never overrides a binding).
+    // Must not break the readiness read if it fails.
+    try {
+      await reconcileMicrosoftPlatformAppProfile(tenant);
+    } catch (reconcileError: any) {
+      console.warn('[calendarSetupActions] supplied-app reconcile failed', {
+        tenant,
+        error: reconcileError?.message || 'unknown',
+      });
+    }
+
+    const [profile, platformOffered, platformClientId, canManageProviderSettings] = await Promise.all([
+      resolveMicrosoftConsumerProfileConfig(tenant, 'calendar'),
+      isMicrosoftPlatformAppOffered(),
+      getMicrosoftPlatformClientId(),
+      hasPermission(user as any, 'system_settings', 'update'),
+    ]);
     if (profile.status !== 'ready') {
       return {
         success: true,
@@ -99,6 +134,8 @@ export const getMicrosoftCalendarSetupStatus = withAuth(async (
         profileId: profile.profileId || null,
         message: profile.message || 'No Microsoft profile is currently bound to Calendar.',
         reasonCode: profile.reasonCode,
+        platformOffered,
+        canManageProviderSettings,
       };
     }
 
@@ -108,6 +145,10 @@ export const getMicrosoftCalendarSetupStatus = withAuth(async (
       state: 'ready',
       redirectUri,
       profileId: profile.profileId,
+      // Same derivation as getMicrosoftEmailSetupReadiness: client id equals the platform app's.
+      source: isMicrosoftPlatformClientId(profile.clientId, platformClientId) ? 'platform' : 'tenant_app',
+      platformOffered,
+      canManageProviderSettings,
     };
   } catch (err: any) {
     return {

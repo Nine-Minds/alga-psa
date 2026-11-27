@@ -80,6 +80,19 @@ describe('admin consent failures (Calendar pending_admin_consent)', () => {
     ).toBe('admin_consent_required');
   });
 
+  it('classifies interaction_required only when the description names admin approval or consent', () => {
+    expect(
+      classifyMicrosoftOAuthFailure({ error: 'interaction_required', errorDescription: 'Need admin approval' })
+    ).toBe('admin_consent_required');
+    expect(
+      classifyMicrosoftOAuthFailure({ error: 'interaction_required', errorDescription: 'User consent is required' })
+    ).toBe('admin_consent_required');
+    expect(
+      classifyMicrosoftOAuthFailure({ error: 'interaction_required', errorDescription: 'Session expired, sign in again' })
+    ).toBeNull();
+    expect(classifyMicrosoftOAuthFailure({ error: 'interaction_required' })).toBeNull();
+  });
+
   it('does not treat other OAuth errors as consent failures', () => {
     expect(classifyMicrosoftOAuthFailure({ error: 'access_denied', errorDescription: 'The user cancelled' })).toBeNull();
   });

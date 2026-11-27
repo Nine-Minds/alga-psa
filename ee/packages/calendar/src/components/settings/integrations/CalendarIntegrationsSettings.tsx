@@ -1,7 +1,10 @@
 'use client';
 
-import { CalendarIntegrationsSettings as EnterpriseCalendarIntegrationsSettings } from '../../calendar/CalendarIntegrationsSettings';
+import {
+  CalendarIntegrationsSettings as EnterpriseCalendarIntegrationsSettings,
+  type CalendarIntegrationsSettingsProps,
+} from '../../calendar/CalendarIntegrationsSettings';
 
-export default function CalendarIntegrationsSettings() {
-  return <EnterpriseCalendarIntegrationsSettings />;
+export default function CalendarIntegrationsSettings(props: CalendarIntegrationsSettingsProps) {
+  return <EnterpriseCalendarIntegrationsSettings {...props} />;
 }

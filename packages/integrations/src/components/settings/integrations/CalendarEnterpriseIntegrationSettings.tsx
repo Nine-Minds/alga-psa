@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getMicrosoftEmailAdminConsentUrl } from '../../../actions/integrations/microsoftEmailSetupActions';
 import { isCalendarEnterpriseEdition } from '../../../lib/calendarAvailability';
 
 function CalendarLoadingPlaceholder() {
@@ -35,5 +36,5 @@ export function CalendarEnterpriseIntegrationSettings() {
     return null;
   }
 
-  return <EnterpriseCalendarIntegrationsSettings />;
+  return <EnterpriseCalendarIntegrationsSettings getMicrosoftAdminConsentUrl={getMicrosoftEmailAdminConsentUrl} />;
 }

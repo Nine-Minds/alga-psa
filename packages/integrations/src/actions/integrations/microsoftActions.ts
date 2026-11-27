@@ -38,6 +38,7 @@ import {
   buildMicrosoftEmailSetupRedirectUri,
 } from '@alga-psa/shared/services/email/microsoftRedirectUris';
 import { MICROSOFT_CALENDAR_OAUTH_SCOPES } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
+import { reconcileMicrosoftPlatformAppProfile } from '../../lib/microsoftPlatformApp';
 import { resolveMicrosoftBindingCandidateProfile } from '../../lib/microsoftConsumerProfileResolution';
 import {
   backfillMicrosoftEmailProviderIssuerMetadata,
@@ -1134,6 +1135,7 @@ async function createMicrosoftProfileInternal(
   }
 }
 
+// LEVERAGE: friction microsoft-email-named-setup — this creator is shared by the supplied-app and the manual (tenant-owned, email-only) setup paths and is imported by tests/UI under its email-specific name, so it is not mechanically renamable; it now takes the capabilities explicitly (default email only).
 export async function createMicrosoftEmailProfilePendingConsentInternal(
   user: any,
   tenant: string,
@@ -1142,6 +1144,7 @@ export async function createMicrosoftEmailProfilePendingConsentInternal(
     clientId: string;
     clientSecret: string;
     tenantId: string;
+    capabilities?: MicrosoftProfileConsumer[];
   }
 ): Promise<{
   success: boolean;
@@ -1149,9 +1152,10 @@ export async function createMicrosoftEmailProfilePendingConsentInternal(
   profileId?: string;
   displayName?: string;
 }> {
+  const { capabilities, ...profileInput } = input;
   const created = await createMicrosoftProfileInternal(user, tenant, {
-    ...input,
-    capabilities: ['email'],
+    ...profileInput,
+    capabilities: capabilities && capabilities.length > 0 ? capabilities : ['email'],
     requiresEmailAdminConsent: true,
   });
   if (!created.success || !created.profile) {
@@ -1855,8 +1859,21 @@ export const getMicrosoftIntegrationStatus = withAuth(async (
   try {
     if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
 
+    // The one deliberate write on this status path: bring the tenant's consented
+    // supplied-app profile up to what the platform app serves (see
+    // microsoftPlatformApp.ts). It never touches legacy/unmigrated state or
+    // tenant-owned profiles, and is a no-op when the supplied app isn't offered.
+    // A failure must not break the status read.
+    try {
+      await reconcileMicrosoftPlatformAppProfile(tenant);
+    } catch (reconcileError) {
+      console.warn('[microsoftActions] supplied-app reconcile failed', {
+        tenant,
+        error: reconcileError instanceof Error ? reconcileError.message : 'unknown',
+      });
+    }
     const profiles = await readMicrosoftProfilesForTenant(tenant);
-    // STRICTLY READ-ONLY. This status powers both the Microsoft email settings
+    // Apart from the reconcile above, STRICTLY READ-ONLY. This status powers both the Microsoft email settings
     // page and the Teams settings profile picker, so it must never write to
     // microsoft_profiles, microsoft_profile_consumer_bindings,
     // microsoft_email_provider_config, or the secret provider. The conservative

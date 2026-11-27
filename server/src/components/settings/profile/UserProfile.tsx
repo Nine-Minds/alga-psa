@@ -35,6 +35,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getUserLocaleAction, updateUserLocaleAction } from '@alga-psa/user-composition/actions/localeActions';
 import { getInheritedLocaleAction } from '@alga-psa/tenancy/actions/locale-actions/getInheritedLocale';
 import type { SupportedLocale } from '@alga-psa/core/i18n/config';
+import { getMicrosoftEmailAdminConsentUrl } from '@alga-psa/integrations/actions/integrations/microsoftEmailSetupActions';
 
 function ConnectSsoLoading() {
   const { t } = useTranslation('msp/profile');
@@ -538,7 +539,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
     ...(isCalendarTabAvailable ? [{
       id: 'calendar',
       label: t('profile.tabs.calendar', { defaultValue: 'Calendar' }),
-      content: <CalendarProfileSettings />,
+      content: <CalendarProfileSettings getMicrosoftAdminConsentUrl={getMicrosoftEmailAdminConsentUrl} />,
     }] : []),
   ];
 

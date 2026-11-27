@@ -1792,13 +1792,16 @@
         "callbackUri": "Mailbox callback URI",
         "complete": {
           "consentDone": "Approved by your Microsoft 365 administrator. You can now connect a mailbox.",
+          "consentDoneCalendar": "Approved by your Microsoft 365 administrator. You can now connect a mailbox or a calendar.",
           "consentPending": "A Microsoft 365 administrator for your organization must approve access before mailboxes can connect.",
+          "consentPendingCalendar": "A Microsoft 365 administrator for your organization must approve access before mailboxes and calendars can connect.",
           "profileCreated": "Microsoft Email profile created",
           "ready": "Microsoft is ready",
           "waiting": "Waiting for admin approval"
         },
         "consent": {
           "confirmedDescription": "The Microsoft app is ready for mailbox authorization.",
+          "confirmedDescriptionCalendar": "The Microsoft app is ready for mailbox and calendar authorization.",
           "confirmedTitle": "Administrator consent confirmed",
           "approvalLink": "Approval link",
           "url": "Administrator consent URL",
@@ -1806,6 +1809,7 @@
         },
         "copied": "{{label}} copied",
         "description": "Choose how AlgaPSA connects to Microsoft. You will connect mailboxes separately.",
+        "descriptionCalendar": "Choose how AlgaPSA connects to Microsoft. You will connect mailboxes and calendars separately.",
         "errors": {
           "automated": "Could not start automated Microsoft app creation.",
           "generic": "Microsoft Email setup did not complete.",
@@ -1864,6 +1868,11 @@
           "description": "Connect Microsoft 365 with the application supplied by AlgaPSA. No Entra app registration is required.",
           "readyDescription": "The Microsoft app is approved and ready for mailbox sign-in.",
           "connectAction": "Connect a mailbox →",
+          "suppliedTitle": "Microsoft is ready to connect",
+          "suppliedReadyDescriptionCalendar": "The Microsoft app supplied by AlgaPSA is approved. You can connect Outlook mailboxes and calendars with it.",
+          "connectCalendarAction": "Connect a calendar →",
+          "approveCalendarAction": "Approve calendar access",
+          "approveCalendarHint": "Use \"Approve calendar access\" if your Microsoft administrator approved this app before calendar was included.",
           "unavailableTitle": "Platform Microsoft credentials are unavailable",
           "unavailableDescription": "This deployment requires an app maintained by your organization. Use the advanced setup below to add one."
         },

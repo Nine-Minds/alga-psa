@@ -127,6 +127,18 @@ describe('Microsoft email setup actions', () => {
     expect(hoisted.persistProfile).not.toHaveBeenCalled();
   });
 
+  it('creates the platform profile with the served capabilities and a display name that does not say Email', async () => {
+    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+    await configureMicrosoftEmailPlatformApplication({ tenantId: '11111111-2222-4333-8444-555555555555' });
+    const input = hoisted.persistProfile.mock.calls[0][2];
+    expect(input.capabilities).toEqual(['email', 'calendar']);
+    expect(input.displayName).not.toMatch(/email/i);
+    process.env.NEXT_PUBLIC_EDITION = 'community';
+    process.env.EDITION = 'ce';
+    await configureMicrosoftEmailPlatformApplication({ tenantId: '11111111-2222-4333-8444-555555555555' });
+    expect(hoisted.persistProfile.mock.calls[1][2].capabilities).toEqual(['email']);
+  });
+
   it('persists a manual app and derives its administrator-consent callback server-side', async () => {
     const result = await configureMicrosoftEmailManualApplication({
       displayName: '  Customer   Email App  ',

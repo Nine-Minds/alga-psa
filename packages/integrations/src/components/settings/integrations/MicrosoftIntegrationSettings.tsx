@@ -11,7 +11,8 @@ import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { MAILBOX_SETUP_ENTRY_PATH } from '@alga-psa/types';
+import { CALENDAR_SETUP_ENTRY_PATH, MAILBOX_SETUP_ENTRY_PATH } from '@alga-psa/types';
+import { getMicrosoftPlatformAppServedConsumers } from '../../../lib/microsoftPlatformAppServed';
 import {
   archiveMicrosoftProfile,
   getMicrosoftIntegrationStatus,
@@ -376,6 +377,7 @@ export function MicrosoftIntegrationSettings({
   const hasProfiles = profiles.length > 0;
   const activeProfiles = profiles.filter((profile) => !profile.isArchived);
   const emailSetup = status?.success ? status.emailSetup : undefined;
+  const platformServesCalendar = getMicrosoftPlatformAppServedConsumers().includes('calendar');
   const profileById = React.useMemo(
     () => new Map(profiles.map((profile) => [profile.profileId, profile])),
     [profiles]
@@ -384,6 +386,16 @@ export function MicrosoftIntegrationSettings({
     () => new Map(bindings.map((binding) => [binding.consumerType, binding])),
     [bindings]
   );
+  // The supplied app serves Calendar for this tenant only when the edition serves it AND Calendar is
+  // not bound to a tenant-owned profile. emailSetup.profileId is the supplied-app profile whenever
+  // emailSetup.source === 'platform' (server-derived; no client-id comparison in the browser). An
+  // unbound Calendar counts as supplied: reconcile / consent-time binding attach it (PRD "Existing
+  // platform profiles are reconciled").
+  const calendarBindingProfileId = bindingByConsumer.get('calendar')?.profileId ?? null;
+  const suppliedAppServesCalendar =
+    platformServesCalendar &&
+    emailSetup?.source === 'platform' &&
+    (!calendarBindingProfileId || calendarBindingProfileId === emailSetup.profileId);
   const teamsAvailability = resolveTeamsAvailability({
     isEnterpriseEdition,
     requireTenantContext: false,
@@ -407,14 +419,13 @@ export function MicrosoftIntegrationSettings({
     setLoading(true);
     setError(null);
 
-    const [statusResult, bindingsResult] = await Promise.all([
-      // PURE READ. Loading this page must never write to
-      // microsoft_email_provider_config (the Teams settings page shares this
-      // status action to build its profile picker). The conservative same-client
-      // issuer backfill runs only from the deliberate save/reconnect handler.
-      getMicrosoftIntegrationStatus(),
-      listMicrosoftConsumerBindings(),
-    ]);
+    // Never writes to microsoft_email_provider_config (the Teams settings page
+    // shares this status action to build its profile picker); the same-client
+    // issuer backfill runs only from the deliberate save/reconnect handler. The
+    // status read reconciles a consented supplied-app profile (adds Calendar),
+    // so the bindings are read AFTER it, not in parallel, to see that result.
+    const statusResult = await getMicrosoftIntegrationStatus();
+    const bindingsResult = await listMicrosoftConsumerBindings();
 
     setStatus(statusResult);
     onStatusChange?.(statusResult);
@@ -772,7 +783,56 @@ export function MicrosoftIntegrationSettings({
             </Alert>
           )}
 
-          {emailSetup?.state === 'ready' && (
+          {emailSetup?.state === 'ready' && emailSetup.source === 'platform' && (
+            <Alert variant="success" id="microsoft-email-setup-ready">
+              <AlertDescription>
+                <div className="font-medium">
+                  {t('integrations.microsoft.settings.platform.suppliedTitle', { defaultValue: 'Microsoft is ready to connect' })}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {suppliedAppServesCalendar
+                    ? t('integrations.microsoft.settings.platform.suppliedReadyDescriptionCalendar', { defaultValue: 'The Microsoft app supplied by AlgaPSA is approved. You can connect Outlook mailboxes and calendars with it.' })
+                    : t('integrations.microsoft.settings.platform.readyDescription', { defaultValue: 'The Microsoft app is approved and ready for mailbox sign-in.' })}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button
+                    id="microsoft-platform-connect-email"
+                    type="button"
+                    onClick={() => router.push(MAILBOX_SETUP_ENTRY_PATH)}
+                  >
+                    {t('integrations.microsoft.settings.platform.connectAction', { defaultValue: 'Connect a mailbox →' })}
+                  </Button>
+                  {suppliedAppServesCalendar && (
+                    <Button
+                      id="microsoft-platform-connect-calendar"
+                      type="button"
+                      onClick={() => router.push(CALENDAR_SETUP_ENTRY_PATH)}
+                    >
+                      {t('integrations.microsoft.settings.platform.connectCalendarAction', { defaultValue: 'Connect a calendar →' })}
+                    </Button>
+                  )}
+                  {suppliedAppServesCalendar && (
+                    <Button
+                      id="microsoft-platform-approve-calendar"
+                      type="button"
+                      variant="outline"
+                      onClick={() => void approvePendingEmailSetup()}
+                    >
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      {t('integrations.microsoft.settings.platform.approveCalendarAction', { defaultValue: 'Approve calendar access' })}
+                    </Button>
+                  )}
+                </div>
+                {suppliedAppServesCalendar && (
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    {t('integrations.microsoft.settings.platform.approveCalendarHint', { defaultValue: 'Use "Approve calendar access" if your Microsoft administrator approved this app before calendar was included.' })}
+                  </div>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {emailSetup?.state === 'ready' && emailSetup.source !== 'platform' && (
             <Alert variant="success" id="microsoft-email-setup-ready">
               <AlertDescription>
                 <div className="font-medium">

@@ -23,6 +23,11 @@ import {
   useMicrosoftEmailSetupCallback,
   type MicrosoftEmailSetupCallbackResult,
 } from './useMicrosoftEmailSetupCallback';
+import {
+  getMicrosoftPlatformAppServedConsumers,
+  MICROSOFT_PLATFORM_PROFILE_DISPLAY_NAME,
+  MICROSOFT_TENANT_APP_DEFAULT_DISPLAY_NAME,
+} from '../../../lib/microsoftPlatformAppServed';
 import { Copy, ExternalLink, KeyRound, Settings2, WandSparkles } from 'lucide-react';
 
 type SetupStep = 'choose' | 'platform' | 'automated' | 'manual' | 'complete';
@@ -46,7 +51,17 @@ export function MicrosoftEmailSetupDialog({
   const [working, setWorking] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [tenantId, setTenantId] = React.useState('');
-  const [displayName, setDisplayName] = React.useState('AlgaPSA Microsoft Email');
+  const [displayName, setDisplayName] = React.useState<string>(MICROSOFT_PLATFORM_PROFILE_DISPLAY_NAME);
+  const [setupPath, setSetupPath] = React.useState<'platform' | 'automated' | 'manual'>('platform');
+  // Calendar is only claimed where the edition serves it, and only for the supplied-app path:
+  // automated / manual profiles are created with the email capability alone.
+  const platformServesCalendar = getMicrosoftPlatformAppServedConsumers().includes('calendar');
+  const calendarWording = platformServesCalendar && setupPath === 'platform';
+  const choosePath = React.useCallback((path: 'platform' | 'automated' | 'manual') => {
+    setSetupPath(path);
+    setDisplayName(path === 'platform' ? MICROSOFT_PLATFORM_PROFILE_DISPLAY_NAME : MICROSOFT_TENANT_APP_DEFAULT_DISPLAY_NAME);
+    setStep(path);
+  }, []);
   const [clientId, setClientId] = React.useState('');
   const [clientSecret, setClientSecret] = React.useState('');
   const [completion, setCompletion] = React.useState<MicrosoftEmailSetupCompletionResult | null>(null);
@@ -71,6 +86,8 @@ export function MicrosoftEmailSetupDialog({
     setCompletion(null);
     setClientId('');
     setClientSecret('');
+    setSetupPath('platform');
+    setDisplayName(MICROSOFT_PLATFORM_PROFILE_DISPLAY_NAME);
     setAdminConsentGranted(false);
     setLoading(true);
     void getMicrosoftEmailSetupOptions()
@@ -100,7 +117,9 @@ export function MicrosoftEmailSetupDialog({
       setAdminConsentGranted(true);
       toast({
         title: t('integrations.microsoft.emailSetup.consent.confirmedTitle', { defaultValue: 'Administrator consent confirmed' }),
-        description: t('integrations.microsoft.emailSetup.consent.confirmedDescription', { defaultValue: 'The Microsoft app is ready for mailbox authorization.' }),
+        description: calendarWording
+          ? t('integrations.microsoft.emailSetup.consent.confirmedDescriptionCalendar', { defaultValue: 'The Microsoft app is ready for mailbox and calendar authorization.' })
+          : t('integrations.microsoft.emailSetup.consent.confirmedDescription', { defaultValue: 'The Microsoft app is ready for mailbox authorization.' }),
       });
       void onCompleted();
       return;
@@ -111,7 +130,7 @@ export function MicrosoftEmailSetupDialog({
     setTenantId(result.tenantId || '');
     setStep('complete');
     void onCompleted();
-  }, [clearPopupMonitor, onCompleted, t, toast]);
+  }, [calendarWording, clearPopupMonitor, onCompleted, t, toast]);
   useMicrosoftEmailSetupCallback(handleSetupCallback, isOpen);
 
   React.useEffect(() => () => clearPopupMonitor(), [clearPopupMonitor]);
@@ -298,7 +317,9 @@ export function MicrosoftEmailSetupDialog({
         <div className="space-y-5">
           <div>
             <p className="text-sm text-[rgb(var(--color-text-700))]">
-              {t('integrations.microsoft.emailSetup.description', { defaultValue: 'Choose how AlgaPSA connects to Microsoft. You will connect mailboxes separately.' })}
+              {platformServesCalendar
+                ? t('integrations.microsoft.emailSetup.descriptionCalendar', { defaultValue: 'Choose how AlgaPSA connects to Microsoft. You will connect mailboxes and calendars separately.' })
+                : t('integrations.microsoft.emailSetup.description', { defaultValue: 'Choose how AlgaPSA connects to Microsoft. You will connect mailboxes separately.' })}
             </p>
           </div>
 
@@ -317,7 +338,7 @@ export function MicrosoftEmailSetupDialog({
                   id="microsoft-email-choose-platform-button"
                   type="button"
                   className="rounded-lg border bg-[rgb(var(--color-card))] p-4 text-left transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
-                  onClick={() => setStep('platform')}
+                  onClick={() => choosePath('platform')}
                 >
                   <div className="flex min-w-0 items-start gap-3">
                     <KeyRound className="mt-0.5 h-5 w-5 shrink-0 text-primary-500" />
@@ -339,7 +360,7 @@ export function MicrosoftEmailSetupDialog({
                 type="button"
                 className="rounded-lg border bg-[rgb(var(--color-card))] p-4 text-left transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={!options?.automatedCreationAvailable}
-                onClick={() => setStep('automated')}
+                onClick={() => choosePath('automated')}
               >
                 <div className="flex min-w-0 items-start gap-3">
                   <WandSparkles className="mt-0.5 h-5 w-5 shrink-0 text-primary-500" />
@@ -359,7 +380,7 @@ export function MicrosoftEmailSetupDialog({
                 id="microsoft-email-choose-manual-button"
                 type="button"
                 className="rounded-lg border bg-[rgb(var(--color-card))] p-4 text-left transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
-                onClick={() => setStep('manual')}
+                onClick={() => choosePath('manual')}
               >
                 <div className="flex min-w-0 items-start gap-3">
                   <Settings2 className="mt-0.5 h-5 w-5 shrink-0 text-primary-500" />
@@ -433,8 +454,12 @@ export function MicrosoftEmailSetupDialog({
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {adminConsentGranted
-                      ? t('integrations.microsoft.emailSetup.complete.consentDone', { defaultValue: 'Approved by your Microsoft 365 administrator. You can now connect a mailbox.' })
-                      : t('integrations.microsoft.emailSetup.complete.consentPending', { defaultValue: 'A Microsoft 365 administrator for your organization must approve access before mailboxes can connect.' })}
+                      ? (calendarWording
+                        ? t('integrations.microsoft.emailSetup.complete.consentDoneCalendar', { defaultValue: 'Approved by your Microsoft 365 administrator. You can now connect a mailbox or a calendar.' })
+                        : t('integrations.microsoft.emailSetup.complete.consentDone', { defaultValue: 'Approved by your Microsoft 365 administrator. You can now connect a mailbox.' }))
+                      : (calendarWording
+                        ? t('integrations.microsoft.emailSetup.complete.consentPendingCalendar', { defaultValue: 'A Microsoft 365 administrator for your organization must approve access before mailboxes and calendars can connect.' })
+                        : t('integrations.microsoft.emailSetup.complete.consentPending', { defaultValue: 'A Microsoft 365 administrator for your organization must approve access before mailboxes can connect.' }))}
                   </p>
                 </AlertDescription>
               </Alert>

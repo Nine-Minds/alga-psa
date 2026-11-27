@@ -1800,13 +1800,16 @@
         "callbackUri": "Identyfikator URI wywołania zwrotnego skrzynki pocztowej",
         "complete": {
           "consentDone": "Administrator Microsoft 365 zatwierdził dostęp. Możesz teraz połączyć skrzynkę pocztową.",
+          "consentDoneCalendar": "Zatwierdzone przez administratora Microsoft 365. Możesz teraz połączyć skrzynkę pocztową lub kalendarz.",
           "consentPending": "Administrator Microsoft 365 w Twojej organizacji musi zatwierdzić dostęp, zanim będzie można połączyć skrzynki pocztowe.",
+          "consentPendingCalendar": "Administrator Microsoft 365 w Twojej organizacji musi zatwierdzić dostęp, zanim będzie można połączyć skrzynki pocztowe i kalendarze.",
           "profileCreated": "Microsoft Email profile created and bound",
           "ready": "Microsoft jest gotowy",
           "waiting": "Oczekiwanie na zatwierdzenie przez administratora"
         },
         "consent": {
           "confirmedDescription": "Aplikacja Microsoft jest gotowa do autoryzacji skrzynki pocztowej.",
+          "confirmedDescriptionCalendar": "Aplikacja Microsoft jest gotowa do autoryzacji skrzynek pocztowych i kalendarzy.",
           "confirmedTitle": "Potwierdzono zgodę administratora",
           "url": "Adres URL zgody administratora",
           "urlLabel": "Adres URL zgody",
@@ -1814,6 +1817,7 @@
         },
         "copied": "Skopiowano: {{label}}",
         "description": "Wybierz sposób połączenia AlgaPSA z Microsoft. Skrzynki pocztowe połączysz osobno.",
+        "descriptionCalendar": "Wybierz, jak AlgaPSA łączy się z Microsoft. Skrzynki pocztowe i kalendarze połączysz osobno.",
         "errors": {
           "automated": "Nie udało się rozpocząć automatycznego tworzenia aplikacji Microsoft.",
           "generic": "Konfiguracja poczty Microsoft nie została ukończona.",
@@ -1872,6 +1876,11 @@
           "description": "Połącz Microsoft 365 za pomocą aplikacji dostarczonej przez AlgaPSA. Rejestracja aplikacji Entra nie jest wymagana.",
           "readyDescription": "Aplikacja Microsoft jest zatwierdzona i gotowa do logowania do skrzynki pocztowej.",
           "connectAction": "Połącz skrzynkę pocztową →",
+          "suppliedTitle": "Microsoft jest gotowy do połączenia",
+          "suppliedReadyDescriptionCalendar": "Aplikacja Microsoft udostępniana przez AlgaPSA jest zatwierdzona. Możesz za jej pomocą połączyć skrzynki pocztowe i kalendarze Outlook.",
+          "connectCalendarAction": "Połącz kalendarz →",
+          "approveCalendarAction": "Zatwierdź dostęp do kalendarza",
+          "approveCalendarHint": "Użyj opcji „Zatwierdź dostęp do kalendarza”, jeśli administrator Microsoft zatwierdził tę aplikację, zanim uwzględniono kalendarz.",
           "unavailableTitle": "Poświadczenia Microsoft platformy są niedostępne",
           "unavailableDescription": "To wdrożenie wymaga aplikacji zarządzanej przez Twoją organizację. Dodaj ją za pomocą poniższej konfiguracji zaawansowanej."
         },

@@ -27,6 +27,11 @@ import {
   storeMicrosoftEmailSetupState,
 } from '../../utils/microsoftEmailSetupStateStore';
 import {
+  getMicrosoftPlatformAppServedConsumers,
+  MICROSOFT_PLATFORM_PROFILE_DISPLAY_NAME,
+} from '../../lib/microsoftPlatformApp';
+import { MICROSOFT_TENANT_APP_DEFAULT_DISPLAY_NAME } from '../../lib/microsoftPlatformAppServed';
+import {
   createMicrosoftEmailProfilePendingConsentInternal,
   getMicrosoftEmailConsentProfileInternal,
   getMicrosoftEmailSetupMetadataInternal,
@@ -325,6 +330,7 @@ export const getMicrosoftEmailAdminConsentUrl = withAuth(async (
   }
 });
 
+// LEVERAGE: friction microsoft-email-named-setup — this action now sets up the supplied app for every consumer it serves (email, and calendar on EE), but the name is imported by the setup dialog and tests, so the rename is not mechanical.
 export const configureMicrosoftEmailPlatformApplication = withAuth(async (
   user,
   { tenant },
@@ -344,10 +350,11 @@ export const configureMicrosoftEmailPlatformApplication = withAuth(async (
     if (!secret) return { success: false, error: 'OAuth state signing is not configured on this server.' };
     const microsoftTenant = validateMicrosoftTenantIdentifier(input.tenantId);
     const profile = await createMicrosoftEmailProfilePendingConsentInternal(user, tenant, {
-      displayName: input.displayName?.trim() || 'Alga platform Microsoft Email',
+      displayName: input.displayName?.trim() || MICROSOFT_PLATFORM_PROFILE_DISPLAY_NAME,
       clientId: credentials.clientId,
       clientSecret: credentials.clientSecret,
       tenantId: microsoftTenant,
+      capabilities: getMicrosoftPlatformAppServedConsumers(),
     });
     if (!profile.success || !profile.profileId) {
       return profile.success
@@ -559,7 +566,7 @@ export async function completeMicrosoftEmailApplicationCreation(input: {
       path: '/applications',
       accessToken,
       body: buildMicrosoftEmailApplicationManifest({
-        displayName: input.state.displayName || 'AlgaPSA Microsoft Email',
+        displayName: input.state.displayName || MICROSOFT_TENANT_APP_DEFAULT_DISPLAY_NAME,
         mailboxRedirectUri: metadata.mailboxRedirectUri,
         setupRedirectUri: metadata.setupRedirectUri,
       }),

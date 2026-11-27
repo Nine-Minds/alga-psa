@@ -21,6 +21,6 @@ describe('UserProfile calendar edition contract', () => {
     expect(source).toContain('...(isCalendarTabAvailable ? [{');
     // The Calendar tab label is now internationalized.
     expect(source).toContain("label: t('profile.tabs.calendar', { defaultValue: 'Calendar' })");
-    expect(source).toContain('content: <CalendarProfileSettings />');
+    expect(source).toContain('content: <CalendarProfileSettings getMicrosoftAdminConsentUrl={getMicrosoftEmailAdminConsentUrl} />');
   });
 });
