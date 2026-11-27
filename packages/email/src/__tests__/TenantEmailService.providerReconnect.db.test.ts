@@ -179,7 +179,30 @@ describe('TenantEmailService Microsoft mailbox reconnect', () => {
     tables.microsoft_email_provider_config.push(...vendorRows);
   });
 
-  it('runs a single init for concurrent sends after the window expires', async () => {
+  it('re-initializes when a healthy mailbox is observed disconnected', async () => {
+    reconnect(tables, tenantA);
+    await expect(send(tenantA)).resolves.toMatchObject({ success: true });
+    expect(graph.sent).toHaveLength(1);
+    expect(graph.inits).toBe(1);
+
+    reconnect(tables, tenantA, { status: 'error', is_active: false, updated_at: '2026-08-04T12:10:00.000Z' });
+    expect(tables.tenant_email_settings[0].updated_at).toBe(SETTINGS_UPDATED_AT);
+
+    const after = await send(tenantA);
+    expect(after.success).toBe(false);
+    expect(after.error).toMatch(/selected Microsoft mailbox is not connected/);
+    // Not submitted: the previously healthy provider was dropped, not reused.
+    expect(graph.sent).toHaveLength(1);
+    // The re-init ran the readiness check, which fails before Graph initialize.
+    expect(graph.inits).toBe(1);
+
+    reconnect(tables, tenantA, { status: 'connected', is_active: true, updated_at: '2026-08-04T12:15:00.000Z' });
+    await expect(send(tenantA)).resolves.toMatchObject({ success: true });
+    expect(graph.inits).toBe(2); // a fresh provider, not the original instance
+    expect(graph.sent).toHaveLength(2);
+  });
+
+  it('runs a single init for concurrent sends after the mailbox reconnects', async () => {
     await send(tenantA);
     reconnect(tables, tenantA);
     const results = await Promise.all([send(tenantA), send(tenantA), send(tenantA)]);
