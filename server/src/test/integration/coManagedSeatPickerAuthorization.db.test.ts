@@ -16,6 +16,8 @@ const testState = vi.hoisted(() => ({
   db: null as unknown,
   seatUserIds: new Set<string>(),
   seatGrants: new Set<string>(),
+  /** Callers held to an explicit grant set (a portal user on a stock portal role). */
+  grantsByUser: new Map<string, Set<string>>(),
 }));
 const authUser = vi.hoisted(() => async () => {
   const db = testState.db as import('knex').Knex;
@@ -28,8 +30,11 @@ const withAuthMock = vi.hoisted(() => () => ({
     action(await authUser(), { tenant: testState.tenant }, ...args),
 }));
 /** The RBAC answer: a seat technician holds exactly the seat role's grants; every other test caller holds everything. */
-const rbac = vi.hoisted(() => async (user: { user_id: string }, resource: string, action: string) =>
-  !testState.seatUserIds.has(user.user_id) || testState.seatGrants.has(`${resource}:${action}`));
+const rbac = vi.hoisted(() => async (user: { user_id: string }, resource: string, action: string) => {
+  const explicit = testState.grantsByUser.get(user.user_id);
+  if (explicit) return explicit.has(`${resource}:${action}`);
+  return !testState.seatUserIds.has(user.user_id) || testState.seatGrants.has(`${resource}:${action}`);
+});
 
 vi.mock('@alga-psa/auth/withAuth', withAuthMock);
 vi.mock('@alga-psa/auth', () => ({
@@ -297,6 +302,18 @@ describeDb('seat pickers and actions return only what the operation allows', { s
     // Portal control: a client user keeps the portal's rules (their own client only).
     as(s.cX.userId, 'client');
     expect(ids(((await searchAssociations('client', '', 1, 50)) as any).options)).toEqual([s.clientX]);
+    // The Documents contact loader now applies that same own-client rule to a portal user whose role grants
+    // document:read and contact:read; before this change it returned every active contact in the tenant.
+    const portalPicker = await getAssociationContacts() as any[];
+    expect(portalPicker.map((row) => row.contact_name_id)).toEqual([s.cX.contactId]);
+    expect(portalPicker.map((row) => row.client_id)).toEqual([s.clientX]);
+    // A stock portal role (document:read, no contact:read) gets no contacts, before and after this change.
+    testState.grantsByUser.set(s.cX.userId, new Set(['document:read', 'document:create', 'document:update']));
+    try {
+      expect(await getAssociationContacts()).toEqual([]);
+    } finally {
+      testState.grantsByUser.delete(s.cX.userId);
+    }
   });
 
   // ---------------------------------------------------------------- T003 / F003
