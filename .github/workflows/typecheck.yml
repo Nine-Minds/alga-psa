@@ -66,11 +66,12 @@ jobs:
       # so they cannot share the runner with any other concurrent tsc. Running the full
       # `nx affected` set in parallel let two heavy typechecks overlap and OOM-killed the
       # runner ("received a shutdown signal" / "operation was canceled"), even though the
-      # typecheck itself had no errors. We split into two passes:
+      # typecheck itself had no errors. We split into three passes:
       #   1. Smaller libraries in parallel (capped heap × parallelism stays under 16 GB).
-      #   2. Billing and the apps serially, each with the whole box to itself.
-      # Pass 2 re-evaluates `affected` but the libraries are instant Nx cache hits from
-      # pass 1, so it only does real work for billing/apps — and only when affected.
+      #   2. `@alga-psa/billing` alone, with a larger heap (see below).
+      #   3. The heavy apps serially, each with the whole box to itself.
+      # Pass 3 re-evaluates `affected` but the libraries are instant Nx cache hits from
+      # passes 1 and 2, so it only does real work for the apps — and only when they are affected.
       - name: Nx affected typecheck (libraries, parallel)
         run: npx nx affected -t typecheck --base=$NX_BASE --head=$NX_HEAD --output-style=static --parallel=2 --exclude=server,sebastian-ee,@alga-psa/billing
         env:
@@ -78,7 +79,22 @@ jobs:
           # 2 concurrent × 6 GB = 12 GB, leaving headroom for the runner.
           NODE_OPTIONS: '--max-old-space-size=6144'
 
-      - name: Nx affected typecheck (billing and apps, isolated & serial)
+      # The billing typecheck peaks at ~6 GB on Linux/Node 20, right at the 6 GB cap
+      # above, so it intermittently OOMs. Run it alone so it can have 8 GB without
+      # pushing the parallel pass past the runner's RAM.
+      - name: Nx affected typecheck (billing, isolated)
+        shell: bash
+        run: |
+          if npx nx show projects --affected --base=$NX_BASE --head=$NX_HEAD | grep -qx '@alga-psa/billing'; then
+            npx nx run @alga-psa/billing:typecheck --output-style=static
+          else
+            echo "@alga-psa/billing is not affected; skipping."
+          fi
+        env:
+          NX_DAEMON: 'false'
+          NODE_OPTIONS: '--max-old-space-size=8192'
+
+      - name: Nx affected typecheck (apps, isolated & serial)
         run: npx nx affected -t typecheck --base=$NX_BASE --head=$NX_HEAD --output-style=static --parallel=1
         env:
           NX_DAEMON: 'false'
