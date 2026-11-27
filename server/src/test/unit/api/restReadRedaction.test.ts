@@ -1312,7 +1312,7 @@ describe('assets / inventory lookup and document adapters', () => {
 describe('asset routes serialize the projection', () => {
   const A1 = 'a-1', A2 = 'a-2';
   const asset = (id: string, extra: Record<string, any> = {}) => ({
-    asset_id: id, name: `Asset ${id}`, serial_number: 'SN-1', purchase_price: 900, vendor_id: 'v-1', vendor_name: 'Dell', ...extra,
+    asset_id: id, name: `Asset ${id}`, serial_number: 'SN-1', purchase_cost: 900, vendor_id: 'v-1', vendor_name: 'Dell', ...extra,
   });
   const controller = () => new ApiAssetController();
   beforeEach(() => {
@@ -1391,27 +1391,27 @@ describe('asset routes serialize the projection', () => {
   });
 
   it('list omits hidden fields and drops suppressed rows from rows and total', async () => {
-    state.decisions.set(A1, { allowed: true, redactedFields: ['purchase_price'] });
+    state.decisions.set(A1, { allowed: true, redactedFields: ['purchase_cost'] });
     state.decisions.set(A2, { allowed: true, redactedFields: ['asset_id'] });
     const body = await (await controller().list(request('/api/v2/assets?page=1&limit=25'))).json();
     expect(body.data.map((a: any) => a.asset_id)).toEqual([A1]);
-    expect(body.data[0]).not.toHaveProperty('purchase_price');
+    expect(body.data[0]).not.toHaveProperty('purchase_cost');
     expect(body.meta?.total ?? body.pagination?.total).toBe(1);
   });
 
   it('search and export (csv and json) omit hidden fields and suppressed rows', async () => {
-    state.decisions.set(A1, { allowed: true, redactedFields: ['purchase_price'] });
+    state.decisions.set(A1, { allowed: true, redactedFields: ['purchase_cost'] });
     state.decisions.set(A2, { allowed: true, redactedFields: ['*'] });
     const search = await (await controller().search(request('/api/v2/assets/search?query=x'))).json();
     expect(search.data.map((a: any) => a.asset_id)).toEqual([A1]);
-    expect(search.data[0]).not.toHaveProperty('purchase_price');
+    expect(search.data[0]).not.toHaveProperty('purchase_cost');
 
-    state.decisions.set(A2, { allowed: true, redactedFields: ['purchase_price'] });
+    state.decisions.set(A2, { allowed: true, redactedFields: ['purchase_cost'] });
     const json = await (await controller().export(request('/api/v2/assets/export?format=json'))).json();
     expect(json.data).toHaveLength(2);
-    expect(json.data.every((a: any) => !('purchase_price' in a))).toBe(true);
+    expect(json.data.every((a: any) => !('purchase_cost' in a))).toBe(true);
     const csv = await (await controller().export(request('/api/v2/assets/export?format=csv'))).text();
-    expect(csv.split('\n')[0]).not.toContain('purchase_price');
+    expect(csv.split('\n')[0]).not.toContain('purchase_cost');
     expect(csv).not.toContain('900');
   });
 
@@ -1496,18 +1496,20 @@ describe('asset routes serialize the projection', () => {
     const controller = new ApiAssetController();
     const mockedService = (controller as any).assetService;
     mockedService.getStatisticsFromProjections = ActualAssetService.prototype.getStatisticsFromProjections;
+    mockedService.summarizeAssetValue = (ActualAssetService.prototype as any).summarizeAssetValue;
+    mockedService.getTenantDefaultCurrency = vi.fn(async () => 'EUR');
     const now = new Date();
     const oldPurchaseDate = new Date(now.getTime() - 90 * 86_400_000).toISOString();
     const oldWarrantyDate = new Date(now.getTime() - 20 * 86_400_000).toISOString();
     state.assets = [
       {
         asset_id: 'a-visible', asset_type: 'workstation', status: 'active', client_id: 'c-1', client_name: 'Acme',
-        created_at: now.toISOString(), purchase_date: oldPurchaseDate, purchase_cost: 4938,
+        created_at: now.toISOString(), purchase_date: oldPurchaseDate, purchase_cost: 4938, purchase_cost_currency: 'EUR',
         warranty_end_date: oldWarrantyDate,
       },
       {
         asset_id: 'a-suppressed', asset_type: 'server', status: 'active', client_id: 'c-2', client_name: 'Hidden client',
-        created_at: now.toISOString(), purchase_date: oldPurchaseDate, purchase_cost: 90000,
+        created_at: now.toISOString(), purchase_date: oldPurchaseDate, purchase_cost: 90000, purchase_cost_currency: 'EUR',
         warranty_end_date: oldWarrantyDate,
       },
     ];
@@ -1522,6 +1524,7 @@ describe('asset routes serialize the projection', () => {
     const visibleStats = (await visible.json()).data;
     expect(visibleStats).toMatchObject({
       total_assets: 1, deployed_assets: 1, assets_added_this_month: 1, total_asset_value: 4938,
+      total_asset_value_currency: 'EUR', asset_value_by_currency: { EUR: 4938 },
       assets_by_type: { workstation: 1 }, assets_by_client: { Acme: 1 }, warranty_expired: 1,
       maintenance_due: 1, maintenance_overdue: 1,
     });
@@ -1542,6 +1545,8 @@ describe('asset routes serialize the projection', () => {
     });
     // A hidden purchase cost omits the aggregate instead of reporting a fabricated 0.
     expect(hiddenStats).not.toHaveProperty('total_asset_value');
+    expect(hiddenStats).not.toHaveProperty('total_asset_value_currency');
+    expect(hiddenStats).not.toHaveProperty('asset_value_by_currency');
     expect(JSON.stringify(hiddenStats)).not.toContain('4938');
   });
 
