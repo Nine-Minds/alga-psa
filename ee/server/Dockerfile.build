@@ -66,8 +66,12 @@ WORKDIR /app/server
 # Copy example environment file and set Enterprise Edition
 COPY .env.example /app/.env   
 COPY .env.example /app/server/.env  
+# Drop the dev-only Hocuspocus URL (ws://localhost:1234) so `next build` doesn't
+# inline it into the client bundle; when unset, production clients connect to
+# the same-origin /hocuspocus endpoint. An explicit build-time env var still wins.
 RUN sed -i 's/NEXT_PUBLIC_EDITION=community/NEXT_PUBLIC_EDITION=enterprise/' /app/.env && \
-    sed -i 's/NEXT_PUBLIC_EDITION=community/NEXT_PUBLIC_EDITION=enterprise/' /app/server/.env  
+    sed -i 's/NEXT_PUBLIC_EDITION=community/NEXT_PUBLIC_EDITION=enterprise/' /app/server/.env && \
+    sed -i '/^NEXT_PUBLIC_HOCUSPOCUS_URL=/d' /app/.env /app/server/.env
 
 WORKDIR /app
 RUN npm run build:ee
