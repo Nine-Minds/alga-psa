@@ -15,7 +15,12 @@ import {
   upsertBundleRule,
 } from '@alga-psa/authorization/bundles/service';
 
-const ref = vi.hoisted(() => ({ knex: null as Knex | null, tenant: '', user: null as any }));
+const ref = vi.hoisted(() => ({ knex: null as Knex | null, tenant: '', user: null as any, canReadContacts: true }));
+
+// Coarse RBAC stand-in shared by `@alga-psa/auth` and `@alga-psa/auth/rbac` (the integrations action imports the
+// latter): everything is granted except contact:read when a test revokes it.
+const allowPermission = vi.hoisted(() => async (_user: unknown, resource: string, action: string) =>
+  ref.canReadContacts || !(resource === 'contact' && action === 'read'));
 
 vi.mock('@alga-psa/db', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/db')>()),
@@ -26,7 +31,12 @@ vi.mock('@alga-psa/db', async (importOriginal) => ({
 vi.mock('@alga-psa/auth', async (importOriginal) => ({
   ...(await importOriginal<any>()),
   withAuth: (action: any) => (...args: any[]) => action(ref.user, { tenant: ref.tenant }, ...args),
-  ...(await import('../../../../test-utils/rbacStandIn')).rbacStandIn(vi.fn(async () => true)),
+  ...(await import('../../../../test-utils/rbacStandIn')).rbacStandIn(allowPermission),
+}));
+
+vi.mock('@alga-psa/auth/rbac', async (importOriginal) => ({
+  ...(await importOriginal<any>()),
+  ...(await import('../../../../test-utils/rbacStandIn')).rbacStandIn(allowPermission),
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', async (importOriginal) => ({
@@ -131,6 +141,21 @@ describe('contact email lookups narrowed by contact read scope (real kernel, rea
       ]);
       expect(Array.isArray(result)).toBe(true);
       expect([...(result as string[])].sort()).toEqual([email('a1'), extra('a1')].sort());
+    }, HOOK_TIMEOUT);
+  });
+
+  describe('without contact:read', () => {
+    it('every lookup refuses the caller before reading any contact', async () => {
+      asUser(unrestrictedId);
+      ref.canReadContacts = false;
+      try {
+        await expect(findContactByEmailAddress(email('a1'))).rejects.toThrow(/Permission denied/);
+        await expect(findIntegrationContactByEmailAddress(email('a1'))).rejects.toThrow('Permission denied: Cannot read contacts');
+        const result = await checkExistingEmails([email('a1')]);
+        expect(Array.isArray(result)).toBe(false);
+      } finally {
+        ref.canReadContacts = true;
+      }
     }, HOOK_TIMEOUT);
   });
 

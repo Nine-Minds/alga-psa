@@ -116,6 +116,10 @@ export const findIntegrationContactByEmailAddress = withAuth(async (
   { tenant },
   email: string
 ): Promise<(IContact & { client_name?: string | null }) | null> => {
+  if (!(await hasPermission(user as any, 'contact', 'read'))) {
+    throw new Error('Permission denied: Cannot read contacts');
+  }
+
   const { knex } = await createTenantKnex();
 
   const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {

@@ -46,8 +46,10 @@ vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => async (...args: any[]) => fn({ user_id: 'user-1' }, { tenant: 'tenant-123' }, ...args),
 }));
 
+const hasPermissionMock = vi.fn(async (..._args: unknown[]) => true);
+
 vi.mock('@alga-psa/auth/rbac', () => ({
-  hasPermission: vi.fn(async () => true),
+  hasPermission: hasPermissionMock,
 }));
 
 vi.mock('@alga-psa/shared/models/contactModel', () => ({
@@ -88,8 +90,24 @@ describe('integration contact email lookup helpers', () => {
     clientSelectMock.mockClear();
     trxMock.mockClear();
 
+    hasPermissionMock.mockReset();
+    hasPermissionMock.mockResolvedValue(true);
+
     createTenantKnexMock.mockResolvedValue({ knex: trxMock });
     clientFirstMock.mockResolvedValue({ client_name: 'Acme Corp' });
+  });
+
+  it('findIntegrationContactByEmailAddress and its email-action wrapper refuse callers without contact:read', async () => {
+    hasPermissionMock.mockResolvedValue(false);
+
+    const { findIntegrationContactByEmailAddress } = await import('./clientLookupActions');
+    await expect(findIntegrationContactByEmailAddress('ada@example.com')).rejects.toThrow('Permission denied: Cannot read contacts');
+
+    const { findContactByEmail } = await import('./email-actions/emailActions');
+    await expect(findContactByEmail('ada@example.com')).rejects.toThrow('Permission denied: Cannot read contacts');
+
+    expect(hasPermissionMock).toHaveBeenCalledWith(expect.anything(), 'contact', 'read');
+    expect(getContactByEmailMock).not.toHaveBeenCalled();
   });
 
   it('T043: findIntegrationContactByEmailAddress resolves a contact through an additional email row', async () => {
