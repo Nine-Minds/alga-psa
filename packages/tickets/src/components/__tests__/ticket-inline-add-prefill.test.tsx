@@ -868,7 +868,9 @@ describe('QuickAddTicket prefills', () => {
     );
 
     await waitFor(() => expect(checkCurrentUserPermissionsMock).toHaveBeenCalled());
-    await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
+    // The category picker renders once the form has loaded and board-1 is selected; only then is the
+    // absence of the control meaningful.
+    await screen.findByTestId('category-picker', {}, { timeout: 5000 });
     expect(screen.queryByRole('button', { name: /\+ add new category/i })).not.toBeInTheDocument();
     checkCurrentUserPermissionsMock.mockResolvedValue([{ resource: 'ticket_settings', action: 'update', granted: true }]);
   });
@@ -935,9 +937,9 @@ describe('QuickAddTicket prefills', () => {
       />
     );
 
-    await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
-
-    fireEvent.click(screen.getByRole('button', { name: 'Paste Image' }));
+    // Wait for the form itself: the formData mock's call count carries over between (shuffled) tests,
+    // so it alone does not mean the loading state has ended.
+    fireEvent.click(await screen.findByRole('button', { name: 'Paste Image' }, { timeout: 5000 }));
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
     expect(await screen.findByTestId('confirmation-dialog')).toBeInTheDocument();
