@@ -6110,7 +6110,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/stats",
     "displayName": "Get asset statistics",
     "summary": "Get asset statistics",
-    "description": "Returns tenant-scoped aggregate asset statistics including total counts, counts by type/status/client, warranty counts, and maintenance due/overdue counts. The service runs multiple aggregate queries filtered by context.tenant; assets_by_client is limited to the top 10 client names. The response links currently point at /api/v2/assets paths.",
+    "description": "Returns aggregate statistics over the tenant assets the caller is authorized to read: total and deployed counts, counts by type/status/client, warranty counts, maintenance due/overdue counts, and asset value from purchase_cost (minor units, grouped by currency). Each asset is authorized and projected before it is counted, so fields redacted for the caller never contribute; value fields are omitted rather than reported as partial totals.",
     "tags": [
       "Assets"
     ],

@@ -6,6 +6,8 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createTestApiKey } from '../e2e/utils/apiTestHelpers';
+import { createRegistry } from '../../lib/api/openapi/registry';
+import { registerAssetRoutes } from '../../lib/api/openapi/routes/assets';
 import { createAuthorizationBundle, createBundleAssignment, publishBundleRevision, upsertBundleRule } from '@alga-psa/authorization/bundles/service';
 
 /**
@@ -93,7 +95,7 @@ async function seed(seeds: Array<{ cost: number | null; currency: string | null 
   await table('asset_statuses').insert({ tenant, slug: 'active', label: 'Active', kind: 'deployable', is_builtin: true, is_active: true, display_order: 0 }).onConflict(['tenant', 'slug']).ignore();
   await table('default_billing_settings').insert({ tenant, default_currency_code: TENANT_DEFAULT_CURRENCY })
     .onConflict('tenant').merge({ default_currency_code: TENANT_DEFAULT_CURRENCY });
-  await insertTestAssets(connection.db!, seeds.map((s, i) => ({
+  if (seeds.length) await insertTestAssets(connection.db!, seeds.map((s, i) => ({
     tenant, client_id: clientId, asset_tag: `STATS-${i}-${randomUUID().slice(0, 8)}`, name: `Stats fixture ${i}`,
     status: 'active', asset_type: 'workstation', purchase_cost: s.cost, purchase_cost_currency: s.currency,
     created_at: db.fn.now(), updated_at: db.fn.now(),
@@ -101,12 +103,39 @@ async function seed(seeds: Array<{ cost: number | null; currency: string | null 
   return clientId;
 }
 
+// The documented 200 response for this route, taken from the OpenAPI source the published spec is generated from.
+function documentedStatsResponse() {
+  const registry = createRegistry();
+  registerAssetRoutes(registry);
+  const route = registry.getRegisteredRoutes().find((r) => r.method === 'get' && r.path === '/api/v1/assets/stats');
+  return (route!.responses as any)[200].schema as import('zod').ZodObject<any>;
+}
+
+/** Every 200 body must parse under the documented schema and carry no undocumented statistics field. */
+function expectMatchesOpenApi(body: any) {
+  const schema = documentedStatsResponse();
+  const parsed = schema.safeParse(body);
+  expect(parsed.success, parsed.success ? '' : JSON.stringify(parsed.error.issues)).toBe(true);
+  const documented = Object.keys((schema.shape.data as import('zod').ZodObject<any>).shape);
+  expect(Object.keys(body.data).filter((key) => !documented.includes(key))).toEqual([]);
+}
+
 async function getStats(caller: { apiKey: string }) {
   const req = new NextRequest('http://localhost/api/v1/assets/stats', {
     headers: { 'x-api-key': caller.apiKey, 'x-tenant-id': tenant },
   });
   const response = await (statsGet as Function)(req, { params: Promise.resolve({}) });
-  return { status: response.status as number, body: await response.json() };
+  const body = await response.json();
+  if (response.status === 200) expectMatchesOpenApi(body);
+  return { status: response.status as number, body };
+}
+
+async function tenantRowFor(id: string, name: string) {
+  const row: Record<string, unknown> = { tenant: id, company_name: name, email: `${id}@example.test`, product_code: 'psa', created_at: db.fn.now(), updated_at: db.fn.now() };
+  const cols = await schema('tenants').columnInfo();
+  if (!('company_name' in cols)) { delete row.company_name; row.client_name = name; }
+  if (!('product_code' in cols)) delete row.product_code;
+  return row;
 }
 
 beforeAll(async () => {
@@ -124,11 +153,8 @@ beforeEach(async () => {
   tenant = randomUUID();
   connection.tenant = tenant;
   cleanupTenants.add(tenant);
-  const tenantRow = { tenant, company_name: 'Asset stats route', email: `${tenant}@example.test`, product_code: 'psa', created_at: db.fn.now(), updated_at: db.fn.now() };
-  const cols = await schema('tenants').columnInfo();
-  if (!('company_name' in cols)) { delete (tenantRow as any).company_name; (tenantRow as any).client_name = 'Asset stats route'; }
-  if (!('product_code' in cols)) delete (tenantRow as any).product_code;
-  await tenantDb(db, '__asset_stats_route_fixture__').unscoped('tenants', 'create asset stats route tenant').insert(tenantRow);
+  await tenantDb(db, '__asset_stats_route_fixture__').unscoped('tenants', 'create asset stats route tenant')
+    .insert(await tenantRowFor(tenant, 'Asset stats route'));
   connection.db = await db.transaction();
 });
 
@@ -168,6 +194,33 @@ describe('GET /api/v1/assets/stats value fields through the real route', () => {
     expect(body.data.asset_value_by_currency).toEqual({ [TENANT_DEFAULT_CURRENCY]: 100 });
     expect(body.data.total_asset_value).toBe(100);
     expect(body.data.total_asset_value_currency).toBe(TENANT_DEFAULT_CURRENCY);
+  }, 180_000);
+
+  it('reports a zero total in the tenant default currency when no asset is valued', async () => {
+    const caller = await createCaller();
+    await seed([]);
+    const { status, body } = await getStats(caller);
+    expect(status).toBe(200);
+    expect(body.data.total_assets).toBe(0);
+    expect(body.data.asset_value_by_currency).toEqual({});
+    expect(body.data.total_asset_value).toBe(0);
+    expect(body.data.total_asset_value_currency).toBe(TENANT_DEFAULT_CURRENCY);
+  }, 180_000);
+
+  it("does not count another tenant's assets", async () => {
+    const caller = await createCaller();
+    await seed([{ cost: 100, currency: 'EUR' }]);
+    const ownTenant = tenant;
+    const otherTenant = randomUUID();
+    await tenantDb(connection.db!, '__asset_stats_route_fixture__').unscoped('tenants', 'create other asset stats tenant')
+      .insert(await tenantRowFor(otherTenant, 'Other asset stats tenant'));
+    tenant = otherTenant;
+    try { await seed([{ cost: 9_999, currency: 'EUR' }, { cost: 1, currency: 'USD' }]); } finally { tenant = ownTenant; }
+    const { status, body } = await getStats(caller);
+    expect(status).toBe(200);
+    expect(body.data.total_assets).toBe(1);
+    expect(body.data.asset_value_by_currency).toEqual({ EUR: 100 });
+    expect(body.data.total_asset_value).toBe(100);
   }, 180_000);
 
   it.each(['purchase_cost', 'purchase_cost_currency'])('omits every value field when %s is redacted for the caller', async (field) => {
