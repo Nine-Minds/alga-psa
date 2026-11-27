@@ -9,6 +9,7 @@ const computeWorkDateFieldsMock = vi.fn();
 const createTimeEntryChangeRequestRecordMock = vi.fn();
 const fetchTimeEntryChangeRequestsForEntryIdsFromDbMock = vi.fn();
 const markTimeEntryChangeRequestsHandledMock = vi.fn();
+const runTimeSheetTransitionMock = vi.fn();
 const resolveContractLineSelectionMock = vi.fn(async () => ({
   selectedContractLineId: null,
   decision: 'ambiguous_or_unresolved' as const,
@@ -46,6 +47,13 @@ vi.mock('@alga-psa/db', () => ({
 
 vi.mock('../src/actions/timeEntryDelegationAuth', () => ({
   assertCanActOnBehalf: (...args: any[]) => assertCanActOnBehalfMock(...args),
+}));
+
+// The row-locked lifecycle engine is exercised against PostgreSQL in
+// timeSheetService.createUpdate.integration.test.ts; this fake DB only checks the hand-off.
+vi.mock('../src/lib/timeSheetApprovalTransition', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  runTimeSheetTransition: (...args: any[]) => runTimeSheetTransitionMock(...args),
 }));
 
 vi.mock('../src/lib/contractLineDisambiguation', () => ({
@@ -243,6 +251,7 @@ describe('time entry change-request action integration', () => {
       work_timezone: 'America/New_York',
     }));
     fetchTimeEntryChangeRequestsForEntryIdsFromDbMock.mockResolvedValue(new Map());
+    runTimeSheetTransitionMock.mockResolvedValue(undefined);
   });
 
   it('T003/T025: requesting changes creates a change-request record and keeps creating new records across review cycles', async () => {
@@ -278,8 +287,19 @@ describe('time entry change-request action integration', () => {
       },
     );
 
-    expect(calls.entryUpdates).toHaveLength(2);
-    expect(calls.sheetUpdates).toHaveLength(2);
+    // Each review cycle goes through the lifecycle engine for the entry's parent sheet; the action
+    // itself writes neither the entry nor the sheet.
+    expect(runTimeSheetTransitionMock).toHaveBeenCalledTimes(2);
+    expect(runTimeSheetTransitionMock).toHaveBeenCalledWith(expect.objectContaining({
+      knex: db,
+      tenant: 'tenant-1',
+      timeSheetId: 'sheet-1',
+      operation: 'requestEntryChanges',
+      entryIds: ['entry-1'],
+      actor: expect.objectContaining({ userId: 'manager-1' }),
+    }));
+    expect(calls.entryUpdates).toHaveLength(0);
+    expect(calls.sheetUpdates).toHaveLength(0);
     expect(createTimeEntryChangeRequestRecordMock).toHaveBeenCalledTimes(2);
     expect(createTimeEntryChangeRequestRecordMock).toHaveBeenNthCalledWith(1, db, {
       tenant: 'tenant-1',

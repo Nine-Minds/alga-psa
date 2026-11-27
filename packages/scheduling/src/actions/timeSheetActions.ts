@@ -1,8 +1,8 @@
 'use server'
 
 import { delegateToTimeSource } from '../lib/timeSource';
-import { assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
-import { approveSubmittedTimeSheet, reverseApprovedTimeSheet } from '../lib/timeSheetApprovalTransition';
+import { approveSubmittedTimeSheet, reverseApprovedTimeSheet, runTimeSheetTransition } from '../lib/timeSheetApprovalTransition';
+import { sessionLifecycleActor } from '../lib/timeSheetLifecycleActor';
 import {
   ITimeEntry,
   ITimeSheetApproval,
@@ -27,7 +27,7 @@ import { WorkItemType } from '@alga-psa/types';
 import { validateArray, validateData } from '@alga-psa/validation';
 import { Temporal } from '@js-temporal/polyfill';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { assertCanActOnBehalf, assertCanApproveSubject, resolveManagedSubjectUserIds } from './timeEntryDelegationAuth';
+import { assertCanActOnBehalf, resolveManagedSubjectUserIds } from './timeEntryDelegationAuth';
 import {
   timeSheetActionErrorFrom,
   type TimeSheetActionError,
@@ -263,12 +263,7 @@ export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheet
           knex: trx,
           tenant,
           timeSheetId: id,
-          actorId: user.user_id,
-          authorize: async (approvalTrx, timeSheet) => {
-            await assertCanApproveSubject(user, tenant, timeSheet.user_id, approvalTrx);
-            // Human-work guard: approval requires a human approver.
-            await assertHumanWorkOwner(approvalTrx, tenant, user.user_id, 'approved_by');
-          },
+          actor: sessionLifecycleActor(user, tenant),
         });
 
         approvedSheets.push({
@@ -497,16 +492,8 @@ export const approveTimeSheet = withAuth(async (user, { tenant }, timeSheetId: s
       knex: db,
       tenant,
       timeSheetId,
-      actorId: user.user_id,
+      actor: sessionLifecycleActor(user, tenant),
       comment: 'Time sheet approved',
-      authorize: async (trx, timeSheet) => {
-        if (!await hasPermission(user, 'time_sheet', 'approve', trx)) {
-          throw new Error('Permission denied: Cannot approve timesheets');
-        }
-        await assertCanApproveSubject(user, tenant, timeSheet.user_id, trx);
-        // Human-work guard: approval requires a human approver.
-        await assertHumanWorkOwner(trx, tenant, approverId, 'approved_by');
-      },
     });
 
     // Track analytics
@@ -540,40 +527,13 @@ export const requestChangesForTimeSheet = withAuth(async (user, { tenant }, time
       throw new Error('Permission denied: Invalid approver');
     }
 
-    await db.transaction(async (trx) => {
-      const scopedDb = tenantDb(trx, tenant) as any;
-      const timeSheet = await scopedDb.table('time_sheets')
-        .where({
-          id: timeSheetId,
-          tenant
-        })
-        .first();
-
-      if (!timeSheet) {
-        throw new Error('Time sheet not found');
-      }
-
-      await assertCanActOnBehalf(user, tenant, timeSheet.user_id, trx);
-
-      await scopedDb.table('time_sheets')
-        .where({
-          id: timeSheetId,
-          tenant
-        })
-        .update({
-          approval_status: 'CHANGES_REQUESTED' as TimeSheetStatus,
-          approved_at: null,
-          approved_by: null
-        });
-
-      await scopedDb.table('time_sheet_comments').insert({
-        time_sheet_id: timeSheetId,
-        user_id: approverId,
-        comment: 'Changes requested for time sheet',
-        created_at: trx.fn.now(),
-        is_approver: true,
-        tenant
-      });
+    await runTimeSheetTransition({
+      knex: db,
+      tenant,
+      timeSheetId,
+      operation: 'requestChanges',
+      actor: sessionLifecycleActor(user, tenant),
+      comment: 'Changes requested for time sheet',
     });
   } catch (error) {
     console.error('Error requesting changes for time sheet:', error);
@@ -608,11 +568,8 @@ export const reverseTimeSheetApproval = withAuth(async (
       knex: db,
       tenant,
       timeSheetId,
-      actorId: approverId,
+      actor: sessionLifecycleActor(user, tenant),
       reason,
-      authorize: async (trx, sheet) => {
-        await assertCanActOnBehalf(user, tenant, sheet.user_id, trx);
-      },
     });
   } catch (error) {
     console.error('Error reversing time sheet approval:', error);

@@ -54,7 +54,7 @@ import {
   type CalendarAccess,
 } from '@alga-psa/scheduling/lib/calendarAccess';
 import { assertCanActOnBehalf, assertCanApproveSubject, resolveManagedSubjectUserIds } from '@alga-psa/scheduling/actions/timeEntryDelegationAuth';
-import { approveSubmittedTimeSheet, reverseApprovedTimeSheet, TimeSheetReversalError } from '@alga-psa/scheduling/lib/timeSheetApprovalTransition';
+import { runTimeSheetTransition, TimeSheetTransitionError, type TimeSheetLifecycleActor } from '@alga-psa/scheduling/lib/timeSheetApprovalTransition';
 import { loadVisibleCalendars } from '@alga-psa/scheduling/lib/visibleCalendars';
 import type { IVisibleCalendar } from '@alga-psa/types';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
@@ -631,83 +631,67 @@ export class TimeSheetService extends BaseService<any> {
 
 
   // Time sheet workflow operations
+
+  // LEVERAGE: pattern lifecycle-actor — session, REST sheet and REST entry actors repeat the subject-rule → delegation helper mapping; differ only in RBAC resource and denial error.
+  /** REST principal for the shared lifecycle engine: REST RBAC plus delegation, failing as 403. */
+  private lifecycleActor(context: ServiceContext): TimeSheetLifecycleActor {
+    return {
+      userId: context.userId,
+      hasPermission: async (permission, trx) => {
+        if (permission === 'submit') return this.canSubmitTimeSheets(context, trx);
+        if (permission === 'approve') return this.canApproveTimeSheets(context, trx);
+        return await this.canReverseTimeSheets(context, trx) && await this.canManageTimeSheets(context, trx);
+      },
+      assertSubject: async (rule, subjectUserId, trx) => {
+        try {
+          if (rule === 'approveSubject') {
+            await assertCanApproveSubject(context.user as any, context.tenant, subjectUserId, trx);
+          } else {
+            await assertCanActOnBehalf(context.user as any, context.tenant, subjectUserId, trx);
+          }
+        } catch {
+          throw new ForbiddenError('Permission denied: Cannot act on this time sheet');
+        }
+      },
+    };
+  }
+
+  /** Run a lifecycle operation through the shared row-locked engine, mapping its failures to HTTP errors. */
   private async transitionTimeSheet(
     id: string,
-    target: 'SUBMITTED' | 'APPROVED' | 'CHANGES_REQUESTED',
-    data: SubmitTimeSheetData | ApproveTimeSheetData | RequestChangesTimeSheetData,
+    operation: 'submit' | 'approve' | 'requestChanges' | 'reverse',
     context: ServiceContext,
-    operation?: 'reject'
-  ): Promise<any> {
-    const rejecting = operation === 'reject';
+    options: { comment?: string; reason?: string } = {},
+  ): Promise<void> {
     const { knex } = await this.getKnex();
-    await withTransaction(knex, async (trx) => {
-      // Lock the persisted row before inspecting state. All competing transitions serialize here.
-      const sheet = await tenantDb(trx, context.tenant).table('time_sheets').where({ id }).forUpdate().first();
-      if (!sheet) throw new NotFoundError('Time sheet not found');
-
-      const permitted = target === 'SUBMITTED'
-        ? await this.canSubmitTimeSheets(context, trx)
-        : await this.canApproveTimeSheets(context, trx);
-      if (!permitted) {
-        throw new ForbiddenError(`Permission denied: Cannot ${target.toLowerCase()} time sheets`);
+    try {
+      await runTimeSheetTransition({
+        knex,
+        tenant: context.tenant,
+        timeSheetId: id,
+        operation,
+        actor: this.lifecycleActor(context),
+        ...options,
+      });
+    } catch (error) {
+      if (!(error instanceof TimeSheetTransitionError)) throw error;
+      if (error.reason === 'not_found') throw new NotFoundError(error.message);
+      if (error.reason === 'forbidden') throw new ForbiddenError(error.message);
+      if (error.reason === 'wrong_state' && operation !== 'reverse') {
+        const target = { submit: 'SUBMITTED', approve: 'APPROVED', requestChanges: 'CHANGES_REQUESTED' }[operation];
+        throw new ConflictError(`Cannot transition time sheet from ${error.currentState} to ${target}`);
       }
-      try {
-        if (target === 'APPROVED') {
-          await assertCanApproveSubject(context.user as any, context.tenant, sheet.user_id, trx);
-        } else {
-          await assertCanActOnBehalf(context.user as any, context.tenant, sheet.user_id, trx);
-        }
-      } catch {
-        throw new ForbiddenError('Permission denied: Cannot act on this time sheet');
-      }
-
-      const allowed = target === 'SUBMITTED'
-        ? ['DRAFT', 'CHANGES_REQUESTED'].includes(sheet.approval_status)
-        : target === 'APPROVED'
-          ? sheet.approval_status === 'SUBMITTED'
-          : sheet.approval_status === 'SUBMITTED';
-      if (!allowed) throw new ConflictError(`Cannot transition time sheet from ${sheet.approval_status} to ${target}`);
-
-      if (target === 'SUBMITTED' && !await tenantDb(trx, context.tenant).table('time_entries').where({ time_sheet_id: id }).first()) {
-        throw new ConflictError('Cannot submit time sheet without time entries');
-      }
-
-      const now = new Date();
-      const update: Record<string, unknown> = { approval_status: target };
-      if (target === 'SUBMITTED') {
-        update.submitted_at = now;
-      } else if (target === 'APPROVED') {
-        await assertHumanWorkOwner(trx, context.tenant, context.userId, 'approved_by');
-        update.approved_at = now;
-        update.approved_by = context.userId;
-      }
-      await tenantDb(trx, context.tenant).table('time_sheets').where({ id }).update(update);
-      await tenantDb(trx, context.tenant).table('time_entries').where({ time_sheet_id: id }).update({ approval_status: target, updated_at: now });
-
-      const comment = target === 'APPROVED'
-        ? (data as ApproveTimeSheetData).approval_notes
-        : target === 'CHANGES_REQUESTED'
-          ? rejecting
-            ? `Rejected: ${(data as RequestChangesTimeSheetData).change_reason}`
-            : `Changes requested: ${(data as RequestChangesTimeSheetData).change_reason}${(data as RequestChangesTimeSheetData).detailed_feedback ? `\n\nDetails: ${(data as RequestChangesTimeSheetData).detailed_feedback}` : ''}`
-          : (data as SubmitTimeSheetData).submission_notes
-            ? `Submitted: ${(data as SubmitTimeSheetData).submission_notes}`
-            : undefined;
-      if (comment) {
-        await tenantDb(trx, context.tenant).table('time_sheet_comments').insert({
-          comment_id: uuidv4(), time_sheet_id: id, user_id: context.userId,
-          comment, is_approver: target !== 'SUBMITTED', created_at: trx.fn.now(), tenant: context.tenant,
-        });
-      }
-    });
-    // Existing unregistered event publication happens only after the atomic state commit.
-    return this.getById(id, context);
+      throw new ConflictError(error.message);
+    }
   }
 
   async submitTimeSheet(id: string, data: SubmitTimeSheetData, context: ServiceContext): Promise<any> {
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'submitTimeSheet', [id, data, context]);
     if (delegated.handled) return delegated.value;
-    const result = await this.transitionTimeSheet(id, 'SUBMITTED', data, context);
+    await this.transitionTimeSheet(id, 'submit', context, {
+      comment: data.submission_notes ? `Submitted: ${data.submission_notes}` : undefined,
+    });
+    const result = await this.getById(id, context);
     await publishUnregisteredEventType({ eventType: 'TIME_SHEET_SUBMITTED', payload: { tenantId: context.tenant, timeSheetId: id, userId: context.userId, timestamp: new Date().toISOString() } });
     return result;
   }
@@ -716,33 +700,7 @@ export class TimeSheetService extends BaseService<any> {
   async approveTimeSheet(id: string, data: ApproveTimeSheetData, context: ServiceContext): Promise<any> {
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'approveTimeSheet', [id, data, context]);
     if (delegated.handled) return delegated.value;
-    const { knex } = await this.getKnex();
-    try {
-      await approveSubmittedTimeSheet({
-        knex,
-        tenant: context.tenant,
-        timeSheetId: id,
-        actorId: context.userId,
-        comment: data.approval_notes || undefined,
-        authorize: async (trx, sheet) => {
-          if (!await this.canApproveTimeSheets(context, trx)) {
-            throw new ForbiddenError('Permission denied: Cannot approve time sheets');
-          }
-          try {
-            await assertCanApproveSubject(context.user as any, context.tenant, sheet.user_id, trx);
-          } catch {
-            throw new ForbiddenError('Permission denied: Cannot act on this time sheet');
-          }
-          await assertHumanWorkOwner(trx, context.tenant, context.userId, 'approved_by');
-        },
-      });
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('not in a submitted state')) {
-        throw new ConflictError(`Cannot transition time sheet from ${error.message.split('(current state: ')[1]?.replace(/\)$/, '') ?? 'current state'} to APPROVED`);
-      }
-      if (error instanceof Error && error.message === 'Time sheet not found') throw new NotFoundError(error.message);
-      throw error;
-    }
+    await this.transitionTimeSheet(id, 'approve', context, { comment: data.approval_notes || undefined });
     const result = await this.getById(id, context);
     await publishUnregisteredEventType({ eventType: 'TIME_SHEET_APPROVED', payload: { tenantId: context.tenant, timeSheetId: id, approvedBy: context.userId, timestamp: new Date().toISOString() } });
     return result;
@@ -752,7 +710,10 @@ export class TimeSheetService extends BaseService<any> {
   async requestChanges(id: string, data: RequestChangesTimeSheetData, context: ServiceContext): Promise<any> {
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'requestChanges', [id, data, context]);
     if (delegated.handled) return delegated.value;
-    const result = await this.transitionTimeSheet(id, 'CHANGES_REQUESTED', data, context);
+    await this.transitionTimeSheet(id, 'requestChanges', context, {
+      comment: `Changes requested: ${data.change_reason}${data.detailed_feedback ? `\n\nDetails: ${data.detailed_feedback}` : ''}`,
+    });
+    const result = await this.getById(id, context);
     await publishUnregisteredEventType({ eventType: 'TIME_SHEET_CHANGES_REQUESTED', payload: { tenantId: context.tenant, timeSheetId: id, requestedBy: context.userId, reason: data.change_reason, timestamp: new Date().toISOString() } });
     return result;
   }
@@ -760,7 +721,8 @@ export class TimeSheetService extends BaseService<any> {
   async rejectTimeSheet(id: string, notes: string, context: ServiceContext): Promise<any> {
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'rejectTimeSheet', [id, notes, context]);
     if (delegated.handled) return delegated.value;
-    const result = await this.transitionTimeSheet(id, 'CHANGES_REQUESTED', { change_reason: notes } as RequestChangesTimeSheetData, context, 'reject');
+    await this.transitionTimeSheet(id, 'requestChanges', context, { comment: `Rejected: ${notes}` });
+    const result = await this.getById(id, context);
     await publishUnregisteredEventType({ eventType: 'TIME_SHEET_REJECTED', payload: { tenantId: context.tenant, timeSheetId: id, rejectedBy: context.userId, notes, timestamp: new Date().toISOString() } });
     return result;
   }
@@ -789,32 +751,7 @@ export class TimeSheetService extends BaseService<any> {
   async reverseApproval(id: string, data: ReverseApprovalData, context: ServiceContext): Promise<any> {
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'reverseApproval', [id, data, context]);
     if (delegated.handled) return delegated.value;
-    const { knex } = await this.getKnex();
-    try {
-      await reverseApprovedTimeSheet({
-        knex,
-        tenant: context.tenant,
-        timeSheetId: id,
-        actorId: context.userId,
-        reason: data.reversal_reason,
-        authorize: async (trx, sheet) => {
-          if (!await this.canReverseTimeSheets(context, trx) || !await this.canManageTimeSheets(context, trx)) {
-            throw new ForbiddenError('Permission denied: Cannot reverse approval time sheets');
-          }
-          try {
-            await assertCanActOnBehalf(context.user as any, context.tenant, sheet.user_id, trx);
-          } catch {
-            throw new ForbiddenError('Permission denied: Cannot act on this time sheet');
-          }
-        },
-      });
-    } catch (error) {
-      if (error instanceof TimeSheetReversalError) {
-        if (error.reason === 'not_found') throw new NotFoundError(error.message);
-        throw new ConflictError(error.message);
-      }
-      throw error;
-    }
+    await this.transitionTimeSheet(id, 'reverse', context, { reason: data.reversal_reason });
     const result = await this.getById(id, context);
     await publishUnregisteredEventType({ eventType: 'TIME_SHEET_APPROVAL_REVERSED', payload: { tenantId: context.tenant, timeSheetId: id, reversedBy: context.userId, reason: data.reversal_reason, timestamp: new Date().toISOString() } });
     return result;

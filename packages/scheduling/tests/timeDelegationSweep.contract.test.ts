@@ -33,10 +33,14 @@ describe('time/delegation narrowing sweep contracts', () => {
     expect(timeSheetSource).toContain('export const requestChangesForTimeSheet = withAuth(async');
     expect(timeSheetSource).toContain("if (approverId !== user.user_id) {");
     expect(timeSheetSource).toContain("throw new Error('Permission denied: Invalid approver');");
-    expect(timeSheetSource).toContain('await assertCanActOnBehalf(user, tenant, timeSheet.user_id, trx);');
     expect(timeSheetSource).toContain('export const approveTimeSheet = withAuth(async');
-    expect(timeSheetSource).toContain('await assertCanApproveSubject(user, tenant, timeSheet.user_id, trx);');
     expect(timeSheetSource).toContain('export const reverseTimeSheetApproval = withAuth(async');
-    expect(timeSheetSource).toContain('await assertCanActOnBehalf(user, tenant, timeSheet.user_id, trx);');
+    // Lifecycle actions authorize the target subject inside the row-locked engine via the session actor.
+    expect(timeSheetSource.match(/actor: sessionLifecycleActor\(user, tenant\)/g)?.length).toBeGreaterThanOrEqual(4);
+    const actorSource = readSource('../src/lib/timeSheetLifecycleActor.ts');
+    expect(actorSource).toContain('await assertCanApproveSubject(user, tenant, subjectUserId, trx);');
+    expect(actorSource).toContain('await assertCanActOnBehalf(user, tenant, subjectUserId, trx);');
+    const engineSource = readSource('../src/lib/timeSheetApprovalTransition.ts');
+    expect(engineSource).toContain('await actor.assertSubject(rule.subject, sheet.user_id, trx);');
   });
 });

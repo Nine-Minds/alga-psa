@@ -92,6 +92,7 @@ async function cleanupTenant(tenantId: string) {
   await tenantTable(tenantId, 'invoice_time_entries').del();
   await tenantTable(tenantId, 'invoices').del();
   await tenantTable(tenantId, 'clients').del();
+  await tenantTable(tenantId, 'time_entry_change_requests').del();
   await tenantTable(tenantId, 'time_entries').del();
   await tenantTable(tenantId, 'time_sheet_comments').del();
   await tenantTable(tenantId, 'time_sheets').del();
@@ -889,6 +890,346 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     const unrelatedResult = await approveTimeSheetAction(unrelated.sheetId, f.actor);
     expect(unrelatedResult).toMatchObject({ permissionError: expect.any(String) });
     expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: unrelated.sheetId }).first()).toEqual(unrelatedBefore);
+  });
+
+  describe('every lifecycle writer goes through the shared row-locked engine', () => {
+    const snapshot = async (tenantId: string, sheetId: string) => ({
+      sheet: await tenantTable(tenantId, 'time_sheets').where({ id: sheetId }).first(),
+      entries: await tenantTable(tenantId, 'time_entries').where({ time_sheet_id: sheetId }).orderBy('entry_id').select('*'),
+      comments: await tenantTable(tenantId, 'time_sheet_comments').where({ time_sheet_id: sheetId }).orderBy('comment_id').select('*'),
+    });
+
+    async function approveSheet(tenantId: string, sheetId: string, approverId: string, invoiced = false) {
+      await tenantTable(tenantId, 'time_sheets').where({ id: sheetId })
+        .update({ approval_status: 'APPROVED', approved_by: approverId, approved_at: db.fn.now() });
+      await tenantTable(tenantId, 'time_entries').where({ time_sheet_id: sheetId })
+        .update({ approval_status: 'APPROVED', invoiced });
+    }
+
+    async function addSibling(tenantId: string, entryId: string, overrides: Record<string, unknown>) {
+      const source = await tenantTable(tenantId, 'time_entries').where({ entry_id: entryId }).first();
+      const siblingId = uuidv4();
+      await tenantTable(tenantId, 'time_entries').insert({ ...source, entry_id: siblingId, ...overrides });
+      return siblingId;
+    }
+
+    const uiSubmit = async (sheetId: string) =>
+      (await import('@alga-psa/scheduling/actions/timeSheetOperations')).submitTimeSheet(sheetId);
+    const uiRequestChanges = async (sheetId: string, approverId: string) =>
+      (await import('@alga-psa/scheduling/actions/timeSheetActions')).requestChangesForTimeSheet(sheetId, approverId);
+    const uiEntryReview = async (entryId: string, approvalStatus: 'APPROVED' | 'CHANGES_REQUESTED' | 'SUBMITTED' | 'DRAFT', changeRequestComment?: string) =>
+      (await import('@alga-psa/scheduling/actions/timeEntryCrudActions')).updateTimeEntryApprovalStatus({ entryId, approvalStatus, changeRequestComment });
+
+    const OWNER_GRANTS = ['time_sheet:submit', 'time_sheet:read'];
+    const APPROVER_GRANTS = ['time_sheet:approve', 'time_sheet:read_all'];
+
+    // Desk-review probes: an owner submission and a UI request-changes must not reopen approved, invoiced time.
+    it.each(['submit', 'requestChanges'] as const)(
+      '%s cannot reopen approved invoiced time outside reversal', async (operation) => {
+        const f = await seed();
+        const { sheetId } = await seedUiApprovalSheet(f, 'SUBMITTED');
+        await approveSheet(f.tenantId, sheetId, f.actor, true);
+        const actorId = operation === 'submit' ? f.subject : f.actor;
+        actAsUiApprover(f, actorId);
+        grants.byUser.set(actorId, new Set(operation === 'submit' ? OWNER_GRANTS : APPROVER_GRANTS));
+        const before = await snapshot(f.tenantId, sheetId);
+
+        const result = operation === 'submit' ? await uiSubmit(sheetId) : await uiRequestChanges(sheetId, actorId);
+
+        expect(result).toMatchObject({ actionError: expect.any(String) });
+        expect(await snapshot(f.tenantId, sheetId)).toEqual(before);
+      }
+    );
+
+    it.each(['APPROVED', 'SUBMITTED'] as const)('owner submission from %s is refused without writes', async (status) => {
+      const f = await seed();
+      const { sheetId } = await seedUiApprovalSheet(f, 'SUBMITTED');
+      if (status === 'APPROVED') await approveSheet(f.tenantId, sheetId, f.actor);
+      actAsUiApprover(f, f.subject);
+      grants.byUser.set(f.subject, new Set(OWNER_GRANTS));
+      const before = await snapshot(f.tenantId, sheetId);
+
+      expect(await uiSubmit(sheetId)).toMatchObject({ actionError: expect.stringContaining(`current state: ${status}`) });
+      expect(await snapshot(f.tenantId, sheetId)).toEqual(before);
+    });
+
+    it.each(['DRAFT', 'CHANGES_REQUESTED'] as const)('owner submission from %s synchronizes the sheet and every entry', async (status) => {
+      const f = await seed();
+      const { sheetId, entryId } = await seedUiApprovalSheet(f, status);
+      const siblingId = await addSibling(f.tenantId, entryId, {});
+      actAsUiApprover(f, f.subject);
+      grants.byUser.set(f.subject, new Set(OWNER_GRANTS));
+
+      const result = await uiSubmit(sheetId);
+
+      expect(result).toMatchObject({ id: sheetId, approval_status: 'SUBMITTED' });
+      const after = await snapshot(f.tenantId, sheetId);
+      expect(after.sheet.approval_status).toBe('SUBMITTED');
+      expect(after.sheet.submitted_at).not.toBeNull();
+      expect(after.entries.map((entry: any) => [entry.entry_id, entry.approval_status]).sort())
+        .toEqual([[entryId, 'SUBMITTED'], [siblingId, 'SUBMITTED']].sort());
+    });
+
+    it('owner submission of an empty sheet is refused without writes', async () => {
+      const f = await seed();
+      const { sheetId } = await seedUiApprovalSheet(f, 'DRAFT');
+      await tenantTable(f.tenantId, 'time_entries').where({ time_sheet_id: sheetId }).del();
+      actAsUiApprover(f, f.subject);
+      grants.byUser.set(f.subject, new Set(OWNER_GRANTS));
+      const before = await snapshot(f.tenantId, sheetId);
+
+      expect(await uiSubmit(sheetId)).toMatchObject({ actionError: expect.stringContaining('without time entries') });
+      expect(await snapshot(f.tenantId, sheetId)).toEqual(before);
+    });
+
+    it('submission for another user still requires act-on-behalf rights', async () => {
+      const f = await seed();
+      const { sheetId } = await seedUiApprovalSheet(f, 'DRAFT');
+      actAsUiApprover(f, f.actor);
+      grants.byUser.set(f.actor, new Set(['time_sheet:submit']));
+      const before = await snapshot(f.tenantId, sheetId);
+
+      expect(await uiSubmit(sheetId)).toMatchObject({ permissionError: expect.any(String) });
+      expect(await snapshot(f.tenantId, sheetId)).toEqual(before);
+    });
+
+    it('UI request-changes on a submitted sheet synchronizes entries, clears approval metadata and records history', async () => {
+      const f = await seed();
+      const { sheetId, entryId } = await seedUiApprovalSheet(f, 'SUBMITTED');
+      const siblingId = await addSibling(f.tenantId, entryId, {});
+      actAsUiApprover(f);
+      grants.byUser.set(f.actor, new Set(APPROVER_GRANTS));
+
+      expect(await uiRequestChanges(sheetId, f.actor)).toBeUndefined();
+
+      const after = await snapshot(f.tenantId, sheetId);
+      expect(after.sheet).toMatchObject({ approval_status: 'CHANGES_REQUESTED', approved_by: null, approved_at: null });
+      expect(after.entries.map((entry: any) => [entry.entry_id, entry.approval_status]).sort())
+        .toEqual([[entryId, 'CHANGES_REQUESTED'], [siblingId, 'CHANGES_REQUESTED']].sort());
+      expect(after.comments).toEqual(expect.arrayContaining([
+        expect.objectContaining({ comment: 'Changes requested for time sheet', user_id: f.actor, is_approver: true }),
+      ]));
+    });
+
+    it.each(['APPROVED', 'DRAFT', 'CHANGES_REQUESTED'] as const)(
+      'UI request-changes from %s is refused without writes (approved sheets reopen only through reversal)', async (status) => {
+        const f = await seed();
+        const { sheetId } = await seedUiApprovalSheet(f, status === 'APPROVED' ? 'SUBMITTED' : status);
+        if (status === 'APPROVED') await approveSheet(f.tenantId, sheetId, f.actor);
+        actAsUiApprover(f);
+        grants.byUser.set(f.actor, new Set(APPROVER_GRANTS));
+        const before = await snapshot(f.tenantId, sheetId);
+
+        expect(await uiRequestChanges(sheetId, f.actor)).toMatchObject({ actionError: expect.stringContaining(`current state: ${status}`) });
+        expect(await snapshot(f.tenantId, sheetId)).toEqual(before);
+      }
+    );
+
+    it('UI request-changes without approve permission is refused without writes', async () => {
+      const f = await seed();
+      const { sheetId } = await seedUiApprovalSheet(f, 'SUBMITTED');
+      actAsUiApprover(f);
+      grants.byUser.set(f.actor, new Set(['time_sheet:read_all', 'time_sheet:reverse']));
+      const before = await snapshot(f.tenantId, sheetId);
+
+      expect(await uiRequestChanges(sheetId, f.actor)).toMatchObject({ permissionError: expect.any(String) });
+      expect(await snapshot(f.tenantId, sheetId)).toEqual(before);
+    });
+
+    // Desk-review probe: reviewing one entry must not reopen an approved parent that holds invoiced time.
+    it('entry review cannot reopen a sheet containing invoiced siblings', async () => {
+      const f = await seed();
+      const { sheetId, entryId } = await seedUiApprovalSheet(f, 'SUBMITTED');
+      await approveSheet(f.tenantId, sheetId, f.actor);
+      await addSibling(f.tenantId, entryId, { invoiced: true });
+      actAsUiApprover(f);
+      grants.byUser.set(f.actor, new Set(APPROVER_GRANTS));
+      const before = await snapshot(f.tenantId, sheetId);
+
+      expect(await uiEntryReview(entryId, 'CHANGES_REQUESTED', 'fix this')).toMatchObject({ actionError: expect.any(String) });
+      expect(await snapshot(f.tenantId, sheetId)).toEqual(before);
+    });
+
+    it.each([
+      ['APPROVED', 'CHANGES_REQUESTED'],
+      ['APPROVED', 'APPROVED'],
+      ['DRAFT', 'CHANGES_REQUESTED'],
+      ['DRAFT', 'APPROVED'],
+    ] as const)('entry review on a %s parent (to %s) is refused without writes', async (parent, review) => {
+      const f = await seed();
+      const { sheetId, entryId } = await seedUiApprovalSheet(f, parent === 'APPROVED' ? 'SUBMITTED' : parent);
+      if (parent === 'APPROVED') await approveSheet(f.tenantId, sheetId, f.actor);
+      actAsUiApprover(f);
+      grants.byUser.set(f.actor, new Set(APPROVER_GRANTS));
+      const before = await snapshot(f.tenantId, sheetId);
+
+      expect(await uiEntryReview(entryId, review, 'note')).toMatchObject({ actionError: expect.stringContaining(`current state: ${parent}`) });
+      expect(await snapshot(f.tenantId, sheetId)).toEqual(before);
+    });
+
+    it.each(['SUBMITTED', 'DRAFT'] as const)('entry review cannot set the sheet-owned %s status', async (review) => {
+      const f = await seed();
+      const { sheetId, entryId } = await seedUiApprovalSheet(f, 'SUBMITTED');
+      actAsUiApprover(f);
+      grants.byUser.set(f.actor, new Set(APPROVER_GRANTS));
+      const before = await snapshot(f.tenantId, sheetId);
+
+      expect(await uiEntryReview(entryId, review)).toMatchObject({ actionError: expect.stringContaining(`cannot be reviewed to ${review}`) });
+      expect(await snapshot(f.tenantId, sheetId)).toEqual(before);
+    });
+
+    it('entry change request on a submitted sheet returns the sheet to its owner and leaves siblings alone', async () => {
+      const f = await seed();
+      const { sheetId, entryId } = await seedUiApprovalSheet(f, 'SUBMITTED');
+      const siblingId = await addSibling(f.tenantId, entryId, {});
+      actAsUiApprover(f);
+      grants.byUser.set(f.actor, new Set(APPROVER_GRANTS));
+
+      expect(await uiEntryReview(entryId, 'CHANGES_REQUESTED', 'split this entry')).toBeUndefined();
+
+      const after = await snapshot(f.tenantId, sheetId);
+      expect(after.sheet).toMatchObject({ approval_status: 'CHANGES_REQUESTED', approved_by: null, approved_at: null });
+      const statuses = Object.fromEntries(after.entries.map((entry: any) => [entry.entry_id, entry.approval_status]));
+      expect(statuses).toEqual({ [entryId]: 'CHANGES_REQUESTED', [siblingId]: 'SUBMITTED' });
+      expect(await tenantTable(f.tenantId, 'time_entry_change_requests').where({ time_entry_id: entryId }).select('comment'))
+        .toEqual([{ comment: 'split this entry' }]);
+
+      // A second entry reviewed on the now changes-requested sheet is still allowed and stays in the engine.
+      expect(await uiEntryReview(siblingId, 'APPROVED')).toBeUndefined();
+      expect((await tenantTable(f.tenantId, 'time_entries').where({ entry_id: siblingId }).first()).approval_status).toBe('APPROVED');
+      expect((await tenantTable(f.tenantId, 'time_sheets').where({ id: sheetId }).first()).approval_status).toBe('CHANGES_REQUESTED');
+    });
+
+    it('entry approval keeps the self-approval restriction', async () => {
+      const f = await seed();
+      const { sheetId, entryId } = await seedUiApprovalSheet(f, 'SUBMITTED', f.actor);
+      actAsUiApprover(f);
+      grants.byUser.set(f.actor, new Set(APPROVER_GRANTS));
+      const before = await snapshot(f.tenantId, sheetId);
+
+      expect(await uiEntryReview(entryId, 'APPROVED')).toMatchObject({ permissionError: expect.any(String) });
+      expect(await snapshot(f.tenantId, sheetId)).toEqual(before);
+    });
+
+    it('REST submission of an approved, invoiced sheet is a conflict without writes', async () => {
+      const f = await seed();
+      const { sheetId } = await seedUiApprovalSheet(f, 'SUBMITTED');
+      await approveSheet(f.tenantId, sheetId, f.actor, true);
+      grants.byUser.set(f.subject, new Set(OWNER_GRANTS));
+      const before = await snapshot(f.tenantId, sheetId);
+
+      await expect(runWithTenant(f.tenantId, () => serviceFor(f.tenantId).submitTimeSheet(sheetId, {}, contextFor(f.tenantId, f.subject))))
+        .rejects.toThrow(new ConflictError('Cannot transition time sheet from APPROVED to SUBMITTED'));
+      expect(await snapshot(f.tenantId, sheetId)).toEqual(before);
+    });
+
+    it('REST entry review goes through the engine: approved parents, other subjects and self-approval are refused', async () => {
+      const { TimeEntryService } = await import('@/lib/api/services/TimeEntryService');
+      const f = await seed();
+      const entries = new TimeEntryService();
+      vi.spyOn(entries as any, 'getKnex').mockResolvedValue({ knex: db, tenant: f.tenantId });
+      const ctx = contextFor(f.tenantId, f.actor);
+
+      // Approved parent: an entry change request must not reopen it.
+      const approved = await seedUiApprovalSheet(f, 'SUBMITTED');
+      await approveSheet(f.tenantId, approved.sheetId, f.actor);
+      grants.byUser.set(f.actor, new Set(['time_entry:approve', 'time_sheet:approve', 'time_sheet:read_all']));
+      const beforeApproved = await snapshot(f.tenantId, approved.sheetId);
+      const rcResults = await runWithTenant(f.tenantId, () => entries.requestChanges({ entry_ids: [approved.entryId], change_reason: 'x' } as any, ctx));
+      expect(rcResults).toEqual([expect.objectContaining({ success: false, entry_id: approved.entryId })]);
+      expect(await snapshot(f.tenantId, approved.sheetId)).toEqual(beforeApproved);
+
+      // Another subject without delegation rights.
+      const submitted = await seedUiApprovalSheet(f, 'SUBMITTED');
+      grants.byUser.set(f.actor, new Set(['time_entry:approve']));
+      const beforeSubmitted = await snapshot(f.tenantId, submitted.sheetId);
+      await expect(runWithTenant(f.tenantId, () => entries.approveTimeEntries({ entry_ids: [submitted.entryId] } as any, ctx)))
+        .rejects.toThrow('No time entries could be approved');
+      expect(await snapshot(f.tenantId, submitted.sheetId)).toEqual(beforeSubmitted);
+
+      // Self-approval.
+      const own = await seedUiApprovalSheet(f, 'SUBMITTED', f.actor);
+      grants.byUser.set(f.actor, new Set(['time_entry:approve', 'time_sheet:approve', 'time_sheet:read_all']));
+      const beforeOwn = await snapshot(f.tenantId, own.sheetId);
+      await expect(runWithTenant(f.tenantId, () => entries.approveTimeEntries({ entry_ids: [own.entryId] } as any, ctx)))
+        .rejects.toThrow('No time entries could be approved');
+      expect(await snapshot(f.tenantId, own.sheetId)).toEqual(beforeOwn);
+
+      // Authorized review of another subject's submitted entry succeeds.
+      grants.byUser.set(f.actor, new Set(['time_entry:approve', 'time_sheet:approve', 'time_sheet:read_all']));
+      const result = await runWithTenant(f.tenantId, () => entries.approveTimeEntries({ entry_ids: [submitted.entryId] } as any, contextFor(f.tenantId, f.actor)));
+      expect(result).toMatchObject({ approved_count: 1 });
+      expect((await tenantTable(f.tenantId, 'time_entries').where({ entry_id: submitted.entryId }).first()).approval_status).toBe('APPROVED');
+    });
+
+    it.each([
+      ['owner submission', 'submit'],
+      ['UI request-changes', 'requestChanges'],
+      ['entry change request', 'entryReview'],
+    ] as const)('%s queued behind a winning approval fails without overwriting it', async (_label, competitor) => {
+      const f = await seed();
+      const { sheetId, entryId } = await seedUiApprovalSheet(f, competitor === 'submit' ? 'CHANGES_REQUESTED' : 'SUBMITTED');
+      if (competitor === 'submit') {
+        // The owner's submission wins first; the approver then queues behind the lock holder alongside a
+        // second (stale) owner submission.
+        actAsUiApprover(f, f.subject);
+        grants.byUser.set(f.subject, new Set(OWNER_GRANTS));
+        expect(await uiSubmit(sheetId)).toMatchObject({ approval_status: 'SUBMITTED' });
+      }
+      grants.byUser.set(f.actor, new Set(APPROVER_GRANTS));
+      grants.byUser.set(f.subject, new Set(OWNER_GRANTS));
+      actAsUiApprover(f, f.actor);
+
+      const asUser = <T,>(userId: string, run: () => Promise<T>) => async () => {
+        uiActionActor.user = { user_id: userId, tenant: f.tenantId, user_type: 'internal' };
+        return run();
+      };
+      const results = await queueTwoUiApprovalsBehindSheetLock(
+        f.tenantId,
+        sheetId,
+        asUser(f.actor, () => approveTimeSheetAction(sheetId, f.actor)),
+        competitor === 'submit'
+          ? asUser(f.subject, () => uiSubmit(sheetId))
+          : competitor === 'requestChanges'
+            ? asUser(f.actor, () => uiRequestChanges(sheetId, f.actor))
+            : asUser(f.actor, () => uiEntryReview(entryId, 'CHANGES_REQUESTED', 'late')),
+      );
+
+      expect(results[0]).toBeUndefined();
+      expect(results[1]).toMatchObject({ actionError: expect.stringContaining('current state: APPROVED') });
+      const after = await snapshot(f.tenantId, sheetId);
+      expect(after.sheet).toMatchObject({ approval_status: 'APPROVED', approved_by: f.actor });
+      expect(after.entries.every((entry: any) => entry.approval_status === 'APPROVED')).toBe(true);
+    });
+
+    it('reversal queued ahead of an owner submission is the only path that reopens approved time', async () => {
+      const f = await seed();
+      const { sheetId } = await seedUiApprovalSheet(f, 'SUBMITTED');
+      await approveSheet(f.tenantId, sheetId, f.actor);
+      grants.byUser.set(f.actor, new Set(['time_sheet:reverse', 'time_sheet:approve', 'time_sheet:read_all']));
+      grants.byUser.set(f.subject, new Set(OWNER_GRANTS));
+      actAsUiApprover(f, f.subject);
+      const before = await snapshot(f.tenantId, sheetId);
+      expect(await uiSubmit(sheetId)).toMatchObject({ actionError: expect.stringContaining('current state: APPROVED') });
+      expect(await snapshot(f.tenantId, sheetId)).toEqual(before);
+
+      const asUser = <T,>(userId: string, run: () => Promise<T>) => async () => {
+        uiActionActor.user = { user_id: userId, tenant: f.tenantId, user_type: 'internal' };
+        return run();
+      };
+      const results = await queueTwoUiApprovalsBehindSheetLock(
+        f.tenantId,
+        sheetId,
+        asUser(f.actor, () => reverseTimeSheetApproval(sheetId, f.actor, 'wrong project')),
+        asUser(f.subject, () => uiSubmit(sheetId)),
+      );
+
+      expect(results[0]).toBeUndefined();
+      expect(results[1]).toMatchObject({ approval_status: 'SUBMITTED' });
+      const after = await snapshot(f.tenantId, sheetId);
+      expect(after.sheet).toMatchObject({ approval_status: 'SUBMITTED', reversed_by: f.actor, reversal_reason: 'wrong project' });
+      expect(after.entries.every((entry: any) => entry.approval_status === 'SUBMITTED')).toBe(true);
+    });
   });
 
   it('enforces approval bundle rules through REST single and bulk approval without partial writes', async () => {

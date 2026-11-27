@@ -106,6 +106,10 @@ export function timeSheetActionErrorFrom(error: unknown): TimeSheetActionError |
     if (message.includes('Validation failed')) {
       return actionError(message.replace(/^Validation failed:\s*/, ''));
     }
+    // Remaining lifecycle refusals (wrong state, empty sheet) carry a user-facing message.
+    if (error.name === 'TimeSheetTransitionError') {
+      return actionError(message);
+    }
   }
 
   const dbError = error as { code?: string; column?: string };

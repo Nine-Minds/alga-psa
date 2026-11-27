@@ -28,6 +28,8 @@ import { computeWorkDateFields, resolveUserTimeZone, truncateToMinute } from 'se
 import { buildTimeEntryApprovedPayload, toWorkflowTimeEntryWorkItemType } from '@alga-psa/workflow-streams';
 import { buildTicketTimeEntryAddedWorkflowEvent } from './timeEntryWorkflowEvents';
 import { hasPermission } from '../../auth/rbac';
+import { assertCanActOnBehalf, assertCanApproveSubject } from '@alga-psa/scheduling/actions/timeEntryDelegationAuth';
+import { runTimeSheetTransition, TimeSheetTransitionError, type TimeSheetLifecycleActor } from '@alga-psa/scheduling/lib/timeSheetApprovalTransition';
 import type { IUser } from '@alga-psa/types';
 import {
   StopwatchConflictError,
@@ -890,6 +892,54 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   // Approval operations
+
+  /**
+   * Review one entry through the shared row-locked time-sheet lifecycle engine, which locks the
+   * parent sheet, authorizes the actor against the entry's owner and validates sheet state.
+   */
+  private async reviewEntry(
+    knex: Knex,
+    entry: { entry_id: string; time_sheet_id?: string | null },
+    operation: 'approveEntries' | 'requestEntryChanges',
+    context: ServiceContext,
+  ): Promise<void> {
+    if (!entry.time_sheet_id) {
+      throw new ConflictError('Time entry is not part of a time sheet');
+    }
+    // LEVERAGE: pattern lifecycle-actor — session, REST sheet and REST entry actors repeat the subject-rule → delegation helper mapping; differ only in RBAC resource and denial error.
+    const actor: TimeSheetLifecycleActor = {
+      userId: context.userId,
+      hasPermission: async (permission, trx) =>
+        permission === 'approve' && !!context.user && hasPermission(context.user, 'time_entry', 'approve', trx),
+      assertSubject: async (rule, subjectUserId, trx) => {
+        try {
+          if (rule === 'approveSubject') {
+            await assertCanApproveSubject(context.user as any, context.tenant, subjectUserId, trx);
+          } else {
+            await assertCanActOnBehalf(context.user as any, context.tenant, subjectUserId, trx);
+          }
+        } catch {
+          throw new ForbiddenError('Permission denied: Cannot act on this time entry');
+        }
+      },
+    };
+    try {
+      await runTimeSheetTransition({
+        knex,
+        tenant: context.tenant,
+        timeSheetId: entry.time_sheet_id,
+        operation,
+        actor,
+        entryIds: [entry.entry_id],
+      });
+    } catch (error) {
+      if (!(error instanceof TimeSheetTransitionError)) throw error;
+      if (error.reason === 'not_found') throw new NotFoundError(error.message);
+      if (error.reason === 'forbidden') throw new ForbiddenError(error.message);
+      throw new ConflictError(error.message);
+    }
+  }
+
   async approveTimeEntries(data: ApproveTimeEntriesData, context: ServiceContext): Promise<any> {
     // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'approveTimeEntries', [data, context]);
@@ -918,13 +968,8 @@ export class TimeEntryService extends BaseService<any> {
           results.push({ success: false, error: `Time entry is in ${entry.approval_status} status and cannot be approved`, entry_id: entryId });
           continue;
         }
-        
-        await this.buildTenantScopedQuery(knex, context)
-          .where('entry_id', entryId)
-          .update({
-            approval_status: 'APPROVED',
-            updated_at: new Date()
-          });
+
+        await this.reviewEntry(knex, entry, 'approveEntries', context);
 
         results.push({ success: true, entry_id: entryId });
 
@@ -984,13 +1029,14 @@ export class TimeEntryService extends BaseService<any> {
     
     for (const entryId of data.entry_ids) {
       try {
-        await this.buildTenantScopedQuery(knex, context)
+        const entry = await this.buildTenantScopedQuery(knex, context)
           .where('entry_id', entryId)
-          .where('approval_status', 'SUBMITTED')
-          .update({
-            approval_status: 'CHANGES_REQUESTED',
-            updated_at: new Date()
-          });
+          .first();
+        if (!entry) {
+          results.push({ success: false, error: 'Time entry not found', entry_id: entryId });
+          continue;
+        }
+        await this.reviewEntry(knex, entry, 'requestEntryChanges', context);
 
         results.push({ success: true, entry_id: entryId });
 

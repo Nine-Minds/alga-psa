@@ -22,7 +22,9 @@ import {
   updateTimeEntryApprovalStatusParamsSchema,
   UpdateTimeEntryApprovalStatusParams,
 } from './timeEntrySchemas'; // Import schemas
-import { assertCanActOnBehalf, assertCanApproveSubject } from './timeEntryDelegationAuth';
+import { assertCanActOnBehalf } from './timeEntryDelegationAuth';
+import { runTimeSheetTransition, TimeSheetTransitionError, type TimeSheetLifecycleOperation } from '../lib/timeSheetApprovalTransition';
+import { sessionLifecycleActor } from '../lib/timeSheetLifecycleActor';
 import {
   createTimeEntryChangeRequestRecord,
   fetchTimeEntryChangeRequestsForEntryIdsFromDb,
@@ -46,6 +48,12 @@ function captureAnalytics(_event: string, _properties?: Record<string, any>, _us
 }
 
 const NON_BILLABLE_FALLBACK_WORK_ITEM_ID = '__non_billable__';
+
+/** Approver review outcomes for a single entry; every other status is set only by sheet transitions. */
+const ENTRY_REVIEW_OPERATIONS: Partial<Record<ITimeEntry['approval_status'], TimeSheetLifecycleOperation>> = {
+  APPROVED: 'approveEntries',
+  CHANGES_REQUESTED: 'requestEntryChanges',
+};
 
 type TimeEntrySearchEventType =
   | 'TIME_ENTRY_CREATED'
@@ -562,55 +570,36 @@ export const updateTimeEntryApprovalStatus = withAuth(async (
       .where({
         entry_id: validatedParams.entryId,
       })
-      .select('entry_id', 'user_id', 'invoiced', 'time_sheet_id', 'work_item_id', 'work_item_type')
+      .select('entry_id', 'user_id', 'time_sheet_id', 'work_item_id', 'work_item_type')
       .first();
 
     if (!existingEntry) {
       throw new Error('Time entry not found');
     }
 
-    if (validatedParams.approvalStatus === 'APPROVED') {
-      await assertCanApproveSubject(user, tenant, existingEntry.user_id, db);
-    } else {
-      await assertCanActOnBehalf(user, tenant, existingEntry.user_id, db);
+    const operation = ENTRY_REVIEW_OPERATIONS[validatedParams.approvalStatus];
+    if (!operation) {
+      throw new TimeSheetTransitionError('wrong_state', `Time entries cannot be reviewed to ${validatedParams.approvalStatus}`);
+    }
+    if (!existingEntry.time_sheet_id) {
+      throw new TimeSheetTransitionError('not_found', 'Time entry is not part of a time sheet');
     }
 
-    if (existingEntry.invoiced) {
-      throw new Error('This time entry has already been invoiced and cannot be modified.');
-    }
-
+    // The engine locks the parent sheet and its entries, then re-checks the actor, the sheet state
+    // and invoicing before any entry or parent-sheet write.
     await db.transaction(async (trx) => {
-      const trxTenantDb = tenantDb(trx, tenant) as any;
-
-      await trxTenantDb.table('time_entries')
-        .where({
-          entry_id: validatedParams.entryId,
-        })
-        .update({
-          approval_status: validatedParams.approvalStatus,
-          updated_at: new Date(),
-          updated_by: user.user_id,
-        });
+      await runTimeSheetTransition({
+        knex: trx,
+        tenant,
+        timeSheetId: existingEntry.time_sheet_id,
+        operation,
+        actor: sessionLifecycleActor(user, tenant),
+        entryIds: [validatedParams.entryId],
+      });
 
       if (
         validatedParams.approvalStatus === 'CHANGES_REQUESTED' &&
-        existingEntry.time_sheet_id
-      ) {
-        await trxTenantDb.table('time_sheets')
-          .where({
-            id: existingEntry.time_sheet_id,
-          })
-          .update({
-            approval_status: 'CHANGES_REQUESTED',
-            approved_at: null,
-            approved_by: null,
-          });
-      }
-
-      if (
-        validatedParams.approvalStatus === 'CHANGES_REQUESTED' &&
-        validatedParams.changeRequestComment &&
-        existingEntry.time_sheet_id
+        validatedParams.changeRequestComment
       ) {
         await createTimeEntryChangeRequestRecord(trx, {
           tenant,

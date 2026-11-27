@@ -40,12 +40,16 @@ describe('delegation guard wiring (static)', () => {
 
   it('reopen/reverse approval is blocked when a timesheet contains invoiced entries', () => {
     const src = readRepoFile('packages/scheduling/src/actions/timeSheetActions.ts');
-    expect(src).toContain('contains invoiced time and cannot be reopened');
+    expect(src).toMatch(/export const reverseTimeSheetApproval[\s\S]*reverseApprovedTimeSheet\(/);
+    const engine = readRepoFile('packages/scheduling/src/lib/timeSheetApprovalTransition.ts');
+    expect(engine).toMatch(/reverse: \{[\s\S]*?refuseInvoicedSheet: true/);
+    expect(engine).toContain('contains invoiced time and cannot be reopened');
   });
 
   it('reopen/reverse approval transitions timesheet and entries to CHANGES_REQUESTED', () => {
-    const src = readRepoFile('packages/scheduling/src/actions/timeSheetActions.ts');
-    expect(src).toMatch(/reverseTimeSheetApproval[\s\S]*approval_status:\s*'CHANGES_REQUESTED'/);
+    const engine = readRepoFile('packages/scheduling/src/lib/timeSheetApprovalTransition.ts');
+    expect(engine).toMatch(/reverse: \{[\s\S]*?entries: 'all',\s*entryStatus: 'CHANGES_REQUESTED'/);
+    expect(engine).toMatch(/reopenPatch = [\s\S]*?approval_status: 'CHANGES_REQUESTED'/);
 
     const ui = readRepoFile('packages/scheduling/src/components/time-management/time-entry/time-sheet/TimeSheet.tsx');
     expect(ui).toContain("timeSheet.approval_status === 'DRAFT' || timeSheet.approval_status === 'CHANGES_REQUESTED'");

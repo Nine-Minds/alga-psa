@@ -24,6 +24,8 @@ import {
 import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
 import { assertCanActOnBehalf } from './timeEntryDelegationAuth';
 import { findOrCreateTimeSheetRow } from '../lib/timeSheetResolution';
+import { runTimeSheetTransition } from '../lib/timeSheetApprovalTransition';
+import { sessionLifecycleActor } from '../lib/timeSheetLifecycleActor';
 import {
   timeSheetActionErrorFrom,
   type TimeSheetActionError,
@@ -144,70 +146,27 @@ export const submitTimeSheet = withAuth(async (user, { tenant }, timeSheetId: st
       throw new Error('Permission denied: Cannot submit timesheets');
     }
 
-    return await db.transaction(async (trx) => {
-      // Get timesheet info for analytics
-      const timeSheetInfo = await tenantScopedTable(trx, 'time_sheets', tenant)
-        .where({
-          id: validatedParams.timeSheetId,
-        })
-        .first();
-
-      if (!timeSheetInfo) {
-        throw new Error('Time sheet not found');
-      }
-
-      await assertCanActOnBehalf(user, tenant, timeSheetInfo.user_id, trx);
-
-      // Get entry count and total hours for analytics
-      const entriesInfo = await tenantScopedTable(trx, 'time_entries', tenant)
-        .where({
-          time_sheet_id: validatedParams.timeSheetId,
-        })
-        .select(
-          trx.raw('COUNT(*) as entry_count'),
-          trx.raw('SUM(billable_duration) / 60 as total_hours')
-        )
-        .first() as unknown as TimeEntriesInfo | undefined;
-
-      // Get period info
-      const periodInfo = await tenantScopedTable(trx, 'time_periods', tenant)
-        .where({
-          period_id: timeSheetInfo.period_id,
-        })
-        .first();
-
-      // Update the time sheet status
-      const [updatedTimeSheet] = await tenantScopedTable(trx, 'time_sheets', tenant)
-        .where({
-          id: validatedParams.timeSheetId,
-        })
-        .update({
-          approval_status: 'SUBMITTED',
-          submitted_at: trx.fn.now()
-        })
-        .returning('*');
-
-      // Update all time entries associated with this time sheet
-      await tenantScopedTable(trx, 'time_entries', tenant)
-        .where({
-          time_sheet_id: validatedParams.timeSheetId,
-        })
-        .update({
-          approval_status: 'SUBMITTED',
-          updated_at: trx.fn.now()
-        });
-
-      // Track analytics
-      captureAnalytics('time_sheet_submitted', {
-        time_sheet_id: validatedParams.timeSheetId,
-        entry_count: entriesInfo?.entry_count || 0,
-        total_hours: parseFloat(String(entriesInfo?.total_hours ?? '0')),
-        period_start: periodInfo?.start_date,
-        period_end: periodInfo?.end_date
-      }, user.user_id);
-
-      return updatedTimeSheet as ITimeSheet;
+    const submission = await runTimeSheetTransition({
+      knex: db,
+      tenant,
+      timeSheetId: validatedParams.timeSheetId,
+      operation: 'submit',
+      actor: sessionLifecycleActor(user, tenant),
     });
+
+    const periodInfo = await tenantScopedTable(db, 'time_periods', tenant)
+      .where({ period_id: submission.sheet.period_id })
+      .first();
+
+    captureAnalytics('time_sheet_submitted', {
+      time_sheet_id: validatedParams.timeSheetId,
+      entry_count: submission.entryCount || 0,
+      total_hours: parseFloat(String(submission.totalHours ?? '0')),
+      period_start: periodInfo?.start_date,
+      period_end: periodInfo?.end_date
+    }, user.user_id);
+
+    return submission.sheet as ITimeSheet;
   } catch (error) {
     console.error('Error submitting time sheet:', error);
     const expected = timeSheetActionErrorFrom(error);

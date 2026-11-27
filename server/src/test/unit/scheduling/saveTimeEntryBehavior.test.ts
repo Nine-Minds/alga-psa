@@ -33,7 +33,9 @@ describe('saveTimeEntry behavior (static)', () => {
   });
 
   it('blocks updates to invoiced time entries', () => {
+    // Entry review runs through the lifecycle engine, which refuses invoiced entries.
     const src = readRepoFile('packages/scheduling/src/actions/timeEntryCrudActions.ts');
-    expect(src).toContain('already been invoiced and cannot be modified');
+    expect(src).toMatch(/export const updateTimeEntryApprovalStatus[\s\S]*runTimeSheetTransition\(/);
+    expect(readRepoFile('packages/scheduling/src/lib/timeSheetApprovalTransition.ts')).toContain('already been invoiced and cannot be modified');
   });
 });
