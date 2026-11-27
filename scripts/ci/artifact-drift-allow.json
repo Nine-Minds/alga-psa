@@ -1006,6 +1006,26 @@
   },
   {
     "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1software~1search/get/parameters/query:limit/schema/maximum",
+    "reason": "alga-2026-0003306: GET /api/v1/software/search has always rejected limit > 100 with a 400 (parsePositiveIntParam cap of 100 in the route); the published maximum of 200 was wrong. Lowering it to 100 documents existing behaviour and does not reject any request the route previously accepted."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/SoftwareSearchQuery/properties/limit/maximum",
+    "reason": "alga-2026-0003306: GET /api/v1/software/search has always rejected limit > 100 with a 400 (parsePositiveIntParam cap of 100 in the route); the published maximum of 200 was wrong. Lowering it to 100 documents existing behaviour and does not reject any request the route previously accepted."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1software~1search/get/parameters/query:limit/schema/maximum",
+    "reason": "alga-2026-0003306: GET /api/v1/software/search has always rejected limit > 100 with a 400 (parsePositiveIntParam cap of 100 in the route); the published maximum of 200 was wrong. Lowering it to 100 documents existing behaviour and does not reject any request the route previously accepted."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/SoftwareSearchQuery/properties/limit/maximum",
+    "reason": "alga-2026-0003306: GET /api/v1/software/search has always rejected limit > 100 with a 400 (parsePositiveIntParam cap of 100 in the route); the published maximum of 200 was wrong. Lowering it to 100 documents existing behaviour and does not reject any request the route previously accepted."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
     "pointer": "/paths/~1api~1v1~1webhooks~1templates~1{id}",
     "reason": "Admin API key 403 card (alga-2026-0003307): GET/PUT/DELETE /api/v1/webhooks/templates/{id} were documented as the webhook getById/update/delete wiring (x-route-to-controller-mismatch) but never reached a webhook: the shared id extractor parsed the literal 'templates' as the id, so every call returned 400. Webhook templates have no storage, so the routes now have their own handlers: GET returns 404, PUT/DELETE return 501 NOT_IMPLEMENTED. The removed webhook request/response shapes and 404s describe behaviour no caller could ever have received."
   },

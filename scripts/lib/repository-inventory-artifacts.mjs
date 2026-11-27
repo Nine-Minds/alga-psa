@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { readRunnerCollection } from './read-runner-collection.mjs';
 import { reconcileDiscovery } from './test-discovery.mjs';
+import { hasCurrentManualRunnerReview } from './vitest-inventory-collection.mjs';
 
 // These are artifact identities from the execution lanes, not test-file globs.
 // Never recollect the large suites here: their raw registrations are already
@@ -42,7 +43,7 @@ export function readVitestInventoryArtifact({ input, root, revision, descriptor 
     collectionFile: path.join(directory, 'collected.json'), casesFile: path.join(directory, 'collected-tests.json') }, directory);
 }
 
-export function verifyRepositoryInventory({ root, revision, input, candidates, manualRunners, exclusions, delegations = [] }) {
+export function verifyRepositoryInventory({ root, revision, input, candidates, manualRunners, exclusions, delegations = [], now = new Date() }) {
   const collections = [], failures = [];
   const attempt = (name, read) => {
     try { collections.push(...read()); }
@@ -79,10 +80,10 @@ export function verifyRepositoryInventory({ root, revision, input, candidates, m
     requireInventorySource(evidence.source, revision);
     if (evidence.status !== 'passed' || evidence.executionVerified !== false) throw new Error('Manual collection failed or claims execution');
     return manualRunners.map(runner => {
-      const date = runner.expires;
-      if (runner.mandatory !== false || !runner.owner?.trim() || !runner.runtime?.trim() || !runner.reason?.trim()
-        || !runner.issue?.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(date ?? '') || !Number.isFinite(Date.parse(`${date}T00:00:00Z`))
-        || new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) !== date || date <= new Date().toISOString().slice(0, 10)) {
+      // The same predicate gates manual collection; a second copy here once
+      // rejected reviews on their expiry day after collection had accepted them.
+      if (runner.mandatory !== false || !runner.owner?.trim() || !runner.runtime?.trim()
+        || !hasCurrentManualRunnerReview(runner, now)) {
         throw new Error(`Manual suite requires an owned, unexpired review: ${runner.runner}`);
       }
       return readRunnerCollection({ ...runner, status: 'passed', format: 'vitest', sourceRoot: evidence.sourceRoot,
