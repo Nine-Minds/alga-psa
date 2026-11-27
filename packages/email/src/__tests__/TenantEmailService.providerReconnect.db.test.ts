@@ -179,27 +179,40 @@ describe('TenantEmailService Microsoft mailbox reconnect', () => {
     tables.microsoft_email_provider_config.push(...vendorRows);
   });
 
-  it('re-initializes when a healthy mailbox is observed disconnected', async () => {
+  it.each([
+    ['disconnected and inactive', { status: 'error', is_active: false }],
+    ['inactive with status connected', { status: 'connected', is_active: false }],
+    ['status error while active', { status: 'error', is_active: true }],
+  ])('keeps sending through a healthy cached provider after the mailbox row is marked %s', async (_name, change) => {
     reconnect(tables, tenantA);
     await expect(send(tenantA)).resolves.toMatchObject({ success: true });
     expect(graph.sent).toHaveLength(1);
     expect(graph.inits).toBe(1);
 
-    reconnect(tables, tenantA, { status: 'error', is_active: false, updated_at: '2026-08-04T12:10:00.000Z' });
+    reconnect(tables, tenantA, { ...change, updated_at: '2026-08-04T12:10:00.000Z' } as any);
     expect(tables.tenant_email_settings[0].updated_at).toBe(SETTINGS_UPDATED_AT);
 
-    const after = await send(tenantA);
-    expect(after.success).toBe(false);
-    expect(after.error).toMatch(/selected Microsoft mailbox is not connected/);
-    // Not submitted: the previously healthy provider was dropped, not reused.
-    expect(graph.sent).toHaveLength(1);
-    // The re-init ran the readiness check, which fails before Graph initialize.
-    expect(graph.inits).toBe(1);
-
-    reconnect(tables, tenantA, { status: 'connected', is_active: true, updated_at: '2026-08-04T12:15:00.000Z' });
     await expect(send(tenantA)).resolves.toMatchObject({ success: true });
-    expect(graph.inits).toBe(2); // a fresh provider, not the original instance
     expect(graph.sent).toHaveLength(2);
+    expect(graph.inits).toBe(1); // same provider reused
+  });
+
+  it('recovers on a mailbox-only reconnect when init failed after a healthy period', async () => {
+    reconnect(tables, tenantA);
+    await expect(send(tenantA)).resolves.toMatchObject({ success: true });
+    expect(graph.sent).toHaveLength(1);
+
+    // A settings save forces re-init while the mailbox is down.
+    reconnect(tables, tenantA, { ...DOWN, updated_at: '2026-08-04T12:10:00.000Z' });
+    tables.tenant_email_settings[0].updated_at = '2026-08-04T12:11:00.000Z';
+    const failed = await send(tenantA);
+    expect(failed.success).toBe(false);
+    expect(failed.error).toMatch(/not connected/);
+    expect(graph.sent).toHaveLength(1);
+
+    reconnect(tables, tenantA, { ...UP, updated_at: '2026-08-04T12:15:00.000Z' });
+    await expect(send(tenantA)).resolves.toMatchObject({ success: true });
+    expect(graph.sent).toHaveLength(2); // exactly one submission, no retry-window wait
   });
 
   it('runs a single init for concurrent sends after the mailbox reconnects', async () => {

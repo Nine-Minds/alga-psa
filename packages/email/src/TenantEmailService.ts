@@ -82,6 +82,7 @@ export class TenantEmailService extends BaseEmailService {
   private tenantSettingsLoaded = false;
   private providerSettingsFingerprint: string | null = null;
   private failedProviderInitAt: number | null = null;
+  private mailboxStateKey: string | null = null;
   private providerStateQueue: Promise<void> = Promise.resolve();
   private usingSystemProvider = false;
 
@@ -754,15 +755,21 @@ export class TenantEmailService extends BaseEmailService {
       // a transient database error into "no settings" and accidentally replace
       // a working tenant provider with the system fallback.
       const settings = await TenantEmailService.loadTenantEmailSettings(this.tenantId, knex);
-      // Mailbox lifecycle is part of the key: a reconnect changes only the
-      // email_providers row, never the tenant settings.
+      // Mailbox lifecycle is tracked apart from the settings fingerprint: a
+      // reconnect changes only the email_providers row, never tenant settings.
       const mailboxState = await TenantEmailService.loadMicrosoftMailboxState(this.tenantId, settings, knex);
-      const fingerprint = TenantEmailService.getProviderSettingsFingerprint(settings, mailboxState);
+      const mailboxKey = JSON.stringify(mailboxState);
+      const fingerprint = TenantEmailService.getProviderSettingsFingerprint(settings);
 
-      // Never pin a null provider: reuse it only until the retry window ends.
+      // A cached provider survives mailbox changes. A null one is retried when
+      // the mailbox changed or the retry window ended, so failures stay bounded.
+      const settingsUnchanged = this.initialized && fingerprint === this.providerSettingsFingerprint;
       const reusable = this.emailProvider !== null
-        || (this.failedProviderInitAt !== null && Date.now() - this.failedProviderInitAt < FAILED_PROVIDER_RETRY_MS);
-      if (this.initialized && fingerprint === this.providerSettingsFingerprint && reusable) {
+        || (this.failedProviderInitAt !== null
+          && mailboxKey === this.mailboxStateKey
+          && Date.now() - this.failedProviderInitAt < FAILED_PROVIDER_RETRY_MS);
+      if (settingsUnchanged && reusable) {
+        if (this.emailProvider !== null) this.mailboxStateKey = mailboxKey;
         // Retain the freshly-normalized object even when its provider-relevant
         // values are unchanged so From resolution never depends on old state.
         this.tenantSettings = settings;
@@ -783,6 +790,7 @@ export class TenantEmailService extends BaseEmailService {
       this.tenantSettingsLoaded = true;
       await this.initialize();
       this.providerSettingsFingerprint = fingerprint;
+      this.mailboxStateKey = mailboxKey;
       this.failedProviderInitAt = this.emailProvider === null ? Date.now() : null;
       return {
         emailProvider: this.emailProvider,
@@ -805,6 +813,7 @@ export class TenantEmailService extends BaseEmailService {
     this.tenantSettingsLoaded = false;
     this.providerSettingsFingerprint = null;
     this.failedProviderInitAt = null;
+    this.mailboxStateKey = null;
     this.usingSystemProvider = false;
   }
 
@@ -842,10 +851,7 @@ export class TenantEmailService extends BaseEmailService {
       .sort((a: any, b: any) => String(a.id).localeCompare(String(b.id)));
   }
 
-  private static getProviderSettingsFingerprint(
-    settings: TenantEmailSettings | null,
-    mailboxState: Array<Record<string, unknown>> = []
-  ): string {
+  private static getProviderSettingsFingerprint(settings: TenantEmailSettings | null): string {
     const providerState = {
       defaultFromDomain: settings?.defaultFromDomain ?? null,
       emailProvider: settings?.emailProvider ?? null,
@@ -854,7 +860,6 @@ export class TenantEmailService extends BaseEmailService {
       // explicit cross-process refresh signal even if the submitted provider
       // values happen to be identical to the prior values.
       updatedAt: settings?.updatedAt ?? null,
-      mailboxState,
       // Enterprise tenant mail can fall back directly to the system provider,
       // so its environment-backed credentials are part of this snapshot too.
       systemProvider: isEnterprise
