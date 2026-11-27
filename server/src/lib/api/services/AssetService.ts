@@ -1824,8 +1824,10 @@ export class AssetService extends BaseService<any> {
     const knex = await this.getDbForContext(context);
     const applyReadScope = await this.resolveAssetReadScope(knex, context);
     const scopedContext = { ...context, assetReadScope: applyReadScope } as ServiceContext & { assetReadScope: (query: Knex.QueryBuilder) => void };
-    // Aggregate purchase cost is purchase cost: with it closed the field is omitted, not reported as 0.
-    const includeAssetValue = !applyReadScope.closedFields.includes('purchase_cost');
+    // Aggregate value needs both the cost and its currency (same rule as getStatisticsFromProjections): with
+    // either closed the value fields are omitted, never reported as 0 or as a partial total.
+    const includeAssetValue = !applyReadScope.closedFields.includes('purchase_cost')
+      && !applyReadScope.closedFields.includes('purchase_cost_currency');
     const [basicStats, typeStats, statusStats, clientStats, warrantyStats, maintenanceStats] = await Promise.all([
       this.getBasicStatistics(scopedContext, includeAssetValue),
       this.getAssetsByType(scopedContext),
