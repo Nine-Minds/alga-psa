@@ -17,6 +17,8 @@ import {
   type AuthorizationSubject,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import { assertRecordCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
+import type { SubjectUserInput } from '@alga-psa/authorization/subject';
 
 /** A quote write refers to a row outside the quote's own client (location, contact, opportunity). */
 export class QuoteScopeError extends Error {
@@ -174,4 +176,38 @@ export async function assertQuotePatchReferencesInScope(
   }
 
   return { reparented };
+}
+
+/**
+ * The one create check every quote creation path runs (ordinary create, create-from-template, REST create), asked
+ * BEFORE a quote number is allocated or anything is written:
+ *  - the kernel's create decision for the candidate record, so a subject fenced to client A cannot create a quote
+ *    for client B (throws `RecordCreateDeniedError`: "Permission denied: Cannot create quote", the text the action
+ *    layer and the REST 403 handling already map);
+ *  - the contact and opportunity the quote points at belong to its client (a plain tenant-scoped read, for every
+ *    caller).
+ */
+export async function assertQuoteCreateAllowed(
+  conn: Knex | Knex.Transaction,
+  input: {
+    tenant: string;
+    user: SubjectUserInput;
+    candidate: Pick<IQuote, 'client_id' | 'contact_id' | 'opportunity_id'> & Partial<Pick<IQuote, 'created_by'>>;
+  }
+): Promise<void> {
+  const { tenant, user, candidate } = input;
+  await assertRecordCreateAllowed(
+    conn,
+    {
+      tenant,
+      user,
+      resourceType: 'billing',
+      record: toQuoteAuthorizationRecord({ client_id: candidate.client_id ?? null, created_by: candidate.created_by ?? null }),
+    },
+    'quote'
+  );
+  await assertQuoteReferencesOwnedByClient(conn, tenant, candidate.client_id, {
+    contact_id: candidate.contact_id,
+    opportunity_id: candidate.opportunity_id,
+  });
 }

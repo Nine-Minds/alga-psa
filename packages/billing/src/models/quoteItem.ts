@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import type { IQuoteItem } from '@alga-psa/types';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
+import { assertQuoteLocationsOwnedByClient } from '../lib/quoteScope';
 import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
 import { resolveTenantUnitCodeForLabel } from '@alga-psa/shared/billingClients/tenantUnitsOfMeasure';
 import { deriveServiceTaxTreatment } from '@alga-psa/shared/billingClients/serviceTaxTreatment';
@@ -10,6 +11,62 @@ function ensureIntegerField(value: unknown, fieldName: string): void {
   if (value !== undefined && value !== null && !Number.isInteger(Number(value))) {
     throw new Error(`${fieldName} must be an integer`);
   }
+}
+
+/**
+ * Defence in depth behind the schemas: the values a line will actually be stored with, after defaults and
+ * catalog resolution, must be sane. A caller that bypasses a schema (template overrides, internal copy flows)
+ * can otherwise store a negative price that turns the quote total into a credit.
+ */
+function assertResolvedItemValues(values: {
+  quantity: unknown;
+  unit_price: unknown;
+  discount_percentage?: unknown;
+  cost?: unknown;
+}): void {
+  const quantity = Number(values.quantity);
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    throw new Error('Quantity must be greater than zero');
+  }
+  const unitPrice = Number(values.unit_price);
+  if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+    throw new Error('Unit price must not be negative');
+  }
+  if (values.discount_percentage !== undefined && values.discount_percentage !== null) {
+    const discount = Number(values.discount_percentage);
+    if (!Number.isFinite(discount) || discount < 0 || discount > 100) {
+      throw new Error('Discount percentage must be between 0 and 100');
+    }
+  }
+  if (values.cost !== undefined && values.cost !== null) {
+    const cost = Number(values.cost);
+    if (!Number.isFinite(cost) || cost < 0) {
+      throw new Error('Cost must not be negative');
+    }
+  }
+}
+
+/**
+ * A line's location must belong to the quote's own client. Reads the parent quote under a row lock, so a
+ * concurrent reparent of the quote (which locks the same row) cannot slip past the check.
+ */
+async function assertItemLocationInQuoteClient(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+  locationId: string | null | undefined
+): Promise<void> {
+  if (!locationId) {
+    return;
+  }
+  const quote = await quoteTable(trx, tenant, 'quotes')
+    .where({ quote_id: quoteId })
+    .forUpdate()
+    .first<{ client_id: string | null } | undefined>('client_id');
+  if (!quote) {
+    throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
+  }
+  await assertQuoteLocationsOwnedByClient(trx, tenant, quote.client_id, [locationId]);
 }
 
 function normalizeQuoteItem(row: Record<string, any>): IQuoteItem {
@@ -116,6 +173,294 @@ type CreateQuoteItemPayload = Omit<
   | 'updated_at'
 > & Partial<Pick<IQuoteItem, 'display_order'>>;
 
+async function createQuoteItem(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  item: CreateQuoteItemPayload,
+  options: QuoteItemCreateOptions
+): Promise<IQuoteItem> {
+  ensureIntegerField(item.quantity, 'Quantity');
+  ensureIntegerField(item.unit_price, 'Unit price');
+
+  // The catalog-description snapshot is never read from the item payload.
+  // It is not part of any caller-facing input shape, and a value smuggled
+  // past schema validation (defense in depth) is dropped before insert so it
+  // can never persist. Verbatim snapshots arrive only through the internal
+  // `options.catalogDescriptionSnapshot` channel.
+  const itemPayload: CreateQuoteItemPayload = { ...item };
+  delete (itemPayload as Partial<IQuoteItem>).catalog_description;
+  let resolvedItem: Partial<IQuoteItem> = { ...itemPayload };
+
+  const snapshotFromOptions =
+    options.catalogDescriptionSnapshot !== undefined
+      ? normalizeCatalogDescription(options.catalogDescriptionSnapshot)
+      : undefined;
+
+  if (item.service_id) {
+    const service = await quoteTable<QuoteItemServiceLookupRow>(knexOrTrx, tenant, 'service_catalog')
+      .where({ service_id: item.service_id })
+      .select(
+        'service_name',
+        'description',
+        'sku',
+        'default_rate',
+        'unit_of_measure',
+        'unit_code',
+        'billing_method',
+        'item_kind',
+        'cost',
+        'cost_currency',
+        'tax_rate_id'
+      )
+      .first();
+
+    if (!service) {
+      throw new Error(`Service ${item.service_id} not found in tenant ${tenant}`);
+    }
+
+    // Look up currency-specific price from service_prices when unit_price not explicitly provided
+    let resolvedUnitPrice = resolvedItem.unit_price;
+    if (resolvedUnitPrice == null) {
+      const quote = await quoteTable<QuoteCurrencyLookupRow>(knexOrTrx, tenant, 'quotes')
+        .where({ quote_id: item.quote_id })
+        .select('currency_code')
+        .first();
+      const currencyCode = quote?.currency_code ?? 'USD';
+
+      // Only the price effective today: a future-dated row scheduled through
+      // the catalog rollout is not the price to quote yet.
+      const today = new Date().toISOString().slice(0, 10);
+      const priceRow = await quoteTable<ServicePriceLookupRow>(knexOrTrx, tenant, 'service_prices')
+        .where({ service_id: item.service_id, currency_code: currencyCode })
+        .where('effective_date', '<=', today)
+        .orderBy('effective_date', 'desc')
+        .select('rate')
+        .first();
+
+      resolvedUnitPrice = priceRow ? Number(priceRow.rate) : Number(service.default_rate ?? 0);
+    }
+
+    const resolvedItemKind = resolvedItem.service_item_kind ?? service.item_kind ?? 'service';
+
+    // Catalog-description snapshot policy: a trusted server-internal copy
+    // flow that supplies `options.catalogDescriptionSnapshot` keeps that
+    // value verbatim (including null). Otherwise — a freshly selected
+    // catalog-backed line — the authoritative, tenant-scoped catalog text is
+    // captured here. Persistence never trusts picker or caller data.
+    const resolvedCatalogDescription =
+      snapshotFromOptions !== undefined
+        ? snapshotFromOptions
+        : normalizeCatalogDescription(service.description);
+
+    // Tax treatment follows the catalog service unless the caller made an
+    // explicit choice. A service with no tax_rate_id is non-taxable (the
+    // invoice rule), so a quote can no longer charge phantom tax on a
+    // non-taxable service via the client's default rate.
+    const taxTreatment = resolvedItem.is_taxable === undefined
+      ? await deriveServiceTaxTreatment(knexOrTrx, tenant, service.tax_rate_id)
+      : null;
+
+    resolvedItem = {
+      ...resolvedItem,
+      ...(taxTreatment
+        ? {
+          is_taxable: taxTreatment.isTaxable,
+          tax_region: resolvedItem.tax_region ?? taxTreatment.taxRegion,
+        }
+        : {}),
+      service_name: resolvedItem.service_name ?? service.service_name,
+      service_sku: resolvedItem.service_sku ?? service.sku ?? null,
+      unit_price: resolvedUnitPrice,
+      unit_of_measure: resolvedItem.unit_of_measure ?? service.unit_of_measure ?? null,
+      billing_method: resolvedItem.billing_method ?? service.billing_method ?? null,
+      service_item_kind: resolvedItemKind,
+      description: resolvedItem.description || service.service_name,
+      catalog_description: resolvedCatalogDescription,
+      // Snapshot cost for product items so markup can be calculated on the quote
+      cost: resolvedItemKind === 'product' && service.cost != null ? Number(service.cost) : (resolvedItem as any).cost ?? null,
+      cost_currency: resolvedItemKind === 'product' && service.cost_currency ? service.cost_currency : (resolvedItem as any).cost_currency ?? null,
+    };
+  } else {
+    // Custom and discount lines have no catalog identity, so there is no
+    // snapshot to capture. When a trusted copy flow passes a verbatim
+    // snapshot (a copy of a line whose catalog entry was deleted and whose
+    // FK was SET NULL), keep it so duplication/template flows preserve
+    // historical output; otherwise store null.
+    resolvedItem = {
+      ...resolvedItem,
+      catalog_description: snapshotFromOptions !== undefined ? snapshotFromOptions : null,
+    };
+  }
+
+  // Always explicit on insert: the column default (true) must never be the
+  // thing that decides a line's tax treatment.
+  resolvedItem.is_taxable = resolvedItem.is_taxable ?? true;
+
+  if (resolvedItem.unit_of_measure !== undefined) {
+    resolvedItem.unit_code = await resolveTenantUnitCodeForLabel(
+      knexOrTrx, tenant, resolvedItem.unit_of_measure, resolvedItem.unit_code,
+    );
+  }
+
+  const quantity = Number(resolvedItem.quantity ?? 1);
+  const unitPrice = Number(resolvedItem.unit_price ?? 0);
+  assertResolvedItemValues({
+    quantity,
+    unit_price: unitPrice,
+    discount_percentage: resolvedItem.discount_percentage,
+    cost: resolvedItem.cost,
+  });
+  await assertItemLocationInQuoteClient(knexOrTrx, tenant, item.quote_id, resolvedItem.location_id);
+  const totalPrice = quantity * unitPrice;
+  const displayOrder = resolvedItem.display_order ?? await getNextDisplayOrder(knexOrTrx, tenant, item.quote_id);
+
+  const [createdItem] = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
+    .insert({
+      tenant,
+      ...resolvedItem,
+      quantity,
+      unit_price: unitPrice,
+      total_price: totalPrice,
+      net_amount: totalPrice,
+      tax_amount: 0,
+      display_order: displayOrder,
+    })
+    .returning('*');
+
+  await recalculateQuoteFinancials(knexOrTrx, tenant, item.quote_id);
+
+  const refreshedItem = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
+    .where({ quote_item_id: createdItem.quote_item_id })
+    .first();
+
+  return normalizeQuoteItem(refreshedItem ?? createdItem);
+}
+
+async function updateQuoteItem(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteItemId: string,
+  updateData: Omit<Partial<IQuoteItem>, 'catalog_description'>
+): Promise<IQuoteItem> {
+  const existingItem = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
+    .where({ quote_item_id: quoteItemId })
+    .first();
+
+  if (!existingItem) {
+    throw new Error(`Quote item ${quoteItemId} not found in tenant ${tenant}`);
+  }
+
+  const quantity = Number(updateData.quantity ?? existingItem.quantity);
+  const unitPrice = Number(updateData.unit_price ?? existingItem.unit_price);
+
+  ensureIntegerField(quantity, 'Quantity');
+  ensureIntegerField(unitPrice, 'Unit price');
+
+  // Judge the resolved values, but only when this update touches one of them: a stored legacy row must stay
+  // editable (description, phase, ...) without being re-litigated.
+  if (['quantity', 'unit_price', 'discount_percentage', 'cost'].some((key) => (updateData as Record<string, unknown>)[key] !== undefined)) {
+    assertResolvedItemValues({
+      quantity,
+      unit_price: unitPrice,
+      discount_percentage: updateData.discount_percentage ?? existingItem.discount_percentage,
+      cost: updateData.cost ?? existingItem.cost,
+    });
+  }
+  await assertItemLocationInQuoteClient(knexOrTrx, tenant, existingItem.quote_id, updateData.location_id);
+
+  const totalPrice = Number(quantity) * Number(unitPrice);
+
+  // `catalog_description` is not caller-writable. Drop it from the update
+  // payload unconditionally — even if a value smuggles past schema
+  // validation — so ordinary edits can never overwrite the stored snapshot.
+  let resolvedUpdate: Partial<IQuoteItem> = { ...updateData };
+  delete (resolvedUpdate as Partial<IQuoteItem> & { catalog_description?: string | null }).catalog_description;
+
+  // Catalog selection change: recapture name/SKU/kind/catalog description
+  // together from the fresh, tenant-scoped catalog row. Ordinary edits
+  // (quantity, price, line description) leave service_id unchanged and never
+  // touch the snapshot. No caller may override the recaptured value.
+  const serviceSelectionChanged =
+    updateData.service_id !== undefined && updateData.service_id !== existingItem.service_id;
+
+  if (serviceSelectionChanged) {
+    if (updateData.service_id) {
+      const service = await quoteTable<QuoteItemServiceLookupRow>(knexOrTrx, tenant, 'service_catalog')
+        .where({ service_id: updateData.service_id })
+        .select('service_name', 'description', 'sku', 'unit_of_measure', 'unit_code', 'billing_method', 'item_kind', 'tax_rate_id')
+        .first();
+
+      if (!service) {
+        throw new Error(`Service ${updateData.service_id} not found in tenant ${tenant}`);
+      }
+
+      // Re-deriving tax treatment belongs with the rest of the catalog
+      // recapture: a new service brings its own tax configuration unless the
+      // caller sent an explicit choice in the same update.
+      const taxTreatment = updateData.is_taxable === undefined
+        ? await deriveServiceTaxTreatment(knexOrTrx, tenant, service.tax_rate_id)
+        : null;
+
+      resolvedUpdate = {
+        ...resolvedUpdate,
+        ...(taxTreatment
+          ? {
+            is_taxable: taxTreatment.isTaxable,
+            tax_region: updateData.tax_region ?? taxTreatment.taxRegion,
+          }
+          : {}),
+        service_name: service.service_name,
+        service_sku: service.sku ?? null,
+        unit_of_measure: updateData.unit_of_measure ?? service.unit_of_measure ?? null,
+        unit_code: updateData.unit_code ?? (updateData.unit_of_measure === undefined ? service.unit_code : null) ?? null,
+        billing_method: service.billing_method ?? null,
+        service_item_kind: service.item_kind ?? 'service',
+        catalog_description: normalizeCatalogDescription(service.description),
+      };
+    } else {
+      resolvedUpdate = {
+        ...resolvedUpdate,
+        service_name: null,
+        service_sku: null,
+        service_item_kind: null,
+        catalog_description: null,
+      };
+    }
+  }
+
+  if (resolvedUpdate.unit_of_measure !== undefined || resolvedUpdate.unit_code !== undefined) {
+    const label = resolvedUpdate.unit_of_measure ?? existingItem.unit_of_measure ?? null;
+    const labelChanged = label !== existingItem.unit_of_measure;
+    const suppliedCode = resolvedUpdate.unit_code;
+    const previousCodeMatches = labelChanged && suppliedCode != null &&
+      (suppliedCode === existingItem.unit_code || suppliedCode === knownUnitCodeForLabel(existingItem.unit_of_measure));
+    resolvedUpdate.unit_code = await resolveTenantUnitCodeForLabel(
+      knexOrTrx, tenant, label,
+      labelChanged && (!suppliedCode || previousCodeMatches) ? null : suppliedCode ?? existingItem.unit_code,
+    );
+  }
+
+  const [updatedItem] = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
+    .where({ quote_item_id: quoteItemId })
+    .update({
+      ...resolvedUpdate,
+      quantity,
+      unit_price: unitPrice,
+      total_price: totalPrice,
+      net_amount: totalPrice,
+    })
+    .returning('*');
+
+  await recalculateQuoteFinancials(knexOrTrx, tenant, existingItem.quote_id);
+
+  const refreshedItem = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
+    .where({ quote_item_id: quoteItemId })
+    .first();
+
+  return normalizeQuoteItem(refreshedItem ?? updatedItem);
+
+}
+
 const QuoteItem = {
   async listByQuoteId(
     knexOrTrx: Knex | Knex.Transaction,
@@ -144,154 +489,8 @@ const QuoteItem = {
       throw new Error('Tenant context is required for creating quote item');
     }
 
-    ensureIntegerField(item.quantity, 'Quantity');
-    ensureIntegerField(item.unit_price, 'Unit price');
-
-    // The catalog-description snapshot is never read from the item payload.
-    // It is not part of any caller-facing input shape, and a value smuggled
-    // past schema validation (defense in depth) is dropped before insert so it
-    // can never persist. Verbatim snapshots arrive only through the internal
-    // `options.catalogDescriptionSnapshot` channel.
-    const itemPayload: CreateQuoteItemPayload = { ...item };
-    delete (itemPayload as Partial<IQuoteItem>).catalog_description;
-    let resolvedItem: Partial<IQuoteItem> = { ...itemPayload };
-
-    const snapshotFromOptions =
-      options.catalogDescriptionSnapshot !== undefined
-        ? normalizeCatalogDescription(options.catalogDescriptionSnapshot)
-        : undefined;
-
-    if (item.service_id) {
-      const service = await quoteTable<QuoteItemServiceLookupRow>(knexOrTrx, tenant, 'service_catalog')
-        .where({ service_id: item.service_id })
-        .select(
-          'service_name',
-          'description',
-          'sku',
-          'default_rate',
-          'unit_of_measure',
-          'unit_code',
-          'billing_method',
-          'item_kind',
-          'cost',
-          'cost_currency',
-          'tax_rate_id'
-        )
-        .first();
-
-      if (!service) {
-        throw new Error(`Service ${item.service_id} not found in tenant ${tenant}`);
-      }
-
-      // Look up currency-specific price from service_prices when unit_price not explicitly provided
-      let resolvedUnitPrice = resolvedItem.unit_price;
-      if (resolvedUnitPrice == null) {
-        const quote = await quoteTable<QuoteCurrencyLookupRow>(knexOrTrx, tenant, 'quotes')
-          .where({ quote_id: item.quote_id })
-          .select('currency_code')
-          .first();
-        const currencyCode = quote?.currency_code ?? 'USD';
-
-        // Only the price effective today: a future-dated row scheduled through
-        // the catalog rollout is not the price to quote yet.
-        const today = new Date().toISOString().slice(0, 10);
-        const priceRow = await quoteTable<ServicePriceLookupRow>(knexOrTrx, tenant, 'service_prices')
-          .where({ service_id: item.service_id, currency_code: currencyCode })
-          .where('effective_date', '<=', today)
-          .orderBy('effective_date', 'desc')
-          .select('rate')
-          .first();
-
-        resolvedUnitPrice = priceRow ? Number(priceRow.rate) : Number(service.default_rate ?? 0);
-      }
-
-      const resolvedItemKind = resolvedItem.service_item_kind ?? service.item_kind ?? 'service';
-
-      // Catalog-description snapshot policy: a trusted server-internal copy
-      // flow that supplies `options.catalogDescriptionSnapshot` keeps that
-      // value verbatim (including null). Otherwise — a freshly selected
-      // catalog-backed line — the authoritative, tenant-scoped catalog text is
-      // captured here. Persistence never trusts picker or caller data.
-      const resolvedCatalogDescription =
-        snapshotFromOptions !== undefined
-          ? snapshotFromOptions
-          : normalizeCatalogDescription(service.description);
-
-      // Tax treatment follows the catalog service unless the caller made an
-      // explicit choice. A service with no tax_rate_id is non-taxable (the
-      // invoice rule), so a quote can no longer charge phantom tax on a
-      // non-taxable service via the client's default rate.
-      const taxTreatment = resolvedItem.is_taxable === undefined
-        ? await deriveServiceTaxTreatment(knexOrTrx, tenant, service.tax_rate_id)
-        : null;
-
-      resolvedItem = {
-        ...resolvedItem,
-        ...(taxTreatment
-          ? {
-            is_taxable: taxTreatment.isTaxable,
-            tax_region: resolvedItem.tax_region ?? taxTreatment.taxRegion,
-          }
-          : {}),
-        service_name: resolvedItem.service_name ?? service.service_name,
-        service_sku: resolvedItem.service_sku ?? service.sku ?? null,
-        unit_price: resolvedUnitPrice,
-        unit_of_measure: resolvedItem.unit_of_measure ?? service.unit_of_measure ?? null,
-        billing_method: resolvedItem.billing_method ?? service.billing_method ?? null,
-        service_item_kind: resolvedItemKind,
-        description: resolvedItem.description || service.service_name,
-        catalog_description: resolvedCatalogDescription,
-        // Snapshot cost for product items so markup can be calculated on the quote
-        cost: resolvedItemKind === 'product' && service.cost != null ? Number(service.cost) : (resolvedItem as any).cost ?? null,
-        cost_currency: resolvedItemKind === 'product' && service.cost_currency ? service.cost_currency : (resolvedItem as any).cost_currency ?? null,
-      };
-    } else {
-      // Custom and discount lines have no catalog identity, so there is no
-      // snapshot to capture. When a trusted copy flow passes a verbatim
-      // snapshot (a copy of a line whose catalog entry was deleted and whose
-      // FK was SET NULL), keep it so duplication/template flows preserve
-      // historical output; otherwise store null.
-      resolvedItem = {
-        ...resolvedItem,
-        catalog_description: snapshotFromOptions !== undefined ? snapshotFromOptions : null,
-      };
-    }
-
-    // Always explicit on insert: the column default (true) must never be the
-    // thing that decides a line's tax treatment.
-    resolvedItem.is_taxable = resolvedItem.is_taxable ?? true;
-
-    if (resolvedItem.unit_of_measure !== undefined) {
-      resolvedItem.unit_code = await resolveTenantUnitCodeForLabel(
-        knexOrTrx, tenant, resolvedItem.unit_of_measure, resolvedItem.unit_code,
-      );
-    }
-
-    const quantity = Number(resolvedItem.quantity ?? 1);
-    const unitPrice = Number(resolvedItem.unit_price ?? 0);
-    const totalPrice = quantity * unitPrice;
-    const displayOrder = resolvedItem.display_order ?? await getNextDisplayOrder(knexOrTrx, tenant, item.quote_id);
-
-    const [createdItem] = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
-      .insert({
-        tenant,
-        ...resolvedItem,
-        quantity,
-        unit_price: unitPrice,
-        total_price: totalPrice,
-        net_amount: totalPrice,
-        tax_amount: 0,
-        display_order: displayOrder,
-      })
-      .returning('*');
-
-    await recalculateQuoteFinancials(knexOrTrx, tenant, item.quote_id);
-
-    const refreshedItem = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
-      .where({ quote_item_id: createdItem.quote_item_id })
-      .first();
-
-    return normalizeQuoteItem(refreshedItem ?? createdItem);
+    // One transaction for the scope check and the insert, so the quote cannot change client in between.
+    return withTransaction(knexOrTrx, (trx) => createQuoteItem(trx, tenant, item, options));
   },
 
   async update(
@@ -304,110 +503,7 @@ const QuoteItem = {
       throw new Error('Tenant context is required for updating quote item');
     }
 
-    const existingItem = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
-      .where({ quote_item_id: quoteItemId })
-      .first();
-
-    if (!existingItem) {
-      throw new Error(`Quote item ${quoteItemId} not found in tenant ${tenant}`);
-    }
-
-    const quantity = Number(updateData.quantity ?? existingItem.quantity);
-    const unitPrice = Number(updateData.unit_price ?? existingItem.unit_price);
-
-    ensureIntegerField(quantity, 'Quantity');
-    ensureIntegerField(unitPrice, 'Unit price');
-
-    const totalPrice = Number(quantity) * Number(unitPrice);
-
-    // `catalog_description` is not caller-writable. Drop it from the update
-    // payload unconditionally — even if a value smuggles past schema
-    // validation — so ordinary edits can never overwrite the stored snapshot.
-    let resolvedUpdate: Partial<IQuoteItem> = { ...updateData };
-    delete (resolvedUpdate as Partial<IQuoteItem> & { catalog_description?: string | null }).catalog_description;
-
-    // Catalog selection change: recapture name/SKU/kind/catalog description
-    // together from the fresh, tenant-scoped catalog row. Ordinary edits
-    // (quantity, price, line description) leave service_id unchanged and never
-    // touch the snapshot. No caller may override the recaptured value.
-    const serviceSelectionChanged =
-      updateData.service_id !== undefined && updateData.service_id !== existingItem.service_id;
-
-    if (serviceSelectionChanged) {
-      if (updateData.service_id) {
-        const service = await quoteTable<QuoteItemServiceLookupRow>(knexOrTrx, tenant, 'service_catalog')
-          .where({ service_id: updateData.service_id })
-          .select('service_name', 'description', 'sku', 'unit_of_measure', 'unit_code', 'billing_method', 'item_kind', 'tax_rate_id')
-          .first();
-
-        if (!service) {
-          throw new Error(`Service ${updateData.service_id} not found in tenant ${tenant}`);
-        }
-
-        // Re-deriving tax treatment belongs with the rest of the catalog
-        // recapture: a new service brings its own tax configuration unless the
-        // caller sent an explicit choice in the same update.
-        const taxTreatment = updateData.is_taxable === undefined
-          ? await deriveServiceTaxTreatment(knexOrTrx, tenant, service.tax_rate_id)
-          : null;
-
-        resolvedUpdate = {
-          ...resolvedUpdate,
-          ...(taxTreatment
-            ? {
-              is_taxable: taxTreatment.isTaxable,
-              tax_region: updateData.tax_region ?? taxTreatment.taxRegion,
-            }
-            : {}),
-          service_name: service.service_name,
-          service_sku: service.sku ?? null,
-          unit_of_measure: updateData.unit_of_measure ?? service.unit_of_measure ?? null,
-          unit_code: updateData.unit_code ?? (updateData.unit_of_measure === undefined ? service.unit_code : null) ?? null,
-          billing_method: service.billing_method ?? null,
-          service_item_kind: service.item_kind ?? 'service',
-          catalog_description: normalizeCatalogDescription(service.description),
-        };
-      } else {
-        resolvedUpdate = {
-          ...resolvedUpdate,
-          service_name: null,
-          service_sku: null,
-          service_item_kind: null,
-          catalog_description: null,
-        };
-      }
-    }
-
-    if (resolvedUpdate.unit_of_measure !== undefined || resolvedUpdate.unit_code !== undefined) {
-      const label = resolvedUpdate.unit_of_measure ?? existingItem.unit_of_measure ?? null;
-      const labelChanged = label !== existingItem.unit_of_measure;
-      const suppliedCode = resolvedUpdate.unit_code;
-      const previousCodeMatches = labelChanged && suppliedCode != null &&
-        (suppliedCode === existingItem.unit_code || suppliedCode === knownUnitCodeForLabel(existingItem.unit_of_measure));
-      resolvedUpdate.unit_code = await resolveTenantUnitCodeForLabel(
-        knexOrTrx, tenant, label,
-        labelChanged && (!suppliedCode || previousCodeMatches) ? null : suppliedCode ?? existingItem.unit_code,
-      );
-    }
-
-    const [updatedItem] = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
-      .where({ quote_item_id: quoteItemId })
-      .update({
-        ...resolvedUpdate,
-        quantity,
-        unit_price: unitPrice,
-        total_price: totalPrice,
-        net_amount: totalPrice,
-      })
-      .returning('*');
-
-    await recalculateQuoteFinancials(knexOrTrx, tenant, existingItem.quote_id);
-
-    const refreshedItem = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
-      .where({ quote_item_id: quoteItemId })
-      .first();
-
-    return normalizeQuoteItem(refreshedItem ?? updatedItem);
+    return withTransaction(knexOrTrx, (trx) => updateQuoteItem(trx, tenant, quoteItemId, updateData));
   },
 
   async delete(

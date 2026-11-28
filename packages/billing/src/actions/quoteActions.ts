@@ -26,7 +26,14 @@ import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailL
 import { getQuoteApprovalWorkflowSettings as loadQuoteApprovalWorkflowSettings, setQuoteApprovalWorkflowRequired as persistQuoteApprovalWorkflowRequired, getQuoteEmailLinkReviewSettings as loadQuoteEmailLinkReviewSettings, setQuoteEmailLinkReviewSettings as persistQuoteEmailLinkReviewSettings, type QuoteApprovalWorkflowSettings, type QuoteEmailLinkReviewSettings, validateQuoteEmailLinkLifetimeHours } from '../lib/quoteApprovalSettings';
 import { buildQuoteReviewLink, canBuildQuoteReviewLink } from '../lib/quoteReviewLink';
 import { mint as mintQuoteAccessLink, revoke as revokeQuoteAccessLinks } from '../services/quoteAccessLinks';
-import { createQuoteItemSchema, createQuoteSchema, updateQuoteItemSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
+import { createQuoteFromTemplateItemsSchema, createQuoteItemSchema, createQuoteSchema, updateQuoteItemSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
+import {
+  assertQuoteCreateAllowed,
+  assertQuotePatchReferencesInScope,
+  authorizeQuoteWrite,
+  isQuoteScopeError,
+  toQuoteAuthorizationRecord,
+} from '../lib/quoteScope';
 import { buildQuoteConversionPreview, convertQuoteToDraftContract, convertQuoteToDraftContractAndInvoice, convertQuoteToDraftInvoice, convertQuoteToDraftSalesOrder, createPDFGenerationService } from '../services';
 import {
   BuiltinAuthorizationKernelProvider,
@@ -41,6 +48,8 @@ import {
 import { SELF_APPROVAL_AUDIT_METADATA, allowSelfQuoteApproval, resolveAllowSelfApprovalFlag } from '@alga-psa/authorization/quoteSelfApproval';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
+import { createRecordProjectionPolicy } from '@alga-psa/authorization/recordProjection';
+import { QUOTE_LINE_RECORD_SOURCE, QUOTE_RECORD_SOURCE } from '@alga-psa/authorization/recordProjectionDescriptors';
 import { getQuotePdfFileName } from '../lib/quoteFileNames';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { onQuoteSent } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
@@ -169,6 +178,10 @@ const requireQuoteApprovePermission = async (user: unknown): Promise<ActionPermi
 export type QuoteActionError = ActionPermissionError | ActionMessageError;
 
 function quoteActionErrorFrom(error: unknown): QuoteActionError | null {
+  if (isQuoteScopeError(error)) {
+    // A contact, opportunity or location outside the quote's own client: a rejected write, not a crash.
+    return actionError(error.message);
+  }
   if (error instanceof Error) {
     if (error.message.startsWith('Permission denied') || error.message === 'user is not logged in') {
       return permissionError(error.message);
@@ -187,6 +200,10 @@ function quoteActionErrorFrom(error: unknown): QuoteActionError | null {
     }
 
     const expectedMessages = new Set([
+      'Quantity must be greater than zero',
+      'Unit price must not be negative',
+      'Discount percentage must be between 0 and 100',
+      'Cost must not be negative',
       'Quote item updates cannot move items across quotes.',
       'Use createQuoteFromTemplate for business templates',
       'Quote is already a template',
@@ -319,14 +336,6 @@ async function resolveAuthorizationSubjectForUser(
   };
 }
 
-function toQuoteAuthorizationRecord(quote: Partial<IQuote>): AuthorizationRecord {
-  return {
-    id: quote.quote_id ?? null,
-    ownerUserId: quote.created_by ?? null,
-    clientId: quote.client_id ?? null,
-  };
-}
-
 function createQuoteAuthorizationKernel(knex: Knex | Knex.Transaction, includeApproveGuard = false) {
   return createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider({
@@ -409,7 +418,27 @@ async function getAuthorizedQuoteForRead(
     return null;
   }
 
-  return applyQuoteRedactions(quote, decision.redactedFields);
+  return projectQuoteRecord(quote, decision.redactedFields);
+}
+
+async function assertQuoteReadAllowedForMutationWithDecision(
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  user: BillingAuthUser,
+  quoteId: string,
+  deniedMessage: string
+) {
+  const quote = await Quote.getById(knex, tenant, quoteId);
+  if (!quote) {
+    throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
+  }
+
+  const { decision, subject, authorizationKernel } = await authorizeQuoteReadDecision(knex, tenant, user, quote);
+  if (!decision.allowed) {
+    throw new Error(deniedMessage);
+  }
+
+  return { quote, decision, subject, authorizationKernel };
 }
 
 async function assertQuoteReadAllowedForMutation(
@@ -419,28 +448,46 @@ async function assertQuoteReadAllowedForMutation(
   quoteId: string,
   deniedMessage: string
 ): Promise<IQuote> {
-  const quote = await Quote.getById(knex, tenant, quoteId);
-  if (!quote) {
-    throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
-  }
-
-  const { decision } = await authorizeQuoteReadDecision(knex, tenant, user, quote);
-  if (!decision.allowed) {
-    throw new Error(deniedMessage);
-  }
-
-  return quote;
+  return (await assertQuoteReadAllowedForMutationWithDecision(knex, tenant, user, quoteId, deniedMessage)).quote;
 }
 
-function applyQuoteRedactions<T extends object>(value: T, redactedFields: string[]): T {
-  if (redactedFields.length === 0) {
-    return value;
+/**
+ * Projects a quote under its authorization decision with the recursive record policy, so a redaction such as
+ * `quote_items.cost` reaches the nested lines (the old shallow helper only deleted top-level keys). Returns null
+ * when the decision suppresses the quote itself.
+ */
+function projectQuoteRecord<T extends object>(quote: T, redactedFields: readonly string[] | undefined): T | null {
+  if (!redactedFields || redactedFields.length === 0) {
+    return quote;
   }
-  const redacted = { ...value } as Record<string, unknown>;
-  for (const field of redactedFields) {
-    delete redacted[field];
+  return createRecordProjectionPolicy(redactedFields, QUOTE_RECORD_SOURCE)
+    .project(quote as Record<string, any>, QUOTE_RECORD_SOURCE) as T | null;
+}
+
+/** A detached quote line, projected under its parent quote's decision. */
+function projectQuoteItemRecord<T extends object>(item: T, redactedFields: readonly string[] | undefined): T | null {
+  if (!redactedFields || redactedFields.length === 0) {
+    return item;
   }
-  return redacted as T;
+  return createRecordProjectionPolicy(redactedFields, QUOTE_RECORD_SOURCE)
+    .project(item as Record<string, any>, QUOTE_LINE_RECORD_SOURCE) as T | null;
+}
+
+const quoteReadSuppressedError = (): ActionPermissionError =>
+  permissionError('Permission denied: Cannot read quotes', 'msp/quotes:errors.permissions.read');
+
+/**
+ * A quote a mutation just wrote goes back to the caller under the same read decision as `getQuote`. The quote
+ * exists either way; a suppressed answer is a permission error, never the raw record.
+ */
+async function projectMutationQuoteResult(
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  user: BillingAuthUser,
+  quote: IQuote
+): Promise<IQuote | ActionPermissionError> {
+  const { decision } = await authorizeQuoteReadDecision(knex, tenant, user, quote);
+  return projectQuoteRecord(quote, decision.redactedFields) ?? quoteReadSuppressedError();
 }
 
 const QUOTE_DATE_FIELDS = [
@@ -908,6 +955,19 @@ export const createQuote = withAuth(async (user, { tenant }, input: CreateQuoteI
     }
   }
 
+  // Before a quote number is allocated or anything is written: the candidate record's client must be in the
+  // caller's scope, and its contact / opportunity must belong to that client.
+  await assertQuoteCreateAllowed(knex, {
+    tenant,
+    user: user as BillingAuthUser,
+    candidate: {
+      client_id: parsedInput.client_id ?? null,
+      contact_id: parsedInput.contact_id ?? null,
+      opportunity_id: parsedInput.opportunity_id ?? null,
+      created_by: parsedInput.created_by ?? null,
+    },
+  });
+
   const createdQuote = await Quote.create(knex, tenant, {
     ...parsedInput,
     currency_code: currencyCode,
@@ -916,7 +976,9 @@ export const createQuote = withAuth(async (user, { tenant }, input: CreateQuoteI
     tax: input.tax ?? 0,
     total_amount: input.total_amount ?? 0,
   } as any);
-  return await Quote.getById(knex, tenant, createdQuote.quote_id) as IQuote;
+  return await projectMutationQuoteResult(
+    knex, tenant, user as BillingAuthUser, await Quote.getById(knex, tenant, createdQuote.quote_id) as IQuote
+  );
   });
 });
 
@@ -933,7 +995,7 @@ export const updateQuote = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  await assertQuoteReadAllowedForMutation(
+  const { quote: storedQuote, subject, authorizationKernel } = await assertQuoteReadAllowedForMutationWithDecision(
     knex,
     tenant,
     user as BillingAuthUser,
@@ -945,43 +1007,84 @@ export const updateQuote = withAuth(async (
     updated_by: input.updated_by ?? getActorUserId(user),
   }));
 
-  if (parsedInput.status === 'sent' || parsedInput.status === 'accepted') {
-    const updatedQuote = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      if (parsedInput.status === 'accepted') {
-        // Acceptance always goes through the decision service (sent -> accepted only; see
-        // QUOTE_ALLOWED_STATUS_TRANSITIONS): one conditional UPDATE, one quote_decisions row,
-        // the hook exactly once. The service stamps accepted_at/accepted_by itself.
-        const { status: _status, accepted_at: _acceptedAt, accepted_by: _acceptedBy, ...rest } = parsedInput;
-        const result = await decideQuote({
-          tenantId: tenant,
-          quoteId,
-          action: 'accept',
-          actor: { kind: 'msp_user', userId: getActorUserId(user) },
-        }, trx);
-        if (result.status === 'not_found') {
-          throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
-        }
-        if (result.status !== 'decided') {
-          const current = result.status === 'not_pending' ? result.currentStatus : 'accepted';
-          throw new Error(`Invalid quote status transition from ${current} to accepted`);
-        }
-        const hasOtherFields = Object.keys(rest).some((key) => key !== 'updated_by' && (rest as Record<string, unknown>)[key] !== undefined);
-        return hasOtherFields
-          ? await Quote.update(trx, tenant, quoteId, rest as Partial<IQuote>)
-          : result.quote;
+  // The stored row was authorized above; a patch that moves the quote to another client, or re-points its contact
+  // or opportunity, creates a different record. That candidate is judged too, and everything hanging off the quote
+  // is re-validated against the destination client, in the same transaction as the write.
+  const changesScope =
+    (parsedInput.client_id !== undefined && (parsedInput.client_id ?? null) !== (storedQuote.client_id ?? null)) ||
+    (parsedInput.contact_id !== undefined && (parsedInput.contact_id ?? null) !== (storedQuote.contact_id ?? null)) ||
+    (parsedInput.opportunity_id !== undefined && (parsedInput.opportunity_id ?? null) !== (storedQuote.opportunity_id ?? null));
+
+  const guardScope = async (trx: Knex.Transaction) => {
+    // Lock the row so a concurrent item write (which locks it too) sees the quote's final client.
+    const locked = await tenantDb(trx, tenant).table('quotes')
+      .where({ quote_id: quoteId })
+      .forUpdate()
+      .first<IQuote>();
+    if (!locked) {
+      throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
+    }
+    const { reparented } = await assertQuotePatchReferencesInScope(trx, tenant, locked, parsedInput as Partial<IQuote>);
+    if (reparented) {
+      const candidateDecision = await authorizeQuoteWrite(trx, {
+        subject,
+        candidate: { ...locked, ...(parsedInput as Partial<IQuote>) },
+        authorizationKernel,
+      });
+      if (!candidateDecision.allowed) {
+        throw new Error('Permission denied: Cannot update quote');
       }
-      const lifecyclePatch = {
-        ...parsedInput,
-        ...(!parsedInput.sent_at ? { sent_at: new Date().toISOString() } : {}),
-      } as Partial<IQuote>;
-      const updated = await Quote.update(trx, tenant, quoteId, lifecyclePatch);
-      if (updated.status === 'sent') await onQuoteSent(trx, updated);
-      return updated;
-    });
-    return await Quote.getById(knex, tenant, updatedQuote.quote_id) as IQuote;
-  }
-  const updatedQuote = await Quote.update(knex, tenant, quoteId, parsedInput as Partial<IQuote>);
-  return await Quote.getById(knex, tenant, updatedQuote.quote_id) as IQuote;
+    }
+  };
+
+  const applyUpdate = async (conn: Knex | Knex.Transaction): Promise<IQuote> => {
+    if (parsedInput.status === 'sent' || parsedInput.status === 'accepted') {
+      return await withTransaction(conn, async (trx: Knex.Transaction) => {
+        if (parsedInput.status === 'accepted') {
+          // Acceptance always goes through the decision service (sent -> accepted only; see
+          // QUOTE_ALLOWED_STATUS_TRANSITIONS): one conditional UPDATE, one quote_decisions row,
+          // the hook exactly once. The service stamps accepted_at/accepted_by itself.
+          const { status: _status, accepted_at: _acceptedAt, accepted_by: _acceptedBy, ...rest } = parsedInput;
+          const result = await decideQuote({
+            tenantId: tenant,
+            quoteId,
+            action: 'accept',
+            actor: { kind: 'msp_user', userId: getActorUserId(user) },
+          }, trx);
+          if (result.status === 'not_found') {
+            throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
+          }
+          if (result.status !== 'decided') {
+            const current = result.status === 'not_pending' ? result.currentStatus : 'accepted';
+            throw new Error(`Invalid quote status transition from ${current} to accepted`);
+          }
+          const hasOtherFields = Object.keys(rest).some((key) => key !== 'updated_by' && (rest as Record<string, unknown>)[key] !== undefined);
+          return hasOtherFields
+            ? await Quote.update(trx, tenant, quoteId, rest as Partial<IQuote>)
+            : result.quote;
+        }
+        const lifecyclePatch = {
+          ...parsedInput,
+          ...(!parsedInput.sent_at ? { sent_at: new Date().toISOString() } : {}),
+        } as Partial<IQuote>;
+        const updated = await Quote.update(trx, tenant, quoteId, lifecyclePatch);
+        if (updated.status === 'sent') await onQuoteSent(trx, updated);
+        return updated;
+      });
+    }
+    return await Quote.update(conn, tenant, quoteId, parsedInput as Partial<IQuote>);
+  };
+
+  const updatedQuote = changesScope
+    ? await withTransaction(knex, async (trx: Knex.Transaction) => {
+        await guardScope(trx);
+        return await applyUpdate(trx);
+      })
+    : await applyUpdate(knex);
+
+  return await projectMutationQuoteResult(
+    knex, tenant, user as BillingAuthUser, await Quote.getById(knex, tenant, updatedQuote.quote_id) as IQuote
+  );
   });
 });
 
@@ -1089,7 +1192,7 @@ export const listQuotes = withAuth(async (
     },
     scanLimit: Math.max(pageSize, 100),
   });
-  const redactedData = await Promise.all(
+  const redactedRows = await Promise.all(
     authorizedPage.data.map(async (quote) => {
       const decision = await authorizationKernel.authorizeResource({
         subject,
@@ -1102,9 +1205,10 @@ export const listQuotes = withAuth(async (
         requestCache,
         knex,
       });
-      return applyQuoteRedactions(quote, decision.redactedFields ?? []);
+      return projectQuoteRecord(quote, decision.redactedFields);
     })
   );
+  const redactedData = redactedRows.filter((quote): quote is NonNullable<typeof quote> => quote !== null);
 
   const clientIds = Array.from(
     new Set(redactedData.map((q) => q.client_id).filter((id): id is string => Boolean(id)))
@@ -1165,7 +1269,7 @@ export const addQuoteItem = withAuth(async (
     ...input,
     created_by: input.created_by ?? getActorUserId(user),
   });
-  await assertQuoteReadAllowedForMutation(
+  const { decision } = await assertQuoteReadAllowedForMutationWithDecision(
     knex,
     tenant,
     user as BillingAuthUser,
@@ -1173,7 +1277,8 @@ export const addQuoteItem = withAuth(async (
     'Permission denied: Cannot update quote'
   );
 
-  return await QuoteItem.create(knex, tenant, parsedInput as any);
+  const createdItem = await QuoteItem.create(knex, tenant, parsedInput as any);
+  return projectQuoteItemRecord(createdItem, decision.redactedFields) ?? quoteReadSuppressedError();
   });
 });
 
@@ -1203,7 +1308,7 @@ export const updateQuoteItem = withAuth(async (
   if (typeof parsedInput.quote_id === 'string' && parsedInput.quote_id !== quoteItem.quote_id) {
     throw new Error('Quote item updates cannot move items across quotes.');
   }
-  await assertQuoteReadAllowedForMutation(
+  const { decision } = await assertQuoteReadAllowedForMutationWithDecision(
     knex,
     tenant,
     user as BillingAuthUser,
@@ -1211,7 +1316,8 @@ export const updateQuoteItem = withAuth(async (
     'Permission denied: Cannot update quote'
   );
 
-  return await QuoteItem.update(knex, tenant, quoteItemId, parsedInput);
+  const updatedItem = await QuoteItem.update(knex, tenant, quoteItemId, parsedInput);
+  return projectQuoteItemRecord(updatedItem, decision.redactedFields) ?? quoteReadSuppressedError();
   });
 });
 
@@ -1289,7 +1395,7 @@ export async function copyQuoteItemsToQuote(
   tenant: string,
   targetQuoteId: string,
   sourceItems: IQuoteItem[],
-  options: { forceSelected?: boolean; createdBy?: string | null } = {}
+  options: { forceSelected?: boolean; createdBy?: string | null; clearLocations?: boolean } = {}
 ): Promise<void> {
   const baseItems = sourceItems.filter((item) => !item.is_discount);
   const discountItems = sourceItems.filter((item) => item.is_discount);
@@ -1323,7 +1429,8 @@ export async function copyQuoteItemsToQuote(
       tax_rate: sourceItem.tax_rate ?? null,
       cost: sourceItem.cost ?? null,
       cost_currency: sourceItem.cost_currency ?? null,
-      location_id: sourceItem.location_id ?? null,
+      // A target with no client (a template) has no locations to point at; the model rejects the rest.
+      location_id: options.clearLocations === true ? null : (sourceItem.location_id ?? null),
       created_by: options.createdBy,
     }, { catalogDescriptionSnapshot: sourceItem.catalog_description ?? null });
   };
@@ -1434,6 +1541,12 @@ export const createQuoteFromTemplate = withAuth(async (
     return denied;
   }
 
+  // The editor's draft rows are caller-supplied: parse the whole array (shape, ranges, at most 200 rows) before
+  // any quote row — or quote number — exists, so a rejected override leaves nothing behind.
+  const draftItems = input.items === undefined || input.items === null
+    ? undefined
+    : createQuoteFromTemplateItemsSchema.parse(input.items) as CreateQuoteFromTemplateItemInput[];
+
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx) => {
@@ -1492,6 +1605,18 @@ export const createQuoteFromTemplate = withAuth(async (
       created_by: input.created_by ?? actorUserId,
     }));
 
+    // Same create check as createQuote, before the quote number is allocated.
+    await assertQuoteCreateAllowed(trx, {
+      tenant,
+      user: user as BillingAuthUser,
+      candidate: {
+        client_id: parsedQuote.client_id ?? null,
+        contact_id: parsedQuote.contact_id ?? null,
+        opportunity_id: parsedQuote.opportunity_id ?? null,
+        created_by: parsedQuote.created_by ?? null,
+      },
+    });
+
     const createdQuote = await Quote.create(trx, tenant, {
       ...parsedQuote,
       // `createQuoteSchema` has no template_id, so the parsed payload drops the
@@ -1529,8 +1654,8 @@ export const createQuoteFromTemplate = withAuth(async (
     const resolveLocationId = (locationId?: string | null): string | null =>
       locationId && clientLocationIds.has(locationId) ? locationId : null;
 
-    if (Array.isArray(input.items)) {
-      await createDraftItemsOnQuote(trx, tenant, createdQuote.quote_id, input.items, {
+    if (draftItems) {
+      await createDraftItemsOnQuote(trx, tenant, createdQuote.quote_id, draftItems, {
         createdBy: actorUserId,
         resolveLocationId,
       });
@@ -1549,7 +1674,9 @@ export const createQuoteFromTemplate = withAuth(async (
 
     await recalculateQuoteFinancials(trx, tenant, createdQuote.quote_id);
 
-    return await Quote.getById(trx, tenant, createdQuote.quote_id) as IQuote;
+    return await projectMutationQuoteResult(
+      trx, tenant, user as BillingAuthUser, await Quote.getById(trx, tenant, createdQuote.quote_id) as IQuote
+    );
   });
   });
 });
@@ -1684,6 +1811,8 @@ export const saveQuoteAsTemplate = withAuth(async (
     await copyQuoteItemsToQuote(trx, tenant, templateQuote.quote_id, sourceQuote.quote_items ?? [], {
       forceSelected: true,
       createdBy: actorUserId,
+      // A template belongs to no client, so no location applies to it.
+      clearLocations: true,
     });
 
     await recalculateQuoteFinancials(trx, tenant, templateQuote.quote_id);
@@ -2502,7 +2631,7 @@ export const getQuoteByConvertedContractId = withAuth(async (
   if (!decision.allowed) {
     return null;
   }
-  return applyQuoteRedactions(quote, decision.redactedFields);
+  return projectQuoteRecord(quote, decision.redactedFields);
 });
 
 export const getQuoteByConvertedInvoiceId = withSerializableAuth(withAuth(async (
@@ -2524,7 +2653,7 @@ export const getQuoteByConvertedInvoiceId = withSerializableAuth(withAuth(async 
   if (!decision.allowed) {
     return null;
   }
-  return applyQuoteRedactions(quote, decision.redactedFields);
+  return projectQuoteRecord(quote, decision.redactedFields);
 }));
 
 /**

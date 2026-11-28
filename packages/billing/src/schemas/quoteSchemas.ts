@@ -121,7 +121,15 @@ const createQuoteItemBaseSchema = z.object({
   created_by: z.string().guid().optional().nullable(),
 });
 
-export const createQuoteItemSchema = createQuoteItemBaseSchema.superRefine((value, ctx) => {
+type QuoteItemRefinementInput = {
+  is_recurring?: boolean;
+  billing_frequency?: string | null;
+  is_discount?: boolean;
+  discount_type?: string | null;
+  discount_percentage?: number | null;
+};
+
+const refineCreateQuoteItem = (value: QuoteItemRefinementInput, ctx: z.RefinementCtx) => {
   if (value.is_recurring && !value.billing_frequency) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -145,7 +153,31 @@ export const createQuoteItemSchema = createQuoteItemBaseSchema.superRefine((valu
       path: ['discount_percentage']
     });
   }
-});
+};
+
+export const createQuoteItemSchema = createQuoteItemBaseSchema.superRefine(refineCreateQuoteItem);
+
+/** The most editor draft rows one create-from-template request may carry. */
+export const MAX_QUOTE_TEMPLATE_ITEM_OVERRIDES = 200;
+
+/**
+ * One editor draft row supplied as a create-from-template item override: the item shape `createQuoteItemSchema`
+ * enforces (minus the quote it does not exist on yet), plus the client-side `local_id` row key. Draft discounts
+ * point `applies_to_item_id` at another draft's `local_id` (or at a stored item id), so that one reference is
+ * only length-bounded rather than required to be a GUID.
+ */
+export const createQuoteFromTemplateItemSchema = createQuoteItemBaseSchema
+  .omit({ quote_id: true, created_by: true })
+  .extend({
+    local_id: z.string().trim().min(1).max(100),
+    applies_to_item_id: z.string().trim().min(1).max(100).optional().nullable(),
+  })
+  .superRefine(refineCreateQuoteItem);
+
+/** The whole override array, parsed before any quote row (or quote number) exists. */
+export const createQuoteFromTemplateItemsSchema = z
+  .array(createQuoteFromTemplateItemSchema)
+  .max(MAX_QUOTE_TEMPLATE_ITEM_OVERRIDES);
 
 export const updateQuoteItemSchema = partialWithoutDefaults(createQuoteItemBaseSchema).extend({
   updated_by: z.string().guid().optional().nullable()
