@@ -33,6 +33,8 @@ export interface SurfacePathRule {
   staticPrefixes: readonly string[];
   /** First matching rule decides; a path no rule matches is closed. */
   access: 'open' | 'closed';
+  /** Match the prefixes themselves only: a sub-path (and a query string, which is never part of the route) does not widen the rule. */
+  exact?: boolean;
 }
 
 export interface SurfaceKind {
@@ -45,6 +47,12 @@ export interface SurfaceKind {
    * route the kind opens. Absent: the kind has no home, and the MSP home answers not found like any closed route.
    */
   home?: string;
+  /**
+   * The sections of the self-profile page (`/msp/profile`) the kind may use: tab ids, plus
+   * `dashboard-onboarding` for the onboarding preference. Absent: the kind has no profile page. Ordinary
+   * principals have no kind and see every section their product and edition offer.
+   */
+  profileSections?: readonly string[];
   /**
    * REST requests the kind's own API keys may make (`principalApiKeyPrefix`), first match wins; anything no rule
    * opens is closed. Absent: the kind has no API surface. Only open an endpoint whose reads and writes the
@@ -106,9 +114,14 @@ export const SURFACE_KINDS: Readonly<Record<string, SurfaceKind>> = Object.freez
       { group: 'seat_devices', access: 'open', staticPrefixes: ['/msp/assets'] },
       { group: 'seat_documents', access: 'open', staticPrefixes: ['/msp/documents'] },
       { group: 'seat_time', access: 'open', staticPrefixes: ['/msp/time-entry'] },
+      // A technician's own details. Exact: no sub-path of the profile route opens.
+      { group: 'seat_self_profile', access: 'open', exact: true, staticPrefixes: ['/msp/profile'] },
     ],
     capabilities: ['scheduling_time_actions'],
     home: '/msp/tickets',
+    // Own details, sign-in security, notifications and shortcuts. No API Keys (a seat holds no general credential),
+    // no SSO or calendar linking, and no dashboard onboarding preference (the seat has no dashboard).
+    profileSections: ['profile', 'security', 'notifications', 'keyboard-shortcuts'],
     // The mobile app's operational screens. Each endpoint opened here was traced to the seat rules narrowing its
     // reads and writes; the static siblings of a wildcard are closed first because `*` would match them.
     api: [
@@ -230,9 +243,13 @@ function matchesPrefix(path: string, prefixes: readonly string[]): boolean {
   return prefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 }
 
+function matchesRule(rule: SurfacePathRule, path: string): boolean {
+  return rule.exact ? rule.staticPrefixes.includes(path) : matchesPrefix(path, rule.staticPrefixes);
+}
+
 function allowedByRules(rules: readonly SurfacePathRule[], path: string): boolean {
   const normalized = surfacePath(path);
-  return rules.find((rule) => matchesPrefix(normalized, rule.staticPrefixes))?.access === 'open';
+  return rules.find((rule) => matchesRule(rule, normalized))?.access === 'open';
 }
 
 export function surfaceAllowsRoute(kind: string, pathname: string): boolean {
@@ -247,6 +264,11 @@ export function surfaceHomeRedirect(kind: string, pathname: string): string | nu
   const home = surfaceKindRules(kind).home;
   if (!home || !MSP_HOME_PATHS.includes(surfacePath(pathname))) return null;
   return surfaceAllowsRoute(kind, home) ? home : null;
+}
+
+/** Whether the kind may use a section of its self-profile page; a kind that lists none has none. */
+export function surfaceAllowsProfileSection(kind: string, section: string): boolean {
+  return (surfaceKindRules(kind).profileSections ?? []).includes(section);
 }
 
 export function surfaceAllowsCapability(kind: string, capability: string): boolean {

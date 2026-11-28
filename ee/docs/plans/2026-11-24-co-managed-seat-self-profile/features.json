@@ -1,0 +1,17 @@
+[
+  {
+    "id": "F001",
+    "description": "Open the existing self-profile page for a seat technician through menu navigation and direct access while preserving restricted MSP route behavior.",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Load and save the signed-in technician's supported personal details through the existing self-service flow.",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "Apply principal eligibility to profile controls and tab deep links, including general API key management, while preserving the ordinary MSP profile.",
+    "implemented": true
+  }
+]

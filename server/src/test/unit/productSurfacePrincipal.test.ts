@@ -32,6 +32,9 @@ describe('product surface registry resolves per principal (S12 F029)', () => {
       '/msp/time-entry/timesheet/6f1c0b8e-0000-4000-8000-000000000000',
       '/desk/tickets',
       '/msp/tickets?view=with-msp',
+      '/msp/profile',
+      '/msp/profile?tab=api-keys',
+      '/desk/profile',
     ])('reaches the operational route %s', (pathname) => {
       expect(resolveProductRouteBehavior(seat(), pathname)).toBe('allowed');
     });
@@ -57,8 +60,18 @@ describe('product surface registry resolves per principal (S12 F029)', () => {
       ['a route no rule names', '/msp/some/route/added/later'],
       ['a prefix that merely starts like an operational one', '/msp/ticketsfoo'],
       ['the client portal', '/client-portal/tickets'],
+      ['a sub-path of the profile', '/msp/profile/anything'],
+      ['a prefix that merely starts like the profile', '/msp/profilefoo'],
+      ['security settings', '/msp/security-settings'],
+      ['the account page', '/msp/account'],
+      ['user administration with a profile-like query', '/msp/settings/users?next=/msp/profile'],
     ])('gets not_found for %s', (_label, pathname) => {
       expect(resolveProductRouteBehavior(seat(), pathname)).toBe('not_found');
+    });
+
+    it('leaves an ordinary principal on the profile as before', () => {
+      expect(resolveProductRouteBehavior({ productCode: 'psa' }, '/msp/profile')).toBe('allowed');
+      expect(resolveProductRouteBehavior('psa', '/msp/profile/anything')).toBe('allowed');
     });
 
     it('is closed to a principal kind nobody registered', () => {
@@ -139,9 +152,11 @@ describe('product surface registry resolves per principal (S12 F029)', () => {
       ]);
     });
 
-    it('keeps nothing of the settings menu, the footer links or the portal navigation', () => {
+    it('keeps nothing of the settings menu or the portal navigation, and only Profile in the footer', () => {
       expect(filterMenuSectionsByProduct(seat(), settingsNavigationSections)).toEqual([]);
-      expect(filterMenuSectionsByProduct(seat(), [{ items: bottomMenuItems }])).toEqual([]);
+      // The footer keeps the technician's own profile and nothing else.
+      const footerHrefs = filterMenuSectionsByProduct(seat(), [{ items: bottomMenuItems }]).flatMap((section) => section.items.flatMap((item) => (item.subItems ?? [item]).map((sub) => sub.href)));
+      expect(footerHrefs).toEqual(['/msp/profile']);
       expect(filterPortalNavigationByProduct(seat(), [{ href: '/client-portal/tickets' }])).toEqual([]);
     });
 
