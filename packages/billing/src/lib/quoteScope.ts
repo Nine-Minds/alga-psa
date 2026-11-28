@@ -22,6 +22,9 @@ import type { SubjectUserInput } from '@alga-psa/authorization/subject';
 
 /** A quote write refers to a row outside the quote's own client (location, contact, opportunity). */
 export class QuoteScopeError extends Error {
+  // Distinguishes the class structurally, so `isQuoteScopeError` narrows without collapsing `Error` to `never`.
+  readonly code = 'QUOTE_SCOPE_VIOLATION' as const;
+
   constructor(message: string) {
     super(message);
     this.name = 'QuoteScopeError';
