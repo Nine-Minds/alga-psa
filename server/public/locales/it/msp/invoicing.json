@@ -3071,5 +3071,9 @@
     "toasts": {
       "reversed": "Pagamento stornato"
     }
+  },
+  "draftInvoicePayments": {
+    "amountPaid": "Per questa fattura sono registrati pagamenti per {{amount}}.",
+    "overpaidWarning": "Il totale della bozza è inferiore all'importo già pagato ({{paid}}). Finalizzando, la fattura risulterà pagata in eccesso."
   }
 }

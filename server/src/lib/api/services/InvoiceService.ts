@@ -46,6 +46,7 @@ import { applyCreditToInvoiceInternal } from '@alga-psa/billing/actions/creditAc
 import { changeInvoiceTaxSourceInternal } from '@alga-psa/billing/actions/taxSourceActions';
 import { assertInvoiceNotExported, findInvoiceExportInProgress } from '@alga-psa/billing/services/accountingSync/invoiceExportGuards';
 import { findLocalVoidBlocker, voidInvoiceLocally } from '@alga-psa/billing/lib/invoiceVoidCore';
+import { computeBalanceDue, deriveInvoiceStatus } from '@alga-psa/billing/lib/balanceDue';
 import { hasConnectedQboRealm } from '@alga-psa/billing/services/accountingSync/accountingSyncSettings';
 import { enqueueInvoiceVoid } from '@alga-psa/billing/services/accountingSync/syncProducers';
 import { signalAutopayInvoiceSettled } from '@alga-psa/billing/services/autopayBridge';
@@ -1922,19 +1923,23 @@ export class InvoiceService extends BaseService<IInvoice> {
           .sum('amount as total_paid');
         const totalPayments = Number((payments as Array<{ total_paid: string }>)[0]?.total_paid || 0);
 
-        // Total paid includes both credits and payments
-        const totalPaid = newCreditApplied + totalPayments;
-
-        // Update invoice status based on total paid
-        let newStatus = invoice.status;
-        if (totalPaid >= invoice.total_amount) {
-          newStatus = 'paid';
-        } else if (totalPaid > 0 && invoice.status !== 'cancelled') {
-          newStatus = 'partially_applied';
-        }
+        // Same derivation as applyCreditToInvoiceInternal wrote under the
+        // invoice lock: credit and net payments are separate inputs, and credit
+        // alone never makes an invoice paid. (alga-2026-0003329)
+        const newStatus = deriveInvoiceStatus({
+          totalAmount: Number(updatedInvoice?.total_amount ?? invoice.total_amount),
+          creditApplied: newCreditApplied,
+          totalPaid: totalPayments,
+          currentStatus: updatedInvoice?.status ?? invoice.status,
+        });
+        const remainingBalance = computeBalanceDue({
+          totalAmount: Number(updatedInvoice?.total_amount ?? invoice.total_amount),
+          creditApplied: newCreditApplied,
+          totalPaid: totalPayments,
+        });
 
         finalStatus = newStatus;
-        finalBalanceDue = Number(invoice.total_amount) - totalPaid;
+        finalBalanceDue = remainingBalance;
 
         await tenantDb(trx, context.tenant).table('invoices')
           .where({ invoice_id: data.invoice_id })
@@ -1947,9 +1952,6 @@ export class InvoiceService extends BaseService<IInvoice> {
         if (newStatus === 'paid') {
           await settlePrepaidReplenishmentInvoice(trx, context.tenant, data.invoice_id);
         }
-
-        // Calculate remaining balance after credit application
-        const remainingBalance = invoice.total_amount - totalPaid;
 
         const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id);
 
@@ -2072,7 +2074,8 @@ export class InvoiceService extends BaseService<IInvoice> {
         reference_number: data.reference_number,
         notes: data.reason,
         status: 'refunded',
-        created_by: context.userId,
+        // invoice_payments has no created_by column; attribution goes in metadata
+        metadata: { recorded_by: context.userId },
         tenant: context.tenant,
         created_at: new Date()
       };
@@ -2103,19 +2106,14 @@ export class InvoiceService extends BaseService<IInvoice> {
         .sum('amount as total_paid');
       const netPaid = Number((netPayments as Array<{ total_paid: string }>)[0]?.total_paid || 0);
 
-      // Include credits in total paid
-      const creditApplied = Number(invoice.credit_applied || 0);
-      const totalPaid = netPaid + creditApplied;
-
-      // Update invoice status based on net paid amount
-      let newStatus: string;
-      if (totalPaid <= 0) {
-        newStatus = 'sent'; // Back to sent after full refund
-      } else if (totalPaid >= invoice.total_amount) {
-        newStatus = 'paid';
-      } else {
-        newStatus = 'partially_applied';
-      }
+      // Credit applied is its own input to the shared derivation (not added to
+      // paid). Cancelled/void/draft keep their status. (alga-2026-0003329)
+      const newStatus = deriveInvoiceStatus({
+        totalAmount: Number(invoice.total_amount),
+        creditApplied: Number(invoice.credit_applied || 0),
+        totalPaid: netPaid,
+        currentStatus: invoice.status,
+      });
 
       await tenantDb(trx, context.tenant).table('invoices')
         .where({ invoice_id: data.invoice_id })

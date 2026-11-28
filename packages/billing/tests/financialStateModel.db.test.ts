@@ -135,6 +135,8 @@ async function execute(trx: Knex.Transaction, models: Account[], step: Step) {
         const result = await applyCreditToInvoiceInternal(m.tenant, m.user, m.client, m.invoice, step.amount);
         expect(result.appliedAmount).toBe(expected);
         m.credit += expected; m.available -= expected; if (expected > 0) m.applications++;
+        // Credit applied is a status input (alga-2026-0003329): payments plus credit covering the total read paid.
+        if (m.paid > 0) m.status = m.paid + m.credit >= m.total ? 'paid' : 'partially_applied';
         break;
       }
       case 'void':

@@ -180,7 +180,26 @@ describe('entity webhooks → signed delivery at the webhook-sink (no app server
 
     const t = await knex('tenants').select('tenant').first();
     tenant = t!.tenant;
-    const u = await knex('users').where({ tenant }).select('user_id').first();
+    // The UI actions run the real RBAC gate (createContactAs checks contact:create), so the actor
+    // must be a seeded MSP user that actually holds it. An unordered `users.first()` returned a
+    // different seeded user per database and was refused in CI.
+    const u = await knex('users as u')
+      .join('user_roles as ur', function () {
+        this.on('ur.user_id', 'u.user_id').andOn('ur.tenant', 'u.tenant');
+      })
+      .join('roles as r', function () {
+        this.on('r.role_id', 'ur.role_id').andOn('r.tenant', 'ur.tenant');
+      })
+      .join('role_permissions as rp', function () {
+        this.on('rp.role_id', 'r.role_id').andOn('rp.tenant', 'r.tenant');
+      })
+      .join('permissions as p', function () {
+        this.on('p.permission_id', 'rp.permission_id').andOn('p.tenant', 'rp.tenant');
+      })
+      .where({ 'u.tenant': tenant, 'u.user_type': 'internal', 'r.msp': true, 'p.msp': true, 'p.resource': 'contact', 'p.action': 'create' })
+      .orderBy('u.username')
+      .first('u.user_id');
+    expect(u, 'seeded tenant has an internal user holding contact:create').toBeTruthy();
     userId = u!.user_id;
     db.knex = knex;
     db.tenant = tenant;

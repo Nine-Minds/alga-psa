@@ -9,6 +9,7 @@ function createMockDb() {
     invoices: [],
     transactions: [],
     credit_tracking: [],
+    invoice_payments: [],
   };
 
   const tx = ((tableName: string) => {
@@ -38,6 +39,14 @@ function createMockDb() {
         return filteredRows.length;
       },
       orderBy() {
+        return builder;
+      },
+      // Finalize derives status from net recorded payments (alga-2026-0003329):
+      // where(...).sum('amount as total').first()
+      sum(expr: string) {
+        const [column, alias = column] = expr.split(/\s+as\s+/i);
+        const total = filteredRows.reduce((acc, row) => acc + Number(row[column] ?? 0), 0);
+        filteredRows = [{ [alias]: total }];
         return builder;
       },
       // hour-block activation hook chain: where(...).orderBy(...).forUpdate().select(...)
