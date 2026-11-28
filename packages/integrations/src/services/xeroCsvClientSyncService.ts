@@ -14,6 +14,7 @@ import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex, registerAfterCommit, tenantDb } from '@alga-psa/db';
 import { unparseCSV, parseCSV } from '@alga-psa/core';
+import { canWriteClientBilling, partitionClientBillingWrite } from '@alga-psa/auth/lib/clientBillingProjection';
 import { withTransaction } from '@alga-psa/db';
 import { resolveProductCode, type IClient, type IClientLocation } from '@alga-psa/types';
 import {
@@ -596,6 +597,16 @@ export class XeroCsvClientSyncService {
         mappingByAlgaId.set(mapping.alga_entity_id, mapping);
       }
 
+      // Billing columns (billing_email) change only for a subject holding billing:update. Resolved once, lazily.
+      let billingWriteAllowed: boolean | undefined;
+      const canWriteBilling = async (): Promise<boolean> => {
+        if (billingWriteAllowed === undefined) {
+          const importer = await db.table('users').where({ user_id: userId }).first();
+          billingWriteAllowed = importer ? await canWriteClientBilling(importer, trx) : false;
+        }
+        return billingWriteAllowed;
+      };
+
       let created = 0;
       let updated = 0;
       let skipped = 0;
@@ -631,6 +642,14 @@ export class XeroCsvClientSyncService {
               }
               if (contact.taxNumber) {
                 updateData.tax_id_number = contact.taxNumber;
+              }
+
+              const { changedBillingFields } = partitionClientBillingWrite(
+                updateData as Record<string, unknown>,
+                matchedClient as unknown as Record<string, unknown>
+              );
+              if (changedBillingFields.length > 0 && !(await canWriteBilling())) {
+                throw new Error('Permission denied: Cannot update client billing settings');
               }
 
               if (Object.keys(updateData).length > 0) {

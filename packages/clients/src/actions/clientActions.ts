@@ -1,6 +1,6 @@
 'use server'
 
-import { CLIENT_BILLING_PERMISSION, canReadClientBilling, omitClientBillingColumns, projectClientForSubject, projectClientsForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
+import { CLIENT_BILLING_PERMISSION, canReadClientBilling, canWriteClientBilling, partitionClientBillingWrite, omitClientBillingColumns, projectClientForSubject, projectClientsForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
 import { trackContactUpdates } from '@alga-psa/shared/lib/contacts/contactEvents';
 import { deactivateClientScopedChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
 import { deactivateClientScopedTicketTemplates } from '@alga-psa/shared/lib/ticketTemplates';
@@ -338,6 +338,17 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
       }
       permittedUpdateData = structural.data;
 
+      // Changing a billing column needs billing:update. Values equal to the stored ones are grandfathered
+      // so a full-record round-trip still saves. Refuse the whole update rather than dropping fields.
+      const { changedBillingFields } = partitionClientBillingWrite(
+        permittedUpdateData as Record<string, unknown>,
+        currentClient
+      );
+      const billingWriteAllowed = !isClientPortalUpdate && await canWriteClientBilling(user, trx);
+      if (changedBillingFields.length > 0 && !billingWriteAllowed) {
+        throw new Error('Permission denied: Cannot update client billing settings. Please contact your administrator if you need additional access.');
+      }
+
       // Preserve partial property updates and only synchronize website copies
       // when url or properties.website was explicitly provided.
       Object.assign(updateObject, mergeClientWebsiteUpdate(
@@ -365,7 +376,8 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
       // Absence only means "cleared" for a subject who was shown these columns: a subject without billing
       // permission reads the client without them (clientBillingProjection), so saving that row back must
       // leave them untouched.
-      const billingColumnsWereVisible = !isClientPortalUpdate && await canReadClientBilling(user, trx);
+      // Absence-nulling is itself a billing write, so it also requires billing:update.
+      const billingColumnsWereVisible = !isClientPortalUpdate && billingWriteAllowed && await canReadClientBilling(user, trx);
       if (billingColumnsWereVisible && !permittedUpdateData.hasOwnProperty('billing_contact_id')) {
         updateObject.billing_contact_id = null;
       }
@@ -1949,6 +1961,13 @@ export const importClientsFromCSV = withAuth(async (
           // an unmapped column leaves whatever is already stored alone.
           if (clientData.client_since !== undefined) {
             updateData.client_since = clientSince;
+          }
+
+          // Billing columns (auto_invoice, credit_limit) change only for a subject holding billing:update;
+          // values equal to the stored ones are grandfathered. The row fails, the rest of the import goes on.
+          const { changedBillingFields } = partitionClientBillingWrite(updateData, existingClient);
+          if (changedBillingFields.length > 0 && !await canWriteClientBilling(user, trx)) {
+            throw new Error('Permission denied: Cannot update client billing settings');
           }
 
           // LEVERAGE: pattern client-inactive-write — every clients.is_inactive write asks the seat arrangement guard in its transaction
