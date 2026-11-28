@@ -85,8 +85,23 @@ export async function assertContactCreateAllowed(
 
 type EmailHolder = { contact_name_id: string; client_id: string | null };
 
-async function findEmailHolder(trx: Knex.Transaction, tenant: string, email: string): Promise<EmailHolder | undefined> {
-  return tenantDb(trx, tenant).table('contacts').where('email', email).first('contact_name_id', 'client_id');
+async function findEmailHolder(
+  trx: Knex.Transaction,
+  tenant: string,
+  email: string,
+  { includeAdditional = false }: { includeAdditional?: boolean } = {},
+): Promise<EmailHolder | undefined> {
+  const primary = await tenantDb(trx, tenant).table('contacts').where('email', email).first('contact_name_id', 'client_id');
+  if (primary || !includeAdditional) return primary;
+
+  // Find-or-create has always matched a contact holding the address as an additional email too. Ids only here;
+  // the holder is read in full only after the scope decision.
+  const additional = await tenantDb(trx, tenant)
+    .table('contact_additional_email_addresses')
+    .where('normalized_email_address', email)
+    .first<{ contact_name_id: string }>('contact_name_id');
+  if (!additional) return undefined;
+  return tenantDb(trx, tenant).table('contacts').where('contact_name_id', additional.contact_name_id).first('contact_name_id', 'client_id');
 }
 
 /**
@@ -172,7 +187,7 @@ export async function findOrCreateContactAs(
 
   const email = input.email?.trim().toLowerCase();
   if (email) {
-    const holder = await findEmailHolder(trx, tenant, email);
+    const holder = await findEmailHolder(trx, tenant, email, { includeAdditional: true });
     if (holder) {
       if (!(await mayDiscloseHolder(trx, tenant, actor, holder, input.client_id))) throw new ContactEmailInUseError();
 

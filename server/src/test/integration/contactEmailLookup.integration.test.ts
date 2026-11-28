@@ -7,7 +7,7 @@ import { ContactModel } from '../../../../shared/models/contactModel';
 
 const testState = vi.hoisted(() => ({
   tenant: 'test-tenant',
-  userId: 'test-user',
+  userId: '00000000-0000-4000-8000-000000000001',
   createTenantKnexMock: vi.fn(),
   withTransactionMock: vi.fn(),
 }));
@@ -21,6 +21,13 @@ vi.mock('@alga-psa/auth', () => ({
       { tenant: testState.tenant },
       ...args
     ),
+  hasPermission: vi.fn(async () => true),
+}));
+
+// createOrFindContactByEmail now runs through the contact create command, which checks `contact:create`
+// through the authorization package's RBAC rather than the auth package export mocked above.
+vi.mock('@alga-psa/authorization/rbac', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/rbac')>()),
   hasPermission: vi.fn(async () => true),
 }));
 

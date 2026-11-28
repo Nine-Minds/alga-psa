@@ -85,6 +85,9 @@ describe('contact email lookup query actions', () => {
         // The command's duplicate lookup: nobody holds the email.
         return makeQuery(testState.emailHolder);
       }
+      if (table === 'contact_additional_email_addresses') {
+        return makeQuery(undefined);
+      }
       if (table === 'clients') {
         return makeQuery({ client_name: 'Acme Client' });
       }
