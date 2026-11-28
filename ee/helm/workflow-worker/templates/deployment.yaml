@@ -189,10 +189,61 @@ spec:
               value: {{ .Values.correlationPathsJson | quote }}
             {{- end }}
 
+            # System email (rendered only when set)
+            {{- with .Values.email }}
+            {{- if eq (toString .enabled) "false" }}
+            - name: EMAIL_ENABLE
+              value: "false"
+            {{- end }}
+            {{- if .provider }}
+            - name: EMAIL_PROVIDER_TYPE
+              value: {{ .provider | quote }}
+            {{- end }}
+            {{- if .from }}
+            - name: EMAIL_FROM
+              value: {{ .from | quote }}
+            {{- end }}
+            {{- if and .resendApiKeySecret .resendApiKeySecret.name }}
+            - name: RESEND_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .resendApiKeySecret.name | quote }}
+                  key: {{ .resendApiKeySecret.key | default "RESEND_API_KEY" | quote }}
+                  optional: true
+            {{- end }}
+            {{- with .smtp }}
+            {{- if .host }}
+            - name: EMAIL_HOST
+              value: {{ .host | quote }}
+            {{- end }}
+            {{- if .port }}
+            - name: EMAIL_PORT
+              value: {{ .port | quote }}
+            {{- end }}
+            {{- if .username }}
+            - name: EMAIL_USERNAME
+              value: {{ .username | quote }}
+            {{- end }}
+            {{- if and .passwordSecret .passwordSecret.name }}
+            - name: EMAIL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .passwordSecret.name | quote }}
+                  key: {{ .passwordSecret.key | quote }}
+                  optional: true
+            {{- end }}
+            {{- end }}
+            {{- end }}
+
             # Additional environment variables
             {{- range .Values.extraEnv }}
-            - name: {{ .name }}
-              value: {{ .value | quote }}
+            - name: {{ .name | quote }}
+              {{- if hasKey . "valueFrom" }}
+              valueFrom:
+                {{- toYaml .valueFrom | nindent 16 }}
+              {{- else }}
+              value: {{ if kindIs "invalid" .value }}""{{ else }}{{ .value | toString | quote }}{{ end }}
+              {{- end }}
             {{- end }}
 
           ports:

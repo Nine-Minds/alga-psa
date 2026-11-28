@@ -156,7 +156,26 @@ affinity: {}
 # defaults from shared/workflow/runtime/correlationDefaults.ts.
 correlationPathsJson: ""
 
-# Additional env/volumes if needed
+# System email (used by workflow email.send when a tenant has no enabled tenant provider).
+# System email is on whenever credentials are present; all defaults are empty so a
+# release without credentials behaves as before (no system provider).
+email:
+  enabled: true          # false renders EMAIL_ENABLE=false (off switch); true renders nothing
+  provider: ""           # optional EMAIL_PROVIDER_TYPE (resend | smtp)
+  from: ""               # EMAIL_FROM
+  resendApiKeySecret:    # RESEND_API_KEY via secretKeyRef (optional: true)
+    name: ""
+    key: RESEND_API_KEY
+  smtp:                  # optional EMAIL_HOST / EMAIL_PORT / EMAIL_USERNAME; password via secretKeyRef
+    host: ""
+    port: ""
+    username: ""
+    passwordSecret:
+      name: ""
+      key: ""
+
+# Additional env/volumes if needed. Entries are rendered as-is (toYaml), so
+# valueFrom (e.g. secretKeyRef) works.
 extraEnv: []
 extraVolumes: []
 extraVolumeMounts: []

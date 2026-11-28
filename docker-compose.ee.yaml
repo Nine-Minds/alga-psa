@@ -54,7 +54,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
       LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
-      EMAIL_ENABLE: ${EMAIL_ENABLE:-false}
+      EMAIL_ENABLE: ${EMAIL_ENABLE:-}
       EMAIL_FROM: ${EMAIL_FROM:-noreply@example.com}
       EMAIL_PORT: ${EMAIL_PORT:-587}
       EMAIL_USERNAME: ${EMAIL_USERNAME:-noreply@example.com}
@@ -181,7 +181,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
       LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
-      EMAIL_ENABLE: ${EMAIL_ENABLE:-false}
+      EMAIL_ENABLE: ${EMAIL_ENABLE:-}
       EMAIL_FROM: ${EMAIL_FROM:-noreply@example.com}
       EMAIL_PORT: ${EMAIL_PORT:-587}
       EMAIL_USERNAME: ${EMAIL_USERNAME:-noreply@example.com}

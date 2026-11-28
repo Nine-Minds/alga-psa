@@ -108,7 +108,7 @@ export async function sendPasswordResetEmail({
       }
 
       // Preserve the existing system fallback. SystemEmailProviderFactory
-      // (and therefore EMAIL_ENABLE) decides whether a system provider exists.
+      // (via resolveSystemEmailState) decides whether a system provider exists.
       logger.warn('[sendPasswordResetEmail] Falling back to SystemEmailService');
       const systemEmailService = await getSystemEmailService();
       const fallbackResult = await systemEmailService.sendEmail(emailParams);

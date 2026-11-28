@@ -1,0 +1,154 @@
+[
+  {
+    "id": "F001",
+    "description": "A single exported resolver in packages/email/src/system returns the system email state (disabled, unconfigured, configured) and the resolved provider type from the environment",
+    "implemented": true,
+    "prdRefs": [
+      "Design > One resolver"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "The resolver reports disabled only when EMAIL_ENABLE is 'false' (trimmed, case-insensitive); unset, empty, 'true' and any other value are not disabled",
+    "implemented": true,
+    "prdRefs": [
+      "Design > One resolver"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "The resolver reports unconfigured when not disabled and the credential for the resolved provider type is missing (RESEND_API_KEY for resend, EMAIL_HOST for smtp)",
+    "implemented": true,
+    "prdRefs": [
+      "Design > One resolver"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "SystemEmailProviderFactory.createProvider creates the provider when the state is configured, with EMAIL_ENABLE unset",
+    "implemented": true,
+    "prdRefs": [
+      "Design > Readers move to the resolver"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "SystemEmailProviderFactory.createProvider returns null without throwing for disabled and for unconfigured, logging which of the two applied",
+    "implemented": true,
+    "prdRefs": [
+      "Design > Readers move to the resolver"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "The console.log of EMAIL_ENABLE in createProvider is removed",
+    "implemented": true,
+    "prdRefs": [
+      "Design > Readers move to the resolver"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "getProviderConfigSummary derives enabled from the resolver state",
+    "implemented": true,
+    "prdRefs": [
+      "Design > Readers move to the resolver"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "validateEmailConfiguration and the initializeApp startup log use the resolver: validation runs when configured, and no warnings are raised for disabled or unconfigured",
+    "implemented": true,
+    "prdRefs": [
+      "Design > Readers move to the resolver"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "The registration verification gate in useRegister uses the resolver's configured state instead of EMAIL_ENABLE === 'true'",
+    "implemented": true,
+    "prdRefs": [
+      "Design > Readers move to the resolver"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "No source file other than the resolver and getConfigFingerprint reads process.env.EMAIL_ENABLE",
+    "implemented": true,
+    "prdRefs": [
+      "Design > Readers move to the resolver"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "All docker-compose files pass EMAIL_ENABLE through without a false default",
+    "implemented": true,
+    "prdRefs": [
+      "Design > Defaults stop saying \"false\""
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "server/entrypoint.sh does not require EMAIL_ENABLE and does not require EMAIL_FROM, EMAIL_PORT or EMAIL_USERNAME when the flag is unset",
+    "implemented": true,
+    "prdRefs": [
+      "Design > Defaults stop saying \"false\""
+    ]
+  },
+  {
+    "id": "F013",
+    "description": ".env.example, ee/setup/config.ini, compose.env and the getting-started configuration docs describe EMAIL_ENABLE as an optional off switch",
+    "implemented": true,
+    "prdRefs": [
+      "Design > Defaults stop saying \"false\""
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "ee/helm/workflow-worker values gain an email block (enabled, provider, from, resendApiKeySecret, smtp) with empty defaults",
+    "implemented": true,
+    "prdRefs": [
+      "Design > workflow-worker chart"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "The workflow-worker deployment renders EMAIL_PROVIDER_TYPE, EMAIL_FROM and SMTP variables only when set, and RESEND_API_KEY and the SMTP password as secretKeyRef",
+    "implemented": true,
+    "prdRefs": [
+      "Design > workflow-worker chart"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "The workflow-worker deployment renders EMAIL_ENABLE=false only when email.enabled is false",
+    "implemented": true,
+    "prdRefs": [
+      "Design > workflow-worker chart"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "workflow-worker extraEnv entries can carry valueFrom",
+    "implemented": true,
+    "prdRefs": [
+      "Design > workflow-worker chart"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "The appliance workflow-worker release receives the same system email settings the appliance app release uses",
+    "implemented": true,
+    "prdRefs": [
+      "Design > workflow-worker chart"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Existing tests that assert the old gate (systemEmailProviderFactory unit test, password recovery integration test, invoiceCalendarDate test env handling) are updated to the new semantics",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance criteria"
+    ]
+  }
+]

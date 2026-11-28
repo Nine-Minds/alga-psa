@@ -76,6 +76,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
     ].includes(file)) return true;
     if (file === 'ee/temporal-workflows/src/db/__tests__/product-upgrade-role-grants.contract.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/__tests__/temporal-worker-shared-tenant-secrets.helm.test.ts') return true;
+    if (file === 'ee/temporal-workflows/src/__tests__/workflow-worker-email.helm.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/__tests__/worker-queue-ownership.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/__tests__/worker-health.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/__tests__/worker.capabilityBoot.test.ts') return true;

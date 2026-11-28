@@ -49,7 +49,7 @@ x-environment: &shared-environment
   REQUIRE_HOCUSPOCUS: ${REQUIRE_HOCUSPOCUS:-false}
 
   # ---- EMAIL ----
-  EMAIL_ENABLE: ${EMAIL_ENABLE:-false}
+  EMAIL_ENABLE: ${EMAIL_ENABLE:-}
   EMAIL_FROM: ${EMAIL_FROM:-noreply@example.com}
   EMAIL_HOST: ${EMAIL_HOST}
   EMAIL_PORT: ${EMAIL_PORT:-587}

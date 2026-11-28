@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { IEmailProvider, EmailProviderConfig } from '@alga-psa/types';
 import { SMTPEmailProvider } from '../providers/SMTPEmailProvider';
 import { ResendEmailProvider } from '../providers/ResendEmailProvider';
+import { resolveSystemEmailState } from './systemEmailState';
 
 export interface SystemEmailProviderConfig {
   providerType: 'smtp' | 'resend';
@@ -44,15 +45,19 @@ export class SystemEmailProviderFactory {
    * Create an email provider based on environment configuration
    */
   static async createProvider(): Promise<IEmailProvider | null> {
-    const isEnabled = process.env.EMAIL_ENABLE === 'true';
-    console.log('EMAIL_ENABLE: ', process.env.EMAIL_ENABLE);
-    
-    if (!isEnabled) {
-      logger.info('[SystemEmailProviderFactory] Email service is disabled');
+    const resolved = resolveSystemEmailState();
+
+    if (resolved.state === 'disabled') {
+      logger.info('[SystemEmailProviderFactory] System email is disabled (EMAIL_ENABLE=false)');
       return null;
     }
 
-    const providerType = process.env.EMAIL_PROVIDER_TYPE || this.detectProviderType();
+    if (resolved.state === 'unconfigured') {
+      logger.info('[SystemEmailProviderFactory] System email is not configured (no provider credentials in the environment)');
+      return null;
+    }
+
+    const providerType = resolved.providerType;
     const providerId = 'system-email-provider';
 
     logger.info(`[SystemEmailProviderFactory] Creating ${providerType} provider`);
@@ -76,19 +81,6 @@ export class SystemEmailProviderFactory {
       logger.error('[SystemEmailProviderFactory] Failed to create provider:', error);
       throw error;
     }
-  }
-
-  /**
-   * Detect provider type based on environment variables
-   */
-  private static detectProviderType(): 'smtp' | 'resend' {
-    // If Resend API key is present, use Resend
-    if (process.env.RESEND_API_KEY) {
-      return 'resend';
-    }
-
-    // Default to SMTP
-    return 'smtp';
   }
 
   /**
@@ -152,16 +144,17 @@ export class SystemEmailProviderFactory {
    * Get provider configuration for logging (with sensitive data masked)
    */
   static getProviderConfigSummary(): Record<string, any> {
-    const isEnabled = process.env.EMAIL_ENABLE === 'true';
-    
-    if (!isEnabled) {
-      return { enabled: false };
+    const resolved = resolveSystemEmailState();
+
+    if (resolved.state !== 'configured') {
+      return { enabled: false, state: resolved.state };
     }
 
-    const providerType = process.env.EMAIL_PROVIDER_TYPE || this.detectProviderType();
-    
+    const providerType = resolved.providerType;
+
     const summary: Record<string, any> = {
       enabled: true,
+      state: resolved.state,
       providerType,
       from: process.env.EMAIL_FROM
     };

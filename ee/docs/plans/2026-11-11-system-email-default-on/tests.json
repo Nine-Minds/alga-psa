@@ -1,0 +1,82 @@
+[
+  {
+    "id": "T001",
+    "description": "Resolver unit table: flag unset/empty/'true'/'TRUE'/'yes' with a Resend key is configured:resend; with only EMAIL_HOST is configured:smtp; 'false' and ' False ' with credentials are disabled; no credentials and no flag is unconfigured; EMAIL_PROVIDER_TYPE=resend without a key is unconfigured",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "SystemEmailProviderFactory.createProvider returns a Resend provider with RESEND_API_KEY set and EMAIL_ENABLE unset, and an SMTP provider with EMAIL_HOST set and EMAIL_ENABLE unset",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "SystemEmailProviderFactory.createProvider returns null and does not throw when EMAIL_ENABLE=false with credentials set, and when no credentials and no flag are set",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F019"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "validateEmailConfiguration returns no warnings for disabled and for unconfigured, and validates provider settings when configured with the flag unset",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Workflow email.send action, tenant with no enabled tenant provider, system Resend credentials in the environment and no EMAIL_ENABLE: the step succeeds through the system fallback (provider HTTP mocked); with EMAIL_ENABLE=false it fails with 'No enabled email provider configured'",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F005"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Password recovery integration suite still passes: recovery through an enabled tenant SMTP provider works with EMAIL_ENABLE=false, and the system provider is not used in that case",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "helm template of ee/helm/workflow-worker: with the email block populated it renders EMAIL_PROVIDER_TYPE, EMAIL_FROM and RESEND_API_KEY as a secretKeyRef; with defaults it renders no EMAIL_* or RESEND_* variables; with email.enabled=false it renders EMAIL_ENABLE=false; an extraEnv entry with valueFrom renders intact",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F015",
+      "F016",
+      "F017"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Source guard: process.env.EMAIL_ENABLE is read only in the resolver and getConfigFingerprint",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "server/entrypoint.sh environment validation passes with EMAIL_ENABLE unset and no EMAIL_* variables",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F012"
+    ]
+  }
+]
