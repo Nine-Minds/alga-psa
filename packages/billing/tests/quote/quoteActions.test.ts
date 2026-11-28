@@ -93,6 +93,11 @@ vi.mock('@alga-psa/auth/withAuth', () => ({
       fn(currentUser, { tenant: TENANT_ID }, ...args),
 }));
 
+// A tenant with no published bundle assignment or scope resolver: the create check takes its neutral fast path.
+vi.mock('@alga-psa/authorization/subject/tenantScope', () => ({
+  probeTenantAuthorizationScope: async () => ({ publishedAssignments: false, resolverSubjects: false }),
+}));
+
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: (...args: any[]) => hasPermissionMock(...args),
 }));

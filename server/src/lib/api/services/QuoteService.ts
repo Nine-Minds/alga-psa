@@ -36,6 +36,15 @@ import { QUOTE_SORT_FIELDS } from '../schemas/quoteSchemas';
 import { canTransitionQuoteStatus } from '@alga-psa/shared/lib/quotes/quoteStatusTransitions';
 import { onQuoteSent } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
 import { QUOTE_ACTIVITY_TYPES, buildApprovalChangesRequestedActivity } from '@alga-psa/billing/lib/quoteActivityTypes';
+import {
+  assertQuoteCreateAllowed,
+  assertQuoteLocationsOwnedByClient,
+  assertQuotePatchReferencesInScope,
+  authorizeQuoteWrite,
+  isQuoteScopeError,
+} from '@alga-psa/billing/lib/quoteScope';
+import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
+import { RequestLocalAuthorizationCache } from '@alga-psa/authorization/kernel';
 import { createPredicateGuard } from '../controllers/authorizationKernel';
 import { SELF_APPROVAL_AUDIT_METADATA } from '@alga-psa/authorization/quoteSelfApproval';
 
@@ -53,6 +62,10 @@ function throwQuoteApiError(error: unknown): never {
     throw error;
   }
 
+  if (isQuoteScopeError(error)) {
+    throw new ValidationError(error.message);
+  }
+
   const message = error.message;
 
   if (/^Quote .+ not found in tenant .+$/.test(message)) {
@@ -67,7 +80,14 @@ function throwQuoteApiError(error: unknown): never {
     throw new ValidationError('Selected service was not found');
   }
 
-  if (message === 'Quantity must be an integer' || message === 'Unit price must be an integer') {
+  if (
+    message === 'Quantity must be an integer' ||
+    message === 'Unit price must be an integer' ||
+    message === 'Quantity must be greater than zero' ||
+    message === 'Unit price must not be negative' ||
+    message === 'Discount percentage must be between 0 and 100' ||
+    message === 'Cost must not be negative'
+  ) {
     throw new ValidationError(message);
   }
 
@@ -120,44 +140,6 @@ export class QuoteService extends BaseService<IQuote> {
     const hasAccess = await hasApiContextPermission(context, 'billing', action);
     if (!hasAccess) {
       throw new ForbiddenError(`Permission denied: Cannot ${action} quotes`);
-    }
-  }
-
-  /**
-   * A quote item's location must be one of the owning client's own locations —
-   * neither this path nor the UI checked before (alga-2026-0002902), so a
-   * caller could pin a line to another client's address.
-   */
-  private async assertItemLocationsBelongToClient(
-    trx: Knex.Transaction,
-    tenant: string,
-    clientId: string | null | undefined,
-    items: Array<{ location_id?: string | null } | undefined>
-  ): Promise<void> {
-    const locationIds = [...new Set(
-      items
-        .map((item) => item?.location_id)
-        .filter((locationId): locationId is string => typeof locationId === 'string' && locationId.length > 0)
-    )];
-
-    if (locationIds.length === 0) {
-      return;
-    }
-
-    if (!clientId) {
-      throw new ValidationError('location_id requires the quote to be linked to a client');
-    }
-
-    const found = await tenantDb(trx, tenant).table('client_locations')
-      .whereIn('location_id', locationIds)
-      .andWhere('client_id', clientId)
-      .pluck<string[]>('location_id');
-
-    const missing = locationIds.filter((locationId) => !found.includes(locationId));
-    if (missing.length > 0) {
-      throw new ValidationError(
-        `location_id does not belong to this quote's client: ${missing.join(', ')}`
-      );
     }
   }
 
@@ -297,8 +279,21 @@ export class QuoteService extends BaseService<IQuote> {
         }
       }
 
+      // Before a quote number is allocated: the same create check the server actions run (candidate client in the
+      // caller's scope; contact and opportunity belong to that client). A denial is the REST layer's 403.
+      await assertQuoteCreateAllowed(trx, {
+        tenant: context.tenant,
+        user: { ...(context.user ?? {}), apiKeyId: context.apiKeyId },
+        candidate: {
+          client_id: quoteData.client_id ?? null,
+          contact_id: quoteData.contact_id ?? null,
+          opportunity_id: quoteData.opportunity_id ?? null,
+          created_by: context.userId,
+        },
+      });
+
       if (items?.length) {
-        await this.assertItemLocationsBelongToClient(trx, context.tenant, quoteData.client_id, items);
+        await assertQuoteLocationsOwnedByClient(trx, context.tenant, quoteData.client_id, items.map((item) => item.location_id));
       }
 
       const quote = await Quote.create(trx, context.tenant, {
@@ -354,6 +349,48 @@ export class QuoteService extends BaseService<IQuote> {
     }
 
     return withTransaction(knex, async (trx) => {
+      // A patch that moves the quote to another client, or re-points its contact or opportunity, is a write of a
+      // different record: judge that candidate, and re-validate contact, opportunity and every item location
+      // against the destination client in this same transaction. Rejects; never repairs.
+      if (
+        updateData.client_id !== undefined ||
+        updateData.contact_id !== undefined ||
+        updateData.opportunity_id !== undefined
+      ) {
+        const stored = await tenantDb(trx, context.tenant).table('quotes')
+          .where('quote_id', id)
+          .forUpdate()
+          .first<IQuote>();
+        if (!stored) {
+          throw new NotFoundError('Quote not found');
+        }
+
+        const { reparented } = await assertQuotePatchReferencesInScope(
+          trx,
+          context.tenant,
+          stored,
+          updateData as Partial<IQuote>
+        );
+
+        if (reparented) {
+          const requestCache = new RequestLocalAuthorizationCache();
+          const subject = await resolveAuthorizationSubject(trx, {
+            tenant: context.tenant,
+            user: context.user,
+            apiKeyId: context.apiKeyId,
+            requestCache,
+          });
+          const decision = await authorizeQuoteWrite(trx, {
+            subject,
+            candidate: { ...stored, ...(updateData as Partial<IQuote>) },
+            requestCache,
+          });
+          if (!decision.allowed) {
+            throw new ForbiddenError('Permission denied: Cannot update quote');
+          }
+        }
+      }
+
       return Quote.update(trx, context.tenant, id, {
         ...updateData,
         updated_by: context.userId,
@@ -401,12 +438,9 @@ export class QuoteService extends BaseService<IQuote> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      await this.assertItemLocationsBelongToClient(
-        trx,
-        context.tenant,
-        await this.getQuoteClientId(trx, context.tenant, quoteId),
-        [data]
-      );
+      // The location's client scope is enforced inside QuoteItem.create / update (same transaction, parent
+      // quote locked); this read only keeps a missing quote a 404 rather than a foreign-key error.
+      await this.getQuoteClientId(trx, context.tenant, quoteId);
 
       // QuoteItem.create handles display_order, totals, and recalculation internally
       const item = await QuoteItem.create(trx, context.tenant, {
@@ -435,12 +469,9 @@ export class QuoteService extends BaseService<IQuote> {
         throw new NotFoundError('Quote item not found');
       }
 
-      await this.assertItemLocationsBelongToClient(
-        trx,
-        context.tenant,
-        await this.getQuoteClientId(trx, context.tenant, quoteId),
-        [data]
-      );
+      // The location's client scope is enforced inside QuoteItem.create / update (same transaction, parent
+      // quote locked); this read only keeps a missing quote a 404 rather than a foreign-key error.
+      await this.getQuoteClientId(trx, context.tenant, quoteId);
 
       // QuoteItem.update handles recalculation internally
       return QuoteItem.update(trx, context.tenant, itemId, {
