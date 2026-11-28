@@ -72,7 +72,7 @@ describeDb('ending a seat arrangement and lapse', { shuffle: false }, () => {
   };
   const toClientIt = (w: World, ticketId: string, technicianUserId?: string) => handCoManagedSeatTicketToClientIt(db, {
     sponsorTenant: w.sponsor, ticketId, actorUserId: w.staff, operationId: randomUUID(), expectedRevision: 0,
-    note: 'Over to your team.', technicianUserId });
+    note: 'Over to your team.', technicianUserId }, async () => {});
   const end = (w: World) => endCoManagedSeatArrangement(db, { sponsorTenant: w.sponsor, arrangementId: w.arrangementId, actorUserId: w.staff });
   const admit = (sponsor: string, userId: string) => db.transaction((trx) => admitInternalUserSeat(trx, sponsor, { kind: 'user', existingUserId: userId }));
 

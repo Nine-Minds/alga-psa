@@ -127,7 +127,7 @@ describe('a native ticket reassignment makes a prepared seat handoff stale', () 
     (await db('tickets').where({ tenant: tenant(), ticket_id: ticketId }).first('assigned_to')).assigned_to;
   const toClientIt = (ticketId: string, expectedRevision: number) => handCoManagedSeatTicketToClientIt(db, {
     sponsorTenant: tenant(), ticketId, actorUserId: fixture.userId, operationId: randomUUID(), expectedRevision,
-    note: 'Yours from here: the user is on site.' });
+    note: 'Yours from here: the user is on site.' }, async () => {});
 
   /** The handoff the actor prepared at `staleRevision` is refused and leaves nothing; a fresh one goes through. */
   const expectStaleHandoffRefused = async (ticketId: string, staleRevision: number) => {

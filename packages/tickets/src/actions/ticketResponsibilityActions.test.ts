@@ -4,6 +4,7 @@ const readable = vi.hoisted(() => vi.fn());
 const handToClientIt = vi.hoisted(() => vi.fn());
 const load = vi.hoisted(() => vi.fn());
 const hasPermission = vi.hoisted(() => vi.fn(async () => true));
+const authorizeRecord = vi.hoisted(() => vi.fn());
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) => fn({ user_id: 'u', user_type: 'internal' }, { tenant: 't' }, ...args),
@@ -12,6 +13,7 @@ vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission }));
 vi.mock('@alga-psa/authorization/kernel', () => ({ RequestLocalAuthorizationCache: class {} }));
 vi.mock('@alga-psa/authorization/subject', () => ({ resolveAuthorizationSubject: async () => ({ resolverFacts: {} }) }));
 vi.mock('@alga-psa/db', () => ({ createTenantKnex: async () => ({ knex: {} }), withTransaction: async (_d: unknown, fn: any) => fn({}) }));
+vi.mock('../lib/ticketRecordAuthorization', () => ({ authorizeTicketRecordAccess: authorizeRecord }));
 vi.mock('./optimizedTicketActions', () => ({ assertTicketReadable: readable }));
 vi.mock('../lib/ticketResponsibility', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../lib/ticketResponsibility')>()),
@@ -38,6 +40,28 @@ describe('handTicketToClientIt record-level authorization', () => {
     load.mockResolvedValue({ responsibility: 'client_it', revision: 1, technicians: [] });
     await expect((handTicketToClientIt as any)(input)).resolves.toEqual({ state: { responsibility: 'client_it', revision: 1, technicians: [] } });
     expect(handToClientIt).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('handTicketToClientIt record-level update admission', () => {
+  beforeEach(() => { vi.clearAllMocks(); hasPermission.mockResolvedValue(true); readable.mockResolvedValue(true); });
+
+  it('hands the provider an admission that runs the update check on the provider transaction', async () => {
+    load.mockResolvedValue({ responsibility: 'client_it', revision: 1, technicians: [] });
+    handToClientIt.mockImplementation(async (_db: unknown, { admitWrite }: any) => {
+      await admitWrite('provider-trx', { ticketId: 'ticket' });
+      return { responsibility: 'client_it', revision: 1, technicians: [] };
+    });
+    await (handTicketToClientIt as any)(input);
+    expect(authorizeRecord).toHaveBeenCalledWith({ trx: 'provider-trx', tenant: 't', user: expect.objectContaining({ user_id: 'u' }), ticketId: 'ticket', action: 'update' });
+  });
+
+  it('tells a denied update the direction\'s ACTOR_NOT_ALLOWED wording, not Permission denied', async () => {
+    authorizeRecord.mockRejectedValue(new Error('Permission denied: Cannot access ticket'));
+    handToClientIt.mockImplementation(async (_db: unknown, { admitWrite }: any) => {
+      try { await admitWrite('trx', { ticketId: 'ticket' }); } catch { throw Object.assign(new Error('x'), { name: 'TicketResponsibilityError', code: 'ACTOR_NOT_ALLOWED' }); }
+    });
+    await expect((handTicketToClientIt as any)(input)).resolves.toMatchObject({ actionError: 'You cannot hand this ticket to client IT.' });
   });
 });
 

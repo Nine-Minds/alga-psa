@@ -149,7 +149,7 @@ describeDb('co-managed seat handoff and shared-note notifications', { shuffle: f
 
   /** Hands to client IT and delivers; returns the receipt. */
   const toClientIt = async (w: World, ticketId: string, expectedRevision: number, technicianUserId?: string) => {
-    const receipt = await handCoManagedSeatTicketToClientIt(db, { ...request(w, ticketId, w.staff, expectedRevision), technicianUserId });
+    const receipt = await handCoManagedSeatTicketToClientIt(db, { ...request(w, ticketId, w.staff, expectedRevision), technicianUserId }, async () => {});
     await deliver(w, receipt);
     return receipt;
   };
@@ -226,7 +226,7 @@ describeDb('co-managed seat handoff and shared-note notifications', { shuffle: f
     await toClientIt(w, ticketId, 0, w.technician);
     await clear(w);
 
-    const receipt = await handCoManagedSeatTicketToMsp(db, request(w, ticketId, w.technician, 1));
+    const receipt = await handCoManagedSeatTicketToMsp(db, request(w, ticketId, w.technician, 1), async () => {});
     expect(receipt.assignedTo).toBeNull();
     await deliver(w, receipt);
 
@@ -247,7 +247,7 @@ describeDb('co-managed seat handoff and shared-note notifications', { shuffle: f
     await toClientIt(w, ticketId, 0, w.technician);
     await clear(w);
 
-    const receipt = await handCoManagedSeatTicketToMsp(db, request(w, ticketId, w.technician, 1));
+    const receipt = await handCoManagedSeatTicketToMsp(db, request(w, ticketId, w.technician, 1), async () => {});
     expect(receipt.assignedTo).toBe(w.defaultAssignee);
     await deliver(w, receipt);
 
@@ -258,7 +258,7 @@ describeDb('co-managed seat handoff and shared-note notifications', { shuffle: f
     const queued = await ticket(w);
     await toClientIt(w, queued, 0, w.technician);
     await clear(w);
-    await deliver(w, await handCoManagedSeatTicketToMsp(db, request(w, queued, w.technician, 1)));
+    await deliver(w, await handCoManagedSeatTicketToMsp(db, request(w, queued, w.technician, 1), async () => {}));
     expect(await told(w, TO_MSP)).toEqual(sorted(w.defaultAssignee, w.ruleUser));
   });
 
@@ -272,8 +272,8 @@ describeDb('co-managed seat handoff and shared-note notifications', { shuffle: f
     try {
       const handoff = { ...request(w, ticketId, w.staff, 0), technicianUserId: w.technician };
       // A failing listener never fails the handoff.
-      const first = await handCoManagedSeatTicketToClientIt(db, handoff);
-      const replay = await handCoManagedSeatTicketToClientIt(db, handoff);
+      const first = await handCoManagedSeatTicketToClientIt(db, handoff, async () => {});
+      const replay = await handCoManagedSeatTicketToClientIt(db, handoff, async () => {});
       expect(replay).toEqual(first);
       // Announced once, for the recorded handoff; the replay announces nothing.
       expect(announced).toEqual([first.operationId]);
@@ -292,7 +292,7 @@ describeDb('co-managed seat handoff and shared-note notifications', { shuffle: f
     delete process.env[FORCE];
     const w = await world();
     const ticketId = await ticket(w, { assignedTo: w.technician });
-    const receipt = await handCoManagedSeatTicketToClientIt(db, { ...request(w, ticketId, w.staff, 0), technicianUserId: w.technician });
+    const receipt = await handCoManagedSeatTicketToClientIt(db, { ...request(w, ticketId, w.staff, 0), technicianUserId: w.technician }, async () => {});
     const lookup = { sponsorTenant: w.sponsor, operationId: receipt.operationId };
 
     // The kill switch, a malformed force value, and rollout targeting that names another tenant.
@@ -321,7 +321,7 @@ describeDb('co-managed seat handoff and shared-note notifications', { shuffle: f
     const ticketId = await ticket(w, { assignedTo: w.technician });
     const receipt = await handCoManagedSeatTicketToClientIt(db, {
       ...request(w, ticketId, w.staff, 0), technicianUserId: w.technician,
-    });
+    }, async () => {});
 
     expect(await deliver(w, receipt)).toEqual([]);
     await comment(w, ticketId, w.staff, 'shared_it');
@@ -337,7 +337,7 @@ describeDb('co-managed seat handoff and shared-note notifications', { shuffle: f
   it('a handoff under an arrangement that has ended, and a ticket of a client with none, notify no one', async () => {
     const w = await world();
     const ticketId = await ticket(w);
-    const receipt = await handCoManagedSeatTicketToClientIt(db, request(w, ticketId, w.staff, 0));
+    const receipt = await handCoManagedSeatTicketToClientIt(db, request(w, ticketId, w.staff, 0), async () => {});
     await db('co_managed_seat_arrangements').where({ tenant: w.sponsor, arrangement_id: w.arrangementId }).update({ state: 'ended', ended_at: new Date() });
 
     expect(await deliver(w, receipt)).toEqual([]);

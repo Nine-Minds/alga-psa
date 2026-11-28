@@ -149,6 +149,13 @@ interface HandoffContext {
   arrangement: SeatArrangementRow;
 }
 
+/**
+ * The caller's per-ticket write authorization, run inside the handoff transaction under the ticket lock and before
+ * any write. Throws to refuse; the handoff then refuses with `ACTOR_NOT_ALLOWED` and nothing is written. Required:
+ * `direction.admit` decides who may ask, this decides whether the actor may write this record.
+ */
+export type HandoffWriteAdmission = (trx: Knex.Transaction, ticket: { ticketId: string }) => Promise<void>;
+
 /** What differs between the two handoffs: who may ask, and who the ticket is left assigned to. */
 interface HandoffDirection {
   /** Throws unless this actor may hand this ticket this way. */
@@ -254,10 +261,12 @@ function receipt(row: ReceiptRow): CoManagedSeatHandoffReceipt {
  * `HANDOFF_CHANGED`. Refusals are not recorded, so a refused request may be retried under the
  * same operation id.
  */
-async function handOff(db: Knex, to: CoManagedSeatResponsibility, input: CoManagedSeatHandToClientItRequest): Promise<CoManagedSeatHandoffReceipt> {
+async function handOff(
+  db: Knex, to: CoManagedSeatResponsibility, input: CoManagedSeatHandToClientItRequest, admitWrite: HandoffWriteAdmission,
+): Promise<CoManagedSeatHandoffReceipt> {
   const request = snapshotRequest(input);
   // `withTransaction` owns this commit, so after-commit hooks (the SLA timer backend) run once it lands.
-  const outcome = await withTransaction(db, (trx) => recordHandoff(trx, to, DIRECTIONS[to], request));
+  const outcome = await withTransaction(db, (trx) => recordHandoff(trx, to, DIRECTIONS[to], request, admitWrite));
   // After commit and once per handoff: a replay returned the original receipt.
   if (outcome.recorded) await announceCoManagedSeatHandoff(request.sponsorTenant, outcome.receipt);
   return outcome.receipt;
@@ -269,6 +278,7 @@ async function handOff(db: Knex, to: CoManagedSeatResponsibility, input: CoManag
  */
 async function recordHandoff(
   trx: Knex.Transaction, to: CoManagedSeatResponsibility, direction: HandoffDirection, request: CoManagedSeatHandToClientItRequest,
+  admitWrite: HandoffWriteAdmission,
 ): Promise<{ receipt: CoManagedSeatHandoffReceipt; recorded: boolean }> {
   const requestFingerprint = fingerprint(to, request);
   {
@@ -296,6 +306,12 @@ async function recordHandoff(
 
     const context: HandoffContext = { sponsor, trx, request, ticket, arrangement };
     await direction.admit(context);
+    // write-admission: the caller's record-level check, under the ticket lock and before every write below. A replay (above) returns the original receipt without it.
+    try {
+      await admitWrite(trx, { ticketId: request.ticketId });
+    } catch {
+      throw new CoManagedSeatHandoffError('ACTOR_NOT_ALLOWED');
+    }
     const assignedTo = await direction.assignee(context);
 
     if (assignedTo !== ticket.assigned_to) {
@@ -327,10 +343,13 @@ async function recordHandoff(
  * client, and with every reason a handoff refuses for: `INVALID_HANDOFF` (no shared note),
  * `TICKET_NOT_FOUND`, `NO_SEAT_ARRANGEMENT`, `HANDOFF_CHANGED` (stale revision),
  * `ALREADY_RESPONSIBLE` and `OPERATION_CONFLICT` (the operation id reused with other details).
+ * `admitWrite` is the caller's record-level update check; a throw refuses with `ACTOR_NOT_ALLOWED`.
  */
-export function handCoManagedSeatTicketToMsp(db: Knex, input: CoManagedSeatHandoffRequest): Promise<CoManagedSeatHandoffReceipt> {
+export function handCoManagedSeatTicketToMsp(
+  db: Knex, input: CoManagedSeatHandoffRequest, admitWrite: HandoffWriteAdmission,
+): Promise<CoManagedSeatHandoffReceipt> {
   // Naming a technician is not part of this direction; it is dropped, not refused.
-  return handOff(db, 'msp', { ...input, technicianUserId: null });
+  return handOff(db, 'msp', { ...input, technicianUserId: null }, admitWrite);
 }
 
 /**
@@ -341,8 +360,10 @@ export function handCoManagedSeatTicketToMsp(db: Knex, input: CoManagedSeatHando
  * `TECHNICIAN_NOT_AVAILABLE` when the named user is not an active technician of this client, with
  * `ACTOR_NOT_ALLOWED` unless the actor is MSP staff, and with every reason a handoff refuses for.
  */
-export function handCoManagedSeatTicketToClientIt(db: Knex, input: CoManagedSeatHandToClientItRequest): Promise<CoManagedSeatHandoffReceipt> {
-  return handOff(db, 'client_it', input);
+export function handCoManagedSeatTicketToClientIt(
+  db: Knex, input: CoManagedSeatHandToClientItRequest, admitWrite: HandoffWriteAdmission,
+): Promise<CoManagedSeatHandoffReceipt> {
+  return handOff(db, 'client_it', input, admitWrite);
 }
 
 /** What an arrangement ends with: every ticket it holds goes back to the MSP, whoever asked. */
@@ -351,6 +372,12 @@ const ARRANGEMENT_END_DIRECTION: HandoffDirection = {
   async admit() {},
   assignee: (context) => DIRECTIONS.msp.assignee(context),
 };
+
+/**
+ * write-admission: exempt — an explicit no-op. The end command has already authorized sponsor administration for the
+ * whole arrangement; returning its tickets is not a per-ticket write by a user, so there is no record-level check.
+ */
+const ARRANGEMENT_END_WRITE_ADMISSION: HandoffWriteAdmission = async () => {};
 
 export interface CoManagedSeatArrangementReturnRequest {
   sponsorTenant: string;
@@ -391,7 +418,7 @@ export async function returnCoManagedSeatArrangementTicketsToMsp(
       operationId: arrangementReturnOperationId(input.arrangementId, work.ticket_id),
       expectedRevision: Number(work.revision), note: input.note, technicianUserId: null,
     });
-    const outcome = await recordHandoff(trx, 'msp', ARRANGEMENT_END_DIRECTION, request);
+    const outcome = await recordHandoff(trx, 'msp', ARRANGEMENT_END_DIRECTION, request, ARRANGEMENT_END_WRITE_ADMISSION);
     if (outcome.recorded) receipts.push(outcome.receipt);
   }
   return receipts;

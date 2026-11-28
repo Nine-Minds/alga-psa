@@ -211,7 +211,7 @@ async function expectDenied(user: any, ticketId: string, noteId: string): Promis
 async function ticketWithClientIt(): Promise<{ ticketId: string; noteId: string }> {
   const ticketId = await insertTicket(db, fixture);
   await handCoManagedSeatTicketToClientIt(db, { sponsorTenant: tenant(), ticketId, actorUserId: fixture.userId,
-    operationId: randomUUID(), expectedRevision: 0, note: 'Yours from here.', technicianUserId: technician.user_id });
+    operationId: randomUUID(), expectedRevision: 0, note: 'Yours from here.', technicianUserId: technician.user_id }, async () => {});
   const noteId = await insertResolutionComment(db, fixture, ticketId, { note: SHARED_NOTE, is_resolution: false, is_internal: true });
   await db('comment_threads').where({ tenant: tenant(), ticket_id: ticketId }).update({ is_internal: true, collaboration_audience: 'shared_it' });
   return { ticketId, noteId };

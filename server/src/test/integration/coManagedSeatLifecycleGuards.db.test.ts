@@ -323,7 +323,7 @@ describe('a ticket that leaves its seat arrangement returns to the MSP (F094)', 
   const ticketWithClientIt = async () => {
     const ticketId = await insertTicket(db, fixture);
     await handCoManagedSeatTicketToClientIt(db, { sponsorTenant: tenant(), ticketId, actorUserId: fixture.userId,
-      operationId: randomUUID(), expectedRevision: 0, note: 'Yours from here: the user is on site.', technicianUserId: technician });
+      operationId: randomUUID(), expectedRevision: 0, note: 'Yours from here: the user is on site.', technicianUserId: technician }, async () => {});
     const noteId = await insertResolutionComment(db, fixture, ticketId, { note: 'Shared IT note', is_resolution: false, is_internal: true });
     await db('comment_threads').where({ tenant: tenant(), ticket_id: ticketId }).update({ is_internal: true, collaboration_audience: 'shared_it' });
     expect(await work(ticketId)).toEqual({ arrangementId, responsibility: 'client_it', revision: 1 });

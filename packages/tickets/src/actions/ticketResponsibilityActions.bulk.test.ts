@@ -5,6 +5,7 @@ const handToClientIt = vi.hoisted(() => vi.fn());
 const handToMsp = vi.hoisted(() => vi.fn());
 const load = vi.hoisted(() => vi.fn());
 const hasPermission = vi.hoisted(() => vi.fn(async () => true));
+const authorizeRecord = vi.hoisted(() => vi.fn());
 const provider = vi.hoisted(() => ({ current: null as unknown }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -15,6 +16,7 @@ vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission }));
 vi.mock('@alga-psa/authorization/kernel', () => ({ RequestLocalAuthorizationCache: class {} }));
 vi.mock('@alga-psa/authorization/subject', () => ({ resolveAuthorizationSubject: async () => ({ resolverFacts: {} }) }));
 vi.mock('@alga-psa/db', () => ({ createTenantKnex: async () => ({ knex: {} }), withTransaction: async (_d: unknown, fn: any) => fn({}) }));
+vi.mock('../lib/ticketRecordAuthorization', () => ({ authorizeTicketRecordAccess: authorizeRecord }));
 vi.mock('./optimizedTicketActions', () => ({ assertTicketReadable: readable }));
 vi.mock('../lib/ticketResponsibility', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../lib/ticketResponsibility')>()),
@@ -106,5 +108,34 @@ describe('bulk handoff actions', () => {
       expect(await (bulkHandTicketsToMsp as any)(bad)).toMatchObject({ actionError: expect.any(String) });
     }
     expect(handToMsp).not.toHaveBeenCalled();
+  });
+});
+
+describe('bulk handoff record-level update admission', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    hasPermission.mockResolvedValue(true);
+    readable.mockResolvedValue(true);
+    load.mockResolvedValue(done);
+  });
+
+  it('refuses a ticket whose update is denied and still hands over the others', async () => {
+    authorizeRecord.mockImplementation(async ({ ticketId }: { ticketId: string }) => {
+      if (ticketId === B) throw new Error('Permission denied: Cannot access ticket');
+    });
+    provider.current = {
+      load,
+      handToClientIt: async (_db: unknown, { ticketId, admitWrite }: any) => {
+        try { await admitWrite('trx', { ticketId }); } catch { throw refusal('ACTOR_NOT_ALLOWED'); }
+        return done;
+      },
+    };
+    const result: any = await (bulkHandTicketsToClientIt as any)(input([A, B, C]));
+    const byTicket = Object.fromEntries(result.results.map((r: any) => [r.ticketId, r]));
+    expect(byTicket[A].ok ?? byTicket[A].state).toBeTruthy();
+    expect(JSON.stringify(byTicket[B])).toContain('You cannot hand this ticket to client IT.');
+    expect(JSON.stringify(byTicket[B])).not.toContain('Permission denied');
+    expect(byTicket[C].ok ?? byTicket[C].state).toBeTruthy();
+    expect(authorizeRecord).toHaveBeenCalledTimes(3);
   });
 });

@@ -14,6 +14,7 @@ import {
   resolveTicketResponsibility,
   ticketResponsibilityRefusalCode,
   type TicketHandoffDirection,
+  type TicketHandoffWriteAdmission,
   type TicketResponsibilityProvider,
   type TicketResponsibilityState,
 } from '../lib/ticketResponsibility';
@@ -24,6 +25,7 @@ import {
   type BulkHandoffItem,
   type BulkHandoffTicketResult,
 } from '../lib/bulkHandoff';
+import { authorizeTicketRecordAccess } from '../lib/ticketRecordAuthorization';
 import { assertTicketReadable } from './optimizedTicketActions';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 
@@ -65,7 +67,7 @@ interface HandoffDirectionDefinition {
   resolve(input: { tenant: string; subject: Pick<AuthorizationSubject, 'resolverFacts'> }): Promise<TicketResponsibilityProvider | null>;
   run(
     provider: TicketResponsibilityProvider, db: Knex,
-    input: { tenant: string; ticketId: string; actorUserId: string; operationId: string; expectedRevision: number; note: string; technicianUserId: string | null },
+    input: { tenant: string; ticketId: string; actorUserId: string; operationId: string; expectedRevision: number; note: string; technicianUserId: string | null; admitWrite: TicketHandoffWriteAdmission },
   ): Promise<TicketResponsibilityState>;
 }
 
@@ -131,9 +133,9 @@ interface HandoffRequest {
 }
 
 /**
- * One ticket's handoff: the single checks, whoever asks (the ticket screen or a bulk run). Record-level
- * authorization as on the ticket screen (`assertTicketReadable`: a ticket the caller cannot read is neither handed
- * off nor confirmed to exist), the provider, the command, and the refusal mapping. Returns the ticket's
+ * One ticket's handoff: the single checks, whoever asks (the ticket screen or a bulk run). `assertTicketReadable`
+ * is the concealment preflight (a ticket the caller cannot read is neither handed off nor confirmed to exist); the
+ * write itself is authorized by `authorizeTicketRecordAccess(update)` inside the provider's transaction, the provider, the command, and the refusal mapping. Returns the ticket's
  * responsibility as it now stands, or the refusal as the user is to be told it. Unexpected errors propagate.
  */
 async function handOffTicket(
@@ -150,6 +152,10 @@ async function handOffTicket(
     const handedOver = await direction.run(provider, session.db, {
       tenant: session.tenant, ticketId: request.ticketId, actorUserId: session.user.user_id, operationId: request.operationId,
       expectedRevision: request.expectedRevision, note: request.note, technicianUserId: request.technicianUserId ?? null,
+      // write-admission: the canonical record-level update check, in the provider's transaction under the ticket lock. A denial surfaces as the direction's ACTOR_NOT_ALLOWED refusal.
+      admitWrite: async (trx, { ticketId }) => {
+        await authorizeTicketRecordAccess({ trx, tenant: session.tenant, user: session.user, ticketId, action: 'update' });
+      },
     });
     if (!options.fullState) return { state: handedOver };
     const state = await withTransaction(session.db, (trx) => provider.load(trx, session.tenant, request.ticketId));
@@ -179,7 +185,7 @@ export interface HandTicketToClientItInput {
 
 /**
  * MSP staff hand a ticket of a seat-arrangement client to client IT. Requires ticket update
- * permission and record-level read access to the ticket (`assertTicketReadable`); the provider's command refuses everyone who is not MSP
+ * permission, record-level read access (`assertTicketReadable`) and record-level update authorization for the ticket (`authorizeTicketRecordAccess`, in the handoff transaction); the provider's command refuses everyone who is not MSP
  * staff, a board the arrangement does not share, and a stale revision. Returns the ticket's
  * responsibility as it now stands, so the chip refreshes from the same answer.
  */
