@@ -19,6 +19,27 @@ import { ForbiddenError, NotFoundError, type AuthenticatedApiRequest } from '../
 
 type Projection = AuthorizedProjection<Record<string, any>>;
 
+/**
+ * The one ticket-not-found error. A missing ticket, an unknown number, another tenant's ticket and a ticket the
+ * read kernel denies must be indistinguishable, so every one of them throws exactly this (message and code).
+ */
+export function ticketNotFoundError(): NotFoundError {
+  return new NotFoundError('Ticket not found');
+}
+
+/**
+ * Row-independent RBAC for reading a ticket (403). Runs before any lookup, including resolving a ticket number,
+ * so a caller without `ticket:read` learns nothing about which tickets exist.
+ */
+export async function assertTicketReadRbac(apiRequest: AuthenticatedApiRequest, knex: Knex): Promise<void> {
+  if (!apiRequest.context.user) {
+    throw new ForbiddenError('User context required');
+  }
+  if (!(await hasApiContextPermission(apiRequest.context, 'ticket', 'read', knex))) {
+    throw new ForbiddenError('Permission denied: Cannot read ticket');
+  }
+}
+
 /** Denied OR suppressed answers 404 (403 would confirm the ticket exists); row-independent RBAC 403 happens earlier. */
 export async function assertTicketReadGate(
   ticketService: TicketService,
@@ -28,7 +49,7 @@ export async function assertTicketReadGate(
 ): Promise<Projection> {
   const ticket = await ticketService.getById(ticketId, apiRequest.context);
   if (!ticket) {
-    throw new NotFoundError('ticket not found');
+    throw ticketNotFoundError();
   }
 
   const projection = await projectApiResourceRead({
@@ -41,7 +62,7 @@ export async function assertTicketReadGate(
   });
 
   if (!projection) {
-    throw new NotFoundError('ticket not found');
+    throw ticketNotFoundError();
   }
 
   return projection;
@@ -59,12 +80,7 @@ export async function authorizeTicketDocuments(
   ticketId: string,
   knex: Knex,
 ): Promise<{ ticketGate: Projection; documents: Awaited<ReturnType<TicketService['getTicketDocuments']>> }> {
-  if (!apiRequest.context.user) {
-    throw new ForbiddenError('User context required');
-  }
-  if (!(await hasApiContextPermission(apiRequest.context, 'ticket', 'read', knex))) {
-    throw new ForbiddenError('Permission denied: Cannot read ticket');
-  }
+  await assertTicketReadRbac(apiRequest, knex);
   const ticketGate = await assertTicketReadGate(ticketService, apiRequest, ticketId, knex);
   const documents = await ticketService.getTicketDocuments(ticketId, apiRequest.context);
   return { ticketGate, documents };

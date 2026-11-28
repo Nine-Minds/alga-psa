@@ -147,11 +147,13 @@ export class ApiDocumentController extends ApiBaseController {
           }
 
           const adapter = ENTITY_ADAPTERS[query.entity_type as keyof typeof ENTITY_ADAPTERS];
-          if (!adapter?.listReadableDocuments || !adapter.resolveEntityId) {
+          if (!adapter?.listReadableDocuments || !adapter.resolveEntityId || !adapter.assertCanRead) {
             throw new ValidationError('Validation failed', [{ path: ['entity_type'], message: 'attachments of this entity type cannot be read' }]);
           }
           await assertEntityAvailableForProduct(adapter, tenant);
 
+          // Row-independent RBAC first: resolving a number is a lookup that must not run for a caller who may not read.
+          await adapter.assertCanRead(apiRequest, knex);
           const entityId = await adapter.resolveEntityId(apiRequest, query.entity_id, knex);
           const { entityLabel, documents: readable } = await adapter.listReadableDocuments(apiRequest, entityId, knex);
 

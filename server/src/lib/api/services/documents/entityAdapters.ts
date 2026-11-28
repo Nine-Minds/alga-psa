@@ -21,7 +21,7 @@ import { projectApiResourceRead } from '../../controllers/authorizationKernel';
 import { assertAssetRecordAccess } from '../../controllers/assetReadGuard';
 import { AssetService } from '../AssetService';
 import type { TicketService } from '../TicketService';
-import { authorizeTicketDocuments } from '../../controllers/ticketDocumentAuthorization';
+import { assertTicketReadRbac, authorizeTicketDocuments, ticketNotFoundError } from '../../controllers/ticketDocumentAuthorization';
 import { reprojectUnderDecision } from '../../controllers/authorizationKernel';
 import { TICKET_DOCUMENT_DOWNLOAD_SOURCE } from '@alga-psa/authorization/recordProjectionDescriptors';
 import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
@@ -87,10 +87,14 @@ export interface EntityAdapter {
   /** Runs inside the document transaction, after the document and association rows are inserted. */
   inTransaction?(args: InTransactionArgs): Promise<void>;
   /**
-   * Reading (optional): only entities that implement both members can be read through `read_attachment`.
+   * Reading (optional): only entities that implement all three members can be read through `read_attachment`.
+   * `assertCanRead` is the row-independent read RBAC (ForbiddenError). The caller MUST run it before
+   * `resolveEntityId`: resolving a human number is a lookup, and a lookup that answers before RBAC confirms
+   * whether the number exists.
    * `resolveEntityId` maps what the caller typed (a UUID, or a human number) to the entity id; an unknown
    * value is a NotFoundError, indistinguishable from an entity the caller may not read.
    */
+  assertCanRead?(apiRequest: AuthenticatedApiRequest, knex: Knex): Promise<void>;
   resolveEntityId?(apiRequest: AuthenticatedApiRequest, idOrNumber: string, knex: Knex): Promise<string>;
   /**
    * The entity's read gate, ending in the documents it admits. Throws ForbiddenError (RBAC) / NotFoundError
@@ -102,7 +106,7 @@ export interface EntityAdapter {
 /** Adapters that can be read through `read_attachment`. */
 export function readableEntityTypes(): AttachableEntityType[] {
   return (Object.values(ENTITY_ADAPTERS) as EntityAdapter[])
-    .filter((a) => typeof a.listReadableDocuments === 'function')
+    .filter((a) => typeof a.listReadableDocuments === 'function' && typeof a.assertCanRead === 'function')
     .map((a) => a.entityType);
 }
 
@@ -213,7 +217,7 @@ const ticketAdapter: EntityAdapter = {
       .where({ ticket_id: ticketId })
       .first();
     if (!ticket) {
-      throw new NotFoundError('Ticket not found');
+      throw ticketNotFoundError();
     }
     // Gate only (nothing from the ticket is serialized). Denied or suppressed => 404, not 403, so the id is not confirmed.
     const projection = await projectApiResourceRead({
@@ -225,7 +229,7 @@ const ticketAdapter: EntityAdapter = {
       record: ticket as Record<string, any>,
     });
     if (projection === null) {
-      throw new NotFoundError('Ticket not found');
+      throw ticketNotFoundError();
     }
   },
   async resolveFolder(knex, tenant, ticketId) {
@@ -236,6 +240,7 @@ const ticketAdapter: EntityAdapter = {
       .first();
     return folder?.folder_path ?? undefined;
   },
+  assertCanRead: (apiRequest, knex) => assertTicketReadRbac(apiRequest, knex),
   async resolveEntityId(apiRequest, idOrNumber, knex) {
     const value = idOrNumber.trim();
     if (UUID_PATTERN.test(value)) return value.toLowerCase();
@@ -245,7 +250,7 @@ const ticketAdapter: EntityAdapter = {
       .whereRaw('upper(ticket_number) = ?', [value.toUpperCase()])
       .select('ticket_id')
       .first<{ ticket_id: string }>();
-    if (!row) throw new NotFoundError('Ticket not found');
+    if (!row) throw ticketNotFoundError();
     return row.ticket_id;
   },
   async listReadableDocuments(apiRequest, ticketId, knex) {

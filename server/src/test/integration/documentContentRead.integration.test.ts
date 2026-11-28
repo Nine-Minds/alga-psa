@@ -242,6 +242,13 @@ async function get(params: Record<string, string | undefined>) {
   return { status: res.status, json, header: json?.data?.header, blocks: (json?.data?.blocks ?? []) as Array<{ type: string; [k: string]: any }> };
 }
 
+async function getRaw(params: Record<string, string>) {
+  const url = new URL('http://localhost/api/v1/documents/content');
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+  const res = await controller.readContent()(new NextRequest(url, { headers: { 'x-api-key': 'k' } }));
+  return { status: res.status, text: await res.text() };
+}
+
 const servedNames = (r: { header: any }) => r.header.served.map((s: { name: string }) => s.name);
 
 beforeAll(async () => {
@@ -429,6 +436,41 @@ describe('GET /api/v1/documents/content', () => {
     const own = await get({ entity_type: 'ticket', entity_id: B.ticketNumber });
     expect(own.status).toBe(200);
     expect(servedNames(own)).toEqual(['OTHER_TENANT.png']);
+  });
+
+  describe('a ticket reference never confirms existence', () => {
+    const reference = (kind: 'number' | 'uuid') => ({
+      unknown: kind === 'number' ? 'SR000000' : '00000000-0000-4000-8000-000000000000',
+      denied: kind === 'number' ? A.ticketNumber : A.ticketId,
+      otherTenant: kind === 'number' ? B.ticketNumber : B.ticketId,
+    });
+
+    for (const kind of ['number', 'uuid'] as const) {
+      it(`with ticket:read: unknown, kernel-denied and other-tenant ${kind} answer 404 with byte-identical bodies`, async () => {
+        const ref = reference(kind);
+        const unknown = await getRaw({ entity_type: 'ticket', entity_id: ref.unknown });
+        state.ticketKernelAllow = false;
+        const denied = await getRaw({ entity_type: 'ticket', entity_id: ref.denied });
+        state.ticketKernelAllow = true;
+        const otherTenant = await getRaw({ entity_type: 'ticket', entity_id: ref.otherTenant });
+        expect([unknown.status, denied.status, otherTenant.status]).toEqual([404, 404, 404]);
+        expect(denied.text).toStrictEqual(unknown.text);
+        expect(otherTenant.text).toStrictEqual(unknown.text);
+        expect(state.downloads).toHaveLength(0);
+      });
+
+      it(`without ticket:read: unknown, existing and other-tenant ${kind} answer 403 with byte-identical bodies`, async () => {
+        const ref = reference(kind);
+        state.allowTicketRead = false;
+        const unknown = await getRaw({ entity_type: 'ticket', entity_id: ref.unknown });
+        const own = await getRaw({ entity_type: 'ticket', entity_id: ref.denied });
+        const otherTenant = await getRaw({ entity_type: 'ticket', entity_id: ref.otherTenant });
+        expect([unknown.status, own.status, otherTenant.status]).toEqual([403, 403, 403]);
+        expect(own.text).toStrictEqual(unknown.text);
+        expect(otherTenant.text).toStrictEqual(unknown.text);
+        expect(state.downloads).toHaveLength(0);
+      });
+    }
   });
 
   it('without ticket:read answers 403 and serves nothing', async () => {
