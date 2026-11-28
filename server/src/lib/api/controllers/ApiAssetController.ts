@@ -27,6 +27,8 @@ import { ApiContext } from '../middleware/apiMiddleware';
 import { ProductAccessError, getTenantProduct } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
 import { getConnection } from '../../db/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
+import { authorizeAndRedactDocuments, isDocumentFieldRedacted } from '@shared/lib/documentAuthorization';
 import { hasPermission } from '../../auth/rbac';
 import { guardAssetRead, readAssetGateProjection, readAssetProjection } from './assetReadGuard';
 import {
@@ -42,6 +44,7 @@ import {
   ASSET_MAINTENANCE_HISTORY_SOURCE,
   ASSET_MAINTENANCE_SCHEDULE_SOURCE,
   ASSET_RECORD_SOURCE,
+  ASSET_DOCUMENTS_RESPONSE_SOURCE,
   ASSET_RELATIONSHIP_SOURCE,
   ASSET_TICKETS_RESPONSE_SOURCE,
 } from '@alga-psa/authorization/recordProjectionDescriptors';
@@ -49,7 +52,7 @@ import { resolveAssetAuthorizationRecords } from '@alga-psa/assets/lib/assetRead
 import { buildProjectedPage } from '@alga-psa/authorization/pagination';
 import type { AuthorizationRecord } from '@alga-psa/authorization/kernel/contracts';
 
-type AssetAction = { resource: 'asset' | 'ticket'; action: 'read' | 'create' | 'update' | 'delete' };
+type AssetAction = { resource: 'asset' | 'ticket' | 'document'; action: 'read' | 'create' | 'update' | 'delete' };
 type AssetChecks = readonly [AssetAction, ...AssetAction[]];
 const ASSET_READ = [{ resource: 'asset', action: 'read' }] as const satisfies AssetChecks;
 const ASSET_CREATE = [{ resource: 'asset', action: 'create' }] as const satisfies AssetChecks;
@@ -57,6 +60,7 @@ const ASSET_UPDATE = [{ resource: 'asset', action: 'update' }] as const satisfie
 const ASSET_UPDATE_RELATED_READ = [...ASSET_UPDATE, ...ASSET_READ] as const satisfies AssetChecks;
 const ASSET_DELETE = [{ resource: 'asset', action: 'delete' }] as const satisfies AssetChecks;
 const ASSET_TICKET_READ = [...ASSET_READ, { resource: 'ticket', action: 'read' }] as const satisfies AssetChecks;
+const ASSET_DOCUMENT_ASSOCIATE = [{ resource: 'asset', action: 'update' }, { resource: 'document', action: 'update' }] as const satisfies AssetChecks;
 const ASSET_TICKET_LINK = [{ resource: 'asset', action: 'update' }, { resource: 'ticket', action: 'update' }] as const satisfies AssetChecks;
 
 const ASSET_PERMISSION_REQUIREMENTS = [
@@ -654,25 +658,59 @@ export class ApiAssetController {
    */
   async listDocuments(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    const { projection, denied } = await readAssetProjection(
-      context,
-      params.id,
-      this.assetService,
-      async () => ({
-        asset_id: params.id,
-        documents: await this.assetService.getAssetDocuments(params.id, context),
-      }),
-    );
+    const { projection: assetGate, denied } = await readAssetGateProjection(context, params.id, this.assetService);
     if (denied) return denied;
 
-    return createApiResponse(projection.documents ?? []);
+    // Document-owned fields (name, size, MIME type, upload time) are decided per document by the shared document
+    // read policy, which also redacts; a document the caller cannot read is dropped even when it is attached to
+    // an asset they can read. The asset gate then governs the asset-owned part of each row.
+    const associations = await this.assetService.getAssetDocuments(params.id, context);
+    const knex = await getConnection(context.tenant);
+    const readable = await withTransaction(knex, async (trx) => {
+      const documentIds = [...new Set(associations.map((row) => row.document_id as string))];
+      if (documentIds.length === 0) return new Map<string, Record<string, any>>();
+      const documents = await tenantDb(trx, context.tenant).table('documents')
+        .whereIn('document_id', documentIds)
+        .select('document_id', 'created_by', 'is_client_visible', 'document_name', 'file_size', 'mime_type', 'entered_at');
+      const authorized = await authorizeAndRedactDocuments(
+        trx, context.tenant, { ...context.user, tenant: context.tenant } as any, documents as any[],
+      );
+      return new Map(authorized.map((document) => [document.document_id, document as Record<string, any>]));
+    });
+
+    const visible = associations.flatMap((association) => {
+      const document = readable.get(association.document_id);
+      if (!document) return [];
+      const row = this.redactDocumentRow(association, document);
+      const projection = reprojectUnderDecisions([assetGate], row, ASSET_DOCUMENTS_RESPONSE_SOURCE);
+      return projection ? [projection] : [];
+    });
+
+    return createApiResponse(visible);
+  }
+
+  /** Applies the document policy's field redactions to the copied document metadata of an association row. */
+  private redactDocumentRow(association: Record<string, any>, document: Record<string, any>): Record<string, any> {
+    const copied = {
+      original_filename: 'document_name', file_size: 'file_size', mime_type: 'mime_type', uploaded_at: 'entered_at',
+    } as const;
+    const row = { ...association, ...(association.document ? { document: { ...association.document } } : {}) };
+    for (const [responseField, documentField] of Object.entries(copied)) {
+      if (!isDocumentFieldRedacted(document, documentField)) continue;
+      row[responseField] = null;
+      if (row.document) row.document[responseField] = null;
+    }
+    return row;
   }
 
   /**
    * POST /api/v2/assets/{id}/documents - Associate document with asset
    */
   async associateDocument(req: NextRequest, params: { id: string }): Promise<NextResponse> {
-    const { context, denied: authDenied } = await this.authorize(req, ASSET_UPDATE);
+    // The association is a change to the document's reach as well as to the asset, so the coarse
+    // document:update permission is required in addition to asset:update. The per-record decisions on the
+    // asset and the document run in the service's write transaction.
+    const { context, denied: authDenied } = await this.authorize(req, ASSET_DOCUMENT_ASSOCIATE);
     if (authDenied) return authDenied;
     const data = await req.json();
 
