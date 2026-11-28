@@ -42,6 +42,12 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
   let tenant: string, actor: string, clientUser: string, otherUser: string, client: string, ticket: string, comment: string;
   const table = (name: string) => tenantDb(trx, tenant).table(name);
   const recipient = 'attachment-recipient@example.test';
+  const externalPolicy = {
+    allowInlineImages: false, suppressProtectedContent: false, protectedContentText: '[Protected content not included]',
+  };
+  const internalPolicy = {
+    allowInlineImages: true, suppressProtectedContent: false, protectedContentText: '[Protected content not included]',
+  };
   beforeAll(async () => {
     conn = await createTestDbConnection();
   });
@@ -284,11 +290,11 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
       ...[1,2].map(()=>({type:'image',props:{url:`/api/documents/view/${img.file}`,name:'picture.png'}})),
     ])});
     await reconcileCommentAttachments(trx,tenant,comment,actor);
-    const prepared=await prepareCommentAttachmentEmail({db:trx,tenant,ticketId:ticket,commentId:comment,recipient,maxAttachmentBytes:3000000,supportsAttachments:true,baseUrl:'http://localhost',download:async id=>{expect(getTenantContext()).toBe(tenant);return {buffer:Buffer.from(id===pdf.file?'%PDF-test':'PNG-test')};}});
+    const prepared=await prepareCommentAttachmentEmail({db:trx,tenant,ticketId:ticket,commentId:comment,recipient:'agent@example.test',...internalPolicy,maxAttachmentBytes:3000000,supportsAttachments:true,baseUrl:'http://localhost',download:async id=>{expect(getTenantContext()).toBe(tenant);return {buffer:Buffer.from(id===pdf.file?'%PDF-test':'PNG-test')};}});
     expect(prepared.attachments).toHaveLength(2);
     expect(prepared.attachments.filter(x=>x.cid)).toHaveLength(1);
     const transport=nodemailer.createTransport({streamTransport:true,buffer:true});
-    const sent=await transport.sendMail({from:'agent@example.test',to:recipient,subject:'Attachment test',html:prepared.html,text:prepared.text,attachments:prepared.attachments});
+    const sent=await transport.sendMail({from:'agent@example.test',to:'agent@example.test',subject:'Attachment test',html:prepared.html,text:prepared.text,attachments:prepared.attachments});
     const parsed=await simpleParser(sent.message);
     expect(parsed.attachments).toHaveLength(2);
     expect(parsed.attachments.find(x=>x.filename==='report.pdf')?.content.toString()).toBe('%PDF-test');
@@ -296,7 +302,7 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
   it('produces recipient-bound expiring fallback links for large/provider-restricted files', async () => {
     const {document,file}=await upload('large.pdf','application/pdf',9000000); await attach(file);
     const download=vi.fn();
-    const prepared=await prepareCommentAttachmentEmail({db:trx,tenant,ticketId:ticket,commentId:comment,recipient,maxAttachmentBytes:3000000,supportsAttachments:false,baseUrl:'http://localhost',signingSecret:'test-secret',download});
+    const prepared=await prepareCommentAttachmentEmail({db:trx,tenant,ticketId:ticket,commentId:comment,recipient,...externalPolicy,maxAttachmentBytes:3000000,supportsAttachments:false,baseUrl:'http://localhost',signingSecret:'test-secret',download});
     expect(download).not.toHaveBeenCalled(); expect(prepared.attachments).toEqual([]);
     expect(prepared.html).toContain('email provider limits');
     const token=decodeURIComponent(prepared.html.match(/token=([^"<]+)/)![1]);
@@ -310,7 +316,7 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
   });
   it('does not record a send when attachment storage fails; durable per-recipient delivery survives partial failures', async () => {
     const {file}=await upload(); await attach(file);
-    await expect(prepareCommentAttachmentEmail({db:trx,tenant,ticketId:ticket,commentId:comment,recipient,maxAttachmentBytes:3000000,supportsAttachments:true,baseUrl:'http://localhost',download:async()=>{throw new Error('storage unavailable');}})).rejects.toThrow('storage unavailable');
+    await expect(prepareCommentAttachmentEmail({db:trx,tenant,ticketId:ticket,commentId:comment,recipient,...externalPolicy,maxAttachmentBytes:3000000,supportsAttachments:true,baseUrl:'http://localhost',download:async()=>{throw new Error('storage unavailable');}})).rejects.toThrow('storage unavailable');
     expect(await table('ticket_comment_email_deliveries')).toEqual([]);
     expect(await claimCommentEmailDelivery(trx,tenant,comment,recipient)).toBe(true);
     await finishCommentEmailDelivery(trx,tenant,comment,recipient,'sent');
@@ -467,8 +473,101 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
     const pdf = await upload(); await attach(pdf.file);
     await table('documents').where({document_id:pdf.document}).update({is_client_visible:false});
     const download=vi.fn();
-    const prepared=await prepareCommentAttachmentEmail({db:trx,tenant,ticketId:ticket,commentId:comment,recipient,maxAttachmentBytes:3000000,supportsAttachments:true,baseUrl:'http://localhost',download});
+    const prepared=await prepareCommentAttachmentEmail({db:trx,tenant,ticketId:ticket,commentId:comment,recipient,...externalPolicy,maxAttachmentBytes:3000000,supportsAttachments:true,baseUrl:'http://localhost',download});
     expect(download).not.toHaveBeenCalled(); expect(prepared.attachments).toEqual([]); expect(prepared.downloadLinks).toEqual([]);
+  });
+  it('keeps an authorized PDF for an external recipient but never downloads its image', async () => {
+    const pdf = await upload();
+    const image = await upload('picture.png', 'image/png');
+    await table('comments').where({ comment_id: comment }).update({ note: JSON.stringify([
+      { type: 'paragraph', content: [{ type: 'text', text: 'Public details', styles: {} }] },
+      { type: 'file', props: { url: `/api/documents/download/${pdf.file}`, name: 'report.pdf' } },
+      { type: 'image', props: { url: `/api/documents/view/${image.file}` } },
+    ]) });
+    await reconcileCommentAttachments(trx, tenant, comment, actor);
+    const download = vi.fn().mockResolvedValue({ buffer: Buffer.from('%PDF-test') });
+    const prepared = await prepareCommentAttachmentEmail({
+      db: trx, tenant, ticketId: ticket, commentId: comment, recipient, ...externalPolicy,
+      maxAttachmentBytes: 3000000, supportsAttachments: true, baseUrl: 'http://localhost', download,
+    });
+
+    expect(prepared.html).toContain('Public details');
+    expect(prepared.html).toContain('[Image not included]');
+    expect(prepared.html).not.toContain(image.file);
+    expect(prepared.attachments.map(attachment => attachment.filename)).toEqual(['report.pdf']);
+    expect(download).toHaveBeenCalledTimes(1);
+    expect(download).toHaveBeenCalledWith(pdf.file);
+  });
+  it('does not send inline images to a mixed staff and client audience', async () => {
+    const image = await upload('picture.png', 'image/png');
+    const pdf = await upload();
+    await table('comments').where({ comment_id: comment }).update({ note: JSON.stringify([
+      { type: 'paragraph', content: [{ type: 'text', text: 'Resolution details', styles: {} }] },
+      { type: 'image', props: { url: `/api/documents/view/${image.file}`, name: 'picture.png' } },
+      { type: 'file', props: { url: `/api/documents/download/${pdf.file}`, name: 'report.pdf' } },
+    ]) });
+    await reconcileCommentAttachments(trx, tenant, comment, actor);
+    const download = vi.fn().mockResolvedValue({ buffer: Buffer.from('PNG-test') });
+    const prepared = await prepareCommentAttachmentEmail({
+      db: trx, tenant, ticketId: ticket, commentId: comment, recipient: 'agent@example.test',
+      recipients: ['agent@example.test', recipient], ...externalPolicy, suppressProtectedContent: true,
+      maxAttachmentBytes: 3000000, supportsAttachments: true, baseUrl: 'http://localhost',
+      missingImageText: '[Image not included]', download,
+    });
+
+    expect(prepared.html).toContain('Resolution details');
+    expect(prepared.html).toContain('[Image not included]');
+    expect(prepared.html).toContain('[Protected content not included]');
+    expect(prepared.html).not.toContain(image.file);
+    expect(prepared.html).not.toContain(pdf.file);
+    expect(prepared.text).toContain('[Image not included]');
+    expect(prepared.attachments).toEqual([]);
+    expect(download).not.toHaveBeenCalled();
+  });
+
+  it('allows authorized staff to receive private resolution images, but never sends them to clients', async () => {
+    const image = await upload('private.png', 'image/png');
+    await table('comments').where({ comment_id: comment }).update({
+      is_internal: true,
+      is_resolution: true,
+      note: JSON.stringify([{ type: 'image', props: { url: `/api/documents/view/${image.file}` } }]),
+    });
+    await reconcileCommentAttachments(trx, tenant, comment, actor);
+    const download = vi.fn().mockResolvedValue({ buffer: Buffer.from('PNG-test') });
+    const common = {
+      db: trx, tenant, ticketId: ticket, commentId: comment, maxAttachmentBytes: 3000000,
+      supportsAttachments: true, baseUrl: 'http://localhost', allowInternal: true, download, ...internalPolicy,
+    };
+
+    const staff = await prepareCommentAttachmentEmail({ ...common, recipient: 'agent@example.test' });
+    expect(staff.attachments).toHaveLength(1);
+    expect(staff.html).toContain('src="cid:');
+    const customer = await prepareCommentAttachmentEmail({ ...common, recipient });
+    expect(customer.attachments).toEqual([]);
+    expect(customer.html).toBe('');
+    expect(download).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses a visible marker instead of a recipient-bound image link in a shared message', async () => {
+    const image = await upload('large.png', 'image/png', 9000000);
+    await table('comments').where({ comment_id: comment }).update({ note: JSON.stringify([
+      { type: 'image', props: { url: `/api/documents/view/${image.file}` } },
+    ]) });
+    await reconcileCommentAttachments(trx, tenant, comment, actor);
+    await table('contacts').insert({
+      tenant, contact_name_id: randomUUID(), client_id: client, full_name: 'Copied contact', email: 'copied@example.test',
+    });
+    const prepared = await prepareCommentAttachmentEmail({
+      db: trx, tenant, ticketId: ticket, commentId: comment, recipient,
+      recipients: [recipient, 'copied@example.test'],
+      ...externalPolicy,
+      maxAttachmentBytes: 3000000, supportsAttachments: false, baseUrl: 'http://localhost',
+      missingImageText: '[Image not included]', signingSecret: 'test-secret',
+    });
+
+    expect(prepared.html).toContain('[Image not included]');
+    expect(prepared.html).not.toContain('/api/ticket-comment-attachments/download');
+    expect(prepared.downloadLinks).toEqual([]);
   });
   it('guest mailbox verification binds browser, expires, limits attempts and rechecks current access', async () => {
     const {issueAttachmentChallenge,redeemAttachmentChallenge} = await import('@/lib/notifications/ticketCommentAttachmentVerification');
@@ -902,6 +1001,8 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
     const { default: smtpSink } = await import('@alga-psa/emulator-smtp-sink');
     const { coManagedDeliverySeam } = await import('@shared/lib/coManagedDelivery');
     const { ticketEmailSubscriberTestHarness } = await import('@/lib/eventBus/subscribers/ticketEmailSubscriber');
+    const persistedContent = JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'One recipient secret body' }] }]);
+    await table('comments').where({ comment_id: comment }).update({ note: persistedContent });
     const ids = { hidden: randomUUID(), visible: randomUUID() };
     const addresses = { [ids.hidden]: 'hidden-sponsor@example.test', [ids.visible]: 'visible-sponsor@example.test' };
     const policies: Record<string, string[]> = { [ids.hidden]: ['note', 'actor_display_name'], [ids.visible]: [] };
@@ -942,7 +1043,7 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
     try {
       await ticketEmailSubscriberTestHarness.handleTicketCommentAdded({ id: randomUUID(), eventType: 'TICKET_COMMENT_ADDED', payload: {
         tenantId: tenant, ticketId: ticket, actorUserId: actor,
-        comment: { id: comment, content: JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'One recipient secret body' }] }]), author: 'Hidden Author', isInternal: false },
+        comment: { id: comment, content: 'Stale event body', author: 'Hidden Author', isInternal: false },
       } } as any);
       const customerMessages = await (await fetch(`http://127.0.0.1:${customerPorts.controlPort}/control/smtp-sink/state/emails`)).json() as any;
       const sponsorMessages = await (await fetch(`http://127.0.0.1:${sponsorPorts.controlPort}/control/smtp-sink/state/emails`)).json() as any;
@@ -956,6 +1057,7 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
       expect(hidden.text).not.toContain('Hidden Author');
       expect(visible.text).toContain('One recipient secret body');
       expect(visible.text).toContain('Hidden Author');
+      expect(visible.text).not.toContain('Stale event body');
     } finally {
       secret.mockRestore(); connection.mockRestore(); tenantConnection.mockRestore();
       coManagedDeliverySeam.reset(); delete process.env.FORCE_CAPABILITIES;

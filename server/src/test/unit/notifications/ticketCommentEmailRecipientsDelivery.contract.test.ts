@@ -11,11 +11,9 @@ import { resolveDeliveryClaim } from '../../../lib/notifications/sendEventEmail'
  * a real SMTP server and inspects the delivered messages.
  *
  * What is left here is the one guarantee that suite cannot reach cheaply: the
- * per-comment attachment path, which needs stored documents. Both of its
- * gates must stay keyed on the single `To` recipient — a Cc/Bcc address must
- * never be able to claim a comment's delivery or be asked for its own
- * attachment permissions. The claim is pinned through `resolveDeliveryClaim`,
- * the function `sendEventEmail` uses to pick the ledger row it claims.
+ * per-comment attachment path, which needs stored documents. The delivery
+ * claim remains keyed on `To`, while attachment authorization considers every
+ * recipient of the shared message.
  */
 const sendEventEmailSource = fs.readFileSync(
   path.resolve(__dirname, '../../../lib/notifications/sendEventEmail.ts'),
@@ -23,7 +21,7 @@ const sendEventEmailSource = fs.readFileSync(
 );
 
 describe('per-comment Cc/Bcc delivery contract', () => {
-  it('T020: the delivery claim and the attachment gate key on the To recipient only', () => {
+  it('T020: the delivery claim keys on To, but attachment preparation receives all recipients', () => {
     const params = {
       to: 'to@example.test',
       cc: [{ email: 'cc@example.test' }],
@@ -37,9 +35,8 @@ describe('per-comment Cc/Bcc delivery contract', () => {
     });
     // A send without stored attachments is not ledgered at all.
     expect(resolveDeliveryClaim(params, undefined)).toBeNull();
-    expect(sendEventEmailSource).toContain(
-      'recipientCanReceiveCommentFiles(knex, params.tenantId, destinationTicketId!, params.to)'
-    );
+    expect(sendEventEmailSource).toContain('messageRecipients(params.to, params.cc, params.bcc)');
+    expect(sendEventEmailSource).toContain('prepareTicketCommentRichTextEmail({');
   });
 
   it('T020b: a co-managed caller\'s named ledger wins over the comment ledger', () => {
