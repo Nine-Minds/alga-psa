@@ -100,6 +100,37 @@ describe('expandAccountingExportCharges with delegated tax', () => {
     expect(expanded.charges.get('detail-2')).toMatchObject({ net_amount: 68_000, tax_amount: 1_829, total_price: 69_829 });
   });
 
+  it('exports recurring-seat members under their service name and keeps bundle/override text', async () => {
+    const knex = createFakeKnex({
+      'invoice_charge_details as d': [
+        { item_id: 'charge-1', item_detail_id: 'detail-1', service_id: 'svc-1', allocated_amount: 25_000, tax_amount: 0,
+          pricing_basis: 'unit', service_name: 'VIPRE Endpoint Protection (per PC)', invoice_line_description: null },
+        { item_id: 'charge-1', item_detail_id: 'detail-2', service_id: 'svc-2', allocated_amount: 68_000, tax_amount: 0,
+          pricing_basis: 'bundle', service_name: 'Managed Firewall', invoice_line_description: null },
+      ],
+    });
+    const charges = new Map([['charge-1', parentCharge({ description: 'It Support Contract - Fixed Fee' })]]);
+
+    const expanded = await expandAccountingExportCharges(knex, TENANT, charges as any, [exportLine()]);
+
+    expect(expanded.charges.get('detail-1')?.description).toBe('VIPRE Endpoint Protection (per PC)');
+    expect(expanded.charges.get('detail-2')?.description).toBe('It Support Contract - Fixed Fee');
+  });
+
+  it('keeps the contract-line invoice description override on recurring-seat members', async () => {
+    const knex = createFakeKnex({
+      'invoice_charge_details as d': [
+        { item_id: 'charge-1', item_detail_id: 'detail-1', service_id: 'svc-1', allocated_amount: 93_000, tax_amount: 0,
+          pricing_basis: 'unit', service_name: 'VIPRE Endpoint Protection (per PC)', invoice_line_description: 'Antivirus seats' },
+      ],
+    });
+    const charges = new Map([['charge-1', parentCharge({ description: 'Antivirus seats' })]]);
+
+    const expanded = await expandAccountingExportCharges(knex, TENANT, charges as any, [exportLine()]);
+
+    expect(expanded.charges.get('detail-1')?.description).toBe('Antivirus seats');
+  });
+
   it('names the invoice and both sums when the two levels disagree', async () => {
     const knex = createFakeKnex({
       'invoice_charge_details as d': [
