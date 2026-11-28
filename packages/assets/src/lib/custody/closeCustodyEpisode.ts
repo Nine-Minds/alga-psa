@@ -8,20 +8,19 @@ import { CUSTODY_RETURNING, loadCustody, mapCustodyRow } from './shared';
 /**
  * Close an open episode WITHOUT the device coming back to the client (C5 extension of C4).
  *
- * C4's `recordCustodyEvent` only ever closes as `returned_to_client`. A vendor credit ends the stay
+ * C4's `recordCustodyEvent` closes as `returned_to_client` unless the caller names a reason. A vendor credit ends the stay
  * differently: the vendor keeps (or scraps) the device. `asset_custody.close_reason` already allows
  * `disposed`; this core is the one path that writes it. Same table, same state (`closed`), same
  * history row family, and the caller publishes `ASSET_CUSTODY_CHANGED` exactly as for any other step.
  *
  * `returned_to_vendor` (advance-replacement follow-up, alga-2026-0002683) closes an episode whose device the MSP
  * shipped to the vendor (`with_vendor`) once the vendor confirmed receipt. It is deliberately NOT a `returned`
- * event, which always closes as `returned_to_client`.
- * LEVERAGE: friction custody-close-reason — `recordCustodyEvent('returned')` hard-codes `returned_to_client`, so every other ending needs this side door
+ * event with no `close_reason`, which closes as `returned_to_client`.
  *
  * It appends no `asset_custody_events` row: the event vocabulary is physical movement and nothing
  * moved. The asset's status is left alone — a disposed device's lifecycle status is a separate decision.
  */
-export type ClosableCustodyReason = Extract<CustodyCloseReason, 'disposed' | 'returned_to_vendor'>;
+export type ClosableCustodyReason = CustodyCloseReason;
 
 export interface CloseCustodyEpisodeResult {
   custody: IAssetCustody;

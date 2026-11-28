@@ -22,6 +22,8 @@ export interface ReceiveEquipmentResult {
   createdAsset: boolean;
   custody: IAssetCustody;
   event: IAssetCustodyEvent;
+  /** Set when an existing `active` asset became `held_by_msp`, for the post-commit ASSET_UPDATED publish. */
+  assetStatusChange?: { assetId: string; before: string; after: string } | null;
 }
 
 /**
@@ -164,5 +166,5 @@ export async function receiveEquipmentForTicket(
     });
   }
 
-  return { asset: assetSummary!, createdAsset, custody: opened.custody, event: opened.event };
+  return { asset: assetSummary!, createdAsset, custody: opened.custody, event: opened.event, assetStatusChange: opened.assetStatusChange };
 }

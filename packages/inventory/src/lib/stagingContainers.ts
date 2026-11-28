@@ -1,6 +1,12 @@
 import { Knex } from 'knex';
 import type { IProjectStagingLine, IStagingContainer, IStagingContainerMember } from '@alga-psa/types';
 import { assertTaskInProject, normalizeStagingLine, StagingError, stageLineInTransaction } from './staging';
+import {
+  custodyPackLine,
+  custodySealContainer,
+  custodyUnpackLine,
+  type StagingCustodyContext,
+} from './stagingCustody';
 
 /**
  * Staging containers (C6 D10): a box / tote on a project, optionally on a task, holding staging lines.
@@ -15,7 +21,9 @@ import { assertTaskInProject, normalizeStagingLine, StagingError, stageLineInTra
  * - Numbering: `sequence` per project, max+1; identifier `<project_number>-B<nn>`; "n of m" is computed
  *   when read (rank among the project's live boxes), so a printed label is a snapshot.
  *
- * Writes nothing outside the staging tables (packing may stage a line, which moves its own claim).
+ * Writes nothing outside the staging tables (packing may stage a line, which moves its own claim), except
+ * that client-asset members are custody bins (./stagingCustody): pack / unpack move the asset's custody
+ * episode in and out of the box (bin = identifier), seal / reopen write `sealed` / `unsealed` events.
  */
 
 function runInTransaction<T>(db: Knex, fn: (trx: Knex.Transaction) => Promise<T>): Promise<T> {
@@ -136,7 +144,13 @@ export async function deleteContainer(db: Knex, tenant: string, containerId: str
   });
 }
 
-export async function sealContainer(db: Knex, tenant: string, containerId: string, performedBy: string | null): Promise<IStagingContainer> {
+export async function sealContainer(
+  db: Knex,
+  tenant: string,
+  containerId: string,
+  performedBy: string | null,
+  custody?: StagingCustodyContext,
+): Promise<IStagingContainer> {
   return runInTransaction(db, async (trx) => {
     const container = await lockContainer(trx, tenant, containerId);
     if (container.status === 'sealed') return container;
@@ -144,11 +158,18 @@ export async function sealContainer(db: Knex, tenant: string, containerId: strin
       .where({ tenant, container_id: containerId })
       .update({ status: 'sealed', sealed_at: trx.fn.now(), sealed_by: performedBy, updated_at: trx.fn.now() })
       .returning('*');
+    await custodySealContainer(trx, tenant, containerId, 'sealed', performedBy, custody);
     return row as IStagingContainer;
   });
 }
 
-export async function reopenContainer(db: Knex, tenant: string, containerId: string): Promise<IStagingContainer> {
+export async function reopenContainer(
+  db: Knex,
+  tenant: string,
+  containerId: string,
+  performedBy: string | null = null,
+  custody?: StagingCustodyContext,
+): Promise<IStagingContainer> {
   return runInTransaction(db, async (trx) => {
     const container = await lockContainer(trx, tenant, containerId);
     if (container.status === 'open') return container;
@@ -156,6 +177,7 @@ export async function reopenContainer(db: Knex, tenant: string, containerId: str
       .where({ tenant, container_id: containerId })
       .update({ status: 'open', sealed_at: null, sealed_by: null, updated_at: trx.fn.now() })
       .returning('*');
+    await custodySealContainer(trx, tenant, containerId, 'unsealed', performedBy, custody);
     return row as IStagingContainer;
   });
 }
@@ -181,6 +203,7 @@ export async function packLines(
   containerId: string,
   items: readonly PackItem[],
   performedBy: string | null,
+  custody?: StagingCustodyContext,
 ): Promise<IStagingContainerMember[]> {
   if (!Array.isArray(items) || items.length === 0) throw new StagingError('Choose something to pack', 'invalid_input');
   return runInTransaction(db, async (trx) => {
@@ -224,6 +247,8 @@ export async function packLines(
       if (line.status === 'reserved' || line.status === 'received') {
         line = await stageLineInTransaction(trx, tenant, line, performedBy);
       }
+      // A client asset in a box is a custody move to (box location, box identifier).
+      await custodyPackLine(trx, tenant, line, containerId, performedBy, custody);
 
       if (here) {
         const [updated] = await trx('staging_container_members')
@@ -250,6 +275,8 @@ export async function unpackLine(
   containerId: string,
   stagingLineId: string,
   quantity?: number | null,
+  performedBy: string | null = null,
+  custody?: StagingCustodyContext,
 ): Promise<void> {
   await runInTransaction(db, async (trx) => {
     const container = await lockContainer(trx, tenant, containerId);
@@ -263,6 +290,9 @@ export async function unpackLine(
     const take = quantity == null ? current : Math.floor(Number(quantity));
     if (!Number.isFinite(take) || take < 1 || take > current) throw new StagingError(`Choose between 1 and ${current}`, 'invalid_input');
     if (take === current) {
+      const line = await trx('project_staging_lines').where({ tenant, staging_line_id: stagingLineId }).first('kind', 'asset_id');
+      // Before the membership goes: the move out is written while the box still holds it.
+      if (line) await custodyUnpackLine(trx, tenant, line, containerId, performedBy, custody);
       await trx('staging_container_members').where({ tenant, member_id: member.member_id }).delete();
     } else {
       await trx('staging_container_members')

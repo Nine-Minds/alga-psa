@@ -21,6 +21,13 @@ describe('custody state machine', () => {
     expect(nextCustodyState('in_office', 'returned')).toBe('closed');
     expect(nextCustodyState('with_vendor', 'returned')).toBe('closed');
   });
+  it('allows sealed / unsealed (staging box) only from in_office, without changing state', () => {
+    expect(nextCustodyState('in_office', 'sealed')).toBe('in_office');
+    expect(nextCustodyState('in_office', 'unsealed')).toBe('in_office');
+    expect(() => assertCustodyTransition('with_vendor', 'sealed')).toThrow(CustodyTransitionError);
+    expect(() => assertCustodyTransition('with_vendor', 'unsealed')).toThrow(CustodyTransitionError);
+    expect(() => assertCustodyTransition('closed', 'sealed')).toThrow(/already closed/);
+  });
   it('refuses everything else, including any step on a closed episode', () => {
     expect(() => assertCustodyTransition('with_vendor', 'moved')).toThrow(CustodyTransitionError);
     expect(() => assertCustodyTransition('in_office', 'received')).toThrow(CustodyTransitionError);

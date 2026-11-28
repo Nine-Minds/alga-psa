@@ -2202,6 +2202,7 @@
       "submit": "Reservar"
     },
     "clientItems": {
+      "clientItemNote": "Os itens descritos em texto livre são acompanhados apenas neste projeto. Não são ativos, por isso não entram na custódia de equipamentos nem aparecem na fila de custódia. Escolha um ativo do cliente para acompanhá-lo.",
       "chooseAsset": "Escolha um ativo.",
       "describeItem": "Descreva o item.",
       "failed": "Não foi possível adicionar o item.",
@@ -2263,6 +2264,14 @@
     "releaseAll": "Liberar todos os reservados e preparados",
     "keepClaims": "Mantê-los",
     "packAction": "Embalar",
+    "custody": {
+      "inCustody": "Sob custódia em {{place}}",
+      "inOffice": "Sob custódia no escritório",
+      "withVendor": "Sob custódia: com o fornecedor",
+      "notInCustody": "Fora de custódia",
+      "viewAsset": "Abrir o ativo para ver o histórico de custódia"
+    },
+    "clientItemNote": "Os itens descritos em texto livre são acompanhados apenas neste projeto. Não são ativos, por isso não entram na custódia de equipamentos nem aparecem na fila de custódia. Escolha um ativo do cliente para acompanhá-lo.",
     "errors": {
       "notFound": "Projeto não encontrado",
       "permission": {
@@ -2271,6 +2280,7 @@
         "inventory": "Você precisa de acesso ao estoque para escolher unidades de estoque.",
         "billing": "Você precisa de acesso ao faturamento para instalar itens em um projeto.",
         "asset": "Você precisa de acesso a ativos para vincular ativos do cliente.",
+        "assetUpdate": "Você precisa de permissão para atualizar ativos para movimentar equipamentos do cliente pela custódia.",
         "inventoryStock": "Você precisa de acesso ao estoque para ver os níveis de estoque."
       }
     }

@@ -16,6 +16,7 @@ import {
   adjustReservation,
   countActiveStockClaims,
   createContainer,
+  createStagingCustodyContext,
   deleteContainer,
   installLines,
   InsufficientStockError,
@@ -23,6 +24,7 @@ import {
   listStaging,
   MaterialValidationError,
   packLines,
+  publishStagingCustody,
   releaseAllProjectClaims,
   releaseLines,
   reopenContainer,
@@ -38,6 +40,7 @@ import {
   type ClientStagingItem,
   type InstallLineResult,
   type PackItem,
+  type StagingCustodyContext,
   type StagingContainerView,
   type StagingLineView,
 } from '@alga-psa/inventory/lib';
@@ -57,6 +60,9 @@ import { assertProjectReadAllowed } from '../lib/projectReadAuthorization';
  *  - Read (staging page, boxes): `project:read` + the record-level project read decision.
  *  - Mutate (reserve, stage, pack, install, release, boxes): `project:update` + the record-level decision.
  *  - Listing or picking stock units: additionally `inventory:read`.
+ *  - Any step that writes equipment custody for a client asset (add, pack, unpack, seal/reopen, install,
+ *    release): additionally `asset:update` on each affected asset (C6 follow-up, D7). A refusal is typed
+ *    and scoped to the line; in a multi-line install it fails only that line.
  *
  * A project the caller may not read answers like a missing one. Every id the caller passes (line, box)
  * is checked to belong to the project named in the call.
@@ -70,6 +76,9 @@ const UPDATE_DENIED = 'Permission denied: project update required';
 function stagingActionErrorFrom(error: unknown): StagingActionError | StockConflictResult | null {
   const conflict = stockConflictResultFrom(error);
   if (conflict) return conflict;
+  if (error instanceof StagingError && error.code === 'custody_forbidden') {
+    return permissionError(error.message, 'projects:staging.errors.permission.assetUpdate');
+  }
   if (error instanceof StagingError || error instanceof MaterialValidationError || error instanceof InsufficientStockError) {
     return actionError(error.message);
   }
@@ -121,6 +130,25 @@ async function assertContainerInProject(db: Knex, tenant: string, projectId: str
   if (!row) throw new StagingError('Box not found', 'not_found');
 }
 
+/**
+ * Custody context for one action: authorization per asset plus the queue of results to publish after
+ * the lib's transaction has committed (D7, D8). Nothing is published when `work` throws.
+ */
+async function withCustody<T>(
+  user: IUserWithRoles,
+  tenant: string,
+  work: (custody: StagingCustodyContext) => Promise<T>,
+): Promise<T> {
+  const custody = createStagingCustodyContext({
+    tenant,
+    user: user as Parameters<typeof createStagingCustodyContext>[0]['user'],
+    canUpdateAssets: await hasPermission(user, 'asset', 'update'),
+  });
+  const result = await work(custody);
+  await publishStagingCustody(tenant, user as Parameters<typeof createStagingCustodyContext>[0]['user'], custody.publications);
+  return result;
+}
+
 const userId = (user: IUserWithRoles): string | null => (user as { user_id?: string }).user_id ?? null;
 
 export interface ProjectStagingState {
@@ -129,6 +157,8 @@ export interface ProjectStagingState {
   /** Unit pickers and unit labels need inventory:read. */
   canReadInventory: boolean;
   canUpdate: boolean;
+  /** Custody fields on client-asset lines are only filled in for asset:read; without it they are unknown, not empty. */
+  canReadAssets: boolean;
 }
 
 export const getProjectStaging = withAuth(async (
@@ -138,13 +168,25 @@ export const getProjectStaging = withAuth(async (
 ): Promise<ProjectStagingState | StagingActionError | StockConflictResult> => run(async () => {
   const g = await gate(user, tenant, projectId, 'read');
   if (isGateError(g)) return g;
-  const [lines, containers, canReadInventory, canUpdate] = await Promise.all([
+  const [rawLines, containers, canReadInventory, canUpdate, canReadAssets] = await Promise.all([
     listStaging(g.db, tenant, projectId),
     listContainers(g.db, tenant, projectId),
     hasPermission(user, 'inventory', 'read'),
     hasPermission(user, 'project', 'update'),
+    hasPermission(user, 'asset', 'read'),
   ]);
-  return { lines, containers, canReadInventory, canUpdate };
+  // Where a client asset is held is asset data: project readers without asset:read do not get it.
+  const lines = canReadAssets
+    ? rawLines
+    : rawLines.map((line) => ({
+        ...line,
+        custody_id: null,
+        custody_state: null,
+        custody_purpose: null,
+        custody_location_name: null,
+        custody_bin: null,
+      }));
+  return { lines, containers, canReadInventory, canUpdate, canReadAssets };
 }));
 
 export interface ReserveProjectStagingInput {
@@ -234,7 +276,7 @@ export const releaseProjectStagingLines = withAuth(async (
   const g = await gate(user, tenant, projectId, 'update');
   if (isGateError(g)) return g;
   await assertLinesInProject(g.db, tenant, projectId, lineIds);
-  return releaseLines(g.db, tenant, lineIds, userId(user), { projectId });
+  return withCustody(user, tenant, (custody) => releaseLines(g.db, tenant, lineIds, userId(user), { projectId, custody }));
 }));
 
 /** Install keeps addMaterial's semantics: one line at a time, each its own transaction. */
@@ -252,7 +294,8 @@ export const installProjectStagingLines = withAuth(async (
     return permissionError('Permission denied: billing create required', 'projects:staging.errors.permission.billing');
   }
   await assertLinesInProject(g.db, tenant, projectId, lineIds);
-  return installLines(g.db, tenant, lineIds, userId(user), { projectId, allowReservedOverride: options.allowReservedOverride === true });
+  return withCustody(user, tenant, (custody) =>
+    installLines(g.db, tenant, lineIds, userId(user), { projectId, allowReservedOverride: options.allowReservedOverride === true, custody }));
 }));
 
 export const undoProjectStagingInstall = withAuth(async (
@@ -264,7 +307,7 @@ export const undoProjectStagingInstall = withAuth(async (
   const g = await gate(user, tenant, projectId, 'update');
   if (isGateError(g)) return g;
   await assertLinesInProject(g.db, tenant, projectId, [lineId]);
-  return undoInstall(g.db, tenant, lineId, userId(user), { projectId });
+  return withCustody(user, tenant, (custody) => undoInstall(g.db, tenant, lineId, userId(user), { projectId, custody }));
 }));
 
 export const addProjectClientItems = withAuth(async (
@@ -275,12 +318,14 @@ export const addProjectClientItems = withAuth(async (
 ): Promise<IProjectStagingLine[] | StagingActionError | StockConflictResult> => run(async () => {
   const g = await gate(user, tenant, projectId, 'update');
   if (isGateError(g)) return g;
-  // Linking an asset needs asset:read; the refusal is permission-level and says nothing about the asset.
+  // Staging a client asset receives it into custody (or links its open episode), which is an asset write:
+  // asset:update, not asset:read. The refusal is permission-level and says nothing about the asset.
   if ((input.items ?? []).some((item) => Boolean((item as { asset_id?: string | null }).asset_id))
-    && !(await hasPermission(user, 'asset', 'read'))) {
-    return permissionError('Permission denied: asset read required', 'projects:staging.errors.permission.asset');
+    && !(await hasPermission(user, 'asset', 'update'))) {
+    return permissionError('Permission denied: asset update required', 'projects:staging.errors.permission.assetUpdate');
   }
-  return addClientLines(g.db, tenant, { project_id: projectId, task_id: input.task_id ?? null, items: input.items }, userId(user));
+  return withCustody(user, tenant, (custody) =>
+    addClientLines(g.db, tenant, { project_id: projectId, task_id: input.task_id ?? null, items: input.items }, userId(user), custody));
 }));
 
 /** Free stock per location for one product, for the reserve dialog. */
@@ -416,7 +461,10 @@ export const setProjectStagingBoxSealed = withAuth(async (
   const g = await gate(user, tenant, projectId, 'update');
   if (isGateError(g)) return g;
   await assertContainerInProject(g.db, tenant, projectId, containerId);
-  return sealed ? sealContainer(g.db, tenant, containerId, userId(user)) : reopenContainer(g.db, tenant, containerId);
+  return withCustody(user, tenant, (custody) =>
+    sealed
+      ? sealContainer(g.db, tenant, containerId, userId(user), custody)
+      : reopenContainer(g.db, tenant, containerId, userId(user), custody));
 }));
 
 export const packProjectStagingBox = withAuth(async (
@@ -429,7 +477,7 @@ export const packProjectStagingBox = withAuth(async (
   const g = await gate(user, tenant, projectId, 'update');
   if (isGateError(g)) return g;
   await assertContainerInProject(g.db, tenant, projectId, containerId);
-  return packLines(g.db, tenant, containerId, items, userId(user));
+  return withCustody(user, tenant, (custody) => packLines(g.db, tenant, containerId, items, userId(user), custody));
 }));
 
 export const unpackProjectStagingBox = withAuth(async (
@@ -443,7 +491,7 @@ export const unpackProjectStagingBox = withAuth(async (
   const g = await gate(user, tenant, projectId, 'update');
   if (isGateError(g)) return g;
   await assertContainerInProject(g.db, tenant, projectId, containerId);
-  await unpackLine(g.db, tenant, containerId, lineId, quantity ?? null);
+  await withCustody(user, tenant, (custody) => unpackLine(g.db, tenant, containerId, lineId, quantity ?? null, userId(user), custody));
   return { unpacked: true as const };
 }));
 

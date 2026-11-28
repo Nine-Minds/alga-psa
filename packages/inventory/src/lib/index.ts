@@ -16,6 +16,7 @@ export * from './integrationTypes';
 export * from './materials';
 export * from './staging';
 export * from './stagingContainers';
+export * from './stagingCustody';
 export * from './availability';
 export * from './inventoryEvents';
 export * from './stockLowSignal';

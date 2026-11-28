@@ -1925,6 +1925,10 @@
       "shippedVendor": "Shipped to vendor",
       "returnedTo": "Returned to client ({{counterparty}})",
       "returned": "Returned to client",
+      "sealed": "Sealed in {{box}}",
+      "unsealed": "Box reopened: {{box}}",
+      "installedAtClient": "Installed at client site",
+      "aBox": "a staging box",
       "updated": "Custody details updated",
       "fields": {
         "purpose": "purpose",

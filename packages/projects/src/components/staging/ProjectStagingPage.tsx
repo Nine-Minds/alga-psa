@@ -16,6 +16,7 @@ import { getErrorMessage, handleError, isActionMessageError, isActionPermissionE
 import { isStockConflictResult } from '@alga-psa/inventory/lib/stockConflict';
 import type { InstallLineResult } from '@alga-psa/inventory/lib/staging';
 import type { IProject } from '@alga-psa/types';
+import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-hot-toast';
 import { Box, FileText, Loader2, Lock, LockOpen, Package, Pencil, Plus, Printer, Trash2, Undo2 } from 'lucide-react';
@@ -137,6 +138,8 @@ export default function ProjectStagingPage({ projectId, containerId }: Props) {
   const lineById = useMemo(() => new Map(lines.map((l) => [l.staging_line_id, l])), [lines]);
   const selectedLines = [...selected].map((id) => lineById.get(id)).filter(Boolean) as StagingLineView[];
   const canUpdate = Boolean(state?.canUpdate);
+  // Without asset:read the custody fields are redacted, so a null state means "unknown", not "not in custody".
+  const canReadAssets = Boolean(state?.canReadAssets);
 
   const counts = useMemo(() => {
     const c = { reserved: 0, staged: 0, installed: 0, client: 0 };
@@ -161,6 +164,18 @@ export default function ProjectStagingPage({ projectId, containerId }: Props) {
     line.kind === 'stock'
       ? (line.track_stock ? st('kind.stock', 'Stock') : st('kind.untracked', 'Not stock-tracked'))
       : st('kind.client', 'Client-provided');
+
+  /** Where a client asset is now, from its open custody episode: "In custody at Office / PRJ-0042-B03". */
+  const custodyLabel = (line: StagingLineView) => {
+    if (line.custody_state === 'with_vendor') return st('custody.withVendor', 'In custody: with the vendor');
+    if (line.custody_state === 'in_office') {
+      const place = [line.custody_location_name, line.custody_bin].filter(Boolean).join(' / ');
+      return place
+        ? st('custody.inCustody', 'In custody at {{place}}', { place })
+        : st('custody.inOffice', 'In custody in the office');
+    }
+    return st('custody.notInCustody', 'Not in custody');
+  };
 
   const run = async (key: string, work: () => Promise<unknown>, success?: string) => {
     setBusy(key);
@@ -309,6 +324,12 @@ export default function ProjectStagingPage({ projectId, containerId }: Props) {
                 />
               </div>
 
+              {state.lines.some((line) => line.kind === 'client_item') && (
+                <p className="text-xs text-muted-foreground" id="staging-client-item-note">
+                  {st('clientItemNote', 'Items described in free text are tracked on this project only. They are not assets, so they do not enter equipment custody and will not appear in the custody queue. Pick a client asset instead to track it.')}
+                </p>
+              )}
+
               {canUpdate && selected.size > 0 && (
                 <div className="flex flex-wrap items-center gap-2 rounded border bg-muted/40 p-2" id="staging-selection-bar">
                   <span className="text-sm">{st('selected', '{{count}} selected', { count: selected.size })}</span>
@@ -394,6 +415,17 @@ export default function ProjectStagingPage({ projectId, containerId }: Props) {
                                 {line.serial_number && <span className="font-mono">S/N {line.serial_number}</span>}
                                 {line.asset_tag && <span className="font-mono">{line.asset_tag}</span>}
                               </div>
+                              {canReadAssets && line.kind === 'client_asset' && line.asset_id && (line.custody_state || isActiveLine(line)) && (
+                                <div className="text-xs mt-1" id={`staging-custody-${line.staging_line_id}`}>
+                                  <Link
+                                    href={`/msp/assets/${line.asset_id}`}
+                                    className="text-primary-600 hover:underline"
+                                    title={st('custody.viewAsset', 'Open the asset to see its custody history')}
+                                  >
+                                    {custodyLabel(line)}
+                                  </Link>
+                                </div>
+                              )}
                               {line.stock_shortfall > 0 && (
                                 <div className="text-xs text-red-600 mt-1" id={`staging-shortfall-${line.staging_line_id}`}>
                                   {st('shortfall', '{{count}} short: claims at this location exceed what is on hand (stock was taken by an override).', { count: line.stock_shortfall })}

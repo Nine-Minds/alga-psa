@@ -1925,6 +1925,10 @@
       "shippedVendor": "Skickad till leverantör",
       "returnedTo": "Återlämnad till kund ({{counterparty}})",
       "returned": "Återlämnad till kund",
+      "sealed": "Förseglad i {{box}}",
+      "unsealed": "Lådan öppnad igen: {{box}}",
+      "installedAtClient": "Installerad hos kunden",
+      "aBox": "en förberedelselåda",
       "updated": "Förvarsuppgifter uppdaterade",
       "fields": {
         "purpose": "syfte",

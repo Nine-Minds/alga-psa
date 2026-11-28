@@ -2202,6 +2202,7 @@
       "submit": "Zarezerwuj"
     },
     "clientItems": {
+      "clientItemNote": "Pozycje opisane dowolnym tekstem są śledzone tylko w tym projekcie. Nie są zasobami, więc nie trafiają do przechowania sprzętu i nie pojawiają się w kolejce przechowania. Aby je śledzić, wybierz zamiast tego zasób klienta.",
       "chooseAsset": "Wybierz zasób.",
       "describeItem": "Opisz element.",
       "failed": "Nie udało się dodać elementu.",
@@ -2263,6 +2264,14 @@
     "releaseAll": "Zwolnij wszystkie zarezerwowane i przygotowane",
     "keepClaims": "Zachowaj je",
     "packAction": "Zapakuj",
+    "custody": {
+      "inCustody": "W przechowaniu: {{place}}",
+      "inOffice": "W przechowaniu w biurze",
+      "withVendor": "W przechowaniu: u dostawcy",
+      "notInCustody": "Nie jest w przechowaniu",
+      "viewAsset": "Otwórz zasób, aby zobaczyć historię przechowania"
+    },
+    "clientItemNote": "Pozycje opisane dowolnym tekstem są śledzone tylko w tym projekcie. Nie są zasobami, więc nie trafiają do przechowania sprzętu i nie pojawiają się w kolejce przechowania. Aby je śledzić, wybierz zamiast tego zasób klienta.",
     "errors": {
       "notFound": "Projektu nie znaleziono",
       "permission": {
@@ -2271,6 +2280,7 @@
         "inventory": "Potrzebujesz dostępu do magazynu, aby wybierać jednostki zapasu.",
         "billing": "Potrzebujesz dostępu do rozliczeń, aby zainstalować pozycje w projekcie.",
         "asset": "Potrzebujesz dostępu do zasobów, aby powiązać zasoby klienta.",
+        "assetUpdate": "Potrzebujesz uprawnienia do aktualizacji zasobów, aby obsługiwać przechowanie sprzętu klienta.",
         "inventoryStock": "Potrzebujesz dostępu do magazynu, aby zobaczyć stany zapasów."
       }
     }

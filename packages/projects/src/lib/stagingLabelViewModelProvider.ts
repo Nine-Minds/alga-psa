@@ -42,6 +42,12 @@ export async function readAuthorizedStagingContainers(
   return containers.map((c) => (c && allowed.has(c.project_id) ? c : null));
 }
 
+/** "Contains client-owned equipment (n)" when any member of the box is a client line (D9); null otherwise. */
+export function stagingContainerOwnershipNote(container: Pick<StagingContainerView, 'members'>): string | null {
+  const clientLines = container.members.filter((m) => m.kind === 'client_asset' || m.kind === 'client_item').length;
+  return clientLines > 0 ? `Contains client-owned equipment (${clientLines})` : null;
+}
+
 /** The printable box label: the box identifier is both the human-readable line and the Code 128 value. */
 export function stagingContainerLabelViewModel(container: StagingContainerView, baseUrl: string): LabelViewModel {
   return {
@@ -57,6 +63,7 @@ export function stagingContainerLabelViewModel(container: StagingContainerView, 
     secondaryIdentifier: null,
     serialSuffix: null,
     sequence: { n: container.position.n, total: container.position.total },
+    ownershipNote: stagingContainerOwnershipNote(container),
   };
 }
 

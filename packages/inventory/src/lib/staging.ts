@@ -24,6 +24,13 @@ import { evaluateConsumption, InsufficientStockError, stockConflictResultFrom, t
 import { addMaterial, MaterialValidationError, removeMaterialInTransaction } from './materials';
 import type { StockConflictResult } from './stockConflict';
 import { resolveTenantCurrency } from './tenantCurrency';
+import {
+  custodyInstallLine,
+  custodyReleaseLine,
+  custodyUnsealContainers,
+  ensureCustodyForClientAsset,
+  type StagingCustodyContext,
+} from './stagingCustody';
 
 /**
  * Project staging (alga-2026-0002683 C6): reserve -> stage -> install for project equipment, without
@@ -36,8 +43,10 @@ import { resolveTenantCurrency } from './tenantCurrency';
  *   allocated_staging_line_id.
  * - Install goes through the canonical `addMaterial` (the only writer of project_materials and
  *   the only consumer of stock here), which releases the line's own claim and consumes at its location.
- * - Client lines (client_asset, client_item) are status changes only: no stock_units, movements,
- *   levels, cost or project_materials, ever.
+ * - Client lines (client_asset, client_item) never touch stock_units, movements, levels, cost or
+ *   project_materials, ever. A `client_asset` line additionally goes through equipment custody (C4)
+ *   via ./stagingCustody (the only caller of the custody cores); a `client_item` free-text line has no
+ *   asset and stays out of custody. Design: docs/plans/2026-11-23-client-owned-staging-custody.md.
  * - Nothing here bills: billing reads project_materials only.
  *
  * Permission gating lives in the projects action wrappers; this lib owns the semantics. Every write
@@ -62,7 +71,11 @@ export type StagingErrorCode =
   | 'unit_unavailable'
   | 'in_sealed_box'
   | 'packed_exceeds_quantity'
-  | 'already_staged_elsewhere';
+  | 'already_staged_elsewhere'
+  /** The caller lacks asset:update on a client asset this step would write custody for. */
+  | 'custody_forbidden'
+  /** Custody refused the step (e.g. the device is with a vendor). */
+  | 'custody_refused';
 
 /** A refused staging request the user can act on. Stock shortfalls are InsufficientStockError instead. */
 export class StagingError extends Error {
@@ -532,6 +545,7 @@ async function releaseLineInTransaction(
   tenant: string,
   line: IProjectStagingLine,
   performedBy: string | null,
+  custody?: StagingCustodyContext,
 ): Promise<IProjectStagingLine> {
   const active = (line.kind === 'stock' ? ACTIVE_STOCK_STATUSES : ACTIVE_CLIENT_STATUSES).includes(line.status);
   if (!active) throw new StagingError(`A ${line.status} line cannot be released`, 'invalid_state');
@@ -545,6 +559,9 @@ async function releaseLineInTransaction(
       await releaseCounter(trx, tenant, line.service_id!, line.reserved_location_id, counterFor(line.status), line.quantity);
     }
   }
+  // Release only unpacks a client asset (a `moved` out of the box); it never closes custody. The move is
+  // written before the membership goes so no episode is left pointing at a bin that no longer holds it.
+  await custodyReleaseLine(trx, tenant, line, performedBy, custody);
   // A released line is in no box.
   await trx('staging_container_members').where({ tenant, staging_line_id: line.staging_line_id }).delete();
   const [updated] = await trx('project_staging_lines')
@@ -560,14 +577,14 @@ export async function releaseLines(
   tenant: string,
   lineIds: readonly string[],
   performedBy: string | null,
-  opts: { projectId?: string } = {},
+  opts: { projectId?: string; custody?: StagingCustodyContext } = {},
 ): Promise<IProjectStagingLine[]> {
   return runInTransaction(db, async (trx) => {
     const result: IProjectStagingLine[] = [];
     for (const id of lineIds) {
       const line = await lockLine(trx, tenant, id);
       if (opts.projectId && line.project_id !== opts.projectId) throw new StagingError('Staging line not found', 'not_found');
-      result.push(await releaseLineInTransaction(trx, tenant, line, performedBy));
+      result.push(await releaseLineInTransaction(trx, tenant, line, performedBy, opts.custody));
     }
     return result;
   });
@@ -583,6 +600,7 @@ async function releaseLiveLinesWhere(
   tenant: string,
   scope: (query: Knex.QueryBuilder) => Knex.QueryBuilder,
   performedBy: string | null,
+  custody?: StagingCustodyContext,
 ): Promise<number> {
   const rows = await scope(trx('project_staging_lines').where({ tenant }))
     .orderBy('staging_line_id', 'asc')
@@ -599,6 +617,8 @@ async function releaseLiveLinesWhere(
     .whereIn('m.staging_line_id', live.map((l: { staging_line_id: string }) => l.staging_line_id))
     .pluck('c.container_id');
   if (sealedBoxIds.length > 0) {
+    // The reopen is a custody fact too: client assets in those boxes get their `unsealed` event.
+    await custodyUnsealContainers(trx, tenant, sealedBoxIds, performedBy, custody);
     await trx('staging_containers')
       .where({ tenant })
       .whereIn('container_id', sealedBoxIds)
@@ -606,7 +626,7 @@ async function releaseLiveLinesWhere(
   }
   for (const { staging_line_id } of live) {
     const line = await lockLine(trx, tenant, staging_line_id);
-    if (isLiveLine(line)) await releaseLineInTransaction(trx, tenant, line, performedBy);
+    if (isLiveLine(line)) await releaseLineInTransaction(trx, tenant, line, performedBy, custody);
   }
   return live.length;
 }
@@ -619,16 +639,20 @@ async function releaseLiveLinesWhere(
  * (task_id = NULL) and stay on the project. Boxes on the tasks are detached too and stay on the project.
  * project_staging_lines_task_fk and staging_containers_task_fk are NO ACTION, so skipping this helper
  * fails loudly instead of leaving phantom claims. Runs inside the caller's transaction.
+ *
+ * Client assets are unpacked (a custody `moved` out of the box) but their custody episode stays open:
+ * deleting a task is not a statement about where the device physically is.
  */
 export async function releaseStagingForTasks(
   trx: Knex.Transaction,
   tenant: string,
   taskIds: readonly string[],
   performedBy: string | null,
+  custody?: StagingCustodyContext,
 ): Promise<{ released: number }> {
   if (taskIds.length === 0) return { released: 0 };
   const ids = [...taskIds];
-  const released = await releaseLiveLinesWhere(trx, tenant, (q) => q.whereIn('task_id', ids), performedBy);
+  const released = await releaseLiveLinesWhere(trx, tenant, (q) => q.whereIn('task_id', ids), performedBy, custody);
   await trx('project_staging_lines').where({ tenant }).whereIn('task_id', ids).update({ task_id: null, updated_at: trx.fn.now() });
   await trx('staging_containers').where({ tenant }).whereIn('task_id', ids).update({ task_id: null, updated_at: trx.fn.now() });
   return { released };
@@ -639,22 +663,25 @@ export async function releaseStagingForTask(
   tenant: string,
   taskId: string,
   performedBy: string | null,
+  custody?: StagingCustodyContext,
 ): Promise<{ released: number }> {
-  return releaseStagingForTasks(trx, tenant, [taskId], performedBy);
+  return releaseStagingForTasks(trx, tenant, [taskId], performedBy, custody);
 }
 
 /**
  * Project delete: release every live claim (including client lines), then remove the project's boxes,
  * members and lines explicitly - the same rows the project FK cascade would remove, but only after the
  * claims are returned, and before the project's tasks are deleted (the task FK is NO ACTION).
+ * Client assets are moved out of their boxes first (before the box rows go); custody stays open.
  */
 export async function releaseStagingForProject(
   trx: Knex.Transaction,
   tenant: string,
   projectId: string,
   performedBy: string | null,
+  custody?: StagingCustodyContext,
 ): Promise<{ released: number }> {
-  const released = await releaseLiveLinesWhere(trx, tenant, (q) => q.where({ project_id: projectId }), performedBy);
+  const released = await releaseLiveLinesWhere(trx, tenant, (q) => q.where({ project_id: projectId }), performedBy, custody);
   const containerIds = trx('staging_containers').where({ tenant, project_id: projectId }).select('container_id');
   await trx('staging_container_members').where({ tenant }).whereIn('container_id', containerIds).delete();
   await trx('staging_containers').where({ tenant, project_id: projectId }).delete();
@@ -723,7 +750,7 @@ export async function installLines(
   tenant: string,
   lineIds: readonly string[],
   performedBy: string | null,
-  opts: { projectId?: string; allowReservedOverride?: boolean } = {},
+  opts: { projectId?: string; allowReservedOverride?: boolean; custody?: StagingCustodyContext } = {},
 ): Promise<InstallLineResult[]> {
   const results: InstallLineResult[] = [];
   for (const id of lineIds) {
@@ -733,15 +760,20 @@ export async function installLines(
         throw new StagingError('Staging line not found', 'not_found');
       }
       if (line.kind !== 'stock') {
+        // Custody publications queue per line, and only join the caller's queue once this line committed.
+        const lineCustody: StagingCustodyContext | undefined = opts.custody ? { ...opts.custody, publications: [] } : undefined;
         await db.transaction(async (trx) => {
           const locked = await lockLine(trx, tenant, id);
           if (!ACTIVE_CLIENT_STATUSES.includes(locked.status)) {
             throw new StagingError(`A ${locked.status} line cannot be installed`, 'invalid_state');
           }
+          // Custody first: a refusal (asset:update) fails this line before it is marked installed.
+          await custodyInstallLine(trx, tenant, locked, performedBy, lineCustody);
           await trx('project_staging_lines')
             .where({ tenant, staging_line_id: id })
             .update({ status: 'installed', installed_at: trx.fn.now(), installed_by: performedBy, updated_at: trx.fn.now() });
         });
+        if (lineCustody?.publications?.length) opts.custody?.publications?.push(...lineCustody.publications);
         results.push({ staging_line_id: id, ok: true, project_material_id: null });
         continue;
       }
@@ -793,7 +825,7 @@ export async function undoInstall(
   tenant: string,
   lineId: string,
   performedBy: string | null,
-  opts: { projectId?: string } = {},
+  opts: { projectId?: string; custody?: StagingCustodyContext } = {},
 ): Promise<IProjectStagingLine> {
   return runInTransaction(db, async (trx) => {
     const line = await lockLine(trx, tenant, lineId);
@@ -836,6 +868,11 @@ export async function undoInstall(
       }
     }
 
+    // Installing closed the client asset's custody; a staged client asset must be in custody again.
+    if (line.kind === 'client_asset' && line.asset_id) {
+      const project = await loadProject(trx, tenant, line.project_id);
+      await ensureCustodyForClientAsset(trx, tenant, line.asset_id, performedBy, opts.custody, { projectNumber: project.project_number });
+    }
     const [updated] = await trx('project_staging_lines')
       .where({ tenant, staging_line_id: lineId })
       .update({ status: 'staged', installed_at: null, installed_by: null, updated_at: trx.fn.now() })
@@ -845,7 +882,7 @@ export async function undoInstall(
 }
 
 // ---------------------------------------------------------------------------------------------
-// Client-provided items (D9, C4 not merged: plain links, custody is a follow-up)
+// Client-provided items (D9). client_asset lines go through equipment custody; client_item lines do not.
 
 export type ClientStagingItem =
   | { kind: 'client_asset'; asset_id: string; description?: string | null }
@@ -853,14 +890,17 @@ export type ClientStagingItem =
 
 /**
  * Add client-provided items to a project's staging as `received` lines. A client asset must belong
- * to the project's client and may be on only one open staging line. No stock, movement, level,
- * cost or material is ever written for these lines.
+ * to the project's client and may be on only one open staging line, and it must be in custody: its open
+ * episode is linked (any purpose, never rewritten), or one is opened with purpose `staging` in the same
+ * transaction. A free-text `client_item` has no asset and produces no custody rows. No stock, movement,
+ * level, cost or material is ever written for these lines.
  */
 export async function addClientLines(
   db: Knex,
   tenant: string,
   input: { project_id: string; task_id?: string | null; items: ClientStagingItem[] },
   performedBy: string | null,
+  custody?: StagingCustodyContext,
 ): Promise<IProjectStagingLine[]> {
   if (!Array.isArray(input.items) || input.items.length === 0) {
     throw new StagingError('Add at least one item', 'invalid_input');
@@ -889,6 +929,7 @@ export async function addClientLines(
           .whereIn('status', ACTIVE_CLIENT_STATUSES)
           .first('staging_line_id');
         if (open) throw new StagingError('This asset is already in staging', 'already_staged_elsewhere');
+        await ensureCustodyForClientAsset(trx, tenant, item.asset_id, performedBy, custody, { projectNumber: project.project_number });
         const [line] = await trx('project_staging_lines')
           .insert({ ...base, kind: 'client_asset', asset_id: item.asset_id, quantity: 1, description: item.description?.trim() || null })
           .returning('*');
@@ -925,6 +966,12 @@ export interface StagingLineView extends IProjectStagingLine {
   asset_tag: string | null;
   asset_name: string | null;
   asset_serial_number: string | null;
+  /** Open custody episode of a client asset (null for other lines, and once installed): where it is now. */
+  custody_id: string | null;
+  custody_state: 'in_office' | 'with_vendor' | null;
+  custody_purpose: string | null;
+  custody_location_name: string | null;
+  custody_bin: string | null;
   task_name: string | null;
   /** Quantity packed across boxes. */
   packed_quantity: number;
@@ -955,6 +1002,12 @@ export async function listStaging(db: Knex | Knex.Transaction, tenant: string, p
     .leftJoin('assets as a', function () {
       this.on('a.asset_id', '=', 'l.asset_id').andOn('a.tenant', '=', 'l.tenant');
     })
+    .leftJoin('asset_custody as ac', function () {
+      this.on('ac.asset_id', '=', 'l.asset_id').andOn('ac.tenant', '=', 'l.tenant').andOnNull('ac.closed_at');
+    })
+    .leftJoin('stock_locations as cloc', function () {
+      this.on('cloc.location_id', '=', 'ac.location_id').andOn('cloc.tenant', '=', 'ac.tenant');
+    })
     .leftJoin('project_tasks as t', function () {
       this.on('t.task_id', '=', 'l.task_id').andOn('t.tenant', '=', 'l.tenant');
     })
@@ -976,6 +1029,11 @@ export async function listStaging(db: Knex | Knex.Transaction, tenant: string, p
       'a.asset_tag',
       'a.name as asset_name',
       'a.serial_number as asset_serial_number',
+      'ac.custody_id',
+      'ac.state as custody_state',
+      'ac.purpose as custody_purpose',
+      'cloc.name as custody_location_name',
+      'ac.bin as custody_bin',
       't.task_name',
       'lvl.quantity_on_hand as level_on_hand',
       'lvl.reserved_quantity as level_reserved',

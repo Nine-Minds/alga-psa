@@ -2202,6 +2202,7 @@
       "submit": "Reserveren"
     },
     "clientItems": {
+      "clientItemNote": "Items die in vrije tekst zijn beschreven, worden alleen in dit project bijgehouden. Het zijn geen assets, dus ze komen niet in de apparatuurbewaring en verschijnen niet in de bewaringswachtrij. Kies in plaats daarvan een asset van de klant om het te volgen.",
       "chooseAsset": "Kies een asset.",
       "describeItem": "Beschrijf het item.",
       "failed": "Het item kon niet worden toegevoegd.",
@@ -2263,6 +2264,14 @@
     "releaseAll": "Alle gereserveerde en klaargezette items vrijgeven",
     "keepClaims": "Behouden",
     "packAction": "Inpakken",
+    "custody": {
+      "inCustody": "In bewaring op {{place}}",
+      "inOffice": "In bewaring op kantoor",
+      "withVendor": "In bewaring: bij de leverancier",
+      "notInCustody": "Niet in bewaring",
+      "viewAsset": "Open de asset om de bewaringsgeschiedenis te zien"
+    },
+    "clientItemNote": "Items die in vrije tekst zijn beschreven, worden alleen in dit project bijgehouden. Het zijn geen assets, dus ze komen niet in de apparatuurbewaring en verschijnen niet in de bewaringswachtrij. Kies in plaats daarvan een asset van de klant om het te volgen.",
     "errors": {
       "notFound": "Project niet gevonden",
       "permission": {
@@ -2271,6 +2280,7 @@
         "inventory": "U heeft toegang tot de voorraad nodig om voorraadeenheden te kiezen.",
         "billing": "U heeft toegang tot facturatie nodig om items in een project te installeren.",
         "asset": "U heeft toegang tot assets nodig om klantassets te koppelen.",
+        "assetUpdate": "U hebt toestemming nodig om assets bij te werken om klantapparatuur door de bewaring te laten gaan.",
         "inventoryStock": "U heeft toegang tot de voorraad nodig om voorraadniveaus te zien."
       }
     }

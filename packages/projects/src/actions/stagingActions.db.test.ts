@@ -146,7 +146,7 @@ describe('staging actions: RBAC and record-level authorization', () => {
     expect(await count('staging_containers', { project_id: projectId })).toBe(0);
     // Read is still allowed.
     const state: any = await getProjectStaging(projectId);
-    expect(state).toMatchObject({ lines: [], containers: [], canUpdate: false, canReadInventory: true });
+    expect(state).toMatchObject({ lines: [], containers: [], canUpdate: false, canReadInventory: true, canReadAssets: false });
   });
 
   it('reads need project:read', async () => {

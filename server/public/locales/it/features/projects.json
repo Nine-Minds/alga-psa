@@ -2202,6 +2202,7 @@
       "submit": "Riserva"
     },
     "clientItems": {
+      "clientItemNote": "Gli articoli descritti in testo libero sono tracciati solo in questo progetto. Non sono asset, quindi non entrano in custodia delle apparecchiature e non compaiono nella coda di custodia. Scegli invece un asset del cliente per tracciarlo.",
       "chooseAsset": "Scegli un asset.",
       "describeItem": "Descrivi l'articolo.",
       "failed": "Impossibile aggiungere l'articolo.",
@@ -2263,6 +2264,14 @@
     "releaseAll": "Rilascia tutti i riservati e gli allestiti",
     "keepClaims": "Mantienili",
     "packAction": "Imballa",
+    "custody": {
+      "inCustody": "In custodia presso {{place}}",
+      "inOffice": "In custodia in ufficio",
+      "withVendor": "In custodia: presso il fornitore",
+      "notInCustody": "Non in custodia",
+      "viewAsset": "Apri l'asset per vedere la cronologia della custodia"
+    },
+    "clientItemNote": "Gli articoli descritti in testo libero sono tracciati solo in questo progetto. Non sono asset, quindi non entrano in custodia delle apparecchiature e non compaiono nella coda di custodia. Scegli invece un asset del cliente per tracciarlo.",
     "errors": {
       "notFound": "Progetto non trovato",
       "permission": {
@@ -2271,6 +2280,7 @@
         "inventory": "Hai bisogno dell'accesso all'inventario per scegliere le unità di stock.",
         "billing": "Hai bisogno dell'accesso alla fatturazione per installare articoli in un progetto.",
         "asset": "Hai bisogno dell'accesso agli asset per collegare gli asset del cliente.",
+        "assetUpdate": "Serve l'autorizzazione ad aggiornare gli asset per gestire la custodia delle apparecchiature del cliente.",
         "inventoryStock": "Hai bisogno dell'accesso all'inventario per vedere i livelli di stock."
       }
     }

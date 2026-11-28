@@ -1925,6 +1925,10 @@
       "shippedVendor": "An Lieferanten versendet",
       "returnedTo": "An Kunden zurückgegeben ({{counterparty}})",
       "returned": "An Kunden zurückgegeben",
+      "sealed": "Verschlossen: {{box}}",
+      "unsealed": "Box wieder geöffnet: {{box}}",
+      "installedAtClient": "Beim Kunden installiert",
+      "aBox": "Bereitstellungsbox",
       "updated": "Verwahrungsdetails aktualisiert",
       "fields": {
         "purpose": "Zweck",

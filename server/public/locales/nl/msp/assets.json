@@ -1925,6 +1925,10 @@
       "shippedVendor": "Verzonden naar leverancier",
       "returnedTo": "Geretourneerd aan klant ({{counterparty}})",
       "returned": "Geretourneerd aan klant",
+      "sealed": "Verzegeld in {{box}}",
+      "unsealed": "Doos opnieuw geopend: {{box}}",
+      "installedAtClient": "Geïnstalleerd bij de klant",
+      "aBox": "een voorbereidingsdoos",
       "updated": "Bewaringsgegevens bijgewerkt",
       "fields": {
         "purpose": "doel",

@@ -187,7 +187,7 @@ export function buildAssetCustodyChangedPayload(params: {
   custodyId: string;
   clientId?: string | null;
   ticketId?: string | null;
-  eventType: 'received' | 'moved' | 'handed_off' | 'shipped' | 'returned' | 'updated';
+  eventType: 'received' | 'moved' | 'handed_off' | 'shipped' | 'returned' | 'sealed' | 'unsealed' | 'updated';
   state: 'in_office' | 'with_vendor' | 'closed';
   purpose: 'repair' | 'warranty_evaluation' | 'loaner_prep' | 'staging';
   nextActionParty: 'msp' | 'client' | 'vendor';
