@@ -56,3 +56,16 @@ test('accepts an earlier successful build attempt in the same run and revision',
   await verifyDockerArchive(f.record, f.archive, f.expected);
   verifyLoadedDockerImage(f.record, f.inspection, f.expected);
 });
+
+test('a reused build record is accepted with its original revision label and rejected when the provenance is malformed', async t => {
+  const f = await fixture(t);
+  const source = 'b'.repeat(40);
+  f.record.reuse = { sourceRevision: source, sourceRunId: '99', sourceAttempt: 1, artifactRunId: '99', inputs: { policy: 'scripts/image-inputs.json', sha256: `sha256:${'e'.repeat(64)}`, files: 12 } };
+  await verifyDockerArchive(f.record, f.archive, f.expected);
+  f.inspection[0].Config.Labels['org.opencontainers.image.revision'] = source;
+  verifyLoadedDockerImage(f.record, f.inspection, f.expected);
+  for (const mutate of [r => { r.reuse.sourceRevision = r.revision; }, r => { r.reuse.sourceRunId = 'x'; }, r => { delete r.reuse.inputs; }, r => { r.reuse.inputs.sha256 = 'plain'; }]) {
+    const copy = structuredClone(f.record); mutate(copy);
+    await assert.rejects(verifyDockerArchive(copy, f.archive, f.expected), /reuse provenance/);
+  }
+});

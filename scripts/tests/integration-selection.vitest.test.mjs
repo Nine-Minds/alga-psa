@@ -20,7 +20,7 @@ test('workflow selector and real integration runner agree on git changes and wid
   // runner shim delegates every invocation to the installed Vitest binary;
   // its optional failure models an unavailable affected-test graph only.
   for (const file of ['scripts/select-integration-tests.mjs', 'scripts/run-tier1-integration.mjs', 'scripts/lib/integration-selection.mjs', 'scripts/lib/test-execution-evidence.mjs', 'scripts/lib/test-discovery.mjs', 'scripts/lib/test-revision.mjs', 'scripts/lib/test-sharding.mjs', 'scripts/lib/flaky-policy.mjs', 'scripts/lib/vitest-flaky-reporter.mjs', 'scripts/lib/vitest-progress-reporter.mjs', 'scripts/lib/flaky-error.mjs',
-    'scripts/lib/server-unit-durations.mjs']) {
+    'scripts/lib/server-unit-durations.mjs', 'scripts/lib/jev-enforcement.mjs']) {
     write(file, '');
     copyFileSync(path.join(repository, file), path.join(root, file));
   }

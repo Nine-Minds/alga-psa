@@ -224,6 +224,84 @@ test('shards must agree on the collection, the candidate and the checkout, and c
   assert.equal(inferred.evidence.status, 'passed', inferred.evidence.failures.join('\n'));
 });
 
+// What e2e-tests/run.mjs publishes for shard `index` of `total` of a judged
+// run: the judgment covers the whole collection, the shard's files are its
+// share of the files with a selected journey, and it ran those as location
+// filters. A shard left without a file publishes an empty report.
+function judgedShard(index, total, { selected = files.slice(0, 3), deferred = files.slice(3), mutate = () => {} } = {}) {
+  const identity = file => [file, 'ee', 'enterprise', [`${path.basename(file, '.spec.ts')} works`]];
+  const jev = { status: 'applied', threshold: 0.5, revision, floor: [files[0]],
+    selected: selected.map(file => ({ identity: identity(file), probability: 0.9, reason: 'p=0.90' })),
+    deferred: deferred.map(file => ({ identity: identity(file), probability: 0.1 })) };
+  const assigned = partitionJourneys({ files: selected, total })[index - 1];
+  const filters = assigned.map(file => `${file.slice('e2e-tests/'.length)}:1`).sort();
+  const result = shard(index, total, { mutate: result => {
+    result.report = reportOf(assigned.map(file => spec(file)));
+    result.evidence.selection = { mode: 'shard', shard: { index, total }, files: assigned, filters, jev: structuredClone(jev) };
+  } });
+  mutate(result);
+  return result;
+}
+
+test('shards of a judged run merge into one judged record whose deferred journeys the gate excuses', t => {
+  const merged = merge([judgedShard(2, 2), judgedShard(1, 2)]);
+  assert.equal(merged.complete, true);
+  assert.equal(merged.evidence.status, 'passed', merged.evidence.failures.join('\n'));
+  assert.equal(merged.evidence.selection.mode, 'jev');
+  assert.deepEqual(merged.evidence.selection.filters, ['tests/invoice.spec.ts:1', 'tests/login.spec.ts:1', 'tests/portal.spec.ts:1']);
+  assert.equal(merged.evidence.selection.jev.threshold, 0.5);
+  assert.equal(merged.evidence.counts.deferred, 1);
+  assert.equal(merged.evidence.counts.passed, 3);
+  assert.deepEqual(merged.evidence.selection.shards.map(entry => entry.files).flat().sort(), files.slice(0, 3).sort());
+  assert.equal(merged.metrics.status, 'passed', merged.metrics.failures.join('\n'));
+  assert.equal(merged.metrics.collected, files.length);
+  assert.equal(merged.metrics.executed, 3);
+  const calendar = merged.metrics.journeys.find(journey => journey.identity[0] === files[3]);
+  assert.deepEqual([calendar.required, calendar.outcome], [false, 'deferred']);
+  // The written record is a judged execution the fresh-install gate accepts.
+  const output = mkdtempSync(path.join(tmpdir(), 'browser-shard-judged-'));
+  t.after(() => rmSync(output, { recursive: true, force: true }));
+  writeMergedBrowserEvidence(output, merged);
+  const directory = path.dirname(browserArtifact(output, 'evidence.json'));
+  const bundle = readCandidateExecutionBundle({ id: 'playwright-enterprise', format: 'playwright', directory, sourceRoot: root, outcome: 'success' });
+  assert.equal(bundle.jev.deferred.length, 1);
+  const gate = evaluateCandidateExecution({ root, revision, requirements: [{ id: 'playwright-enterprise', format: 'playwright', candidates: files }], bundles: [bundle] });
+  assert.equal(gate.status, 'passed', gate.failures.join('\n'));
+
+  // Fewer selected files than shards leaves a shard idle, and the merge still
+  // sees every shard and the whole collection.
+  const sparse = { selected: files.slice(0, 2), deferred: files.slice(2) };
+  const idle = merge([judgedShard(1, 3, sparse), judgedShard(2, 3, sparse), judgedShard(3, 3, sparse)]);
+  assert.equal(idle.evidence.status, 'passed', idle.evidence.failures.join('\n'));
+  assert.deepEqual(idle.evidence.selection.shards[2].files, []);
+  assert.equal(idle.evidence.counts.deferred, 2);
+  assert.equal(idle.metrics.executed, 2);
+});
+
+test('a judged shard must carry the shared judgment, only its own filters, and must not run what it deferred', () => {
+  const unjudged = merge([shard(1, 2, { mutate: result => { result.evidence.selection.filters = ['tests/login.spec.ts:1']; } }), shard(2, 2)]);
+  assert.ok(unjudged.evidence.failures.includes('shard browser-1: filtered execution'));
+
+  const differing = merge([judgedShard(1, 2), judgedShard(2, 2, { mutate: result => { result.evidence.selection.jev.threshold = 0.6; } })]);
+  assert.ok(differing.evidence.failures.includes('Browser shards disagree on the judged selection'));
+  const mixed = merge([judgedShard(1, 2), shard(2, 2)]);
+  assert.ok(mixed.evidence.failures.includes('Browser shards disagree on the judged selection'));
+
+  const overreach = merge([judgedShard(1, 2), judgedShard(2, 2, { mutate: result => { result.evidence.selection.filters.push('tests/calendar.spec.ts:1'); } })]);
+  assert.ok(overreach.evidence.failures.includes('shard browser-2: filter outside its assigned journeys: tests/calendar.spec.ts:1'));
+
+  const stale = merge([judgedShard(1, 2, { mutate: result => { result.evidence.selection.jev.revision = 'b'.repeat(40); } }),
+    judgedShard(2, 2, { mutate: result => { result.evidence.selection.jev.revision = 'b'.repeat(40); } })]);
+  assert.ok(stale.evidence.failures.includes('Browser shards applied a judgment for a different revision'));
+
+  // A deferred journey that ran anyway is unexpected, not a bonus.
+  const ran = merge([judgedShard(1, 2), judgedShard(2, 2, { mutate: result => {
+    result.report.suites.push({ title: path.basename(files[3]), file: path.basename(files[3]), specs: [spec(files[3])] });
+    result.report.stats.expected++;
+  } })]);
+  assert.ok(ran.evidence.failures.some(failure => failure.startsWith('Unexpected browser test:') && failure.includes('calendar')));
+});
+
 test('the merge command reads downloaded shard artifact trees and reports completeness to the workflow', t => {
   const input = mkdtempSync(path.join(tmpdir(), 'browser-shard-input-'));
   const output = path.join(input, 'merged');
