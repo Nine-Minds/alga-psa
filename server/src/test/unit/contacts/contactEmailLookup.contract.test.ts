@@ -9,10 +9,13 @@ const testState = vi.hoisted(() => ({
   getContactByEmailMock: vi.fn(),
   createContactMock: vi.fn(),
   assertRecordCreateAllowedMock: vi.fn(),
+  emailHolder: undefined as any,
 }));
 
 // The client-scope create gate needs a real connection; its decisions are covered by the T008 integration test.
 vi.mock('@alga-psa/authorization/clientScopeAuthorization', () => ({ createClientScopeContext: async () => ({ narrowing: async () => ({ narrowed: false, apply: (query: unknown) => query }), permits: async () => true }) }));
+
+vi.mock('@alga-psa/authorization/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
 
 vi.mock('@alga-psa/authorization/recordCreateAuthorization', () => ({
   assertRecordCreateAllowed: testState.assertRecordCreateAllowedMock,
@@ -76,7 +79,12 @@ describe('contact email lookup query actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     testState.assertRecordCreateAllowedMock.mockResolvedValue(undefined);
+    testState.emailHolder = undefined;
     testState.trx = ((table: string) => {
+      if (table === 'contacts') {
+        // The command's duplicate lookup: nobody holds the email.
+        return makeQuery(testState.emailHolder);
+      }
       if (table === 'clients') {
         return makeQuery({ client_name: 'Acme Client' });
       }
