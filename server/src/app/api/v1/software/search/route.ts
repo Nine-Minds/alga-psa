@@ -18,6 +18,11 @@
 import { NextResponse } from 'next/server';
 import { searchSoftwareFleetWide } from '@alga-psa/assets/actions/softwareActions';
 import { assetActionErrorFrom, assetActionErrorMessage } from '@alga-psa/assets/actions/assetActionErrors';
+import { AuthenticationError } from '@alga-psa/auth';
+import { isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
+import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { UnauthorizedError } from 'server/src/lib/api/middleware/apiErrors';
+import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
 import type { SoftwareCategory, SoftwareType } from '@alga-psa/types';
 
 const SOFTWARE_CATEGORIES = new Set<string>([
@@ -79,6 +84,31 @@ function assetActionErrorResponse(value: unknown): NextResponse | null {
   return NextResponse.json({ error: message }, { status });
 }
 
+/**
+ * Auth-shaped failures that must never become a 500. `withAuth` throws
+ * AuthenticationError when there is no identity; `authenticateApiKeyRequest`
+ * throws UnauthorizedError (401) and, for co-managed workspaces awaiting
+ * acceptance, a CoManagedLifecycleError (409 via handleApiError's code map).
+ * Anything else is unexpected and keeps the generic 500.
+ */
+// LEVERAGE: pattern api-key-route-auth-errors — AuthenticationError/UnauthorizedError -> 401 repeated from templateRouteErrors.ts; handleApiError does not map AuthenticationError itself
+function authErrorResponse(error: unknown): NextResponse | null {
+  if (error instanceof AuthenticationError) {
+    return handleApiError(new UnauthorizedError('Unauthorized: valid session or API key required'));
+  }
+  const candidate = error as { name?: string; statusCode?: unknown };
+  if (candidate?.name === 'AuthenticationError') {
+    return handleApiError(new UnauthorizedError('Unauthorized: valid session or API key required'));
+  }
+  if (error instanceof UnauthorizedError || candidate?.name === 'UnauthorizedError') {
+    return handleApiError(error);
+  }
+  if (isCoManagedLifecycleError(error)) {
+    return handleApiError(error);
+  }
+  return null;
+}
+
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
@@ -118,7 +148,9 @@ export async function GET(request: Request) {
     const is_security_relevant = isSecurityRelevantParam.value;
     const client_id = url.searchParams.get('client_id') || undefined;
 
-    const result = await searchSoftwareFleetWide({
+    // API-key callers have no session; bridge the key's user into the withAuth action.
+    // Without an x-api-key header this calls the action directly (session path unchanged).
+    const result = await runWithApiKeyOrSession(request, () => searchSoftwareFleetWide({
       search,
       category: category || undefined,
       software_type: software_type || undefined,
@@ -127,7 +159,7 @@ export async function GET(request: Request) {
       client_id,
       page,
       limit,
-    });
+    }));
 
     const actionError = assetActionErrorResponse(result);
     if (actionError) {
@@ -148,6 +180,10 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
+    const authError = authErrorResponse(error);
+    if (authError) {
+      return authError;
+    }
     console.error('Failed to search software:', error);
     return NextResponse.json(
       { error: 'Failed to search software' },

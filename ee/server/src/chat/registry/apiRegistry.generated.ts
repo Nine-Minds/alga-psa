@@ -7012,7 +7012,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/stats",
     "displayName": "Get asset statistics",
     "summary": "Get asset statistics",
-    "description": "Returns tenant-scoped aggregate asset statistics including total counts, counts by type/status/client, warranty counts, and maintenance due/overdue counts. The service runs multiple aggregate queries filtered by context.tenant; assets_by_client is limited to the top 10 client names. The response links currently point at /api/v2/assets paths.",
+    "description": "Returns aggregate statistics over the tenant assets the caller is authorized to read: total and deployed counts, counts by type/status/client, warranty counts, maintenance due/overdue counts, and asset value from purchase_cost (minor units, grouped by currency). Each asset is authorized and projected before it is counted, so fields redacted for the caller never contribute; value fields are omitted rather than reported as partial totals.",
     "tags": [
       "Assets"
     ],
@@ -30395,7 +30395,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/software/search",
     "displayName": "Search software across the fleet",
     "summary": "Search software across the fleet",
-    "description": "Searches installed software across all assets in the tenant, with filters for name/publisher search, category, software_type, is_managed, is_security_relevant, and client_id. Paginated. Authenticated by the global x-api-key middleware and tenant-scoped by the underlying withAuth action (it calls the searchSoftwareFleetWide server action directly rather than using a route-level controller wrapper).",
+    "description": "Searches installed software across all assets in the tenant, with filters for name/publisher search, category, software_type, is_managed, is_security_relevant, and client_id. Paginated. The route bridges the x-api-key identity into the searchSoftwareFleetWide withAuth action (session callers without a key use the session), which is tenant-scoped and requires asset:read and applies record-level read authorization. Missing or invalid credentials return 401, a caller without asset:read returns 403, and invalid parameters return 400.",
     "tags": [
       "Software"
     ],
@@ -30474,7 +30474,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 200
+          "maximum": 100
         }
       },
       {

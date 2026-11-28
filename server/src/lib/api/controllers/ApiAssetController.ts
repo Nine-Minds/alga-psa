@@ -954,9 +954,10 @@ export class ApiAssetController {
     }
 
     const visibleAssetIds = assets.map((asset) => String(asset.asset_id));
-    const [deployableStatusSlugs, maintenanceRows] = await Promise.all([
+    const [deployableStatusSlugs, maintenanceRows, tenantCurrency] = await Promise.all([
       this.assetService.getDeployableStatusSlugs(context),
       this.assetService.getMaintenanceSchedulesForAssets(context, visibleAssetIds),
+      this.assetService.getTenantDefaultCurrency(context),
     ]);
     const schedulesByAsset = new Map<string, Array<Record<string, any>>>();
     for (const schedule of maintenanceRows) {
@@ -978,6 +979,8 @@ export class ApiAssetController {
     return createApiResponse(this.assetService.getStatisticsFromProjections(
       projectionsWithSchedules,
       deployableStatusSlugs,
+      new Date(),
+      tenantCurrency,
     ));
   }
 

@@ -443,8 +443,10 @@ describeDb('co-managed seat devices: read-only own-client assets on real Postgre
       expect(details).toMatchObject({ purchase_cost: expect.anything() });
       expect(details.billing_profile_id).toBeTruthy();
       const stats = await service.getStatistics(ctx(msp));
-      expect(stats.total_asset_value).toBeGreaterThan(0);
-      expect(service.getStatisticsFromProjections(list.data, []).total_asset_value).toBe(stats.total_asset_value);
+      // The fixture holds EUR and USD assets: value is grouped by currency and no single total is reported.
+      expect(stats.asset_value_by_currency).toMatchObject({ EUR: COST });
+      expect(stats).not.toHaveProperty('total_asset_value');
+      expect(service.getStatisticsFromProjections(list.data, []).asset_value_by_currency).toEqual(stats.asset_value_by_currency);
     });
 
     it('denies REST asset writes to a seat subject whatever the role holds', async () => {

@@ -3618,78 +3618,87 @@ components:
     AssetStatsPayload:
       type: object
       properties:
-        data:
+        total_assets:
+          type: integer
+          description: Count of assets the caller can read.
+        deployed_assets:
+          type: integer
+          description: Count of readable assets whose status is a tenant asset status of
+            kind deployable.
+        assets_added_this_month:
+          type: integer
+          description: Count of readable assets created since the start of the current UTC
+            month.
+        average_asset_age_days:
+          type:
+            - integer
+            - "null"
+          description: Rounded average age in days from purchase_date, or null when no
+            readable asset has one.
+        asset_value_by_currency:
           type: object
-          properties:
-            total_assets:
-              type: integer
-              description: Total asset count for the tenant.
-            assets_added_this_month:
-              type: integer
-              description: Count of assets created since the start of the current month.
-            average_asset_age_days:
-              type:
-                - integer
-                - "null"
-              description: Rounded average age in days from purchase_date, or null when
-                unavailable.
-            total_asset_value:
-              type: number
-              description: Sum of purchase_price values, treating null as zero.
-            assets_by_type:
-              type: object
-              additionalProperties:
-                type: integer
-              description: Counts grouped by assets.asset_type.
-            assets_by_status:
-              type: object
-              additionalProperties:
-                type: integer
-              description: Counts grouped by assets.status.
-            assets_by_client:
-              type: object
-              additionalProperties:
-                type: integer
-              description: Top client counts grouped by clients.client_name. The service
-                limits this grouping to 10 clients.
-            warranty_expiring_soon:
-              type: integer
-              description: Count of warranties ending within 30 days.
-            warranty_expired:
-              type: integer
-              description: Count of warranties already expired.
-            maintenance_due:
-              type: integer
-              description: Count of active maintenance schedules with next_maintenance due now
-                or earlier.
-            maintenance_overdue:
-              type: integer
-              description: Count of active maintenance schedules overdue by more than seven
-                days.
-          required:
-            - total_assets
-            - assets_added_this_month
-            - average_asset_age_days
-            - total_asset_value
-            - assets_by_type
-            - assets_by_status
-            - assets_by_client
-            - warranty_expiring_soon
-            - warranty_expired
-            - maintenance_due
-            - maintenance_overdue
-        _links:
+          additionalProperties:
+            type: integer
+          description: Sum of assets.purchase_cost in minor units (cents), keyed by
+            purchase_cost_currency. Assets without a currency count under the
+            tenant default currency; assets with no purchase_cost are not
+            counted; {} when no asset has a cost. Amounts in different
+            currencies are never added together. Omitted when purchase_cost or
+            purchase_cost_currency is redacted or closed to the caller for any
+            readable asset.
+        total_asset_value:
+          type: integer
+          description: Sum of purchase_cost in minor units (cents). Present only when
+            every valued asset shares one currency (0 in the tenant default
+            currency when no asset has a cost); omitted for mixed-currency
+            inventories and whenever asset_value_by_currency is omitted.
+        total_asset_value_currency:
+          type: string
+          description: ISO currency code of total_asset_value. Present exactly when
+            total_asset_value is present.
+        assets_by_type:
           type: object
-          properties:
-            self:
-              $ref: "#/components/schemas/HateoasLink"
-            assets:
-              $ref: "#/components/schemas/HateoasLink"
-          description: Stats links. The controller currently points these at
-            /api/v2/assets paths.
+          additionalProperties:
+            type: integer
+          description: Counts grouped by assets.asset_type.
+        assets_by_status:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Counts grouped by assets.status; assets without a status count
+            under "Unknown".
+        assets_by_client:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Counts grouped by client name; assets without a client name count
+            under "Unknown". Every client is included.
+        warranty_expiring_soon:
+          type: integer
+          description: Count of warranties ending within 30 days.
+        warranty_expired:
+          type: integer
+          description: Count of warranties already expired.
+        maintenance_due:
+          type: integer
+          description: Count of active maintenance schedules with next_maintenance due now
+            or earlier.
+        maintenance_overdue:
+          type: integer
+          description: Count of active maintenance schedules overdue by more than seven
+            days.
       required:
-        - data
-        - _links
+        - total_assets
+        - deployed_assets
+        - assets_added_this_month
+        - average_asset_age_days
+        - assets_by_type
+        - assets_by_status
+        - assets_by_client
+        - warranty_expiring_soon
+        - warranty_expired
+        - maintenance_due
+        - maintenance_overdue
     AssetStatsResponse:
       type: object
       properties:
@@ -11360,7 +11369,7 @@ components:
         limit:
           type: integer
           minimum: 1
-          maximum: 200
+          maximum: 100
     CountriesEnvelope:
       type: object
       properties:
@@ -35819,11 +35828,13 @@ paths:
   /api/v1/assets/stats:
     get:
       summary: Get asset statistics
-      description: Returns tenant-scoped aggregate asset statistics including total
-        counts, counts by type/status/client, warranty counts, and maintenance
-        due/overdue counts. The service runs multiple aggregate queries filtered
-        by context.tenant; assets_by_client is limited to the top 10 client
-        names. The response links currently point at /api/v2/assets paths.
+      description: "Returns aggregate statistics over the tenant assets the caller is
+        authorized to read: total and deployed counts, counts by
+        type/status/client, warranty counts, maintenance due/overdue counts, and
+        asset value from purchase_cost (minor units, grouped by currency). Each
+        asset is authorized and projected before it is counted, so fields
+        redacted for the caller never contribute; value fields are omitted
+        rather than reported as partial totals."
       tags:
         - Assets
       security:
@@ -62889,10 +62900,12 @@ paths:
       summary: Search software across the fleet
       description: Searches installed software across all assets in the tenant, with
         filters for name/publisher search, category, software_type, is_managed,
-        is_security_relevant, and client_id. Paginated. Authenticated by the
-        global x-api-key middleware and tenant-scoped by the underlying withAuth
-        action (it calls the searchSoftwareFleetWide server action directly
-        rather than using a route-level controller wrapper).
+        is_security_relevant, and client_id. Paginated. The route bridges the
+        x-api-key identity into the searchSoftwareFleetWide withAuth action
+        (session callers without a key use the session), which is tenant-scoped
+        and requires asset:read and applies record-level read authorization.
+        Missing or invalid credentials return 401, a caller without asset:read
+        returns 403, and invalid parameters return 400.
       tags:
         - Software
       security:
@@ -62949,7 +62962,7 @@ paths:
         - schema:
             type: integer
             minimum: 1
-            maximum: 200
+            maximum: 100
           required: false
           name: limit
           in: query

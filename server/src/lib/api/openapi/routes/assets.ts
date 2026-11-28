@@ -667,26 +667,25 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  // The controller returns the statistics object itself as `data` (createApiResponse); there is no nested
+  // `data` and no `_links`. Counts are over the asset rows the caller is authorized to read.
   const AssetStatsPayload = registry.registerSchema(
     'AssetStatsPayload',
     zOpenApi.object({
-      data: zOpenApi.object({
-        total_assets: zOpenApi.number().int().describe('Total asset count for the tenant.'),
-        assets_added_this_month: zOpenApi.number().int().describe('Count of assets created since the start of the current month.'),
-        average_asset_age_days: zOpenApi.number().int().nullable().describe('Rounded average age in days from purchase_date, or null when unavailable.'),
-        total_asset_value: zOpenApi.number().describe('Sum of purchase_price values, treating null as zero.'),
-        assets_by_type: zOpenApi.record(zOpenApi.string(), zOpenApi.number().int()).describe('Counts grouped by assets.asset_type.'),
-        assets_by_status: zOpenApi.record(zOpenApi.string(), zOpenApi.number().int()).describe('Counts grouped by assets.status.'),
-        assets_by_client: zOpenApi.record(zOpenApi.string(), zOpenApi.number().int()).describe('Top client counts grouped by clients.client_name. The service limits this grouping to 10 clients.'),
-        warranty_expiring_soon: zOpenApi.number().int().describe('Count of warranties ending within 30 days.'),
-        warranty_expired: zOpenApi.number().int().describe('Count of warranties already expired.'),
-        maintenance_due: zOpenApi.number().int().describe('Count of active maintenance schedules with next_maintenance due now or earlier.'),
-        maintenance_overdue: zOpenApi.number().int().describe('Count of active maintenance schedules overdue by more than seven days.'),
-      }),
-      _links: zOpenApi.object({
-        self: HateoasLink.optional(),
-        assets: HateoasLink.optional(),
-      }).describe('Stats links. The controller currently points these at /api/v2/assets paths.'),
+      total_assets: zOpenApi.number().int().describe('Count of assets the caller can read.'),
+      deployed_assets: zOpenApi.number().int().describe('Count of readable assets whose status is a tenant asset status of kind deployable.'),
+      assets_added_this_month: zOpenApi.number().int().describe('Count of readable assets created since the start of the current UTC month.'),
+      average_asset_age_days: zOpenApi.number().int().nullable().describe('Rounded average age in days from purchase_date, or null when no readable asset has one.'),
+      asset_value_by_currency: zOpenApi.record(zOpenApi.string(), zOpenApi.number().int()).optional().describe('Sum of assets.purchase_cost in minor units (cents), keyed by purchase_cost_currency. Assets without a currency count under the tenant default currency; assets with no purchase_cost are not counted; {} when no asset has a cost. Amounts in different currencies are never added together. Omitted when purchase_cost or purchase_cost_currency is redacted or closed to the caller for any readable asset.'),
+      total_asset_value: zOpenApi.number().int().optional().describe('Sum of purchase_cost in minor units (cents). Present only when every valued asset shares one currency (0 in the tenant default currency when no asset has a cost); omitted for mixed-currency inventories and whenever asset_value_by_currency is omitted.'),
+      total_asset_value_currency: zOpenApi.string().optional().describe('ISO currency code of total_asset_value. Present exactly when total_asset_value is present.'),
+      assets_by_type: zOpenApi.record(zOpenApi.string(), zOpenApi.number().int()).describe('Counts grouped by assets.asset_type.'),
+      assets_by_status: zOpenApi.record(zOpenApi.string(), zOpenApi.number().int()).describe('Counts grouped by assets.status; assets without a status count under "Unknown".'),
+      assets_by_client: zOpenApi.record(zOpenApi.string(), zOpenApi.number().int()).describe('Counts grouped by client name; assets without a client name count under "Unknown". Every client is included.'),
+      warranty_expiring_soon: zOpenApi.number().int().describe('Count of warranties ending within 30 days.'),
+      warranty_expired: zOpenApi.number().int().describe('Count of warranties already expired.'),
+      maintenance_due: zOpenApi.number().int().describe('Count of active maintenance schedules with next_maintenance due now or earlier.'),
+      maintenance_overdue: zOpenApi.number().int().describe('Count of active maintenance schedules overdue by more than seven days.'),
     }),
   );
 
@@ -1272,7 +1271,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/stats',
     summary: 'Get asset statistics',
     description:
-      'Returns tenant-scoped aggregate asset statistics including total counts, counts by type/status/client, warranty counts, and maintenance due/overdue counts. The service runs multiple aggregate queries filtered by context.tenant; assets_by_client is limited to the top 10 client names. The response links currently point at /api/v2/assets paths.',
+      'Returns aggregate statistics over the tenant assets the caller is authorized to read: total and deployed counts, counts by type/status/client, warranty counts, maintenance due/overdue counts, and asset value from purchase_cost (minor units, grouped by currency). Each asset is authorized and projected before it is counted, so fields redacted for the caller never contribute; value fields are omitted rather than reported as partial totals.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     responses: {
