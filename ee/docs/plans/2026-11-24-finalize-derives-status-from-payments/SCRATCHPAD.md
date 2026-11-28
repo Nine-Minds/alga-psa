@@ -42,3 +42,11 @@ group by 1,2,3;
 ## 2026-11-27 review finding (Prepare Human Review)
 
 - F006 resolved: `applyCreditToInvoiceInternal` did not write status, so a payment-plus-credit invoice re-finalized as `partially_applied` with a $0 balance (seen live on FDS-4524-C: $50 paid + $50 auto-applied credit on $100). Credit application now writes the shared `deriveInvoiceStatus` result inside its locked transaction (draft/cancelled/void unchanged; credit alone still never makes `paid`). DB tests T008/T009 in finalizeDerivedStatus.db.test.ts; financialStateModel oracle updated.
+
+## 2026-11-27 repair round (PR #4524 review)
+
+- REST `InvoiceService.applyCredit` and `recordRefund` now call `deriveInvoiceStatus` / `computeBalanceDue` from balanceDue.ts; the inline rules (which counted credit as paid) and both `LEVERAGE: invoice-status-derivation` markers are gone. Amounts are cents on these paths (`total_amount`, `credit_applied`, `invoice_payments.amount`), no conversion added.
+- Behaviour change: a refund on a cancelled/void invoice now keeps that status (old code forced a payment status).
+- Found while testing: REST `recordRefund` inserted a non-existent `invoice_payments.created_by` column (insert always failed). Now records `metadata.recorded_by`. Minimal fix required to exercise the refund path.
+- Tests: T008/T009 (finalizeDerivedStatus.db.test.ts) listed; T010/T011 in `server/src/test/integration/api/invoiceService.creditRefundStatus.db.test.ts`. T002-T004, T007 flagged implemented after checking they exist.
+- DB lane runner: `server/vitest.workspace-db.config.ts` with TEST_DB_NAME, DB_PASSWORD_SERVER, DB_PASSWORD_ADMIN, TEST_DB_PORT.
