@@ -184,30 +184,147 @@ describe('MicrosoftGraphAdapter subscription hygiene', () => {
     );
   });
 
-  it('keeps other subscriptions when mailboxes share the same webhook URL', async () => {
-    const provider = { ...config(), mailbox: 'support@example.test' };
-    const mailboxSubscription = {
-      notificationUrl: provider.webhook_notification_url,
-      changeType: 'created',
-      resource: 'users/support%40example.test/mailFolders/inbox/messages',
-    };
-    mocks.dbPluck.mockResolvedValue(['tracked-by-another-provider']);
-    mocks.client.get.mockResolvedValue({
-      data: {
-        value: [
-          { ...mailboxSubscription, id: 'old-subscription' },
-          { ...mailboxSubscription, id: 'orphan' },
-          { ...mailboxSubscription, id: 'tracked-by-another-provider' },
-          { ...mailboxSubscription, id: 'other-app-url', notificationUrl: 'https://other.example.test/webhook' },
-          { ...mailboxSubscription, id: 'other-mailbox', resource: 'users/sales%40example.test/mailFolders/inbox/messages' },
-        ],
-      },
-    });
-    const adapter = new MicrosoftGraphAdapter(provider);
+  describe('cleanupOrphanedSubscriptions', () => {
+    const webhookUrl = config().webhook_notification_url;
+    const mailboxes = {
+      sales: 'sales@example.test',
+      'service-desk': 'service-desk@example.test',
+    } as const;
+    const resourceFor = (mailbox: string) =>
+      `/users/${encodeURIComponent(mailbox)}/mailFolders/inbox/messages`;
+    const future = () => new Date(Date.now() + 48 * 3600 * 1000).toISOString();
+    const past = () => new Date(Date.now() - 3600 * 1000).toISOString();
 
-    await expect(adapter.cleanupOrphanedSubscriptions()).resolves.toBe(1);
-    expect(mocks.client.delete).toHaveBeenCalledTimes(1);
-    expect(mocks.client.delete).toHaveBeenCalledWith('/subscriptions/orphan');
+    beforeEach(() => {
+      mocks.dbPluck.mockReset();
+      mocks.dbPluck.mockResolvedValue([]);
+      mocks.client.get.mockReset();
+    });
+
+    it.each([
+      ['sales', 'service-desk'],
+      ['service-desk', 'sales'],
+    ] as const)('never deletes a live sibling subscription (%s checked, %s sibling)', async (current, sibling) => {
+      const row = (name: string) => ({
+        id: `sub-${name}`,
+        notificationUrl: webhookUrl,
+        changeType: 'created',
+        resource: `/users/${name}@example.test/mailFolders('inbox')/messages`,
+      });
+      mocks.client.get.mockResolvedValue({ data: { value: [row(current), row(sibling)] } });
+      const adapter = new MicrosoftGraphAdapter({
+        ...config(),
+        mailbox: `${current}@example.test`,
+        webhook_subscription_id: `sub-${current}`,
+      });
+
+      await adapter.cleanupOrphanedSubscriptions();
+
+      expect(mocks.client.delete.mock.calls).toEqual([]);
+    });
+
+    it.each([
+      ['sales', 'service-desk', 'set'],
+      ['sales', 'service-desk', 'null'],
+      ['sales', 'service-desk', 'undefined'],
+      ['service-desk', 'sales', 'set'],
+      ['service-desk', 'sales', 'null'],
+      ['service-desk', 'sales', 'undefined'],
+    ] as const)(
+      'keeps live Graph-shaped subscriptions across repeated cleanup (%s checked, %s other, id %s)',
+      async (checked, other, idState) => {
+        const liveRow = (id: string, mailbox: string) => ({
+          id,
+          resource: resourceFor(mailbox),
+          changeType: 'created',
+          notificationUrl: webhookUrl,
+          expirationDateTime: future(),
+          clientState: 'secret',
+        });
+        mocks.client.get.mockResolvedValue({
+          data: {
+            value: [liveRow(`${checked}-live`, mailboxes[checked]), liveRow(`${other}-live`, mailboxes[other])],
+          },
+        });
+        const provider: any = { ...config(), mailbox: mailboxes[checked] };
+        if (idState === 'set') provider.webhook_subscription_id = `${checked}-live`;
+        else if (idState === 'null') provider.webhook_subscription_id = null;
+        else delete provider.webhook_subscription_id;
+        const adapter = new MicrosoftGraphAdapter(provider);
+
+        await expect(adapter.cleanupOrphanedSubscriptions()).resolves.toBe(0);
+        await expect(adapter.cleanupOrphanedSubscriptions()).resolves.toBe(0);
+        expect(mocks.client.delete).not.toHaveBeenCalled();
+      },
+    );
+
+    it('keeps other subscriptions when mailboxes share the same webhook URL', async () => {
+      const provider = { ...config(), mailbox: 'support@example.test' };
+      const mailboxSubscription = {
+        notificationUrl: provider.webhook_notification_url,
+        changeType: 'created',
+        resource: 'users/support%40example.test/mailFolders/inbox/messages',
+        expirationDateTime: past(),
+      };
+      mocks.dbPluck.mockResolvedValue(['tracked-by-another-provider']);
+      mocks.client.get.mockResolvedValue({
+        data: {
+          value: [
+            { ...mailboxSubscription, id: 'old-subscription' },
+            { ...mailboxSubscription, id: 'orphan' },
+            { ...mailboxSubscription, id: 'live-untracked', expirationDateTime: future() },
+            { ...mailboxSubscription, id: 'tracked-by-another-provider' },
+            { ...mailboxSubscription, id: 'other-app-url', notificationUrl: 'https://other.example.test/webhook' },
+            { ...mailboxSubscription, id: 'other-mailbox', resource: 'users/sales%40example.test/mailFolders/inbox/messages' },
+          ],
+        },
+      });
+      const adapter = new MicrosoftGraphAdapter(provider);
+
+      await expect(adapter.cleanupOrphanedSubscriptions()).resolves.toBe(1);
+      expect(mocks.client.delete).toHaveBeenCalledTimes(1);
+      expect(mocks.client.delete).toHaveBeenCalledWith('/subscriptions/orphan');
+    });
+
+    it('deletes an owned, untracked, expired subscription exactly once', async () => {
+      mocks.client.get.mockResolvedValue({
+        data: {
+          value: [{
+            id: 'expired-orphan',
+            notificationUrl: webhookUrl,
+            changeType: 'created',
+            resource: resourceFor('sales@example.test'),
+            expirationDateTime: past(),
+          }],
+        },
+      });
+      const adapter = new MicrosoftGraphAdapter({ ...config(), mailbox: 'sales@example.test' });
+
+      await expect(adapter.cleanupOrphanedSubscriptions()).resolves.toBe(1);
+      expect(mocks.client.delete).toHaveBeenCalledTimes(1);
+      expect(mocks.client.delete).toHaveBeenCalledWith('/subscriptions/expired-orphan');
+    });
+
+    it.each([
+      ['missing', undefined],
+      ['unparseable', 'not-a-date'],
+    ])('does not delete a row with a %s expirationDateTime', async (_label, expirationDateTime) => {
+      mocks.client.get.mockResolvedValue({
+        data: {
+          value: [{
+            id: 'unproven',
+            notificationUrl: webhookUrl,
+            changeType: 'created',
+            resource: resourceFor('sales@example.test'),
+            expirationDateTime,
+          }],
+        },
+      });
+      const adapter = new MicrosoftGraphAdapter({ ...config(), mailbox: 'sales@example.test' });
+
+      await expect(adapter.cleanupOrphanedSubscriptions()).resolves.toBe(0);
+      expect(mocks.client.delete).not.toHaveBeenCalled();
+    });
   });
 
   it('T017: deletes the explicitly supplied stored Graph subscription', async () => {

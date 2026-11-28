@@ -452,7 +452,9 @@ export const assetStatsResponseSchema = z.object({
   maintenance_due: z.number(),
   maintenance_overdue: z.number(),
   average_asset_age_days: z.number().nullable(),
-  total_asset_value: z.number(),
+  total_asset_value: z.number().optional(),
+  total_asset_value_currency: z.string().optional(),
+  asset_value_by_currency: z.record(z.string(), z.number()).optional(),
   assets_added_this_month: z.number()
 });
 

@@ -3,6 +3,7 @@
 import { projectClientsForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import {
   createClientWithDefaults,
@@ -111,16 +112,26 @@ export const getIntegrationContacts = withAuth(async (
 });
 
 export const findIntegrationContactByEmailAddress = withAuth(async (
-  _user,
+  user,
   { tenant },
   email: string
 ): Promise<(IContact & { client_name?: string | null }) | null> => {
+  if (!(await hasPermission(user as any, 'contact', 'read'))) {
+    throw new Error('Permission denied: Cannot read contacts');
+  }
+
   const { knex } = await createTenantKnex();
 
   const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const baseContact = await ContactModel.getContactByEmail(email, tenant, trx);
 
     if (!baseContact) {
+      return null;
+    }
+
+    // LEVERAGE: pattern scoped-email-lookup — find by email, then return null unless the contact is in the caller's read scope.
+    const scope = await createClientScopeContext(trx, tenant, user);
+    if (!(await scope.permits('contact', baseContact.contact_name_id))) {
       return null;
     }
 
