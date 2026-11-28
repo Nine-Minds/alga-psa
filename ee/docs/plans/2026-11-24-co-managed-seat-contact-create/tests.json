@@ -9,7 +9,7 @@
     "id": "T002",
     "featureIds": ["F002", "F003", "F005"],
     "description": "DB-backed: for a restricted user, an email held by an out-of-scope contact and one held by a client-less contact both return the generic in-use result with no client name and no contact, on create and on find-or-create; an email held by an in-scope contact returns that contact. An unrestricted MSP user still receives the named-client message.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T003",
