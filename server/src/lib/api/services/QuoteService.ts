@@ -36,6 +36,7 @@ import { QUOTE_SORT_FIELDS } from '../schemas/quoteSchemas';
 import { canTransitionQuoteStatus } from '@alga-psa/shared/lib/quotes/quoteStatusTransitions';
 import { onQuoteSent } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
 import { QUOTE_ACTIVITY_TYPES, buildApprovalChangesRequestedActivity } from '@alga-psa/billing/lib/quoteActivityTypes';
+import { assertQuoteLocationsOwnedByClient, isQuoteScopeError } from '@alga-psa/billing/lib/quoteScope';
 import { createPredicateGuard } from '../controllers/authorizationKernel';
 import { SELF_APPROVAL_AUDIT_METADATA } from '@alga-psa/authorization/quoteSelfApproval';
 
@@ -51,6 +52,10 @@ export interface QuoteListOptions extends ListOptions {
 function throwQuoteApiError(error: unknown): never {
   if (!(error instanceof Error)) {
     throw error;
+  }
+
+  if (isQuoteScopeError(error)) {
+    throw new ValidationError(error.message);
   }
 
   const message = error.message;
@@ -120,44 +125,6 @@ export class QuoteService extends BaseService<IQuote> {
     const hasAccess = await hasApiContextPermission(context, 'billing', action);
     if (!hasAccess) {
       throw new ForbiddenError(`Permission denied: Cannot ${action} quotes`);
-    }
-  }
-
-  /**
-   * A quote item's location must be one of the owning client's own locations —
-   * neither this path nor the UI checked before (alga-2026-0002902), so a
-   * caller could pin a line to another client's address.
-   */
-  private async assertItemLocationsBelongToClient(
-    trx: Knex.Transaction,
-    tenant: string,
-    clientId: string | null | undefined,
-    items: Array<{ location_id?: string | null } | undefined>
-  ): Promise<void> {
-    const locationIds = [...new Set(
-      items
-        .map((item) => item?.location_id)
-        .filter((locationId): locationId is string => typeof locationId === 'string' && locationId.length > 0)
-    )];
-
-    if (locationIds.length === 0) {
-      return;
-    }
-
-    if (!clientId) {
-      throw new ValidationError('location_id requires the quote to be linked to a client');
-    }
-
-    const found = await tenantDb(trx, tenant).table('client_locations')
-      .whereIn('location_id', locationIds)
-      .andWhere('client_id', clientId)
-      .pluck<string[]>('location_id');
-
-    const missing = locationIds.filter((locationId) => !found.includes(locationId));
-    if (missing.length > 0) {
-      throw new ValidationError(
-        `location_id does not belong to this quote's client: ${missing.join(', ')}`
-      );
     }
   }
 
@@ -298,7 +265,7 @@ export class QuoteService extends BaseService<IQuote> {
       }
 
       if (items?.length) {
-        await this.assertItemLocationsBelongToClient(trx, context.tenant, quoteData.client_id, items);
+        await assertQuoteLocationsOwnedByClient(trx, context.tenant, quoteData.client_id, items.map((item) => item.location_id));
       }
 
       const quote = await Quote.create(trx, context.tenant, {
@@ -401,11 +368,11 @@ export class QuoteService extends BaseService<IQuote> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      await this.assertItemLocationsBelongToClient(
+      await assertQuoteLocationsOwnedByClient(
         trx,
         context.tenant,
         await this.getQuoteClientId(trx, context.tenant, quoteId),
-        [data]
+        [data.location_id]
       );
 
       // QuoteItem.create handles display_order, totals, and recalculation internally
@@ -435,11 +402,11 @@ export class QuoteService extends BaseService<IQuote> {
         throw new NotFoundError('Quote item not found');
       }
 
-      await this.assertItemLocationsBelongToClient(
+      await assertQuoteLocationsOwnedByClient(
         trx,
         context.tenant,
         await this.getQuoteClientId(trx, context.tenant, quoteId),
-        [data]
+        [data.location_id]
       );
 
       // QuoteItem.update handles recalculation internally
