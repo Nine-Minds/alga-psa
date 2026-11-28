@@ -93,6 +93,7 @@ export async function createHuntressTicket(
   await TicketWatcherService.seedFromAttributes(trx, tenantId, ticket.ticket_id);
 
   if (params.assetId) {
+    // LEVERAGE: pattern asset-ticket-association — hand-rolled copy of shared/services/assets/assetTicketAssociation.ts (not idempotent)
     // asset_associations.created_by is NOT NULL with an FK to users, so a
     // system-created link is attributed to the tenant's earliest user.
     const auditUser = await db.table('users')

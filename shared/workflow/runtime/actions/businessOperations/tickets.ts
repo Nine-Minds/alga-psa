@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import type { Knex } from 'knex';
-import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { getWorkflowEmailProvider } from '../../registries/workflowEmailRegistry';
@@ -40,6 +39,15 @@ import {
   withWorkflowPicker,
   withWorkflowNotFoundPolicy,
 } from '@alga-psa/event-schemas';
+import {
+  TICKET_LINK_ENTITY_TYPES,
+  TICKET_LINK_DEFAULT_LIMIT,
+  TICKET_LINK_MAX_LIMIT,
+  TicketLinkError,
+  linkTicketEntity,
+  listTicketLinks,
+  ticketExists,
+} from '../../../../services/tickets/ticketLinks';
 import { orderTicketCommentsNewestFirst, whereCustomerAuthoredComment } from './ticketComments';
 
 /**
@@ -1368,14 +1376,17 @@ export function registerTicketActions(): void {
       ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
       entity_type: z.enum(['project', 'project_task', 'asset', 'contract']).describe('Entity type'),
       entity_id: uuidSchema.describe('Entity id'),
-      link_type: z.string().min(1).describe('Link type'),
-      metadata: z.record(z.string(), z.unknown()).optional().describe('Optional link metadata')
+      link_type: z.string().min(1).describe(
+        "Link type. Project, project task and contract links keep this value as given. Asset links are stored in asset_associations, which keeps only 'affected' or 'related' as the relationship; any other value is stored as 'affected' and the original value is kept in the link's notes as 'link_type: <value>'."
+      ),
+      metadata: z.record(z.string(), z.unknown()).optional().describe('Optional link metadata. For asset links it is written to the link notes as JSON.')
     }),
     outputSchema: z.object({
       link_id: uuidSchema,
       entity_type: z.string(),
       entity_id: uuidSchema,
-      link_type: z.string(),
+      link_type: z.string().describe('Link type as stored. For asset links this is the stored relationship (affected or related), which for an already-linked asset is the existing link\'s relationship.'),
+      source: z.enum(['asset_associations', 'ticket_entity_links']).describe('Table that holds the link'),
       linked_entity_summary: z.object({
         type: z.string(),
         id: uuidSchema,
@@ -1385,80 +1396,25 @@ export function registerTicketActions(): void {
     }),
     sideEffectful: true,
     idempotency: { mode: 'engineProvided' },
-    ui: { label: 'Link Ticket Entity', category: 'Business Operations', description: 'Link a ticket to another entity' },
+    ui: { label: 'Link Ticket Entity', category: 'Business Operations', description: 'Link a ticket to a project, project task, asset or contract. Asset links only keep affected or related as link_type; see the link_type field.' },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
 
-      const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
-      if (!ticket) {
-        throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found' });
-      }
-
-      let linkedEntitySummary: { type: string; id: string; name: string | null; url: string | null } = {
-        type: input.entity_type,
-        id: input.entity_id,
-        name: null,
-        url: null
-      };
-
-      // Entity existence checks
-      if (input.entity_type === 'project') {
-        const project = await tenantScopedTable(tx, 'projects').where('project_id', input.entity_id).first();
-        if (!project) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Project not found' });
-        linkedEntitySummary = {
-          type: 'project',
-          id: input.entity_id,
-          name: (project.project_name as string | null) ?? null,
-          url: null
-        };
-      } else if (input.entity_type === 'project_task') {
-        const task = await tenantScopedTable(tx, 'project_tasks').where('task_id', input.entity_id).first();
-        if (!task) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Project task not found' });
-        linkedEntitySummary = {
-          type: 'project_task',
-          id: input.entity_id,
-          name: (task.task_name as string | null) ?? null,
-          url: null
-        };
-      } else if (input.entity_type === 'asset') {
-        const asset = await tenantScopedTable(tx, 'assets').where('asset_id', input.entity_id).first();
-        if (!asset) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Asset not found' });
-        const assetName =
-          (asset.asset_name as string | null | undefined) ??
-          (asset.name as string | null | undefined) ??
-          (asset.asset_tag as string | null | undefined) ??
-          null;
-        linkedEntitySummary = { type: 'asset', id: input.entity_id, name: assetName, url: null };
-      } else if (input.entity_type === 'contract') {
-        const contract = await tenantScopedTable(tx, 'contracts').where('contract_id', input.entity_id).first().catch(() => null);
-        if (!contract) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Contract not found' });
-        const contractName =
-          (contract.contract_name as string | null | undefined) ??
-          (contract.name as string | null | undefined) ??
-          (contract.contract_number as string | null | undefined) ??
-          null;
-        linkedEntitySummary = { type: 'contract', id: input.entity_id, name: contractName, url: null };
-      }
-
-      const linkId = uuidv4();
-      const nowIso = new Date().toISOString();
-
-      // Generic polymorphic link table (added via migration in this plan).
+      // Asset links are canonical in asset_associations (shared with the UI/REST/RMM paths);
+      // other types live in ticket_entity_links. See shared/services/tickets/ticketLinks.ts.
+      let result;
       try {
-        await tenantScopedTable(tx, 'ticket_entity_links').insert({
-          tenant: tx.tenantId,
-          link_id: linkId,
-          ticket_id: input.ticket_id,
-          entity_type: input.entity_type,
-          entity_id: input.entity_id,
-          link_type: input.link_type,
-          metadata: input.metadata ?? null,
-          created_at: nowIso
+        result = await linkTicketEntity(tx.trx, tx.tenantId, {
+          ticketId: input.ticket_id,
+          entityType: input.entity_type,
+          entityId: input.entity_id,
+          linkType: input.link_type,
+          metadata: input.metadata,
+          actorUserId: tx.actorUserId,
         });
       } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        if (/duplicate|unique/i.test(msg)) {
-          throwActionError(ctx, { category: 'ActionError', code: 'CONFLICT', message: 'Link already exists' });
+        if (error instanceof TicketLinkError) {
+          throwActionError(ctx, { category: 'ActionError', code: error.code, message: error.message });
         }
         throw error;
       }
@@ -1466,16 +1422,93 @@ export function registerTicketActions(): void {
       await writeRunAudit(ctx, tx, {
         operation: 'workflow_action:tickets.link_entities',
         changedData: { ticket_id: input.ticket_id, entity_type: input.entity_type, entity_id: input.entity_id, link_type: input.link_type },
-        details: { action_id: 'tickets.link_entities', action_version: 1, link_id: linkId }
+        details: { action_id: 'tickets.link_entities', action_version: 1, link_id: result.link_id, source: result.source }
       });
 
       return {
-        link_id: linkId,
-        entity_type: input.entity_type,
-        entity_id: input.entity_id,
-        link_type: input.link_type,
-        linked_entity_summary: linkedEntitySummary
+        link_id: result.link_id,
+        entity_type: result.entity_type,
+        entity_id: result.entity_id,
+        link_type: result.link_type,
+        source: result.source,
+        linked_entity_summary: { type: result.entity_type, id: result.entity_id, name: result.name, url: null }
       };
+    })
+  });
+
+  // ---------------------------------------------------------------------------
+  // tickets.find_linked_entities — read mirror of tickets.link_entities
+  // ---------------------------------------------------------------------------
+  const linkedEntitySchema = z.object({
+    entity_type: z.enum(TICKET_LINK_ENTITY_TYPES),
+    entity_id: uuidSchema,
+    name: z.string().nullable().describe('Display name of the linked entity'),
+    relationship_type: z.string(),
+    linked_at: isoDateTimeSchema.nullable(),
+    source: z.enum(['asset_associations', 'ticket_entity_links']),
+    legacy: z.boolean().optional().describe('Asset link stored in the legacy ticket_entity_links table'),
+    asset: z.object({
+      asset_id: uuidSchema,
+      asset_tag: z.string().nullable(),
+      asset_name: z.string().nullable(),
+      asset_type: z.string().nullable(),
+      client_id: uuidSchema.nullable(),
+    }).optional(),
+    external_ids: z.array(z.object({
+      integration_type: z.string().describe('RMM provider, e.g. levelio, ninjaone'),
+      external_entity_id: z.string().describe('Device id in the RMM provider'),
+      external_realm_id: z.string().nullable(),
+    })).optional().describe('RMM provider device ids mapped to the asset (assets only)'),
+  });
+
+  registry.register({
+    id: 'tickets.find_linked_entities',
+    version: 1,
+    inputSchema: z.object({
+      ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
+      entity_type: z.enum(['all', ...TICKET_LINK_ENTITY_TYPES]).default('all').describe('Restrict to one entity type'),
+      relationship_type: z.string().min(1).optional().describe('Only links with this relationship type (assets: affected/related; others: link_type)'),
+      include_external_ids: z.boolean().default(true).describe('Include RMM provider and external device id for assets'),
+      limit: z.number().int().positive().max(TICKET_LINK_MAX_LIMIT).default(TICKET_LINK_DEFAULT_LIMIT).describe('Maximum number of links to return'),
+      on_not_found: withWorkflowNotFoundPolicy(z.enum(['return_empty', 'error']).default('return_empty'), 'What to do when the ticket has no links'),
+    }),
+    outputSchema: z.object({
+      ticket_id: uuidSchema,
+      links: z.array(linkedEntitySchema),
+    }),
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Find Ticket Linked Entities',
+      category: 'Business Operations',
+      description: 'Return the assets, projects, project tasks and contracts linked to a ticket. Asset rows carry the RMM provider and external device id, ready for RMM device lookups.',
+    },
+    examples: {
+      minimal: { ticket_id: '00000000-0000-0000-0000-000000000000', entity_type: 'asset' },
+    },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      await requirePermission(ctx, tx, { resource: 'ticket', action: 'read' });
+      if (input.entity_type === 'all' || input.entity_type === 'asset') {
+        await requirePermission(ctx, tx, { resource: 'asset', action: 'read' });
+      }
+
+      if (!(await ticketExists(tx.trx, tx.tenantId, input.ticket_id))) {
+        throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found' });
+      }
+
+      const links = await listTicketLinks(tx.trx, tx.tenantId, {
+        ticketId: input.ticket_id,
+        entityType: input.entity_type,
+        relationshipType: input.relationship_type,
+        includeExternalIds: input.include_external_ids,
+        limit: input.limit,
+      });
+
+      if (links.length === 0 && input.on_not_found === 'error') {
+        throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'No linked entities found for ticket' });
+      }
+
+      return { ticket_id: input.ticket_id, links: links.map((l) => linkedEntitySchema.parse(l)) };
     })
   });
 

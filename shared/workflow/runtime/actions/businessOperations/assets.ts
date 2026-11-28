@@ -20,6 +20,7 @@ function tenantScopedTable(
   return tenantDb(tx.trx, tx.tenantId).table(table);
 }
 
+// See also tickets.find_linked_entities (the ticket -> linked assets/entities direction).
 export function registerAssetActions(): void {
   registerAssetMaintenanceActions();
   const registry = getActionRegistryV2();
