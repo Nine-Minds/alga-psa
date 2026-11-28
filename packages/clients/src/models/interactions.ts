@@ -17,13 +17,19 @@ export interface InteractionPageFilters {
   typeId?: string;
   page?: number;
   pageSize?: number;
+  /** Opaque continuation from a previous result's nextCursor; forces page 1. */
+  cursor?: string | null;
 }
 
 export interface InteractionPageResult {
   interactions: IInteraction[];
   total: number;
+  /** False when total is only a lower bound from a bounded count window. */
+  totalExact: boolean;
   page: number;
   pageSize: number;
+  nextCursor?: string | null;
+  hasMore?: boolean;
 }
 
 async function resolveDb(tenantId: string, trx?: DbOrTransaction): Promise<{ db: DbOrTransaction; tenant: string }> {
@@ -278,7 +284,7 @@ class InteractionModel {
     tenantId: string,
     trx?: DbOrTransaction,
     readScope?: ClientReadScope,
-  ): Promise<InteractionPageResult> {
+  ): Promise<Omit<InteractionPageResult, 'totalExact' | 'nextCursor' | 'hasMore'>> {
     const { db, tenant } = await resolveDb(tenantId, trx);
     const facade = tenantDb(db, tenant);
     const page = Math.max(1, Math.floor(filters.page ?? 1));

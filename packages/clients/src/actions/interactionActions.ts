@@ -299,11 +299,14 @@ export const getInteractionsPage = withAuth(async (
     await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interactions');
 
     const { knex } = await createTenantKnex();
-    const admitted = await interactionSeam.delegate(tenant, p => p.readInteractions(knex, tenant, () => resolveInteractionBrowserActor(user, tenant), { filters, paginated: true }));
-    if (admitted.handled) return { interactions: admitted.interactions, total: admitted.total, page: admitted.page, pageSize: admitted.pageSize };
+    // A cursor continuation is positional, so the offset is always page 1.
+    const nativeFilters = filters.cursor ? { ...filters, page: 1 } : filters;
+    const admitted = await interactionSeam.delegate(tenant, p => p.readInteractions(knex, tenant, () => resolveInteractionBrowserActor(user, tenant), { filters: nativeFilters, paginated: true }));
+    if (admitted.handled) return { interactions: admitted.interactions, total: admitted.total, totalExact: admitted.totalExact, page: admitted.page, pageSize: admitted.pageSize, nextCursor: admitted.nextCursor, hasMore: admitted.hasMore };
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const readScope = await resolveInteractionReadScope(trx, tenant, user, 'i');
-      return InteractionModel.getInteractionsPage(filters, tenant, trx, readScope);
+      const result = await InteractionModel.getInteractionsPage(filters, tenant, trx, readScope);
+      return { ...result, totalExact: true, nextCursor: null, hasMore: result.page * result.pageSize < result.total };
     });
   } catch (error) {
     const expected = interactionActionErrorFrom(error);
