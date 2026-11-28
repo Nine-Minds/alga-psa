@@ -105,7 +105,7 @@ import {
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
 import { projectReadableRecord } from '@alga-psa/authorization/recordProjection';
-import { createAssetReadContext, isAssetReadAllowed, type AssetAuthUser } from '@alga-psa/authorization/assetReadAuthorization';
+import { assertTicketAssetLinksAllowed } from '../lib/ticketAssetLinkAuthorization';
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import {
   buildTicketAssignedPayload,
@@ -436,14 +436,15 @@ async function publishResponseStateChangedEvent(
 }
 /**
  * Links assets to a freshly created ticket, one `asset_associations` row each, inside the caller's
- * transaction. Ids are deduplicated; every asset must exist in the tenant (and, when `clientId` is
- * given, belong to that client), otherwise this throws and the caller's create rolls back.
+ * transaction. Ids are deduplicated; every asset must exist in the tenant and belong to `clientId`,
+ * otherwise this throws and the caller's create rolls back. Callers authorize first with
+ * assertTicketAssetLinksAllowed; this check is defense in depth.
  * LEVERAGE: pattern ticket-asset-association-insert — assetActions.createAssetAssociation inserts the same row for an existing ticket
  */
 async function linkAssetsToNewTicket(
   trx: Knex.Transaction,
   tenant: string,
-  params: { ticketId: string; assetIds: string[]; userId: string; clientId?: string }
+  params: { ticketId: string; assetIds: string[]; userId: string; clientId: string }
 ): Promise<void> {
   const assetIds = Array.from(new Set(params.assetIds.filter(Boolean)));
   if (assetIds.length === 0) return;
@@ -457,7 +458,7 @@ async function linkAssetsToNewTicket(
     if (!row) {
       throw new Error(`Invalid asset: ${assetId} was not found`);
     }
-    if (params.clientId && row.client_id !== params.clientId) {
+    if (row.client_id !== params.clientId) {
       throw new Error(`Invalid asset: ${assetId} does not belong to the selected client`);
     }
   }
@@ -510,17 +511,6 @@ export const createTicketFromAsset = withAuth(async (user, { tenant }, data: Cre
               entered_by: user.user_id,
             });
 
-            // The asset the ticket is created from must be one the creator may read: for a seat technician that is
-            // their own client's, and anything else answers as missing. Without a restricting rule this allows.
-            const sourceAsset = await tenantScopedTable(trx, 'assets', tenant)
-              .where({ asset_id: data.asset_id })
-              .first('asset_id', 'client_id');
-            if (!sourceAsset || !await isAssetReadAllowed(
-              trx, tenant, await createAssetReadContext(trx, tenant, user as AssetAuthUser), sourceAsset,
-            )) {
-              throw new Error(`Invalid asset: ${data.asset_id} was not found`);
-            }
-
             // Use shared TicketModel for asset ticket creation
             const ticketResult = await TicketModel.createTicketFromAsset(
                 data,
@@ -531,13 +521,6 @@ export const createTicketFromAsset = withAuth(async (user, { tenant }, data: Cre
                 analyticsTracker
             );
 
-            // Server-specific: Create the asset association
-            await linkAssetsToNewTicket(trx, tenant, {
-              ticketId: ticketResult.ticket_id,
-              assetIds: [data.asset_id],
-              userId: user.user_id,
-            });
-
             // Server-specific: Get full ticket data for return
             const fullTicket = await tenantScopedTable(trx, 'tickets', tenant)
                 .where({ ticket_id: ticketResult.ticket_id })
@@ -546,6 +529,22 @@ export const createTicketFromAsset = withAuth(async (user, { tenant }, data: Cre
             if (!fullTicket) {
                 throw new Error('Created ticket could not be reloaded after insert.');
             }
+
+            // The source asset must be one the creator may update and belong to the persisted ticket's client.
+            // This replaces the former read-only check: update authorization is the stricter record-level test,
+            // and a denied asset answers as missing where the kernel conceals denials.
+            await assertTicketAssetLinksAllowed(trx, tenant, user, {
+              ticketClientId: fullTicket.client_id,
+              assetIds: [data.asset_id],
+            });
+
+            // Server-specific: Create the asset association
+            await linkAssetsToNewTicket(trx, tenant, {
+              ticketId: ticketResult.ticket_id,
+              assetIds: [data.asset_id],
+              userId: user.user_id,
+              clientId: fullTicket.client_id,
+            });
 
             const enteredSlaEvent = buildTicketResolutionSlaStageEnteredEvent({
               tenantId: tenant,
@@ -613,21 +612,22 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       // Optional create extras (linked assets, watchers). Parsed and validated before anything is
       // written; both are optional so callers that send none behave as before.
       const extras = parseTicketCreateExtras(data);
-      const hasCreateExtras = extras.assetIds.length > 0 || extras.watcherIds.length > 0 || extras.additionalAgentIds.length > 0;
-      if (hasCreateExtras) {
-        if (user.user_type !== 'internal') {
-          throw new Error('Permission denied: operation not available in client portal');
-        }
-        if (extras.assetIds.length > 0 && !await hasPermission(user, 'asset', 'update', trx)) {
-          throw new Error('Permission denied: Cannot link assets to tickets');
-        }
-      }
       // The asset the dialog was opened from leads the picked ones, so it is
-      // also the one whose billing profile the ticket inherits below.
+      // also the one whose billing profile the ticket inherits below. Normalized before any gating so the
+      // legacy singular `asset_id` is subject to the same checks as the list.
       const linkedAssetIds = dedupeTicketAssetIds([
         typeof asset_id === 'string' ? asset_id : '',
         ...extras.assetIds,
       ]);
+      const hasCreateExtras = linkedAssetIds.length > 0 || extras.watcherIds.length > 0 || extras.additionalAgentIds.length > 0;
+      if (hasCreateExtras) {
+        if (user.user_type !== 'internal') {
+          throw new Error('Permission denied: operation not available in client portal');
+        }
+        if (linkedAssetIds.length > 0 && !await hasPermission(user, 'asset', 'update', trx)) {
+          throw new Error('Permission denied: Cannot link assets to tickets');
+        }
+      }
 
       // Duplicate-ticket fields. The client only names the source; the hidden
       // carry-over (custom fields, checklist) is copied below from the source
@@ -833,17 +833,6 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
 
       // Asset associations, in the same transaction as the insert: the single `asset_id` ("opened from
       // an asset") merged with the optional `asset_ids` list. Any failure rolls the whole create back.
-      if (linkedAssetIds.length > 0) {
-        await linkAssetsToNewTicket(trx, tenant, {
-          ticketId: ticketResult.ticket_id,
-          assetIds: linkedAssetIds,
-          userId: user.user_id,
-          // The picker is client-scoped, so a supplied list must match the ticket's client. The legacy
-          // single `asset_id` on its own keeps its old behaviour (existence only).
-          clientId: extras.assetIds.length > 0 ? createTicketInput.client_id : undefined,
-        });
-      }
-
       // Server-specific: Get full ticket data for return
       const fullTicket = await tenantScopedTable(trx, 'tickets', tenant)
         .where({ ticket_id: ticketResult.ticket_id })
@@ -851,6 +840,20 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
 
       if (!fullTicket) {
         throw new Error('Created ticket could not be reloaded after insert.');
+      }
+
+      // Authorize against the persisted client (not the raw form value), then link.
+      if (linkedAssetIds.length > 0) {
+        await assertTicketAssetLinksAllowed(trx, tenant, user, {
+          ticketClientId: fullTicket.client_id,
+          assetIds: linkedAssetIds,
+        });
+        await linkAssetsToNewTicket(trx, tenant, {
+          ticketId: ticketResult.ticket_id,
+          assetIds: linkedAssetIds,
+          userId: user.user_id,
+          clientId: fullTicket.client_id,
+        });
       }
 
       // Shared creation may apply a board user or team lead. Publish the final
