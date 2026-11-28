@@ -2,6 +2,7 @@
 
 import type { IPriority, DeletionValidationResult } from '@alga-psa/types';
 import Priority from '../models/priority';
+import { loadPriorities } from '../lib/referenceListQueries';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import type { Knex } from 'knex';
@@ -79,15 +80,12 @@ function priorityActionErrorFrom(error: unknown): PriorityActionError | null {
 
 export const getAllPriorities = withAuth(async (_user, { tenant }, itemType?: 'ticket' | 'project_task') => {
   const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
-    try {
-      const priorities = await Priority.getAll(trx, tenant, itemType);
-      return priorities;
-    } catch (error) {
-      console.error(`Error fetching priorities for tenant ${tenant}:`, error);
-      throw error;
-    }
-  });
+  try {
+    return await loadPriorities(db, tenant, itemType);
+  } catch (error) {
+    console.error(`Error fetching priorities for tenant ${tenant}:`, error);
+    throw error;
+  }
 });
 
 export const getAllPrioritiesWithStandard = withAuth(async (_user, ctx, itemType?: 'ticket' | 'project_task') => {

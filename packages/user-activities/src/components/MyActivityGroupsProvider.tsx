@@ -76,6 +76,7 @@ function withMembership(
   });
 }
 
+// LEVERAGE: pattern query-cache — hand-rolled client store (lazy load, refresh, optimistic writes) over server actions; the same job as useActivitiesCache and the shared SWR reference-list layer (@alga-psa/ui/lib/referenceData). Candidate to move onto that layer.
 export function MyActivityGroupsProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation('msp/user-activities');
   const [groups, setGroups] = useState<ActivityGroup[] | null>(null);

@@ -30,6 +30,7 @@ import {
   StatusColumnsEditor,
   type DeleteStatusColumnRequest,
 } from '../../status-columns';
+import { invalidateReferenceList } from '@alga-psa/ui/lib/referenceData';
 
 interface ProjectTaskStatusSettingsProps {
   projectId: string;
@@ -241,6 +242,7 @@ export const ProjectTaskStatusSettings = forwardRef<
         toast.error(getErrorMessage(result));
         return false;
       }
+      invalidateReferenceList('projectsWithPhases');
       return true;
     } catch (error) {
       console.error('Failed to reorder statuses:', error);
@@ -284,6 +286,7 @@ export const ProjectTaskStatusSettings = forwardRef<
         toast.error(getErrorMessage(result));
         return;
       }
+      invalidateReferenceList('projectsWithPhases');
       toast.success(t('settings.statuses.removed_success', 'Status removed successfully'));
       setDeleteRequest(null);
       await loadStatuses({ silent: true });
@@ -304,6 +307,7 @@ export const ProjectTaskStatusSettings = forwardRef<
         toast.error(getErrorMessage(result));
         return;
       }
+      invalidateReferenceList('projectsWithPhases');
       toast.success(t('settings.statuses.added_success', 'Status added successfully'));
       await loadStatuses({ silent: true });
     } catch (error) {

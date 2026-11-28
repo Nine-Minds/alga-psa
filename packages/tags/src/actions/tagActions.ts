@@ -8,6 +8,7 @@ import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import { hasPermissionAsync, throwPermissionErrorAsync } from '../lib/authHelpers';
 import { generateEntityColorAsync } from '../lib/uiHelpers';
 import { resolveTagReadScope } from '../lib/tagReadScope';
+import { loadTagsByType } from '../lib/tagListQueries';
 import { isTagTextValidationFailure, validateTagText } from '../lib/tagTextValidation';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -784,45 +785,7 @@ export const findAllTagsByType = withOptionalAuth(async (user: IUserWithRoles | 
 
     const { knex: db } = await createTenantKnex();
     const { tenant } = ctx;
-    return await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Get tag definitions that have at least one mapping or reference (filter out orphans)
-      // Use DISTINCT ON for deduplication by tag_text (PostgreSQL-specific but works with Citus)
-      const scopedDb = tenantDb(trx, tenant);
-      const tagMappingsQuery = scopedDb.table('tag_mappings as tm')
-        .select(trx.raw('1'))
-        .whereRaw('?? = ??', ['tm.tag_id', 'td.tag_id']);
-      scopedDb.tenantWhereColumn(tagMappingsQuery, 'tm.tenant', 'td.tenant');
-
-      // A definition something refers to is listed even with no mappings, so a referrer's tag can
-      // still be picked in filters and settings.
-      const tagReferencesQuery = scopedDb.table('tag_references as tr')
-        .select(trx.raw('1'))
-        .whereRaw('?? = ??', ['tr.tag_id', 'td.tag_id']);
-      scopedDb.tenantWhereColumn(tagReferencesQuery, 'tr.tenant', 'td.tenant');
-
-      // A narrowed subject is offered only tags attached to records it may read (see resolveTagReadScope).
-      const readScope = await resolveTagReadScope(trx, tenant, user);
-      const definitions = await scopedDb.table('tag_definitions as td')
-        .distinctOn('td.tag_text')
-        .select('td.*')
-        .where('td.tagged_type', entityType)
-        .where((builder) => builder.whereExists(tagMappingsQuery).orWhereExists(tagReferencesQuery))
-        .modify((query) => readScope?.applyToDefinitions(query, 'td'))
-        .orderBy('td.tag_text', 'asc')
-        .orderBy('td.created_at', 'asc');
-
-      // Convert to ITag format (use definition ID as tag_id since these are unique)
-      return definitions.map((def: any) => ({
-        tag_id: def.tag_id,
-        tenant,
-        board_id: def.board_id || undefined,
-        tag_text: def.tag_text,
-        tagged_id: '', // No specific entity for unique tags
-        tagged_type: def.tagged_type,
-        background_color: def.background_color,
-        text_color: def.text_color
-      }));
-    });
+    return await loadTagsByType(db, tenant, user, entityType);
   } catch (error) {
     console.error(`Error finding all tags for type ${entityType}:`, error);
     const expected = tagActionErrorFrom(error);

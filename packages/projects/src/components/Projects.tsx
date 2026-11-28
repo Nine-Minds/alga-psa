@@ -54,6 +54,7 @@ import {
   resolveKnownClientIds,
   type ProjectListLiveState,
 } from '../lib/projectListViewAdapter';
+import { invalidateReferenceList } from '@alga-psa/ui/lib/referenceData';
 
 type AnySmartSearchResultsProps = SmartSearchResultsProps<unknown, Record<string, unknown>, unknown>;
 
@@ -823,6 +824,7 @@ export default function Projects({ initialProjects, initialFilters, initialProje
         return;
       }
 
+      invalidateReferenceList('projectsWithPhases');
       setProjects(projects.filter(p => p.project_id !== projectToDelete.project_id));
       toast.success(projectListT('deletedSuccess', 'Project deleted successfully'));
       resetDeleteState();

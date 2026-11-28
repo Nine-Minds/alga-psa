@@ -38,6 +38,11 @@ interface ActivitiesTableFiltersProps {
   ticketStatuses?: IStatus[];
   ticketTags?: ITag[];
   projectTaskTags?: ITag[];
+  /**
+   * Per-list "not loaded yet" flags (from `useActivityFilterOptions`). A list that is loading renders
+   * its control disabled with a "Loading…" label; a control hides only once its list has loaded empty.
+   */
+  loading?: Partial<Record<'projects' | 'boards' | 'ticketStatuses' | 'ticketTags' | 'projectTaskTags', boolean>>;
 }
 
 // Deduplicate statuses by name, optionally scoped to a board
@@ -76,8 +81,10 @@ export function ActivitiesTableFilters({
   ticketStatuses = [],
   ticketTags = [],
   projectTaskTags = [],
+  loading = {},
 }: ActivitiesTableFiltersProps) {
   const { t } = useTranslation('msp/user-activities');
+  const loadingLabel = t('filters.placeholders.loadingOptions', { defaultValue: 'Loading…' });
   const ACTIVITY_TYPE_OPTIONS = [
     { value: ActivityType.SCHEDULE, label: t('filters.activityTypeOptions.schedule', { defaultValue: 'Schedule' }) },
     { value: ActivityType.PROJECT_TASK, label: t('filters.activityTypeOptions.projectTask', { defaultValue: 'Project Tasks' }) },
@@ -786,13 +793,15 @@ export function ActivitiesTableFilters({
                 {t('filters.labels.ticketsCompact', { defaultValue: 'Tickets' })}
               </span>
 
-              {boardTreeOptions.length > 0 && (
+              {(loading.boards || boardTreeOptions.length > 0) && (
                 <div className="w-[135px]">
                   <TreeSelect<'board'>
+                    data-automation-id="activities-board-filter"
                     options={boardTreeOptions}
                     value=""
+                    disabled={loading.boards}
                     onValueChange={handleBoardToggle}
-                    placeholder={boardFilterLabel || t('filters.placeholders.allBoards', { defaultValue: 'All Boards' })}
+                    placeholder={loading.boards ? loadingLabel : boardFilterLabel || t('filters.placeholders.allBoards', { defaultValue: 'All Boards' })}
                     multiSelect
                     showExclude
                     showReset
@@ -805,13 +814,15 @@ export function ActivitiesTableFilters({
                 </div>
               )}
 
-              {ticketStatusTreeOptions.length > 0 && (
+              {(loading.ticketStatuses || ticketStatusTreeOptions.length > 0) && (
                 <div className="w-[135px]">
                   <TreeSelect<'ticketStatus'>
+                    data-automation-id="activities-ticket-status-filter"
                     options={ticketStatusTreeOptions}
                     value=""
+                    disabled={loading.ticketStatuses}
                     onValueChange={handleTicketStatusToggle}
-                    placeholder={statusFilterLabel || t('filters.placeholders.allStatuses', { defaultValue: 'All Statuses' })}
+                    placeholder={loading.ticketStatuses ? loadingLabel : statusFilterLabel || t('filters.placeholders.allStatuses', { defaultValue: 'All Statuses' })}
                     multiSelect
                     showExclude
                     showReset
@@ -824,14 +835,15 @@ export function ActivitiesTableFilters({
                 </div>
               )}
 
-              {uniqueTicketTags.length > 0 && (
+              {(loading.ticketTags || uniqueTicketTags.length > 0) && (
                 <TagFilter
                   id="ticket-tag-filter"
+                  disabled={loading.ticketTags}
                   tags={uniqueTicketTags}
                   selectedTags={selectedTicketTagTexts}
                   onToggleTag={handleTicketTagToggle}
                   onClearTags={() => onChange({ ...filters, ticketTagIds: undefined })}
-                  triggerLabel={t('filters.labels.tags', { defaultValue: 'Tags' })}
+                  triggerLabel={loading.ticketTags ? loadingLabel : t('filters.labels.tags', { defaultValue: 'Tags' })}
                   selectedLabel={t('filters.labels.tagsSelected', { count: selectedTicketTagTexts.length, defaultValue: '{{count}} tags' })}
                   placeholder={t('filters.placeholders.ticketTags', { defaultValue: 'Filter ticket tags...' })}
                 />
@@ -848,13 +860,15 @@ export function ActivitiesTableFilters({
                 {t('filters.labels.tasksCompact', { defaultValue: 'Tasks' })}
               </span>
 
-              {projects.length > 0 && (
+              {(loading.projects || projects.length > 0) && (
                 <div className="w-[190px]">
                   <TreeSelect<ProjectNodeType>
+                    data-automation-id="activities-project-filter"
                     options={projectTreeOptions}
                     value=""
+                    disabled={loading.projects}
                     onValueChange={handleProjectTreeToggle}
-                    placeholder={projectFilterLabel || t('filters.placeholders.allProjects', { defaultValue: 'All Projects' })}
+                    placeholder={loading.projects ? loadingLabel : projectFilterLabel || t('filters.placeholders.allProjects', { defaultValue: 'All Projects' })}
                     multiSelect
                     showExclude
                     showReset
@@ -867,16 +881,17 @@ export function ActivitiesTableFilters({
                 </div>
               )}
 
-              {uniqueProjectTaskTags.length > 0 && (
+              {(loading.projectTaskTags || uniqueProjectTaskTags.length > 0) && (
                 <TagFilter
                   id="project-task-tag-filter"
+                  disabled={loading.projectTaskTags}
                   tags={uniqueProjectTaskTags}
                   selectedTags={selectedProjectTaskTagTexts}
                   onToggleTag={handleProjectTaskTagToggle}
                   onClearTags={() =>
                     onChange({ ...filters, projectTaskTagIds: undefined })
                   }
-                  triggerLabel={t('filters.labels.tags', { defaultValue: 'Tags' })}
+                  triggerLabel={loading.projectTaskTags ? loadingLabel : t('filters.labels.tags', { defaultValue: 'Tags' })}
                   selectedLabel={t('filters.labels.tagsSelected', { count: selectedProjectTaskTagTexts.length, defaultValue: '{{count}} tags' })}
                   placeholder={t('filters.placeholders.projectTaskTags', { defaultValue: 'Filter task tags...' })}
                 />

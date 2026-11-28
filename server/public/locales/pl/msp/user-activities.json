@@ -372,6 +372,7 @@
     },
     "placeholders": {
       "allBoards": "Wszystkie tablice",
+      "loadingOptions": "Ładowanie…",
       "allStatuses": "Wszystkie statusy",
       "allProjects": "Wszystkie projekty",
       "allPriorities": "Wszystkie priorytety",

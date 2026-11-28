@@ -78,6 +78,7 @@ import { useQuickAddRichTextUploadSession } from './useQuickAddRichTextUploadSes
 import { getTicketStatuses } from '@alga-psa/reference-data/actions/status-actions/statusActions';
 import { useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { toCalendarDisplayDate } from '@alga-psa/core';
+import { invalidateReferenceList } from '@alga-psa/ui/lib/referenceData';
 
 export interface QuickAddAssetPickerProps {
   id: string;
@@ -1404,6 +1405,7 @@ export function QuickAddTicket({
       if (pendingTags.length > 0 && newTicket.ticket_id) {
         try {
           createdTags = await createTagsForEntity(newTicket.ticket_id, 'ticket', pendingTags);
+          if (createdTags.length > 0) invalidateReferenceList('ticketTags');
           if (createdTags.length < pendingTags.length) {
             const failedCount = pendingTags.length - createdTags.length;
             toast.error(t('quickAdd.tagCreatePartialFailure', {

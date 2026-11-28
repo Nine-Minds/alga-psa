@@ -372,6 +372,7 @@
     },
     "placeholders": {
       "allBoards": "Tutte le bacheche",
+      "loadingOptions": "Caricamento…",
       "allStatuses": "Tutti gli stati",
       "allProjects": "Tutti i progetti",
       "allPriorities": "Tutte le priorità",

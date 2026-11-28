@@ -25,6 +25,8 @@ interface TagFilterProps {
   align?: 'start' | 'center' | 'end';
   /** Shown at the left of the popover footer once something is selected (e.g. a match-mode switch). */
   footerContent?: React.ReactNode;
+  /** Renders the trigger inert (e.g. while the tag list is still loading). */
+  disabled?: boolean;
 }
 
 export function TagFilter({
@@ -41,6 +43,7 @@ export function TagFilter({
   modal = false,
   align = 'center',
   footerContent,
+  disabled = false,
 }: TagFilterProps) {
   const { t } = useTranslation();
   const resolvedPlaceholder = placeholder ?? t('tagFilter.placeholder', { defaultValue: 'Filter by tags...' });
@@ -50,9 +53,9 @@ export function TagFilter({
   const filteredTags = filterTagsByText(tags, searchQuery);
 
   return (
-    <Popover.Root open={isOpen} onOpenChange={setIsOpen} modal={modal}>
+    <Popover.Root open={isOpen && !disabled} onOpenChange={setIsOpen} modal={modal}>
       <Popover.Trigger asChild>
-        <Button id={`${id}-trigger`} variant="outline" className={`h-9 gap-2 whitespace-nowrap ${triggerClassName}`}>
+        <Button id={`${id}-trigger`} variant="outline" disabled={disabled} className={`h-9 gap-2 whitespace-nowrap ${triggerClassName}`}>
           <TagIcon className="h-4 w-4" />
           <span>
             {selectedTags.length > 0

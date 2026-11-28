@@ -101,6 +101,10 @@
     "./user-activities/ActivityDrawerProvider": {
       "import": "./src/user-activities/ActivityDrawerProvider.ts",
       "types": "./src/user-activities/ActivityDrawerProvider.ts"
+    },
+    "./referenceData/*": {
+      "import": "./src/referenceData/*.tsx",
+      "types": "./src/referenceData/*.tsx"
     }
   },
   "dependencies": {

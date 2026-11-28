@@ -372,6 +372,7 @@
     },
     "placeholders": {
       "allBoards": "Alla tavlor",
+      "loadingOptions": "Laddar…",
       "allStatuses": "Alla statusar",
       "allProjects": "Alla projekt",
       "allPriorities": "Alla prioriteter",

@@ -29,6 +29,7 @@ import { deleteWizardBoard } from '../../lib/deleteWizardBoard';
 import { createBoardTicketStatus, updateBoardTicketStatus } from '@alga-psa/tickets/actions/board-actions/boardTicketStatusActions';
 import { createCategory } from '@alga-psa/tickets/actions/ticketCategoryActions';
 import { createPriority } from '@alga-psa/reference-data/actions';
+import { invalidateReferenceList } from '@alga-psa/ui/lib/referenceData';
 import toast from 'react-hot-toast';
 import {
   getErrorMessage,
@@ -298,6 +299,13 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
   };
 
   // Load existing ticketing data on mount
+  // The wizard creates, imports, edits and deletes boards, ticket statuses and priorities at many
+  // sites; leaving the step invalidates the shared reference-list cache once for all of them.
+  useEffect(
+    () => () => invalidateReferenceList(['boards', 'ticketStatuses', 'priorities:ticket']),
+    []
+  );
+
   useEffect(() => {
     loadExistingData();
   }, []); // Only run once on mount

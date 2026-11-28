@@ -7,6 +7,7 @@ import AlgaDeskMspShell from "@/components/layout/AlgaDeskMspShell";
 import CoManagedCustomerShell from '@/components/co-managed/CoManagedCustomerShell';
 import CoManagedWorkspaceNotice, { type CoManagedWorkspaceNoticeState } from '@/components/co-managed/CoManagedWorkspaceNotice';
 import { TagProvider } from "@alga-psa/tags/context";
+import { MspReferenceDataProvider, referenceDataScope } from '@alga-psa/msp-composition/referenceData/MspReferenceDataProvider';
 import { PostHogUserIdentifier } from "@alga-psa/ui/components/analytics/PostHogUserIdentifier";
 import { ClientUIStateProvider } from "@alga-psa/ui/ui-reflection/ClientUIStateProvider";
 import { I18nWrapper } from "@alga-psa/tenancy/components/i18n/I18nWrapper";
@@ -225,6 +226,9 @@ export function MspLayoutClient({
           <MspCallLinkProvider>
           <IncomingCallProvider tenant={session?.user?.tenant} userId={session?.user?.id}>
           <PostHogUserIdentifier />
+          {/* The reference-list cache spans every MSP page: lists are edited on screens outside the
+              workspace route layouts (settings, onboarding), and their invalidations must reach it. */}
+          <MspReferenceDataProvider scope={referenceDataScope(session?.user?.tenant, session?.user?.id)}>
           <TagProvider>
             <ClientUIStateProvider
               initialPageState={{
@@ -273,6 +277,7 @@ export function MspLayoutClient({
               </DataTablePreferencesProvider>
             </ClientUIStateProvider>
           </TagProvider>
+          </MspReferenceDataProvider>
           </IncomingCallProvider>
           </MspCallLinkProvider>
         </TierProvider>

@@ -1195,6 +1195,7 @@ function UngroupedSection({
   onClearForceExpanded,
 }: UngroupedSectionProps) {
   const { t } = useTranslation('msp/user-activities');
+  // LEVERAGE: friction preference-lane — each useUserPreference runs two serial server actions (getCurrentUser, then getUserPreference) on the one serial server-action lane, so this page's preferences queue behind each other; useUserPreferencesBatch would collapse them.
   const { value: savedCollapsed, setValue: setCollapsed } = useUserPreference<boolean>(
     'activitiesUngroupedCollapsed',
     { defaultValue: false, localStorageKey: 'activitiesUngroupedCollapsed', debounceMs: 300 }

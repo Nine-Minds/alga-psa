@@ -10,12 +10,17 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, waitFor } from '@testing-library/react';
 import { ActivityType } from '@alga-psa/types';
+import { SWRConfig } from 'swr';
+import { ReferenceDataProvider } from '@alga-psa/ui/lib/referenceData';
 
 const mocks = vi.hoisted(() => ({
   fetchActivities: vi.fn(),
   setSaved: vi.fn(),
   /** The saved preference this user comes back to (filled in beforeEach). */
   savedFilters: null as any,
+  /** When true the option hook is the real one, reading the shared reference-list cache. */
+  useRealOptions: false,
+  loadReferenceLists: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -54,11 +59,21 @@ vi.mock('@alga-psa/user-composition/hooks', async () => {
 });
 vi.mock('../actions/activityServerActions', () => ({ fetchActivities: mocks.fetchActivities }));
 vi.mock('@alga-psa/user-activities/actions', () => ({ createAdHocActivity: vi.fn() }));
-vi.mock('../hooks/useActivityFilterOptions', () => ({
-  useActivityFilterOptions: () => ({
-    priorities: [], projects: [], boards: [], ticketStatuses: [], ticketTags: [], projectTaskTags: [],
-  }),
-}));
+vi.mock('../hooks/useActivityFilterOptions', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../hooks/useActivityFilterOptions')>();
+  return {
+    useActivityFilterOptions: (types: any) => {
+      // Always call the real hook (stable hook order); use its result only in the real-options test.
+      const real = actual.useActivityFilterOptions(types);
+      return mocks.useRealOptions
+        ? real
+        : {
+            priorities: [], projects: [], boards: [], ticketStatuses: [], ticketTags: [], projectTaskTags: [],
+            loading: { priorities: false, projects: false, boards: false, ticketStatuses: false, ticketTags: false, projectTaskTags: false },
+          };
+    },
+  };
+});
 vi.mock('../hooks/useViewableUsers', () => ({
   useViewableUsers: () => ({ canViewOthers: false, viewableUsers: [] }),
 }));
@@ -90,6 +105,7 @@ import { UserActivitiesDashboard } from './UserActivitiesDashboard';
 const CARD_TYPES = [ActivityType.SCHEDULE, ActivityType.TICKET, ActivityType.PROJECT_TASK, ActivityType.WORKFLOW_TASK];
 
 beforeEach(() => {
+  mocks.useRealOptions = false;
   mocks.setSaved.mockReset();
   mocks.savedFilters = { types: CARD_TYPES, isClosed: false, clientId: 'client-7', ticketStatusIds: ['status-9'] };
   mocks.fetchActivities.mockReset().mockResolvedValue({ activities: [], totalCount: 0 });
@@ -116,5 +132,28 @@ describe('UserActivitiesDashboard saved-filter hydration', () => {
     }
     expect(calls.some((f) => f.clientId === undefined)).toBe(false);
     expect(mocks.setSaved).not.toHaveBeenCalled();
+  });
+
+  // #4217 must survive the reference-list cache: option lists never gate the activities query.
+  it('does not wait for option lists: the first fetches carry the saved filters while every list is still loading', async () => {
+    mocks.useRealOptions = true;
+    // The batched option load never settles in this test.
+    mocks.loadReferenceLists.mockReset().mockImplementation(() => new Promise(() => {}));
+
+    render(
+      <SWRConfig value={{ provider: () => new Map() }}>
+        <ReferenceDataProvider load={mocks.loadReferenceLists} scope="tenant-1:user-1">
+          <UserActivitiesDashboard />
+        </ReferenceDataProvider>
+      </SWRConfig>
+    );
+
+    await waitFor(() => expect(mocks.fetchActivities).toHaveBeenCalledTimes(CARD_TYPES.length));
+    // The option lists were requested (one batch) and are still pending.
+    expect(mocks.loadReferenceLists).toHaveBeenCalledTimes(1);
+    for (const [filters] of mocks.fetchActivities.mock.calls) {
+      expect(filters.clientId).toBe('client-7');
+      expect(filters.ticketStatusIds).toEqual(['status-9']);
+    }
   });
 });

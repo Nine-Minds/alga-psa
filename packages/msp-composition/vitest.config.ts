@@ -18,6 +18,10 @@ export default defineConfig({
       // condition at a dist build this package's test runs do not produce;
       // resolve it to source like the other aliased workspace packages.
       { find: /^@alga-psa\/clients\/context\/ClientCrossFeatureContext$/, replacement: path.resolve(__dirname, '../clients/src/context/ClientCrossFeatureContext.tsx') },
+      // Plain list-query bodies behind loadReferenceLists: subpaths the packages' exports maps do not list.
+      { find: /^@alga-psa\/reference-data\/lib\/(.*)$/, replacement: path.resolve(__dirname, '../reference-data/src/lib/$1') },
+      { find: /^@alga-psa\/tags\/lib\/(.*)$/, replacement: path.resolve(__dirname, '../tags/src/lib/$1') },
+      { find: /^@alga-psa\/projects\/lib\/(.*)$/, replacement: path.resolve(__dirname, '../projects/src/lib/$1') },
       { find: /^@alga-psa\/ui$/, replacement: path.resolve(__dirname, '../ui/src/index.ts') },
       { find: /^@alga-psa\/ui\/(.*)$/, replacement: path.resolve(__dirname, '../ui/src/$1') },
       { find: /^@alga-psa\/scheduling$/, replacement: path.resolve(__dirname, '../scheduling/src/index.ts') },

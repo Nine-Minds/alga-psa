@@ -38,6 +38,7 @@ export function UserActivitiesDashboard() {
   type UserActivitiesViewMode = 'cards' | 'table';
 
   // Use the custom hook for view mode preference
+  // LEVERAGE: friction preference-lane — each useUserPreference runs two serial server actions (getCurrentUser, then getUserPreference) on the one serial server-action lane, so this page's preferences queue behind each other; useUserPreferencesBatch would collapse them.
   const {
     value: viewMode,
     setValue: setViewModePreference

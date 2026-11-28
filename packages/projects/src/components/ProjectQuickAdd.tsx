@@ -38,6 +38,7 @@ import ClientPortalConfigEditor from './ClientPortalConfigEditor';
 import { ChevronDown, ChevronRight, Settings } from 'lucide-react';
 import { useClientIntegration } from '../context/ClientIntegrationContext';
 import { useTranslation } from 'react-i18next';
+import { invalidateReferenceList } from '@alga-psa/ui/lib/referenceData';
 
 interface ProjectQuickAddProps {
   onClose: () => void;
@@ -188,6 +189,9 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
         handleError(getErrorMessage(newProject));
         return;
       }
+
+      // A new project appears in the activities project filter without a reload.
+      invalidateReferenceList('projectsWithPhases');
 
       // Create tags for the new project
       let createdTags: typeof newProject.tags = [];

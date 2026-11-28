@@ -13,6 +13,7 @@ import { getServices } from '../actions/serviceCatalogActions';
 import { timeEntryServiceChoices, type TimeEntryServiceChoice } from '@alga-psa/core';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from 'react-i18next';
+import { invalidateReferenceList } from '@alga-psa/ui/lib/referenceData';
 
 interface PhaseQuickAddProps {
   projectId: string;
@@ -76,6 +77,7 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
         handleError(newPhase);
         return;
       }
+      invalidateReferenceList('projectsWithPhases');
       onPhaseAdded(newPhase);
       onClose();
     } catch (error) {

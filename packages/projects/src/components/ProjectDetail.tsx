@@ -83,6 +83,7 @@ import type { ITeam } from '@alga-psa/types';
 import RemoveTeamDialog from './RemoveTeamDialog';
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
+import { invalidateReferenceList } from '@alga-psa/ui/lib/referenceData';
 
 const PROJECT_VIEW_MODE_SETTING = 'project_detail_view_mode';
 const PROJECT_PHASES_PANEL_VISIBLE_SETTING = 'project_phases_panel_visible';
@@ -2380,6 +2381,7 @@ export default function ProjectDetail({
         handleError(getErrorMessage(reorderResult));
         return;
       }
+      invalidateReferenceList('projectsWithPhases');
 
       // Calculate the new order key locally for immediate UI update
       
@@ -3033,6 +3035,7 @@ export default function ProjectDetail({
         handleError(getErrorMessage(updatedPhase));
         return;
       }
+      invalidateReferenceList('projectsWithPhases');
 
       setProjectPhases(prevPhases =>
         prevPhases.map((p): IProjectPhase =>
@@ -3084,6 +3087,7 @@ export default function ProjectDetail({
         handleError(getErrorMessage(deleteResult));
         return;
       }
+      invalidateReferenceList('projectsWithPhases');
       setProjectPhases(prevPhases =>
         prevPhases.filter(phase => phase.phase_id !== deletePhaseConfirmation.phaseId)
       );

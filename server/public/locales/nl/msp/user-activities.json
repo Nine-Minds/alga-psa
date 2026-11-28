@@ -372,6 +372,7 @@
     },
     "placeholders": {
       "allBoards": "Alle borden",
+      "loadingOptions": "Laden…",
       "allStatuses": "Alle statussen",
       "allProjects": "Alle projecten",
       "allPriorities": "Alle prioriteiten",
