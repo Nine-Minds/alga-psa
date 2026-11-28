@@ -34,6 +34,7 @@ import { Alert, AlertDescription } from './Alert';
 import { Tooltip } from './Tooltip';
 import { useTranslation } from '../lib/i18n/client';
 import { useDataTablePageSizePreference } from './DataTablePreferences';
+import { usePersistedTableState } from './usePersistedTableState';
 
 const DEFAULT_ITEMS_PER_PAGE_VALUES = ['10', '25', '50', '100'];
 
@@ -315,6 +316,8 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     persistPageSize = true,
     columnSizing: controlledColumnSizing,
     onColumnSizingChange,
+    showAllColumns: controlledShowAllColumns,
+    onShowAllColumnsChange,
     columnVisibility,
     columnOrder,
   } = props;
@@ -377,7 +380,15 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
   );
   // When true, every column renders and the table scrolls horizontally; otherwise only the
   // columns that fully fit the container are shown (no horizontal overflow).
-  const [showAllColumns, setShowAllColumns] = useState(false);
+  // Saved per table id (datatable-show-all-columns:<id>); may be controlled via props.
+  // LEVERAGE: pattern datatable-persisted-view-state — column sizing below does the same
+  // localStorage + controlled-mirror dance by hand (with column-id filtering); could share usePersistedTableState.
+  const [showAllColumns, setShowAllColumns] = usePersistedTableState<boolean>(
+    id ? `datatable-show-all-columns:${id}` : null,
+    false,
+    (raw) => raw === true,
+    { controlled: controlledShowAllColumns, onChange: onShowAllColumnsChange }
+  );
   // Per-column size overrides from the fit calculation: the last admitted column may be
   // shrunk into the remaining space instead of being hidden.
   const [fittedSizeOverrides, setFittedSizeOverrides] = useState<Record<string, number>>({});
@@ -430,6 +441,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
       );
     }
   }, [declaredColumnIdsKey, id]);
+  // LEVERAGE: pattern datatable-persisted-view-state — see showAllColumns above
   const columnSizingStorageKey = id ? `datatable-column-sizing:${id}` : null;
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
   const [hasLoadedColumnSizing, setHasLoadedColumnSizing] = useState(false);
