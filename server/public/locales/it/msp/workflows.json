@@ -1330,6 +1330,10 @@
         "maintenance": {
           "label": "Manutenzione",
           "description": "Trova manutenzioni, collega ticket, completa o salta occorrenze e sospendi o riprendi piani."
+        },
+        "tags": {
+          "label": "Tag",
+          "description": "Aggiungi o rimuovi tag su ticket, clienti, contatti e altri record con tag."
         }
       },
       "noMatches": {
@@ -1578,7 +1582,6 @@
         "not_contains_ci": "non contiene senza distinzione tra maiuscole e minuscole",
         "starts_with": "inizia con",
         "ends_with": "termina con",
-        "not_contains": "non contiene",
         "not_starts_with": "non inizia con",
         "not_ends_with": "non termina con",
         "is_empty": "è vuoto",

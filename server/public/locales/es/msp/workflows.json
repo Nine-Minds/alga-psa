@@ -1330,6 +1330,10 @@
         "maintenance": {
           "label": "Mantenimiento",
           "description": "Buscar mantenimiento, vincular tickets, completar u omitir ocurrencias y pausar o reanudar planes."
+        },
+        "tags": {
+          "label": "Etiquetas",
+          "description": "Agregar o quitar etiquetas en tickets, clientes, contactos y otros registros etiquetables."
         }
       },
       "noMatches": {
@@ -1578,7 +1582,6 @@
         "not_contains_ci": "no contiene sin distinguir mayúsculas",
         "starts_with": "empieza por",
         "ends_with": "termina en",
-        "not_contains": "no contiene",
         "not_starts_with": "no empieza por",
         "not_ends_with": "no termina en",
         "is_empty": "está vacío",

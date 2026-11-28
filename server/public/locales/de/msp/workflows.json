@@ -1330,6 +1330,10 @@
         "maintenance": {
           "label": "Wartung",
           "description": "Wartungen finden, Tickets verknüpfen, Vorgänge abschließen oder überspringen und Pläne pausieren oder fortsetzen."
+        },
+        "tags": {
+          "label": "Tags",
+          "description": "Tags zu Tickets, Kunden, Kontakten und anderen taggbaren Datensätzen hinzufügen oder entfernen."
         }
       },
       "noMatches": {
@@ -1578,7 +1582,6 @@
         "not_contains_ci": "enthält nicht, Groß-/Kleinschreibung ignorierend",
         "starts_with": "beginnt mit",
         "ends_with": "endet mit",
-        "not_contains": "enthält nicht",
         "not_starts_with": "beginnt nicht mit",
         "not_ends_with": "endet nicht mit",
         "is_empty": "ist leer",
