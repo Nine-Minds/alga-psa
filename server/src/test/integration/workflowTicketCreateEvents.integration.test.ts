@@ -6,6 +6,7 @@ import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { isoDateTimeSchema } from '../../../../shared/workflow/runtime/actions/businessOperations/shared';
 import { createClient, createTenant, createUser } from '../../../test-utils/testDataFactory';
+import { useNativeCoManagedVerdict } from '../../../../shared/workflow/runtime/actions/__tests__/helpers/nativeCoManagedVerdict';
 
 /**
  * The workflow `tickets.create` action against a real, migrated database. The real
@@ -126,6 +127,8 @@ async function runWith(f: Fixture & { runId: string }, input: Record<string, unk
 const byType = (type: string) => published.filter((e) => e.eventType === type);
 
 describe('workflow tickets.create publishes ticket events (integration)', () => {
+  useNativeCoManagedVerdict();
+
   beforeAll(async () => {
     db = await createTestDbConnection();
     const { registerTicketActions } = await import(

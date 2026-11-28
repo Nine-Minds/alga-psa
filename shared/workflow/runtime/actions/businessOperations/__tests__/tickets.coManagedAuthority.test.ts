@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { coManagedWorkflowTicketSeam } from '../../../../../lib/coManagedDelivery';
 import { registerCapabilityParticipation, invalidateCapability } from '@alga-psa/core/capability';
-import { retainWorkflowTicketAuthority, WorkflowTicketAuthorityUnavailableError } from '../shared';
+import { authorizeWorkflowTicket, findWorkflowTicketCandidates, retainWorkflowTicketAuthority, WorkflowTicketAuthorityUnavailableError } from '../shared';
 
 const ctx = { runId: 'run-1', stepPath: 'a.b' } as any;
 const tx = { tenantId: 'tenant-1', trx: { marker: 'trx' }, actorUserId: 'user-1' } as any;
@@ -101,4 +101,26 @@ describe('workflow ticket mutation adapter (L4a workflowTicketAuthority)', () =>
     expect(retain).toHaveBeenCalledWith(tx.trx, { tenant: 'tenant-1', ticketId: 't1', workflowRunId: 'run-1', actorUserId: 'user-1', fields: ['assignment'], readFields: [] });
   });
 
+  it('operation-aware authorize forwards operation, fields and run identity to a served tenant provider', async () => {
+    const authorize = vi.fn(async () => ({ redactedFields: ['tickets.title'] }));
+    coManagedWorkflowTicketSeam.register(() => ({ retain: vi.fn(), authorize }) as any);
+    process.env.FORCE_CAPABILITIES = 'co-managed:on';
+    await expect(authorizeWorkflowTicket(ctx, tx, { operation: 'read', ticketId: 't1', fields: ['title'] })).resolves.toEqual({ redactedFields: ['tickets.title'] });
+    expect(authorize).toHaveBeenCalledWith(tx.trx, { tenant: 'tenant-1', workflowRunId: 'run-1', actorUserId: 'user-1', operation: 'read', ticketId: 't1', fields: ['title'] });
+  });
+
+  it('a served tenant whose provider only implements retain fails closed for authorize and selectors', async () => {
+    coManagedWorkflowTicketSeam.register(() => ({ retain: vi.fn() }) as any);
+    process.env.FORCE_CAPABILITIES = 'co-managed:on';
+    await expect(authorizeWorkflowTicket(ctx, tx, { operation: 'update', ticketId: 't1', fields: ['comments'] }))
+      .rejects.toMatchObject({ code: 'WORKFLOW_TICKET_AUTHORITY_UNAVAILABLE', reason: 'operation-authorizer-missing' });
+    await expect(findWorkflowTicketCandidates(ctx, tx, { externalRef: 'x', predicateFields: ['attributes.external_ref'] }))
+      .rejects.toMatchObject({ code: 'WORKFLOW_TICKET_AUTHORITY_UNAVAILABLE', reason: 'selector-authorizer-missing' });
+  });
+
+  it('a definitely not-served tenant keeps role-only behaviour: authorize and selectors resolve without a provider', async () => {
+    process.env.FORCE_CAPABILITIES = 'co-managed:off';
+    await expect(authorizeWorkflowTicket(ctx, tx, { operation: 'update', ticketId: 't1', fields: ['comments'] })).resolves.toEqual({ redactedFields: [] });
+    await expect(findWorkflowTicketCandidates(ctx, tx, { ticketNumber: 'T-1', predicateFields: ['ticket_number'] })).resolves.toBeNull();
+  });
 });

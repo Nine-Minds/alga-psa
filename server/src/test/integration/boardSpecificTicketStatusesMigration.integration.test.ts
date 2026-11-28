@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import { useNativeCoManagedVerdict } from '../../../../shared/workflow/runtime/actions/__tests__/helpers/nativeCoManagedVerdict';
 
 const require = createRequire(import.meta.url);
 const HOOK_TIMEOUT = 180_000;
@@ -570,6 +571,8 @@ async function seedUnresolvedWorkflowStatusReference(fixture: LegacyFixture) {
 }
 
 describe('Board-specific ticket statuses migration – DB integration', () => {
+  useNativeCoManagedVerdict();
+
   beforeAll(async () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
     process.env.DB_PORT = process.env.DB_PORT || '5432';
