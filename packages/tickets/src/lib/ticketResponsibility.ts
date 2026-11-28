@@ -32,6 +32,9 @@ export interface TicketResponsibilityState {
 /** Which way a handoff goes: MSP staff hand to `client_it`, a seat technician hands to `msp`. */
 export type TicketHandoffDirection = 'client_it' | 'msp';
 
+/** The caller's record-level update check, run by the provider inside the handoff transaction under the ticket lock and before any write. Throws to refuse. */
+export type TicketHandoffWriteAdmission = (trx: Knex.Transaction, ticket: { ticketId: string }) => Promise<void>;
+
 export interface TicketHandToMspInput {
   tenant: string;
   ticketId: string;
@@ -39,6 +42,7 @@ export interface TicketHandToMspInput {
   operationId: string;
   expectedRevision: number;
   note: string;
+  admitWrite: TicketHandoffWriteAdmission;
 }
 
 export interface TicketHandToClientItInput {
@@ -49,6 +53,7 @@ export interface TicketHandToClientItInput {
   expectedRevision: number;
   note: string;
   technicianUserId?: string | null;
+  admitWrite: TicketHandoffWriteAdmission;
 }
 
 /** Why a handoff was refused: the provider's stable code, which the caller maps to a translated message. */

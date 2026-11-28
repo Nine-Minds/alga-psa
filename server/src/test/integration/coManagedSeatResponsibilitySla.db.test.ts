@@ -87,9 +87,9 @@ describeDb('co-managed seat responsibility pauses and resumes the MSP SLA', { sh
   const row = (w: World, ticketId: string) =>
     db('tickets').where({ tenant: w.sponsor, ticket_id: ticketId }).first('sla_paused_at', 'sla_total_pause_minutes', 'sla_resolution_due_at', 'status_id');
   const toClientIt = (w: World, ticketId: string, expectedRevision: number) => handCoManagedSeatTicketToClientIt(db,
-    { sponsorTenant: w.sponsor, ticketId, actorUserId: w.staff, operationId: randomUUID(), expectedRevision, note: NOTE });
+    { sponsorTenant: w.sponsor, ticketId, actorUserId: w.staff, operationId: randomUUID(), expectedRevision, note: NOTE }, async () => {});
   const toMsp = (w: World, ticketId: string, expectedRevision: number) => handCoManagedSeatTicketToMsp(db,
-    { sponsorTenant: w.sponsor, ticketId, actorUserId: w.technician, operationId: randomUUID(), expectedRevision, note: NOTE });
+    { sponsorTenant: w.sponsor, ticketId, actorUserId: w.technician, operationId: randomUUID(), expectedRevision, note: NOTE }, async () => {});
   /** Pretends the ticket has been paused for `minutes`, so the resume has time to account for. */
   const advanceClock = (w: World, ticketId: string, minutes: number) =>
     db('tickets').where({ tenant: w.sponsor, ticket_id: ticketId }).update({ sla_paused_at: new Date(Date.now() - minutes * MINUTE) });

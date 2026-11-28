@@ -89,7 +89,7 @@ export const coManagedSeatListResponsibilityProvider: TicketResponsibilityProvid
       const receipt = await handCoManagedSeatTicketToClientIt(db, {
         sponsorTenant: input.tenant, ticketId: input.ticketId, actorUserId: input.actorUserId, operationId: input.operationId,
         expectedRevision: input.expectedRevision, note: input.note, technicianUserId: input.technicianUserId ?? null,
-      });
+      }, input.admitWrite);
       return { responsibility: receipt.to, revision: receipt.revision, technicians: [] };
     } catch (error) {
       if (error instanceof CoManagedSeatHandoffError) throw new TicketResponsibilityError(error.code);
@@ -102,7 +102,7 @@ export const coManagedSeatListResponsibilityProvider: TicketResponsibilityProvid
       const receipt = await handCoManagedSeatTicketToMsp(db, {
         sponsorTenant: input.tenant, ticketId: input.ticketId, actorUserId: input.actorUserId, operationId: input.operationId,
         expectedRevision: input.expectedRevision, note: input.note,
-      });
+      }, input.admitWrite);
       return { responsibility: receipt.to, revision: receipt.revision, technicians: [] };
     } catch (error) {
       if (error instanceof CoManagedSeatHandoffError) throw new TicketResponsibilityError(error.code);

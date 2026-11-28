@@ -70,10 +70,10 @@ describeDb('co-managed seat ticket responsibility and handoff', { shuffle: false
   const request = (w: World, ticketId: string, actorUserId: string, expectedRevision: number, operationId: string = randomUUID()) =>
     ({ sponsorTenant: w.sponsor, ticketId, actorUserId, operationId, expectedRevision, note: NOTE });
   const toClientIt = (w: World, ticketId: string, expectedRevision: number, extra: { technicianUserId?: string; operationId?: string; note?: string } = {}) =>
-    handCoManagedSeatTicketToClientIt(db, { ...request(w, ticketId, w.staff, expectedRevision, extra.operationId), ...extra });
+    handCoManagedSeatTicketToClientIt(db, { ...request(w, ticketId, w.staff, expectedRevision, extra.operationId), ...extra }, async () => {});
   const toMsp = (w: World, ticketId: string, expectedRevision: number, extra: { operationId?: string; note?: string; actorUserId?: string } = {}) =>
     handCoManagedSeatTicketToMsp(db, { ...request(w, ticketId, extra.actorUserId ?? w.technician, expectedRevision, extra.operationId),
-      ...(extra.note === undefined ? {} : { note: extra.note }) });
+      ...(extra.note === undefined ? {} : { note: extra.note }) }, async () => {});
   const work = (w: World, ticketId: string) => readCoManagedSeatTicketWork(db, { sponsorTenant: w.sponsor, ticketId });
   const workRows = (w: World) => db('co_managed_seat_ticket_work').where({ tenant: w.sponsor });
   const receipts = (w: World) => db('co_managed_seat_ticket_handoffs').where({ tenant: w.sponsor }).orderBy('revision');
@@ -243,7 +243,7 @@ describeDb('co-managed seat ticket responsibility and handoff', { shuffle: false
 
     // Hand to client IT: MSP staff only.
     for (const actorUserId of [w.technician, randomUUID()]) {
-      await expect(handCoManagedSeatTicketToClientIt(db, request(w, ticketId, actorUserId, 0))).rejects.toMatchObject({ code: 'ACTOR_NOT_ALLOWED' });
+      await expect(handCoManagedSeatTicketToClientIt(db, request(w, ticketId, actorUserId, 0), async () => {})).rejects.toMatchObject({ code: 'ACTOR_NOT_ALLOWED' });
     }
     await toClientIt(w, ticketId, 0);
     // Hand to MSP: an active technician of this ticket's client only.
@@ -264,9 +264,9 @@ describeDb('co-managed seat ticket responsibility and handoff', { shuffle: false
     }
     await toClientIt(w, ticketId, 0, { note: `  ${NOTE}  ` });
     for (const note of ['', '   ']) await expect(toMsp(w, ticketId, 1, { note })).rejects.toMatchObject({ code: 'INVALID_HANDOFF' });
-    await expect(handCoManagedSeatTicketToMsp(db, { ...request(w, ticketId, w.technician, 1), operationId: 'not-a-uuid' }))
+    await expect(handCoManagedSeatTicketToMsp(db, { ...request(w, ticketId, w.technician, 1), operationId: 'not-a-uuid' }, async () => {}))
       .rejects.toMatchObject({ code: 'INVALID_HANDOFF' });
-    await expect(handCoManagedSeatTicketToMsp(db, request(w, ticketId, w.technician, -1))).rejects.toMatchObject({ code: 'INVALID_HANDOFF' });
+    await expect(handCoManagedSeatTicketToMsp(db, request(w, ticketId, w.technician, -1), async () => {})).rejects.toMatchObject({ code: 'INVALID_HANDOFF' });
 
     // The stored note is the trimmed one, and nothing was written for the refusals.
     expect(await receipts(w)).toEqual([expect.objectContaining({ note: NOTE })]);
