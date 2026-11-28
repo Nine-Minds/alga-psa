@@ -1561,7 +1561,14 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
 
       // A subject scoped to a client and boards (a co-managed seat technician) may only edit a ticket they can work,
       // and only so that it stays where they can work it.
-      await assertTicketUpdateAllowed(trx, tenant, user, currentTicket, validatedData);
+      // The billing profile is judged as it will be stored: a falsey value clears it (null), exactly as the
+      // normalisation below writes it, so an empty or undefined key cannot slip past the billing gate.
+      await assertTicketUpdateAllowed(
+        trx, tenant, user, currentTicket,
+        'billing_profile_id' in validatedData
+          ? { ...validatedData, billing_profile_id: validatedData.billing_profile_id || null }
+          : validatedData,
+      );
 
       // Clean up the data before update
       const updateData = { ...validatedData };
