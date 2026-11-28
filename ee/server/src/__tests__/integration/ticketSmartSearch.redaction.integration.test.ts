@@ -19,6 +19,8 @@ const IDS = {
   open: '71000000-0000-4000-8000-000000000012',
   otherMask: '71000000-0000-4000-8000-000000000013',
   wildcard: '71000000-0000-4000-8000-000000000014',
+  identity: '71000000-0000-4000-8000-000000000015',
+  qualifiedIdentity: '71000000-0000-4000-8000-000000000016',
 };
 
 describe('ticket smart-search SQL redaction', () => {
@@ -71,6 +73,8 @@ describe('ticket smart-search SQL redaction', () => {
         { tenant: TENANT, ticket_id: IDS.open, ticket_number: 'T-OPEN', title: 'Visible title', attributes: { description: 'Visible description' }, client_id: clientId, status_id: statusId, priority_id: priorityId, board_id: boardId, assigned_to: assigneeId, assigned_team_id: teamId },
         { tenant: TENANT, ticket_id: IDS.otherMask, ticket_number: 'SECRET-OTHER-NUMBER', title: 'SECRET OTHER TITLE', attributes: { description: 'SECRET OTHER DESCRIPTION' }, client_id: clientId, status_id: statusId, priority_id: priorityId, board_id: boardId, assigned_to: assigneeId, assigned_team_id: teamId },
         { tenant: TENANT, ticket_id: IDS.wildcard, ticket_number: 'SECRET-WILDCARD-NUMBER', title: 'SECRET WILDCARD TITLE', attributes: { description: 'SECRET WILDCARD DESCRIPTION' }, client_id: clientId, status_id: statusId, priority_id: priorityId, board_id: boardId, assigned_to: assigneeId, assigned_team_id: teamId },
+        { tenant: TENANT, ticket_id: IDS.identity, ticket_number: 'SECRET-IDENTITY-NUMBER', title: 'IDENTITY TARGET', attributes: {}, client_id: clientId, status_id: statusId, priority_id: priorityId, board_id: boardId },
+        { tenant: TENANT, ticket_id: IDS.qualifiedIdentity, ticket_number: 'SECRET-QUALIFIED-IDENTITY-NUMBER', title: 'QUALIFIED IDENTITY TARGET', attributes: {}, client_id: clientId, status_id: statusId, priority_id: priorityId, board_id: boardId },
       ]);
       await trx('app_search_index').insert([
         { tenant: TENANT, object_type: 'ticket_comment', parent_id: IDS.restricted, body: 'SECRET RESTRICTED COMMENT', metadata: { author_kind: 'technician' }, source_updated_at: new Date('2026-01-04T00:00:00Z') },
@@ -83,12 +87,14 @@ describe('ticket smart-search SQL redaction', () => {
         trx,
         TENANT,
         { user_id: 'reader', user_type: 'internal' } as any,
-        [IDS.restricted, IDS.open, IDS.otherMask, IDS.wildcard, '71000000-0000-4000-8000-000000000099'],
+        [IDS.restricted, IDS.open, IDS.otherMask, IDS.wildcard, IDS.identity, IDS.qualifiedIdentity, '71000000-0000-4000-8000-000000000099'],
         new Map([
-          [IDS.restricted, ['title', 'ticket_number', 'description', 'client_name', 'assigned_to', 'due_date', 'attributes.custom_private']],
+          [IDS.restricted, ['title', 'description', 'client_name', 'assigned_to', 'due_date', 'attributes.custom_private']],
           [IDS.open, []],
           [IDS.otherMask, ['board_name']],
           [IDS.wildcard, ['*']],
+          [IDS.identity, ['ticket_number']],
+          [IDS.qualifiedIdentity, ['tickets.ticket_number']],
         ])
       );
 
@@ -99,11 +105,13 @@ describe('ticket smart-search SQL redaction', () => {
         candidates.filter((candidate) => candidate.id === IDS.restricted)
       );
       expect(byId.has(IDS.wildcard)).toBe(false);
+      expect(byId.has(IDS.identity)).toBe(false);
+      expect(byId.has(IDS.qualifiedIdentity)).toBe(false);
       expect(byId.has('71000000-0000-4000-8000-000000000099')).toBe(false);
       expect(JSON.stringify(scorerRequest.state.candidates)).not.toMatch(/SECRET (?:NUMBER|TITLE|DESCRIPTION|CLIENT|ASSIGNEE|OTHER|WILDCARD)/);
       const restrictedState = byId.get(IDS.restricted)?.state;
       expect(restrictedState).toMatchObject({
-        ticket_number: '',
+        ticket_number: 'SECRET-NUMBER',
         title: 'Restricted ticket',
         client: null,
         assigned_to: null,

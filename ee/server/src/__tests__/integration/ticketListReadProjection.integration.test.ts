@@ -15,6 +15,10 @@ const WILDCARD = '72000000-0000-4000-8000-000000000014';
 const PRIORITY_COLOR_CANONICAL = '72000000-0000-4000-8000-000000000015';
 const PRIORITY_COLOR_ALIAS = '72000000-0000-4000-8000-000000000016';
 const LOCATION_RESTRICTED = '72000000-0000-4000-8000-000000000017';
+const FIRST_NAME_RESTRICTED = '72000000-0000-4000-8000-000000000018';
+const LAST_NAME_RESTRICTED = '72000000-0000-4000-8000-000000000019';
+const IDENTITY_RESTRICTED = '72000000-0000-4000-8000-000000000020';
+const PREFIXED_IDENTITY_RESTRICTED = '72000000-0000-4000-8000-000000000031';
 
 describe('ticket list and hydration SQL projection', () => {
   let db: Knex;
@@ -81,7 +85,7 @@ describe('ticket list and hydration SQL projection', () => {
         { tenant: TENANT, user_id: ids.assignee, first_name: 'SECRET', last_name: 'ASSIGNEE' },
       ]);
       await trx('teams').insert({ tenant: TENANT, team_id: ids.team, team_name: 'SECRET TEAM' });
-      await trx('tickets').insert([RESTRICTED, VISIBLE, DENIED, WILDCARD, PRIORITY_COLOR_CANONICAL, PRIORITY_COLOR_ALIAS, LOCATION_RESTRICTED].map((ticket_id, index) => ({
+      await trx('tickets').insert([RESTRICTED, VISIBLE, DENIED, WILDCARD, PRIORITY_COLOR_CANONICAL, PRIORITY_COLOR_ALIAS, LOCATION_RESTRICTED, FIRST_NAME_RESTRICTED, LAST_NAME_RESTRICTED, IDENTITY_RESTRICTED, PREFIXED_IDENTITY_RESTRICTED].map((ticket_id, index) => ({
         ticket_id,
         tenant: TENANT,
         ticket_number: `SECRET NUMBER ${index}`,
@@ -123,19 +127,23 @@ describe('ticket list and hydration SQL projection', () => {
         base,
         'internal',
         [
-          { id: RESTRICTED, redactedFields: ['tickets.category_id', 'ticket_number', 'url', 'entered_by', 'attributes.private_value', 'client_name', 'status_name', 'assigned_to', 'priority_name'] },
+          { id: RESTRICTED, redactedFields: ['tickets.category_id', 'url', 'entered_by', 'attributes.private_value', 'client_name', 'status_name', 'assigned_to', 'priority_name'] },
           { id: VISIBLE, redactedFields: [] },
           { id: WILDCARD, redactedFields: ['*'] },
           { id: PRIORITY_COLOR_CANONICAL, redactedFields: ['priority_color'] },
           { id: PRIORITY_COLOR_ALIAS, redactedFields: ['priorities.color'] },
           { id: LOCATION_RESTRICTED, redactedFields: ['location_id'] },
+          { id: FIRST_NAME_RESTRICTED, redactedFields: ['users.first_name'] },
+          { id: LAST_NAME_RESTRICTED, redactedFields: ['users.last_name'] },
+          { id: IDENTITY_RESTRICTED, redactedFields: ['ticket_number'] },
+          { id: PREFIXED_IDENTITY_RESTRICTED, redactedFields: ['tickets.ticket_number'] },
         ],
-        [RESTRICTED, VISIBLE, DENIED, WILDCARD, PRIORITY_COLOR_CANONICAL, PRIORITY_COLOR_ALIAS, LOCATION_RESTRICTED]
+        [RESTRICTED, VISIBLE, DENIED, WILDCARD, PRIORITY_COLOR_CANONICAL, PRIORITY_COLOR_ALIAS, LOCATION_RESTRICTED, FIRST_NAME_RESTRICTED, LAST_NAME_RESTRICTED, IDENTITY_RESTRICTED, PREFIXED_IDENTITY_RESTRICTED]
       );
       const byId = new Map(rows.map((row: any) => [row.ticket_id, row]));
       const restricted = byId.get(RESTRICTED);
       expect(restricted).toMatchObject({
-        ticket_number: null,
+        ticket_number: 'SECRET NUMBER 0',
         url: null,
         entered_by: null,
         title: 'SECRET TITLE 0',
@@ -167,7 +175,16 @@ describe('ticket list and hydration SQL projection', () => {
         ticket_location_name: 'SECRET LOCATION',
         status_name: 'SECRET STATUS',
         assigned_to_name: 'SECRET ASSIGNEE',
+        entered_by_name: 'SECRET ENTERER',
       });
+      for (const id of [FIRST_NAME_RESTRICTED, LAST_NAME_RESTRICTED]) {
+        expect(byId.get(id)).toMatchObject({
+          assigned_to_name: null,
+          entered_by_name: null,
+        });
+      }
+      expect(byId.has(IDENTITY_RESTRICTED)).toBe(false);
+      expect(byId.has(PREFIXED_IDENTITY_RESTRICTED)).toBe(false);
       expect(byId.has(DENIED)).toBe(false);
       expect(byId.has(WILDCARD)).toBe(false);
       expect(byId.get(PRIORITY_COLOR_CANONICAL)).toMatchObject({
