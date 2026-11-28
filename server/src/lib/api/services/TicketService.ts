@@ -2707,6 +2707,16 @@ export class TicketService extends BaseService<ITicket> {
       resolveTicketNotificationSuppression(data);
 
     const fullTicket = await withTransaction(knex, async (trx) => {
+      // A caller-supplied billing profile needs billing authority for a seat technician and must be the client's own.
+      if (data.billing_profile_id) {
+        await assertTicketCreateAllowed(trx, context.tenant, subjectFromServiceContext(context), {
+          client_id: data.client_id,
+          board_id: data.board_id,
+          contact_name_id: data.contact_name_id,
+          billing_profile_id: data.billing_profile_id,
+          entered_by: context.userId,
+        });
+      }
       // Verify asset exists
       const asset = await tenantScopedTable(trx, 'assets', context.tenant)
         .where({ asset_id: data.asset_id })

@@ -717,6 +717,8 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       // is the QuickAddTicket path used by the asset header, the asset list,
       // service history and maintenance — `createTicketFromAsset` and the REST
       // create read the same rule from ticketAssetLinkModel.
+      // Remember what the caller sent before the inherited value fills it: only a supplied profile needs billing authority.
+      const suppliedBillingProfileId = createTicketInput.billing_profile_id;
       const billingProfileSourceAssetId = assetIdForBillingProfileInheritance(linkedAssetIds);
       if (billingProfileSourceAssetId && createTicketInput.client_id && !createTicketInput.billing_profile_id) {
         createTicketInput.billing_profile_id =
@@ -814,6 +816,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         assigned_to: createTicketInput.assigned_to,
         assigned_team_id: createTicketInput.assigned_team_id,
         entered_by: user.user_id,
+        billing_profile_id: suppliedBillingProfileId,
       });
 
       await assertActorMayAssign(trx, tenant, user, [createTicketInput.assigned_to]);
@@ -1558,7 +1561,14 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
 
       // A subject scoped to a client and boards (a co-managed seat technician) may only edit a ticket they can work,
       // and only so that it stays where they can work it.
-      await assertTicketUpdateAllowed(trx, tenant, user, currentTicket, validatedData);
+      // The billing profile is judged as it will be stored: a falsey value clears it (null), exactly as the
+      // normalisation below writes it, so an empty or undefined key cannot slip past the billing gate.
+      await assertTicketUpdateAllowed(
+        trx, tenant, user, currentTicket,
+        'billing_profile_id' in validatedData
+          ? { ...validatedData, billing_profile_id: validatedData.billing_profile_id || null }
+          : validatedData,
+      );
 
       // Clean up the data before update
       const updateData = { ...validatedData };
