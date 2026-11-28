@@ -2,7 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { lockCoManagedLocalAuthentication } from './localAuthentication';
 import { evaluateCoManagedAccess, type CoManagedVisibilityMode } from './policy';
-import { coManagedEditFieldPaths } from './sharedWorkProjection';
+import { coManagedEditFieldPaths, isCoManagedTaskResourceHidden } from './sharedWorkProjection';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { withCoManagedSharedWork, CoManagedSharedWorkError, loadCoManagedHomeFacts, loadCoManagedLifecycleFacts,
   loadCoManagedStaffRoles, type CoManagedSessionActor, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
@@ -159,6 +159,7 @@ export async function readCoManagedSummaryCandidates(trx: Knex.Transaction, reso
 
 async function readSummary(context: CoManagedSharedWorkContext): Promise<CoManagedSharedWorkSummary> {
   const { trx, resource, revision, redactedFields } = context;
+  if (resource.kind === 'project_task' && isCoManagedTaskResourceHidden(redactedFields)) throw new CoManagedSharedWorkError();
   return { resource, revision, fields: visibleCoManagedFields(await readCoManagedSummaryCandidates(trx, resource), redactedFields) };
 }
 
