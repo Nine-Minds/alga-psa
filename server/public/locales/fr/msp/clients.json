@@ -1650,6 +1650,7 @@
         "status": "Statut"
       },
       "empty": "Aucune interaction ne correspond à ces filtres.",
+      "incompleteEmpty": "D'autres interactions restent à rechercher.",
       "loading": "Chargement des interactions…",
       "openClient": "Ouvrir le client {{name}}",
       "openContact": "Ouvrir le contact {{name}}",

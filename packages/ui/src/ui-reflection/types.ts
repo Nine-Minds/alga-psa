@@ -176,6 +176,7 @@ export interface DataTableComponent extends BaseComponent {
     currentPage: number;
     pageSize: number;
     totalItems: number;
+    totalItemsExact?: boolean;
     totalPages: number;
   };
   

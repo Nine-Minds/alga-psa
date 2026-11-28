@@ -1677,6 +1677,7 @@
         "status": "Status"
       },
       "empty": "Keine Interaktionen entsprechen diesen Filtern.",
+      "incompleteEmpty": "Es sind noch weitere Interaktionen zu durchsuchen.",
       "loading": "Interaktionen werden geladen…",
       "openClient": "Kunden {{name}} öffnen",
       "openContact": "Kontakt {{name}} öffnen",

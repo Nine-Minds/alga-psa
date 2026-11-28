@@ -1650,6 +1650,7 @@
         "status": "Estado"
       },
       "empty": "Ninguna interacción coincide con estos filtros.",
+      "incompleteEmpty": "Quedan más interacciones por buscar.",
       "loading": "Cargando interacciones…",
       "openClient": "Abrir cliente {{name}}",
       "openContact": "Abrir contacto {{name}}",

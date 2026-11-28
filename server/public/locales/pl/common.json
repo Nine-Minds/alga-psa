@@ -667,6 +667,8 @@
     "totalItems": "{{count}} {{itemLabel}} łącznie",
     "totalRecordsInline": "({{count}} łącznie rekordów)",
     "pageOf": "Strona {{current}} z {{total}}",
+    "pageNumber": "Strona {{current}}",
+    "totalCountIncomplete": "Łączna liczba niepełna",
     "itemsLabel_one": "element",
     "itemsLabel_few": "elementy",
     "itemsLabel_many": "elementów",

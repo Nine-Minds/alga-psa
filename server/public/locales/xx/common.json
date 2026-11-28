@@ -724,6 +724,8 @@
     "totalItems": "⟦{{count}} {{itemLabel}} ŧȯŧȧŀ⟧",
     "totalRecordsInline": "⟦({{count}} ŧȯŧȧŀ řḗƈȯřḓş)⟧",
     "pageOf": "⟦Ƥȧɠḗ {{current}} ȯƒ {{total}}⟧",
+    "pageNumber": "⟦Ƥȧɠḗ {{current}}⟧",
+    "totalCountIncomplete": "⟦Ŧȯŧȧŀ ƈȯŭƞŧ īƞƈȯḿƥŀḗŧḗ⟧",
     "itemsLabel_few": "⟦īŧḗḿş⟧",
     "itemsLabel_many": "⟦īŧḗḿş⟧"
   },

@@ -550,6 +550,8 @@
     "totalItems": "{{count}} {{itemLabel}} in totaal",
     "totalRecordsInline": "({{count}} records in totaal)",
     "pageOf": "Pagina {{current}} van {{total}}",
+    "pageNumber": "Pagina {{current}}",
+    "totalCountIncomplete": "Totaal onvolledig",
     "itemsLabel_one": "element",
     "itemsLabel_other": "elementen",
     "itemsLabel_few": "elementen",
