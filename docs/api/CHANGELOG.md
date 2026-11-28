@@ -2,6 +2,19 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-27 — `GET /api/v1/assets/stats` reports asset value per currency
+
+**Affected endpoint:** `GET /api/v1/assets/stats`
+
+Asset value used to be one number added up across every asset regardless of currency, and the published schema described it as a sum of a `purchase_price` column that does not exist.
+
+**Changes:**
+
+- New `asset_value_by_currency`: an object keyed by ISO currency code. Each value is the sum of `purchase_cost` for readable assets in that currency. An asset with no `purchase_cost_currency` is counted under the tenant's default currency. Assets with no `purchase_cost` are not counted, and the object is `{}` when no asset has a cost. Amounts in different currencies are never added together.
+- `total_asset_value` is now present only when every valued asset uses the same currency, together with new `total_asset_value_currency`. A tenant with no valued assets gets `0` in its default currency. **Inventories with more than one currency no longer receive `total_asset_value`.** Read `asset_value_by_currency` instead.
+- All three value fields are omitted (not reported as partial totals) when `purchase_cost` or `purchase_cost_currency` is redacted or closed to the caller for any readable asset.
+- The OpenAPI schema now matches what the endpoint returns. The statistics object is `data` itself, with no nested `data` and no `_links`. The schema also documents `deployed_assets`, and `assets_by_client` includes every client.
+
 ## 2026-11-27 — `GET /api/v1/software/search` works with API keys
 
 **Affected endpoint:** `GET /api/v1/software/search`
