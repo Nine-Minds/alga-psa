@@ -25,9 +25,26 @@ An invoice becomes finalized when:
 
 ### 2. Status Management
 - Invoices track their finalization status via the `finalized_at` timestamp
-- Finalization automatically changes invoice status to `'sent'`
+- Finalization derives the invoice status from the net payments already recorded against it, rather than always setting `'sent'` (see [Status on finalization](#status-on-finalization))
 - Users can unfinalize an invoice if needed (moves it back to the main invoice list)
 - Unfinalizing is distinct from reversing a billing period
+
+### Status on finalization
+
+Payments survive unfinalize, so an invoice can reach finalize with payments already recorded (for example, a paid invoice that was unfinalized, edited and finalized again). Finalize therefore computes the status with the shared `deriveInvoiceStatus` helper in `packages/billing/src/lib/balanceDue.ts`:
+
+| Net recorded payments (`invoice_payments.amount`, refunds net out) | Resulting status |
+|---|---|
+| None (0) | `sent` |
+| > 0, and `total_amount - credit_applied - net_paid > 0` | `partially_applied` |
+| > 0, and `total_amount - credit_applied - net_paid <= 0` | `paid` |
+
+- Credit is a separate input from payments, so credit alone never yields `paid`.
+- The `invoice_finalized` audit row records the derived status in its `after` snapshot.
+- Post-finalize credit auto-apply only uses the headroom left after net payments (`computeBalanceDue`).
+- The same helper is used by external payment recording (`recordExternalPayment`) and by the REST `applyCredit` and `recordRefund` paths in `InvoiceService`. `draft`, `cancelled` and `void` are lifecycle states it never overwrites, so a refund recorded on a cancelled or void invoice keeps that status.
+- The draft preview panel shows the net amount already paid (to users with `invoice:payment`) and warns when the draft total is below it, because finalizing would leave the invoice overpaid.
+- Repair migration `20261124010000_repair_invoice_status_from_recorded_payments.cjs` re-derives the status of existing finalized invoices in `sent`/`paid`/`partially_applied` that have recorded payments. Drafts, cancelled and void invoices are untouched.
 
 ### 3. Credit Handling
 **During finalization, the system automatically:**
@@ -80,6 +97,8 @@ export async function finalizeInvoice(invoiceId: string): Promise<void> {
     });
 }
 ```
+
+**Note:** This snippet shows the original simplified shape. Finalize now runs through `finalizeInvoiceWithKnex` in `packages/billing/src/actions/invoiceModification.ts`, shared by the UI action and REST `InvoiceService.finalizeInvoice`. It writes the status from `deriveInvoiceStatus` (see [Status on finalization](#status-on-finalization)), not a hard-coded `'sent'`.
 
 **Complex Credit Handling (lines 109-253):**
 The actual implementation includes sophisticated credit handling:
@@ -236,7 +255,7 @@ export async function generateInvoicePDF(invoiceId: string): Promise<{ file_id: 
 ### ✓ Implemented Features:
 - `finalized_at` timestamp tracking
 - Manual finalization via UI
-- Status change to 'sent' on finalization
+- Status on finalization derived from net recorded payments (`sent` / `partially_applied` / `paid`)
 - Separate display for drafts and finalized invoices
 - Credit handling for prepayment invoices
 - Automatic credit application for regular invoices

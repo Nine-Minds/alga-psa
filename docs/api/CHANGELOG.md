@@ -2,6 +2,44 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-28 — Invoice finalize and apply-credit derive status from recorded payments
+
+**Affected endpoints:** `POST /api/v1/invoices/{id}/finalize`, `POST /api/v1/invoices/{id}/credit`
+
+Finalizing used to set status `sent` every time, even when the invoice already had payments recorded. Payments stay on an invoice when it is unfinalized, so an invoice that was paid, unfinalized, edited and finalized again lost its payment status.
+
+**Changes:**
+
+- Finalize sets the status from net recorded payments (payments less refunds): `sent` when nothing is paid, `partially_applied` when `total_amount - credit_applied - net_paid` is still above 0, `paid` when that balance is 0 or less. Credit alone never yields `paid`. The finalize engine is shared with the MSP app, so both produce the same status.
+- Apply credit no longer overwrites the status written while the credit was applied. It derives the status the same way and computes the balance due from total, credit and net payments. `INVOICE_STATUS_CHANGED` is published only when the derived status differs from the status before the credit was applied, and a prepaid replenishment invoice is settled when the derived status is `paid`.
+- `draft`, `cancelled` and `void` are never replaced by a payment status.
+- A one-time migration re-derives the status of existing finalized invoices in `sent`, `paid` or `partially_applied` that have recorded payments, so `GET` and list responses for those invoices may show a different `status` after upgrade. Drafts, cancelled and void invoices are not changed.
+
+## 2026-11-27 — `GET /api/v1/assets/stats` reports asset value per currency
+
+**Affected endpoint:** `GET /api/v1/assets/stats`
+
+Asset value used to be one number added up across every asset regardless of currency, and the published schema described it as a sum of a `purchase_price` column that does not exist.
+
+**Changes:**
+
+- New `asset_value_by_currency`: an object keyed by ISO currency code. Each value is the sum of `purchase_cost` for readable assets in that currency. An asset with no `purchase_cost_currency` is counted under the tenant's default currency. Assets with no `purchase_cost` are not counted, and the object is `{}` when no asset has a cost. Amounts in different currencies are never added together.
+- `total_asset_value` is now present only when every valued asset uses the same currency, together with new `total_asset_value_currency`. A tenant with no valued assets gets `0` in its default currency. **Inventories with more than one currency no longer receive `total_asset_value`.** Read `asset_value_by_currency` instead.
+- All three value fields are omitted (not reported as partial totals) when `purchase_cost` or `purchase_cost_currency` is redacted or closed to the caller for any readable asset.
+- The OpenAPI schema now matches what the endpoint returns. The statistics object is `data` itself, with no nested `data` and no `_links`. The schema also documents `deployed_assets`, and `assets_by_client` includes every client.
+
+## 2026-11-27 — `GET /api/v1/software/search` works with API keys
+
+**Affected endpoint:** `GET /api/v1/software/search`
+
+Calls authenticated with `x-api-key` always failed with `500`, because the route did not pass the key's identity to the search action. Session callers were not affected.
+
+**Changes:**
+
+- API-key callers now get `200` with the paginated results. The search runs as the key's user, requires `asset:read`, and applies record-level read authorization.
+- Missing or invalid credentials return `401`, and a co-managed workspace still awaiting acceptance returns `409` (`CO_MANAGED_NOT_ACTIVE`). Both use the standard `{ "error": { "code", "message" } }` body. A caller without `asset:read` gets `403`, and invalid parameters get `400`, with the route's existing `{ "error": "<message>" }` body. Other failures are still `500`.
+- `limit` is documented as 1–100, matching what the route already enforced (the schema said 200). `limit=101` or more returns `400`.
+
 ## 2026-11-24 — Portal invitations: resend by invitation state, configurable validity
 
 **Affected endpoints:** `POST /api/v1/clients/{id}/portal-invitations`, `POST /api/v1/portal-invitations/bulk`
