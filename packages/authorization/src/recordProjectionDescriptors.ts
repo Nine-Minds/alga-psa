@@ -622,6 +622,23 @@ export const ASSET_TICKETS_RESPONSE_SOURCE: RedactableRecordSource = {
   derived: { ...TICKET_RECORD_SOURCE.derived, ...ASSET_TICKET_ASSOCIATION_SOURCE.derived },
 };
 
+/**
+ * Asset document rows (document_associations + asset_document_associations + the joined document metadata) are
+ * governed by the owning asset's policy; the document's own visibility is decided per document before this
+ * projection runs.
+ */
+export const ASSET_DOCUMENTS_RESPONSE_SOURCE: RedactableRecordSource = {
+  policySource: ASSET_RECORD_SOURCE,
+  resource: ['document_associations', 'asset_document_associations', 'documents', 'external_files'],
+  identifier: ids(
+    'asset_id', 'entity_id', 'asset_document_associations.asset_id', 'document_associations.entity_id',
+    'association_id', 'document_associations.association_id', 'asset_document_associations.association_id',
+    'document_id', 'documents.document_id', 'document_associations.document_id',
+  ),
+  fields: {},
+  derived: {},
+};
+
 const ASSET_SUMMARY_TICKET_STATUS_SOURCE: RedactableRecordSource = {
   resource: ['statuses'],
   identifier: ['status_id', 'statuses.status_id'],

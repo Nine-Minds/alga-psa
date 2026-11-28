@@ -41,9 +41,13 @@ import { assetClosedFields, assetColumnsOpenTo, resolveAuthorizationSubjectForUs
 import { isAssetAssigneeError, setAssetAssignee } from '@alga-psa/assets/lib/assetAssignment';
 import { getAuthorizedAssetGroupSummary, removeAssetFromAnyGroup } from '@alga-psa/assets/lib/assetGroups';
 import type { AssetAuthUser } from '@alga-psa/assets/lib/assetReadAuthorization';
-import { createPredicateGuard } from '../controllers/authorizationKernel';
+import { authorizeApiResource, createPredicateGuard } from '../controllers/authorizationKernel';
+import { authorizeTicketRecordAccess } from '@alga-psa/authorization/ticketRecordAuthorization';
+import { assertAuthorizedAssociationTarget } from '@shared/lib/documentAssociationTargetAuthorization';
 import { assertBillingProfileForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
 import { claimAssetTag, prepareAssetIdentity, normalizeAssetTag, assetTagClaimsRequired } from '@alga-psa/shared/services/assetNumbering';
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function validationDetails(issues: Array<{ key: string; code: string; message: string }>) {
   return issues.map((issue) => ({ path: ['attributes', issue.key], code: issue.code, message: issue.message }));
@@ -355,15 +359,24 @@ export class AssetService extends BaseService<any> {
    */
   async getAuthorizationRecord(id: string, context: ServiceContext): Promise<Record<string, any> | null> {
     const knex = await this.getDbForContext(context);
-    const asset = await scopedTable(knex, context.tenant, this.tableName)
+    return this.loadAuthorizationRecord(knex, context.tenant, id);
+  }
+
+  private async loadAuthorizationRecord(
+    knex: Knex | Knex.Transaction,
+    tenant: string,
+    id: string,
+    lock = false,
+  ): Promise<Record<string, any> | null> {
+    const assetQuery = scopedTable(knex, tenant, this.tableName)
       .where({ asset_id: id })
-      .select('asset_id', 'client_id')
-      .first();
+      .select('asset_id', 'client_id');
+    const asset = await (lock ? assetQuery.forUpdate() : assetQuery).first();
     if (!asset) return null;
 
     const associations: Array<{ entity_type: string; entity_id: string }> = await scopedTable(
       knex,
-      context.tenant,
+      tenant,
       'asset_associations',
     )
       .where({ asset_id: id })
@@ -380,6 +393,87 @@ export class AssetService extends BaseService<any> {
       clientId: asset.client_id ?? null,
       teamIds,
     };
+  }
+
+  /**
+   * Inside the write transaction: lock the asset row and require an `update` kernel decision on it.
+   * A missing and a refused asset answer the same 404.
+   */
+  private async authorizeAssetUpdateInTransaction(
+    trx: Knex.Transaction,
+    context: ServiceContext,
+    assetId: string,
+  ): Promise<void> {
+    const record = await this.loadAuthorizationRecord(trx, context.tenant, assetId, true);
+    const allowed = record && await authorizeApiResource({
+      knex: trx,
+      tenant: context.tenant,
+      user: context.user,
+      apiKeyId: context.apiKeyId,
+      resource: 'asset',
+      action: 'update',
+      recordContext: record as any,
+    });
+    if (!allowed) throw new NotFoundError('Asset not found');
+  }
+
+  /**
+   * Inside the write transaction: lock the ticket row and require an `update` decision from the shared ticket
+   * record authorization. A missing and a refused ticket answer the same 404, so the response does not reveal
+   * whether a ticket exists.
+   */
+  private async authorizeTicketUpdateInTransaction(
+    trx: Knex.Transaction,
+    context: ServiceContext,
+    ticketId: string,
+  ): Promise<void> {
+    const ticketRow = UUID_PATTERN.test(ticketId)
+      ? await scopedTable(trx, context.tenant, 'tickets')
+        .where({ ticket_id: ticketId })
+        .forUpdate()
+        .first(
+          'ticket_id', 'assigned_to', 'entered_by', 'client_id', 'board_id',
+          'assigned_team_id', 'contact_name_id', 'billing_profile_id', 'attributes',
+        )
+      : undefined;
+    if (!ticketRow || !context.user) throw new NotFoundError('Ticket not found');
+    try {
+      await authorizeTicketRecordAccess({
+        trx,
+        tenant: context.tenant,
+        // createTicketAuthorizationContext reads the key id snake_case to load the key's bundle rules.
+        user: { ...context.user, api_key_id: context.apiKeyId ?? context.user.api_key_id ?? null },
+        ticketId,
+        action: 'update',
+        ticketRow,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith('Permission denied')) {
+        throw new NotFoundError('Ticket not found');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Inside the write transaction: lock the document row and require the shared document update decision
+   * (coarse document:update plus the per-record document policy). Missing and refused answer the same 404.
+   */
+  private async authorizeDocumentUpdateInTransaction(
+    trx: Knex.Transaction,
+    context: ServiceContext,
+    documentId: string,
+  ): Promise<void> {
+    const document = UUID_PATTERN.test(documentId)
+      ? await scopedTable(trx, context.tenant, 'documents')
+        .where({ document_id: documentId })
+        .forUpdate()
+        .first('document_id')
+      : undefined;
+    const allowed = document && context.user && await assertAuthorizedAssociationTarget(
+      trx, context.tenant, context.user, 'document', documentId, 'update',
+    );
+    if (!allowed) throw new NotFoundError('Document not found');
   }
 
   async getWithDetails(id: string, context: ServiceContext): Promise<any | null> {
@@ -858,20 +952,6 @@ export class AssetService extends BaseService<any> {
     }
   }
 
-  private async assertDocumentExists(
-    knex: Knex | Knex.Transaction,
-    tenant: string,
-    documentId: string
-  ): Promise<void> {
-    const document = await scopedTable(knex, tenant, 'documents')
-      .where({ document_id: documentId })
-      .first('document_id');
-
-    if (!document) {
-      throw new NotFoundError('Document not found');
-    }
-  }
-
   private async assertUserExists(
     knex: Knex | Knex.Transaction,
     tenant: string,
@@ -1101,45 +1181,38 @@ export class AssetService extends BaseService<any> {
   ): Promise<any> {
     const knex = await this.getDbForContext(context);
 
-    const asset = await scopedTable(knex, context.tenant, 'assets')
-      .where({ asset_id: assetId })
-      .first();
-    if (!asset) {
-      throw new NotFoundError('Asset not found');
-    }
+    // Both endpoint decisions, the existence check and the insert share one transaction. The asset and the
+    // ticket are locked first (asset, then ticket) so neither can change between the decision and the write.
+    return withTransaction(knex, async (trx) => {
+      await this.authorizeAssetUpdateInTransaction(trx, context, assetId);
+      await this.authorizeTicketUpdateInTransaction(trx, context, data.ticket_id);
 
-    const ticket = await scopedTable(knex, context.tenant, 'tickets')
-      .where({ ticket_id: data.ticket_id })
-      .first();
-    if (!ticket) {
-      throw new NotFoundError('Ticket not found');
-    }
+      const existing = await scopedTable(trx, context.tenant, 'asset_associations')
+        .where({
+          asset_id: assetId,
+          entity_id: data.ticket_id,
+          entity_type: 'ticket'
+        })
+        .first();
+      if (existing) {
+        throw new ConflictError('Ticket is already linked to this asset');
+      }
 
-    const existing = await scopedTable(knex, context.tenant, 'asset_associations')
-      .where({
-        asset_id: assetId,
-        entity_id: data.ticket_id,
-        entity_type: 'ticket'
-      })
-      .first();
-    if (existing) {
-      throw new ConflictError('Ticket is already linked to this asset');
-    }
+      const [created] = await tenantDb(trx, context.tenant).table('asset_associations')
+        .insert({
+          tenant: context.tenant,
+          asset_id: assetId,
+          entity_id: data.ticket_id,
+          entity_type: 'ticket',
+          relationship_type: data.relationship_type || 'affected',
+          notes: data.notes ?? null,
+          created_by: context.userId,
+          created_at: new Date().toISOString()
+        })
+        .returning('*');
 
-    const [created] = await tenantDb(knex, context.tenant).table('asset_associations')
-      .insert({
-        tenant: context.tenant,
-        asset_id: assetId,
-        entity_id: data.ticket_id,
-        entity_type: 'ticket',
-        relationship_type: data.relationship_type || 'affected',
-        notes: data.notes ?? null,
-        created_by: context.userId,
-        created_at: new Date().toISOString()
-      })
-      .returning('*');
-
-    return created;
+      return created;
+    });
   }
 
   /**
@@ -1147,17 +1220,22 @@ export class AssetService extends BaseService<any> {
    */
   async unlinkTicket(assetId: string, ticketId: string, context: ServiceContext): Promise<void> {
     const knex = await this.getDbForContext(context);
-    const deleted = await scopedTable(knex, context.tenant, 'asset_associations')
-      .where({
-        asset_id: assetId,
-        entity_id: ticketId,
-        entity_type: 'ticket'
-      })
-      .del();
+    await withTransaction(knex, async (trx) => {
+      await this.authorizeAssetUpdateInTransaction(trx, context, assetId);
+      await this.authorizeTicketUpdateInTransaction(trx, context, ticketId);
 
-    if (!deleted) {
-      throw new NotFoundError('Asset-ticket association not found');
-    }
+      const deleted = await scopedTable(trx, context.tenant, 'asset_associations')
+        .where({
+          asset_id: assetId,
+          entity_id: ticketId,
+          entity_type: 'ticket'
+        })
+        .del();
+
+      if (!deleted) {
+        throw new NotFoundError('Asset-ticket association not found');
+      }
+    });
   }
 
   async createRelationship(assetId: string, data: CreateAssetRelationshipData, context: ServiceContext): Promise<any> {
@@ -1293,10 +1371,11 @@ export class AssetService extends BaseService<any> {
 
   async associateDocument(assetId: string, data: CreateAssetDocumentData, context: ServiceContext): Promise<any> {
     const knex = await this.getDbForContext(context);
-    await this.assertAssetExists(knex, context.tenant, assetId);
-    await this.assertDocumentExists(knex, context.tenant, data.document_id);
 
     return withTransaction(knex, async (trx) => {
+      // Asset, then document: lock and decide both before the association is written.
+      await this.authorizeAssetUpdateInTransaction(trx, context, assetId);
+      await this.authorizeDocumentUpdateInTransaction(trx, context, data.document_id);
       const db = tenantDb(trx, context.tenant);
       const genericAssociation = {
         entity_type: 'asset', entity_id: assetId, document_id: data.document_id,

@@ -100,12 +100,12 @@ async function grantPermission(caller: { userId: string }, resource: string, act
     .ignore();
 }
 
-async function grantBundle(caller: { userId: string; apiKeyId: string }, clientIds: string[], actions = ['read']) {
+async function grantBundle(caller: { userId: string; apiKeyId: string }, clientIds: string[], actions = ['read'], resourceType = 'asset') {
   const bundle = await createAuthorizationBundle(connection.db!, { tenant, name: `Asset scope ${randomUUID()}`, actorUserId: caller.userId });
   for (const action of actions) {
     await upsertBundleRule(connection.db!, {
       tenant, bundleId: bundle.bundleId, revisionId: bundle.revisionId,
-      resourceType: 'asset', action, templateKey: 'selected_clients',
+      resourceType, action, templateKey: 'selected_clients',
       config: { selectedClientIds: clientIds }, actorUserId: caller.userId,
     });
   }
@@ -446,6 +446,8 @@ describe('asset API-key authorization through public routes and migrated Postgre
     const { a } = await clients();
     const assetId = await createAsset(a, 'Document association target');
     const caller = await createCaller(['read', 'update']);
+    // Associating a document also requires the coarse document:update permission.
+    await grantPermission(caller, 'document', 'update');
     const typeId = randomUUID();
     const documentIds = [randomUUID(), randomUUID(), randomUUID()];
     await table('document_types').insert({ tenant, type_id: typeId, type_name: `Asset docs ${typeId}`, icon: 'file' });
@@ -547,6 +549,187 @@ describe('asset API-key authorization through public routes and migrated Postgre
       expect(foreignDelete.status).toBe(404);
       expect(await tenantDb(connection.db!, foreignTenant).table('asset_document_associations').where({ tenant: foreignTenant, association_id: foreignAssociation })).toHaveLength(1);
     } finally { globalThis.__algaAuthorizationKernelSingleton = previousKernel; }
+  }, 180_000);
+
+  async function createTicket(clientId: string, title: string, enteredBy: string) {
+    let status = await table('statuses').where({ status_type: 'ticket' }).first('status_id');
+    if (!status) {
+      [status] = await table('statuses').insert({
+        tenant, name: 'Open', status_type: 'ticket', order_number: 1, created_by: enteredBy, is_closed: false, is_default: true,
+      }).returning('status_id');
+    }
+    const ticketId = randomUUID();
+    await table('tickets').insert({
+      tenant, ticket_id: ticketId, ticket_number: `T-${ticketId}`, title, status_id: status.status_id,
+      client_id: clientId, entered_by: enteredBy,
+    });
+    return ticketId;
+  }
+
+  async function createDocument(name: string, createdBy: string, clientId?: string) {
+    let type = await table('document_types').first('type_id');
+    if (!type) {
+      [type] = await table('document_types').insert({ tenant, type_id: randomUUID(), type_name: `Doc ${randomUUID()}`, icon: 'file' }).returning('type_id');
+    }
+    const documentId = randomUUID();
+    await table('documents').insert({
+      tenant, document_id: documentId, document_name: name, type_id: type.type_id,
+      user_id: createdBy, created_by: createdBy, entered_at: db.fn.now(), updated_at: db.fn.now(),
+    });
+    // A document's client is the client it is associated with.
+    if (clientId) await table('document_associations').insert({ tenant, entity_type: 'client', entity_id: clientId, document_id: documentId });
+    return documentId;
+  }
+
+  async function withEnterpriseKernel<T>(work: () => Promise<T>): Promise<T> {
+    const previousKernel = globalThis.__algaAuthorizationKernelSingleton;
+    const { createEnterpriseAuthorizationKernel } = await import('../../../../ee/server/src/lib/authorization/kernel');
+    globalThis.__algaAuthorizationKernelSingleton = await createEnterpriseAuthorizationKernel();
+    try { return await work(); } finally { globalThis.__algaAuthorizationKernelSingleton = previousKernel; }
+  }
+
+  const ticketAssociations = (assetId: string, ticketId: string) =>
+    table('asset_associations').where({ asset_id: assetId, entity_id: ticketId, entity_type: 'ticket' });
+
+  async function ticketLinkFixture() {
+    const { a, b } = await clients();
+    const assetId = await createAsset(a, 'Ticket link target');
+    const caller = await createCaller(['read', 'update']);
+    await grantPermission(caller, 'ticket', 'update');
+    await grantBundle(caller, [a], ['update'], 'ticket');
+    await grantBundle(caller, [a], ['read', 'update'], 'asset');
+    const inScopeTicket = await createTicket(a, 'In scope', caller.userId);
+    const outOfScopeTicket = await createTicket(b, 'Out of scope', caller.userId);
+    const [{ POST: linkPost }, { DELETE: unlinkDelete }] = await Promise.all([
+      import('../../app/api/v1/assets/[id]/tickets/route'),
+      import('../../app/api/v1/assets/[id]/tickets/[ticketId]/route'),
+    ]);
+    return {
+      assetId, caller, inScopeTicket, outOfScopeTicket,
+      link: (ticketId: string) => invoke(linkPost, request(caller, `/api/v1/assets/${assetId}/tickets`, 'POST', { ticket_id: ticketId }), { id: assetId }),
+      unlink: (ticketId: string) => invoke(unlinkDelete, request(caller, `/api/v1/assets/${assetId}/tickets/${ticketId}`, 'DELETE'), { id: assetId, ticketId }),
+    };
+  }
+
+  it('answers 404 and writes nothing when a ticket:update key links an out-of-scope ticket to an in-scope asset', async () => {
+    const { assetId, outOfScopeTicket, link } = await ticketLinkFixture();
+    await withEnterpriseKernel(async () => {
+      const refused = await link(outOfScopeTicket);
+      expect(refused.status, JSON.stringify(await refused.clone().json())).toBe(404);
+      expect(await ticketAssociations(assetId, outOfScopeTicket)).toHaveLength(0);
+      // Indistinguishable from a ticket that does not exist.
+      expect((await link(randomUUID())).status).toBe(404);
+    });
+  }, 180_000);
+
+  it('answers 404 and keeps the row when a ticket:update key unlinks an out-of-scope ticket association', async () => {
+    const { assetId, caller, outOfScopeTicket, unlink } = await ticketLinkFixture();
+    await table('asset_associations').insert({
+      tenant, asset_id: assetId, entity_id: outOfScopeTicket, entity_type: 'ticket', relationship_type: 'affected', created_by: caller.userId,
+    });
+    await withEnterpriseKernel(async () => {
+      const refused = await unlink(outOfScopeTicket);
+      expect(refused.status, JSON.stringify(await refused.clone().json())).toBe(404);
+      expect(await ticketAssociations(assetId, outOfScopeTicket)).toHaveLength(1);
+    });
+  }, 180_000);
+
+  it('still links (201) and unlinks (204) an in-scope ticket for the scoped key', async () => {
+    const { assetId, inScopeTicket, link, unlink } = await ticketLinkFixture();
+    await withEnterpriseKernel(async () => {
+      const linked = await link(inScopeTicket);
+      expect(linked.status, JSON.stringify(await linked.clone().json())).toBe(201);
+      expect(await ticketAssociations(assetId, inScopeTicket)).toHaveLength(1);
+      expect((await unlink(inScopeTicket)).status).toBe(204);
+      expect(await ticketAssociations(assetId, inScopeTicket)).toHaveLength(0);
+    });
+  }, 180_000);
+
+  async function documentAssociationFixture() {
+    const { a, b } = await clients();
+    const assetId = await createAsset(a, 'Document association target');
+    const caller = await createCaller(['read', 'update']);
+    const inScopeDocument = await createDocument('In scope document', caller.userId, a);
+    const outOfScopeDocument = await createDocument('Out of scope document', caller.userId, b);
+    return {
+      a, assetId, caller, inScopeDocument, outOfScopeDocument,
+      associate: (documentId: string) => invoke(assetDocumentsPost, request(caller, `/api/v1/assets/${assetId}/documents`, 'POST', { document_id: documentId }), { id: assetId }),
+      rows: (documentId: string) => Promise.all([
+        table('document_associations').where({ entity_type: 'asset', entity_id: assetId, document_id: documentId }),
+        table('asset_document_associations').where({ asset_id: assetId, document_id: documentId }),
+      ]),
+    };
+  }
+
+  it('answers 403 and writes nothing when the key lacks the coarse document:update permission', async () => {
+    const { inScopeDocument, associate, rows } = await documentAssociationFixture();
+    expect((await associate(inScopeDocument)).status).toBe(403);
+    expect((await rows(inScopeDocument)).flat()).toHaveLength(0);
+  }, 180_000);
+
+  it('answers 404 and writes nothing when a document:update key associates an out-of-scope document', async () => {
+    const { a, caller, outOfScopeDocument, associate, rows } = await documentAssociationFixture();
+    await grantPermission(caller, 'document', 'update');
+    await grantBundle(caller, [a], ['read', 'update'], 'document');
+    await withEnterpriseKernel(async () => {
+      const refused = await associate(outOfScopeDocument);
+      expect(refused.status, JSON.stringify(await refused.clone().json())).toBe(404);
+      expect((await rows(outOfScopeDocument)).flat()).toHaveLength(0);
+    });
+  }, 180_000);
+
+  it('still associates an in-scope document for a document:update key', async () => {
+    const { a, caller, inScopeDocument, associate, rows } = await documentAssociationFixture();
+    await grantPermission(caller, 'document', 'update');
+    await grantBundle(caller, [a], ['read', 'update'], 'document');
+    await withEnterpriseKernel(async () => {
+      const created = await associate(inScopeDocument);
+      expect(created.status, JSON.stringify(await created.clone().json())).toBe(201);
+      expect((await rows(inScopeDocument)).map((found) => found.length)).toEqual([1, 1]);
+    });
+  }, 180_000);
+
+  it('leaves documents the caller cannot read out of the asset document list', async () => {
+    const { a, b } = await clients();
+    const assetId = await createAsset(a, 'Document list target');
+    const caller = await createCaller(['read']);
+    await grantPermission(caller, 'document', 'read');
+    await grantBundle(caller, [a], ['read'], 'document');
+    const visibleDocument = await createDocument('Visible document', caller.userId, a);
+    const hiddenDocument = await createDocument('Hidden document', caller.userId, b);
+    for (const documentId of [visibleDocument, hiddenDocument]) {
+      await table('document_associations').insert({ tenant, entity_type: 'asset', entity_id: assetId, document_id: documentId });
+    }
+
+    await withEnterpriseKernel(async () => {
+      const listed = await invoke(assetDocumentsGet, request(caller, `/api/v1/assets/${assetId}/documents`), { id: assetId });
+      expect(listed.status, JSON.stringify(await listed.clone().json())).toBe(200);
+      const body = await listed.json();
+      expect(body.data.map((row: any) => row.document_id)).toEqual([visibleDocument]);
+      expect(JSON.stringify(body)).not.toContain('Hidden document');
+    });
+  }, 180_000);
+
+  it('leaves documents the caller cannot read out of the asset detail response', async () => {
+    const { a, b } = await clients();
+    const assetId = await createAsset(a, 'Detail target');
+    const caller = await createCaller(['read']);
+    await grantPermission(caller, 'document', 'read');
+    await grantBundle(caller, [a], ['read'], 'document');
+    const visibleDocument = await createDocument('Visible detail document', caller.userId, a);
+    const hiddenDocument = await createDocument('Hidden detail document', caller.userId, b);
+    for (const documentId of [visibleDocument, hiddenDocument]) {
+      await table('document_associations').insert({ tenant, entity_type: 'asset', entity_id: assetId, document_id: documentId });
+    }
+
+    await withEnterpriseKernel(async () => {
+      const response = await invoke(assetItemGet, request(caller, `/api/v1/assets/${assetId}`), { id: assetId });
+      expect(response.status, JSON.stringify(await response.clone().json())).toBe(200);
+      const body = await response.json();
+      expect(body.data.documents.map((row: any) => row.document_id)).toEqual([visibleDocument]);
+      expect(JSON.stringify(body)).not.toContain('Hidden detail document');
+      expect(JSON.stringify(body)).not.toContain(hiddenDocument);
+    });
   }, 180_000);
 
   it('returns 404 for a tenant-scoped document association with a missing asset before coarse permission checks', async () => {
