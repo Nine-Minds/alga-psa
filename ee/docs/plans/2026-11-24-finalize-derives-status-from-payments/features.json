@@ -31,7 +31,7 @@
   },
   {
     "id": "F006",
-    "description": "Credit application sets invoice status through the shared derivation (only if it sets status today)",
+    "description": "Credit application sets invoice status through the shared derivation (it did not write status before; it now does, so payments plus credit covering the total read paid)",
     "implemented": true,
     "prdRefs": ["Design notes"]
   },

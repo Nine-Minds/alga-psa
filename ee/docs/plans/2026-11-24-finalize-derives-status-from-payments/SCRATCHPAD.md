@@ -38,3 +38,7 @@ group by 1,2,3;
 
 - Migration runs on single-node Citus in prod: bind timestamps rather than calling now() inside CASE/COALESCE, and keep the join to invoice_payments on (tenant, invoice_id). See the citus-migration-gotchas skill.
 - `updated_at` on finalize/unfinalize is written as a plain date, not a timestamp; don't rely on it for ordering.
+
+## 2026-11-27 review finding (Prepare Human Review)
+
+- F006 resolved: `applyCreditToInvoiceInternal` did not write status, so a payment-plus-credit invoice re-finalized as `partially_applied` with a $0 balance (seen live on FDS-4524-C: $50 paid + $50 auto-applied credit on $100). Credit application now writes the shared `deriveInvoiceStatus` result inside its locked transaction (draft/cancelled/void unchanged; credit alone still never makes `paid`). DB tests T008/T009 in finalizeDerivedStatus.db.test.ts; financialStateModel oracle updated.

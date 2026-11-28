@@ -35,7 +35,7 @@ vi.mock('../src/services/accountingSync/invoiceTerminalStatusHandlers', () => ({
 
 import { runWithTenant } from '@alga-psa/db';
 import { finalizeInvoiceWithKnex, unfinalizeInvoice } from '../src/actions/invoiceModification';
-import { grantCredit } from '../src/actions/creditActions';
+import { grantCredit, applyCreditToInvoiceInternal } from '../src/actions/creditActions';
 import { recordExternalPayment } from '../src/services/accountingSync/recordExternalPayment';
 import { computeBalanceDue } from '../src/lib/balanceDue';
 
@@ -116,6 +116,42 @@ describe('finalize derives status from recorded payments', () => {
       const invoice = await getInvoice(trx, f);
       expect(invoice.status).toBe('paid');
       expect(computeBalanceDue({ totalAmount: Number(invoice.total_amount), creditApplied: Number(invoice.credit_applied ?? 0), totalPaid: 10000 })).toBe(-3000);
+    });
+  });
+
+  it('T008: payment plus auto-applied credit covering the total re-finalizes as paid', async () => {
+    await inTransaction(async (trx) => {
+      const f = await fixture(trx, 10000, 5000);
+      await payFinalizedThenUnfinalize(trx, f, 5000);
+      active = { trx, tenant: f.tenant, user: f.user };
+      // Finalize derives partially_applied (5000 of 10000 paid); auto-apply then draws the 5000 credit.
+      await runWithTenant(f.tenant, () => finalizeInvoiceWithKnex(f.invoice, trx, f.tenant, f.user.user_id));
+      const invoice = await getInvoice(trx, f);
+      expect(Number(invoice.credit_applied)).toBe(5000);
+      expect(computeBalanceDue({ totalAmount: Number(invoice.total_amount), creditApplied: Number(invoice.credit_applied), totalPaid: 5000 })).toBe(0);
+      expect(invoice.status).toBe('paid');
+    });
+  });
+
+  it('T009: manual credit covering the rest of a partially paid invoice makes it paid; credit alone keeps sent', async () => {
+    await inTransaction(async (trx) => {
+      const f = await fixture(trx, 10000, 10000);
+      await runWithTenant(f.tenant, async () => {
+        await finalizeInvoiceWithKnex(f.invoice, trx, f.tenant, null, { skipAutoApply: true });
+        await recordExternalPayment(trx, f.tenant, { invoiceId: f.invoice, amount: 4000, provider: 'test', referenceNumber: `ref-${f.invoice}` });
+      });
+      expect((await getInvoice(trx, f)).status).toBe('partially_applied');
+      await runWithTenant(f.tenant, () => applyCreditToInvoiceInternal(f.tenant, f.user, f.client, f.invoice, 2000));
+      expect((await getInvoice(trx, f)).status).toBe('partially_applied');
+      await runWithTenant(f.tenant, () => applyCreditToInvoiceInternal(f.tenant, f.user, f.client, f.invoice, 4000));
+      expect((await getInvoice(trx, f)).status).toBe('paid');
+    });
+    await inTransaction(async (trx) => {
+      const f = await fixture(trx, 10000, 10000);
+      await runWithTenant(f.tenant, () => finalizeInvoiceWithKnex(f.invoice, trx, f.tenant, null, { skipAutoApply: true }));
+      await runWithTenant(f.tenant, () => applyCreditToInvoiceInternal(f.tenant, f.user, f.client, f.invoice, 10000));
+      // paid requires net payments > 0 (unchanged rule); a credit-only covered invoice keeps its status.
+      expect((await getInvoice(trx, f)).status).toBe('sent');
     });
   });
 
