@@ -41,6 +41,11 @@ export interface ResolveNarrowedReadScopeInput {
   resourceType: string;
   action?: string;
   requestCache?: AuthorizationRequestCache;
+  /**
+   * Supplies the subject when the scope is not on the fast path. A caller that resolves several resources for one
+   * request passes one memoised supplier, so the subject is loaded once and only when something can narrow it.
+   */
+  resolveSubject?: () => Promise<AuthorizationSubject>;
 }
 
 /** The subject's narrowing for `resourceType:action`, or null when nothing narrows it (add no clause). */
@@ -57,7 +62,8 @@ export async function resolveNarrowedReadScope(
   if (!tenantScope.publishedAssignments && tenantScope.resolverSubjects === false) return null;
 
   // A fault in either load propagates: a scope that cannot be resolved must not read as "unrestricted".
-  const subject = await resolveAuthorizationSubject(conn, { tenant: input.tenant, user: input.user, requestCache });
+  const subject = await (input.resolveSubject?.() ??
+    resolveAuthorizationSubject(conn, { tenant: input.tenant, user: input.user, requestCache }));
   const bundleRules = await resolveBundleNarrowingRulesForEvaluation(conn, {
     subject,
     resource: { type: input.resourceType, action },
