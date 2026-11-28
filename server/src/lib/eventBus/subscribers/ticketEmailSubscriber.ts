@@ -1386,6 +1386,7 @@ export async function buildTicketSummaryEmailContext(
   const baseTicketContext = {
     id: ticket.ticket_number,
     title: ticket.title,
+    fromEmail: Boolean(ticket.email_metadata?.messageId),
     description,
     descriptionText: description,
     descriptionHtml: descriptionHtml,
@@ -4500,6 +4501,7 @@ async function dispatchTicketEmailHandlers(validatedEvent: any): Promise<void> {
 }
 
 export const ticketEmailSubscriberTestHarness = {
+  buildTicketSummaryEmailContext,
   resolveTicketNotificationSuppression,
   resolveAccumulatedTicketNotificationSuppression,
   shouldSendContactFacingTicketEmail,
