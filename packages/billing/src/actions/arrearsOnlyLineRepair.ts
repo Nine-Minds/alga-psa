@@ -8,6 +8,7 @@ import { materializeClientCadenceServicePeriods } from '@shared/billingClients/m
 import { materializeContractCadenceServicePeriods } from '@shared/billingClients/materializeContractCadenceServicePeriods';
 import { buildScheduleSourceRuleVersion } from '@shared/billingClients/clientCadenceScheduleRegeneration';
 import { lockTenantBilling } from '../lib/billing/billingMutationLock';
+import { resolveContractCadenceAnchorStart } from '../lib/billing/contractLineWindow';
 import {
   isAdvanceTimingAllowedForLineType,
   contractLineOwnStream,
@@ -69,9 +70,11 @@ type LineRow = {
   contract_line_type: string | null;
   billing_timing: string | null;
   cadence_owner: string | null;
+  cadence_anchor: string | null;
   billing_frequency: string | null;
   owner_client_id: string | null;
   assignment_start_date: unknown;
+  line_start_date: unknown;
 };
 
 type PeriodRow = Record<string, any> & {
@@ -131,9 +134,11 @@ async function loadAffectedLines(
         'cl.contract_line_type as contract_line_type',
         'cl.billing_timing as billing_timing',
         'cl.cadence_owner as cadence_owner',
+        'cl.cadence_anchor as cadence_anchor',
         'cl.billing_frequency as billing_frequency',
         'ct.owner_client_id as owner_client_id',
         'cc.start_date as assignment_start_date',
+        'cl.start_date as line_start_date',
       )) as LineRow[];
     lines.push(...rows.filter((row) => !isAdvanceTimingAllowedForLineType(row.contract_line_type)));
   }
@@ -242,7 +247,11 @@ async function loadArrearsCandidateForServicePeriod(
   }
 
   const frequency = normalizeCadenceBillingCycle(line.billing_frequency);
-  const anchor = line.assignment_start_date ? dateOnly(line.assignment_start_date) : null;
+  const anchor = resolveContractCadenceAnchorStart({
+    assignmentStart: line.assignment_start_date,
+    lineStart: line.line_start_date,
+    cadenceAnchor: line.cadence_anchor,
+  });
   if (!frequency || !anchor) return null;
   const plan = materializeContractCadenceServicePeriods({
     asOf: start,

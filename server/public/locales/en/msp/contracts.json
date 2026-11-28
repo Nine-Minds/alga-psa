@@ -80,7 +80,8 @@
   "billing": {
     "cadenceOwner": {
       "client": "Client schedule",
-      "contract": "Contract anniversary"
+      "contract": "Contract anniversary",
+      "contractLine": "Contract line schedule"
     },
     "frequency": {
       "annually": "Annually",

@@ -80,7 +80,8 @@
   "billing": {
     "cadenceOwner": {
       "client": "Klantplanning",
-      "contract": "Contractverjaardag"
+      "contract": "Contractverjaardag",
+      "contractLine": "Schema van contractregel"
     },
     "frequency": {
       "annually": "Jaarlijks",

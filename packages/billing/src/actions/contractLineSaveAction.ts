@@ -57,6 +57,8 @@ export interface ContractLineEditDraft {
   line: {
     billing_timing?: IContractLine['billing_timing'];
     cadence_owner?: IContractLine['cadence_owner'];
+    /** 'line' = contract line schedule; only meaningful with cadence_owner 'contract'. */
+    cadence_anchor?: IContractLine['cadence_anchor'];
     minimum_billable_time?: number | null;
     round_up_to_nearest?: number | null;
     location_id?: string | null;
@@ -108,7 +110,7 @@ export const getContractLineEditVersion = withAuth(async (
 });
 
 const LINE_FIELDS = [
-  'billing_timing', 'cadence_owner', 'minimum_billable_time', 'round_up_to_nearest',
+  'billing_timing', 'cadence_owner', 'cadence_anchor', 'minimum_billable_time', 'round_up_to_nearest',
   'location_id', 'invoice_line_description', 'invoice_line_subtitle', 'start_date', 'end_date',
 ] as const;
 
@@ -301,11 +303,19 @@ export const saveContractLineEdit = withAuth(async (
       for (const key of LINE_FIELDS) {
         if (key in draft.line) (linePatch as Record<string, unknown>)[key] = (draft.line as Record<string, unknown>)[key];
       }
+      if (
+        linePatch.cadence_anchor !== undefined
+        && linePatch.cadence_anchor !== 'assignment'
+        && linePatch.cadence_anchor !== 'line'
+      ) {
+        throw new Error(`Invalid cadence anchor "${String(linePatch.cadence_anchor)}"; expected "assignment" or "line".`);
+      }
 
       // ---- Writes. Everything below shares `trx`; any throw rolls it all back. ----
       const before = {
         billing_timing: lineRow.billing_timing,
         cadence_owner: lineRow.cadence_owner,
+        cadence_anchor: lineRow.cadence_anchor,
         start_date: normalizeContractLineDate(lineRow.start_date),
         end_date: normalizeContractLineDate(lineRow.end_date),
       };
@@ -373,6 +383,7 @@ export const saveContractLineEdit = withAuth(async (
         membershipChanged ||
         before.billing_timing !== after.billing_timing ||
         before.cadence_owner !== after.cadence_owner ||
+        before.cadence_anchor !== after.cadence_anchor ||
         before.start_date !== normalizeContractLineDate(after.start_date) ||
         before.end_date !== normalizeContractLineDate(after.end_date);
       if (periodShapeChanged) {

@@ -3644,6 +3644,7 @@ export class BillingEngine {
         "cl.billing_frequency",
         "cl.billing_timing",
         "cl.cadence_owner",
+        "cl.cadence_anchor",
         "cl.custom_rate",
         "cl.enable_proration",
         "cl.location_id",
@@ -3661,14 +3662,22 @@ export class BillingEngine {
 
     // Convert dates from the DB into plain ISO strings and normalize values.
     // `start_date`/`end_date` stay the contract assignment window (the cadence
-    // anchor is the assignment start, matching the service-period materializer);
-    // the authored line bounds are carried separately as a coverage window. The
-    // assignment end is an inclusive last day, the line end is half-open, so the
-    // intersection is computed in exclusive space.
+    // anchor is the assignment start, matching the service-period materializer;
+    // a contract-cadence line with cadence_anchor 'line' anchors on its own
+    // effective start instead); the authored line bounds are carried separately
+    // as a coverage window. The assignment end is an inclusive last day, the
+    // line end is half-open, so the intersection is computed in exclusive space.
     clientContractLines.forEach((plan: any) => {
       const billingWindow = resolveContractLineBillingWindow(
         { start_date: plan.start_date, end_date: plan.end_date },
-        { start_date: plan.line_start_date, end_date: plan.line_end_date },
+        {
+          start_date: plan.line_start_date,
+          end_date: plan.line_end_date,
+          cadence_anchor:
+            resolveCadenceOwner(plan.cadence_owner) === "contract"
+              ? plan.cadence_anchor
+              : undefined,
+        },
       );
       plan.start_date = billingWindow.anchorStart;
       plan.end_date = billingWindow.inclusiveEnd;
