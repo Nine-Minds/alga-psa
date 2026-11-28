@@ -52,7 +52,7 @@
       },
       "defaultTimezone": {
         "label": "Zona horaria predeterminada",
-        "help": "Se utiliza para correos electrónicos y notificaciones cuando un usuario no ha configurado su propia zona horaria."
+        "help": "Se utiliza para correos electrónicos, notificaciones y las horas y fechas de los registros de tiempo cuando un usuario no ha configurado su propia zona horaria."
       }
     },
     "actions": {

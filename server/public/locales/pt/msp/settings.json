@@ -52,7 +52,7 @@
       },
       "defaultTimezone": {
         "label": "Fuso horário padrão",
-        "help": "Usado para e-mails e notificações quando um usuário não definiu seu próprio fuso horário."
+        "help": "Usado para e-mails, notificações e horários e datas das entradas de tempo quando um usuário não definiu seu próprio fuso horário."
       }
     },
     "actions": {
