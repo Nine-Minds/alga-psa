@@ -6,6 +6,7 @@ const state = vi.hoisted(() => ({
   subject: {} as Record<string, unknown>,
   existenceQueries: 0,
   rowExists: false,
+  bundleRules: [] as unknown[],
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -32,7 +33,7 @@ vi.mock('../subject/index', () => ({
 }));
 
 vi.mock('../bundles/service', () => ({
-  resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => []),
+  resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => state.bundleRules),
 }));
 
 vi.mock('../kernel/relationshipTemplates', async (importOriginal) => {
@@ -69,6 +70,7 @@ describe('createClientScopeContext: built-in resolvers narrow without a publishe
   beforeEach(() => {
     state.existenceQueries = 0;
     state.rowExists = false;
+    state.bundleRules = [];
     state.probe = { publishedAssignments: false, portfolios: false, resolverSubjects: true };
   });
 
@@ -107,5 +109,43 @@ describe('createClientScopeContext: built-in resolvers narrow without a publishe
     expect((await ctx.narrowing('client')).narrowed).toBe(false);
     expect(await ctx.permits('client', 'x')).toBe(true);
     expect(resolveAuthorizationSubject).not.toHaveBeenCalled();
+  });
+});
+
+// A non-seat subject whose published bundles do not name client or contact. The closed baseline (closedBaseline.ts)
+// says a closed bundle restricts precisely what it does not name, so such a subject reads no client and no contact
+// here, as it already does through authorizeResource and resolveNarrowedReadScope; an open bundle restricts nothing.
+describe('createClientScopeContext: bundles that do not name client or contact', () => {
+  const NON_SEAT: any = { tenant: 't', userId: 'u3', userType: 'internal' };
+  const ticketRule = (baseline: 'open' | 'closed') => ({
+    id: `r-${baseline}`, bundleId: `b-${baseline}`, revisionId: `rev-${baseline}`, baseline,
+    resource: 'ticket', action: 'read', templateKey: 'selected_clients', selectedClientIds: ['own'],
+  });
+  beforeAll(() => resetBuiltinRuleResolversForTests());
+  beforeEach(() => {
+    state.existenceQueries = 0;
+    state.rowExists = false;
+    state.subject = NON_SEAT;
+    state.probe = { publishedAssignments: true, portfolios: false, resolverSubjects: false };
+  });
+
+  it('a closed bundle that names only ticket narrows client and contact (no row admitted)', async () => {
+    state.bundleRules = [ticketRule('closed')];
+    const ctx = await createClientScopeContext({} as any, 't', USER);
+    for (const resource of ['client', 'contact'] as const) {
+      expect((await ctx.narrowing(resource)).narrowed).toBe(true);
+      expect(await ctx.permits(resource, 'any')).toBe(false);
+    }
+    expect(state.existenceQueries).toBe(2);
+  });
+
+  it('an open bundle that names only ticket leaves client and contact unnarrowed', async () => {
+    state.bundleRules = [ticketRule('open')];
+    const ctx = await createClientScopeContext({} as any, 't', USER);
+    for (const resource of ['client', 'contact'] as const) {
+      expect((await ctx.narrowing(resource)).narrowed).toBe(false);
+      expect(await ctx.permits(resource, 'any')).toBe(true);
+    }
+    expect(state.existenceQueries).toBe(0);
   });
 });
