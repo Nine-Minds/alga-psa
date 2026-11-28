@@ -54,6 +54,7 @@ const UPDATE_SQL = `
 `;
 
 async function repairInvoiceStatusFromRecordedPayments(knex, at = new Date()) {
+  // migration-lint: allow 5 - one-shot repair; writes only finalized invoices whose stored status disagrees with their recorded payments (3 rows across 2 tenants in production on 2026-11-24), tenant-joined and colocated on Citus, so row locks are bounded by that mismatch set rather than table size
   const result = await knex.raw(UPDATE_SQL, [at.toISOString()]);
   return result.rowCount ?? 0;
 }
