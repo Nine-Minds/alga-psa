@@ -1668,6 +1668,7 @@
         "status": "Status"
       },
       "empty": "Inga interaktioner matchar filtren.",
+      "incompleteEmpty": "Fler interaktioner återstår att söka igenom.",
       "loading": "Läser in interaktioner…",
       "openClient": "Öppna kunden {{name}}",
       "openContact": "Öppna kontakten {{name}}",

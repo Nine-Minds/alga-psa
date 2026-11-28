@@ -1710,6 +1710,7 @@
         "status": "Status"
       },
       "empty": "Brak interakcji pasujących do tych filtrów.",
+      "incompleteEmpty": "Pozostały kolejne interakcje do przeszukania.",
       "loading": "Ładowanie interakcji…",
       "openClient": "Otwórz klienta {{name}}",
       "openContact": "Otwórz kontakt {{name}}",

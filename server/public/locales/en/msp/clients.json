@@ -1677,6 +1677,7 @@
         "status": "Status"
       },
       "empty": "No interactions match these filters.",
+      "incompleteEmpty": "More interactions remain to search.",
       "loading": "Loading interactions…",
       "openClient": "Open client {{name}}",
       "openContact": "Open contact {{name}}",

@@ -1677,6 +1677,7 @@
         "status": "Status"
       },
       "empty": "Geen interacties komen overeen met deze filters.",
+      "incompleteEmpty": "Er zijn nog meer interacties om te doorzoeken.",
       "loading": "Interacties laden…",
       "openClient": "Klant {{name}} openen",
       "openContact": "Contact {{name}} openen",

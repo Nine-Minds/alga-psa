@@ -724,6 +724,8 @@
     "totalItems": "{{count}} {{itemLabel}} total",
     "totalRecordsInline": "({{count}} total records)",
     "pageOf": "Page {{current}} of {{total}}",
+    "pageNumber": "Page {{current}}",
+    "totalCountIncomplete": "Total count incomplete",
     "itemsLabel_few": "items",
     "itemsLabel_many": "items"
   },

@@ -724,6 +724,8 @@
     "totalItems": "Totalt {{count}} {{itemLabel}}",
     "totalRecordsInline": "(totalt {{count}} poster)",
     "pageOf": "Sida {{current}} av {{total}}",
+    "pageNumber": "Sida {{current}}",
+    "totalCountIncomplete": "Totalt antal ofullständigt",
     "itemsLabel_few": "poster",
     "itemsLabel_many": "poster"
   },

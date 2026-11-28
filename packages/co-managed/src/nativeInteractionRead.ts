@@ -103,6 +103,7 @@ export async function readCoManagedNativeInteractions(db: Knex, tenant: string, 
       return !(filters.dateFrom && (!Number.isFinite(time) || time < new Date(filters.dateFrom).getTime()) ||
         filters.dateTo && (!Number.isFinite(time) || time > new Date(filters.dateTo).getTime()));
     };
+    // Non-paginated entity/recent reads use pageSize 100 and are intentionally capped by the DoS bound.
     const result = await pageAuthorizedRows({ page: filters.cursor ? 1 : options.paginated ? page : 1, pageSize: options.paginated ? pageSize : 100,
       after: afterCursor, maxWindows: 3, fetchCandidates, authorize, matches,
       searchMatches: view => !search || ['title', 'notes', 'contact_name', 'client_name', 'user_name'].some(key => String(view[key] ?? '').toLowerCase().includes(search)) });

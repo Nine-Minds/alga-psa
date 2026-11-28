@@ -550,6 +550,8 @@
     "totalItems": "{{count}} {{itemLabel}} au total",
     "totalRecordsInline": "({{count}} enregistrements au total)",
     "pageOf": "Page {{current}} sur {{total}}",
+    "pageNumber": "Page {{current}}",
+    "totalCountIncomplete": "Nombre total incomplet",
     "itemsLabel_one": "élément",
     "itemsLabel_other": "éléments",
     "itemsLabel_few": "éléments",

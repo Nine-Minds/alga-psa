@@ -722,6 +722,8 @@
     "totalItems": "{{count}} {{itemLabel}} no total",
     "totalRecordsInline": "(total de registros {{count}})",
     "pageOf": "Página {{current}} de {{total}}",
+    "pageNumber": "Página {{current}}",
+    "totalCountIncomplete": "Total incompleto",
     "itemsLabel_one": "item",
     "itemsLabel_other": "itens",
     "itemsLabel_few": "itens",

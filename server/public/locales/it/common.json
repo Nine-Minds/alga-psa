@@ -667,6 +667,8 @@
     "totalItems": "{{count}} {{itemLabel}} totali",
     "totalRecordsInline": "({{count}} record totali)",
     "pageOf": "Pagina {{current}} di {{total}}",
+    "pageNumber": "Pagina {{current}}",
+    "totalCountIncomplete": "Conteggio totale incompleto",
     "itemsLabel_one": "elemento",
     "itemsLabel_other": "elementi",
     "itemsLabel_few": "elementi",
