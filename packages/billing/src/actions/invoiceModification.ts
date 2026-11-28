@@ -13,6 +13,7 @@ import { toISODate } from '@alga-psa/core';
 import { writeInvoiceAudit } from '@alga-psa/db';
 import { applyCreditToInvoiceInternal, resolveCreditExpirationDate, resolveCreditDrawdownPolicy } from './creditActions';
 import { getAvailableCredit } from '../lib/creditBalance';
+import { computeBalanceDue, deriveInvoiceStatus } from '../lib/balanceDue';
 import { reverseCreditApplicationsForInvoice } from '../lib/creditReversal';
 import { clearPrepaidReplenishmentForInvoice } from '../lib/prepaidAutoReplenishment';
 import { ExpectedInvoiceActionError, InvoiceNotDraftError, InvoiceHasPaymentsError } from '../lib/invoiceDeletionErrors';
@@ -1154,6 +1155,7 @@ export async function finalizeInvoiceWithKnex(
     sourceServicePeriodStart: string | null;
     sourceServicePeriodEnd: string | null;
   } | null = null;
+  let derivedStatus = 'sent';
   let deferPrepaidActivation = options.deferPrepaidActivation === true;
   let prepaidBlockActivatesAtFinalize = false;
 
@@ -1240,10 +1242,24 @@ export async function finalizeInvoiceWithKnex(
     const previousFinalizedAt = invoice.finalized_at ?? null;
     const finalizedAtValue = options.finalizedAt || toISODate(Temporal.Now.plainDateISO());
 
+    // Payments survive unfinalize, so the post-finalize status is derived from
+    // the net recorded payments rather than assumed 'sent'. 'sent' is passed as
+    // the lifecycle state: the invoice is leaving draft. (alga-2026-0003329)
+    const netPaymentsRow = await tenantScopedTable(trx, tenant, 'invoice_payments')
+      .where({ invoice_id: invoiceId })
+      .sum('amount as total')
+      .first();
+    derivedStatus = deriveInvoiceStatus({
+      totalAmount: Number(invoice.total_amount),
+      creditApplied: Number(invoice.credit_applied ?? 0),
+      totalPaid: parseInt(String((netPaymentsRow as any)?.total ?? '0'), 10) || 0,
+      currentStatus: 'sent'
+    });
+
     await tenantScopedTable(trx, tenant, 'invoices')
       .where({ invoice_id: invoiceId })
       .update({
-        status: 'sent',
+        status: derivedStatus,
         finalized_at: finalizedAtValue,
         updated_at: toISODate(Temporal.Now.plainDateISO()),
         ...identityUpdates
@@ -1406,7 +1422,7 @@ export async function finalizeInvoiceWithKnex(
       userId,
       invoiceNumber: invoice.invoice_number ?? null,
       before: { status: previousStatus, finalized_at: previousFinalizedAt },
-      after: { status: 'sent', finalized_at: finalizedAtValue },
+      after: { status: derivedStatus, finalized_at: finalizedAtValue },
       extraDetails: options.auditDetails,
     });
   });
@@ -1443,7 +1459,19 @@ export async function finalizeInvoiceWithKnex(
       });
       if (!updatedInvoice) return;
 
-      const unapplied = Number(updatedInvoice.total_amount) - Number(updatedInvoice.credit_applied ?? 0);
+      // Headroom is net of recorded payments: a re-finalized paid invoice owes nothing.
+      const netPaid = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const row = await tenantScopedTable(trx, tenant, 'invoice_payments')
+          .where({ invoice_id: invoiceId })
+          .sum('amount as total')
+          .first();
+        return parseInt(String((row as any)?.total ?? '0'), 10) || 0;
+      });
+      const unapplied = computeBalanceDue({
+        totalAmount: Number(updatedInvoice.total_amount),
+        creditApplied: Number(updatedInvoice.credit_applied ?? 0),
+        totalPaid: netPaid,
+      });
       const creditToApply = Math.min(availableCredit, unapplied);
       if (creditToApply > 0) {
         await applyCreditToInvoiceInternal(

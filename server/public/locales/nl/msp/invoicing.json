@@ -3071,5 +3071,9 @@
     "toasts": {
       "reversed": "Betaling teruggedraaid"
     }
+  },
+  "draftInvoicePayments": {
+    "amountPaid": "Er zijn betalingen van {{amount}} geregistreerd voor deze factuur.",
+    "overpaidWarning": "Het totaal van het concept is lager dan het reeds betaalde bedrag ({{paid}}). Bij het definitief maken is deze factuur te veel betaald."
   }
 }

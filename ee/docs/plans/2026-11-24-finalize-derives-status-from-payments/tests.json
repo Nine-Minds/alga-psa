@@ -1,0 +1,97 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: the status derivation returns paid, partially_applied and sent for full, partial and zero net payments; never overwrites draft/cancelled/void; returns sent (not paid) for a zero-payment credit note or negative-total invoice; returns paid for net payments above the balance",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F007"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "DB integration: record a full payment on a finalized invoice, unfinalize it, finalize it again: status is paid, the audit row's after.status is paid, and no credit is applied even when the client has available credit with auto-apply on",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F004",
+      "F005"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "DB integration: a paid invoice unfinalized, edited to a higher total and finalized is partially_applied with the right balance due; edited below the amount paid and finalized is paid with a negative balance",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "DB integration: a freshly generated invoice with no payments still finalizes as sent (regression guard for the recurring-generation and REST callers)",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Existing recordExternalPayment dedup/reversal tests pass unchanged against the shared derivation",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F006"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Component: the draft invoice view shows the amount paid when payments exist, and the overpaid warning when the total is below it",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F009",
+      "F010"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "DB integration: the migration flips a finalized sent invoice with full payments to paid, leaves a draft with payments and a correctly-statused invoice untouched",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "DB integration: a payment plus an auto-applied credit that together cover the total re-finalizes as paid (partially_applied on finalize, then paid once finalize's auto-apply draws the credit), with zero balance due",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F003"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "DB integration: manual credit applied through applyCreditToInvoiceInternal derives status under the invoice lock: partial credit on a partly paid invoice keeps partially_applied, credit covering the rest makes it paid, and a credit-only covered invoice with no payments stays sent",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "DB integration: the REST InvoiceService.applyCredit path gives a credit-only covered invoice the same status (sent, never paid) as applyCreditToInvoiceInternal, and derives partially_applied then paid for a partly paid invoice (invoiceService.creditRefundStatus.db.test.ts)",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "DB integration: the REST InvoiceService.recordRefund path derives status via the shared derivation: partial refund -> partially_applied, full refund -> sent, applied credit is not counted as paid, a cancelled invoice keeps its status (invoiceService.creditRefundStatus.db.test.ts)",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  }
+]

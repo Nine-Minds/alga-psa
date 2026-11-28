@@ -1,0 +1,86 @@
+[
+  {
+    "id": "F001",
+    "description": "Add a contact create command that, inside the caller's transaction, checks contact:create for the actor, runs record-create authorization on the candidate's client (null included), performs the duplicate lookup, inserts through the contact model and queues the created event.",
+    "prdRefs": ["Design / Contact create command"],
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Project the duplicate-email outcome through the actor's read scope: an in-scope match may be named or returned; an out-of-scope or client-less match yields one generic in-use result with no client name and no contact.",
+    "prdRefs": ["Design / Contact create command", "Accepted limit"],
+    "implemented": false
+  },
+  {
+    "id": "F003",
+    "description": "Provide find-or-create as the same command returning the in-scope existing contact instead of failing, with scope checked before any lookup result is disclosed.",
+    "prdRefs": ["Design / Contact create command"],
+    "implemented": false
+  },
+  {
+    "id": "F004",
+    "description": "Route addContact, createClientContact and the contact CSV import create branch through the create command, so the scope check precedes the duplicate check on all three.",
+    "prdRefs": ["Problem 2", "Design / Contact create command"],
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "description": "Route createOrFindContactByEmail through the command, keeping the client-portal own-client rule and removing the named-client error for callers who cannot read that client.",
+    "prdRefs": ["Problem 2"],
+    "implemented": false
+  },
+  {
+    "id": "F006",
+    "description": "Route createOrFindIntegrationContactByEmail and createOrFindContact through the command so they require contact:create and client scope, and remove them from the pinned permission-coverage gaps.",
+    "prdRefs": ["Problem 2"],
+    "implemented": false
+  },
+  {
+    "id": "F007",
+    "description": "Route REST contact create, ticket CSV import contact creation, and workflow contacts.create and contacts.duplicate with a user actor through the command.",
+    "prdRefs": ["Design / Contact create command"],
+    "implemented": false
+  },
+  {
+    "id": "F008",
+    "description": "Update the contact writer ledger contract so actor-initiated create paths must reach the command and only the named system writers insert directly.",
+    "prdRefs": ["Design / Contact create command"],
+    "implemented": false
+  },
+  {
+    "id": "F009",
+    "description": "Narrow findContactByEmailAddress, findIntegrationContactByEmailAddress and checkExistingEmails to the caller's contact read scope.",
+    "prdRefs": ["Problem 3", "Design / Email lookups"],
+    "implemented": false
+  },
+  {
+    "id": "F010",
+    "description": "Grant create with the own_client condition on contact in the seat authority policy, and add contact:create to the Seat Technician role grants and the migration role catalog.",
+    "prdRefs": ["Design / Seat authority"],
+    "implemented": false
+  },
+  {
+    "id": "F011",
+    "description": "Add an additive, Citus-safe migration that gives contact:create to every existing Seat Technician role.",
+    "prdRefs": ["Design / Seat authority"],
+    "implemented": false
+  },
+  {
+    "id": "F012",
+    "description": "Show the contact picker's Add new affordance only to a user who may create a contact.",
+    "prdRefs": ["Design / UI"],
+    "implemented": false
+  },
+  {
+    "id": "F013",
+    "description": "In the quick-add contact form, preselect, fix and require the client when the user's client scope resolves to exactly one client, and show the add-new-client affordance only with client:create.",
+    "prdRefs": ["Design / UI"],
+    "implemented": false
+  },
+  {
+    "id": "F014",
+    "description": "Add the generic out-of-scope collision message to the locale files and surface it, and the in-scope existing-contact offer, in the quick-add contact form.",
+    "prdRefs": ["Design / UI", "Users and flows"],
+    "implemented": false
+  }
+]

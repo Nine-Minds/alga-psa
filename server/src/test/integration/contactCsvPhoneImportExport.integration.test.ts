@@ -34,6 +34,13 @@ vi.mock('@alga-psa/auth', () => ({
   hasPermission: vi.fn().mockResolvedValue(true),
 }));
 
+// The create path runs through createContactAs, whose RBAC gate reads the canonical
+// authorization module rather than @alga-psa/auth; the suite's actor is not a seeded user.
+vi.mock('@alga-psa/authorization/rbac', async (importOriginal) => ({
+  ...(await importOriginal<any>()),
+  hasPermission: vi.fn().mockResolvedValue(true),
+}));
+
 vi.mock('@alga-psa/db', async () => {
   const actual = await vi.importActual<any>('@alga-psa/db');
   testState.actualWithTransaction = actual.withTransaction;

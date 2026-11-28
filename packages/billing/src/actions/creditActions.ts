@@ -4,13 +4,14 @@ import { tenantDb, withTransaction } from '@alga-psa/db';
 import { auditLog } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { IInvoice, IInvoiceCharge, ITransaction, ICreditTracking } from '@alga-psa/types';
-import type { IUser } from '@alga-psa/types';
+import type { IUser, InvoiceStatus } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { generateInvoiceNumber } from './invoiceGeneration';
 import { Knex } from 'knex';
 import { resolveCreditDrawdownPolicy } from '@shared/billingClients/billingSettings';
 import type { CreditDrawdownPolicy } from '@shared/billingClients/billingSettings';
 import { getAvailableCredit } from '../lib/creditBalance';
+import { deriveInvoiceStatus } from '../lib/balanceDue';
 import { resolveCreditExpirationDate } from '../lib/creditExpirationDate';
 import { resolvePaymentBillingProfileId } from '@alga-psa/shared/billingClients/billingProfilePayments';
 import { withAuth } from '@alga-psa/auth';
@@ -915,7 +916,7 @@ export async function applyCreditToInvoiceInternal(
                 invoice_id: invoiceId,
                 tenant
             })
-            .select('client_id', 'credit_applied', 'total_amount', 'currency_code', 'project_id', 'billing_profile_id')
+            .select('client_id', 'status', 'credit_applied', 'total_amount', 'currency_code', 'project_id', 'billing_profile_id')
             .forUpdate()
             .first();
 
@@ -1257,6 +1258,22 @@ export async function applyCreditToInvoiceInternal(
             .update({
                 credit_applied: trx.raw('COALESCE(credit_applied, 0) + ?', [totalAppliedAmount])
             });
+
+        // Credit applied is a status input: an invoice whose recorded payments
+        // plus this credit now cover it is paid. Same derivation as finalize and
+        // payment record/reverse; draft, cancelled and void are left unchanged.
+        // (alga-2026-0003329)
+        const derivedStatus = deriveInvoiceStatus({
+            totalAmount: Number(invoice.total_amount),
+            creditApplied: alreadyAppliedCredit + totalAppliedAmount,
+            totalPaid: Number(paymentTotal?.total ?? 0),
+            currentStatus: invoice.status,
+        });
+        if (derivedStatus !== invoice.status) {
+            await tenantScopedTable(trx, tenant, 'invoices')
+                .where({ invoice_id: invoiceId, tenant })
+                .update({ status: derivedStatus as InvoiceStatus });
+        }
         
         // For each applied credit, create a related_transaction_id reference
         for (const appliedCredit of appliedCredits) {

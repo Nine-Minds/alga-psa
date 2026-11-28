@@ -24,7 +24,7 @@ import { buildExternalPaymentRecordedPayload } from '../../lib/paymentRecordedEv
  * EE-gated at their entry points.
  */
 
-import { computeBalanceDue } from '../../lib/balanceDue';
+import { computeBalanceDue, deriveInvoiceStatus } from '../../lib/balanceDue';
 import { loadReversedPaymentIds, reversalReferenceFor } from '../../lib/payments/paymentSources';
 export { computeBalanceDue };
 export { reversalReferenceFor };
@@ -120,25 +120,13 @@ async function sumPayments(trx: Knex, tenantId: string, invoiceId: string): Prom
   return parseInt(String(totalPayments?.total ?? '0'), 10) || 0;
 }
 
-function resolveStatus(invoice: InvoiceRow, totalPaid: number): string {
-  const balanceDue = computeBalanceDue({
+async function applyStatus(trx: Knex, tenantId: string, invoice: InvoiceRow, totalPaid: number): Promise<string> {
+  const newStatus = deriveInvoiceStatus({
     totalAmount: Number(invoice.total_amount),
     creditApplied: Number(invoice.credit_applied ?? 0),
-    totalPaid
+    totalPaid,
+    currentStatus: invoice.status
   });
-
-  if (totalPaid > 0 && balanceDue <= 0) {
-    return 'paid';
-  }
-  if (totalPaid > 0) {
-    return 'partially_applied';
-  }
-  // Net payments gone (full reversal) — back to sent.
-  return invoice.status === 'paid' || invoice.status === 'partially_applied' ? 'sent' : invoice.status;
-}
-
-async function applyStatus(trx: Knex, tenantId: string, invoice: InvoiceRow, totalPaid: number): Promise<string> {
-  const newStatus = resolveStatus(invoice, totalPaid);
   if (newStatus !== invoice.status) {
     await tenantDb(trx, tenantId).table('invoices')
       .where({ invoice_id: invoice.invoice_id })

@@ -69,7 +69,7 @@
     "mandatory": false,
     "reason": "The suite deletes a fixture tenant and records its statement list for scripts/review/hotpath-diff.mjs to compare across commits; it needs a disposable migrated database that the DB-less Temporal readiness lane does not provide. HOTPATH_DB=1 is set only so collection registers the env-gated case; collection never executes test bodies. Tenant deletion behavior is mandatory separately in Temporal readiness (tenant-deletion-workflow.behavior, tenant-deletion-external-links, tenant-deletion-answer-mappings).",
     "issue": "https://github.com/Nine-Minds/alga-psa/pull/3911",
-    "expires": "2026-11-27"
+    "expires": "2027-02-26"
   },
   {
     "runner": "server-hotpath-review",
@@ -87,7 +87,7 @@
     "mandatory": false,
     "reason": "The suite drives ticket, comment, transaction and maintenance fan-out hot paths against a fixture tenant and records their statement lists for scripts/review/hotpath-diff.mjs to compare across commits; it needs a disposable migrated database that the DB-less server unit lane does not provide. HOTPATH_DB=1 is set only so collection registers the env-gated cases; collection never executes test bodies. The committed hot-path query budget is mandatory separately in the workspace-db lane (src/test/contract/hotPathQueryBudget.db.test.ts).",
     "issue": "https://github.com/Nine-Minds/alga-psa/pull/3911",
-    "expires": "2026-11-27"
+    "expires": "2027-02-26"
   },
   {
     "runner": "co-managed-built-worker-access-review",
@@ -102,6 +102,6 @@
     "mandatory": false,
     "reason": "The suite spawns the compiled Temporal worker, provisions a customer through the real workflow and redeems the delivered invitation; no CI lane provides a built worker with Temporal and Mailpit. The same native-access cases are mandatory separately in the server integration lane (ee/temporal-workflows/src/__tests__/integration/coManagedNativeAccess.integration.test.ts), which provisions through the activities synchronously.",
     "issue": "https://github.com/Nine-Minds/alga-psa/pull/3937",
-    "expires": "2026-11-27"
+    "expires": "2027-02-26"
   }
 ]

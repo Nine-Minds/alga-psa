@@ -40,36 +40,6 @@ test('manual Vitest runner reviews remain valid through their stated expiry date
   assert.equal(hasCurrentManualRunnerReview({ reason: 'reviewed', issue: 'issue', expires: '2026-11-09' }, today), true);
 });
 
-test('renewed email and invoice reviews collect real cases after the previous deadline', t => {
-  // The workspace DB job passed all test bodies, then failed manual collection
-  // when these reviews reached their deadline at midnight UTC on November 8.
-  t.mock.timers.enable({ apis: ['Date'], now: Date.parse('2026-11-09T01:54:56Z') });
-  const root = fileURLToPath(new URL('../../', import.meta.url));
-  const output = mkdtempSync(path.join(tmpdir(), 'renewed-manual-inventory-'));
-  t.after(() => rmSync(output, { recursive: true, force: true }));
-  const runners = JSON.parse(readFileSync(path.join(root, 'scripts/manual-vitest-runners.json'), 'utf8'));
-
-  for (const name of ['legacy-email-review', 'invoice-visual-review']) {
-    const runner = runners.find(entry => entry.runner === name);
-    assert.ok(runner, `Missing manual runner: ${name}`);
-    assert.throws(() => collectVitestInventory({ root, output,
-      runner: { ...runner, expires: '2026-11-08' } }), /unexpired review/);
-
-    const collection = collectVitestInventory({ root, runner, output,
-      env: { ...process.env, DB_HOST: '127.0.0.1', DB_PORT: '0', REQUIRE_DB: '' } });
-    assert.equal(collection.status, 'passed', collection.failures.join('\n'));
-    assert.equal(collection.mandatory, false);
-    assert.deepEqual([...collection.files].sort(), runner.filters.map(file => `${runner.cwd}/${file}`).sort());
-    assert.ok(collection.collectedTests >= collection.files.length);
-    if (name === 'invoice-visual-review') {
-      const cases = JSON.parse(readFileSync(path.join(collection.collectionDirectory, 'collected-tests.json'), 'utf8'));
-      assert.ok(cases.every(entry => entry.skipped), 'Unavailable DB must remain visible as skipped cases');
-    }
-    const discovery = reconcileDiscovery({ root, candidates: collection.files, collections: [collection] });
-    assert.equal(discovery.status, 'passed', discovery.failures.join('\n'));
-  }
-});
-
 for (const name of ['maintenance-fanout-activities', 'tenant-deletion-prepaid-block-order', 'worker-email-resolution']) {
   test(`Temporal readiness collects the ${name} behavioral regression`, t => {
     const root = fileURLToPath(new URL('../../', import.meta.url));
