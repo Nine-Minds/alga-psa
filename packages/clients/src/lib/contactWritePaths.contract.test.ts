@@ -15,7 +15,6 @@ const PUBLISHED_WRITERS: Record<string, string> = {
   'packages/clients/src/actions/contact-actions/contactActions.tsx': 'queueContactUpdated',
   'shared/models/contactCreateCommand.ts': 'queueContactCreated',
   'packages/clients/src/actions/inboundActions.ts': 'queueContactUpdated',
-  'packages/clients/src/actions/queryActions.ts': 'queueContactCreated',
   'packages/clients/src/actions/clientActions.ts': 'trackContactUpdates',
   'packages/integrations/src/actions/clientLookupActions.ts': 'queueContactCreated',
   'packages/onboarding/src/actions/onboarding-actions/onboardingActions.ts': 'trackContactUpdates',

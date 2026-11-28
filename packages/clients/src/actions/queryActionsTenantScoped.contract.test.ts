@@ -64,7 +64,7 @@ describe('queryActions tenant-scoped query contract', () => {
     expect(getAllContactsSection).not.toContain("trx('clients')");
     expect(getAllContactsSection).not.toContain(".where('tenant', tenant)");
 
-    expect(createOrFindSection).toContain("tenantScopedTable(trx, 'clients', tenant)");
+    expect(createOrFindSection).toContain('findOrCreateContactAs(trx');
     expect(createOrFindSection).not.toContain("trx('clients')");
     expect(createOrFindSection).not.toContain('tenant })');
   });
