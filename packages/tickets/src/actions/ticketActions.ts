@@ -530,9 +530,9 @@ export const createTicketFromAsset = withAuth(async (user, { tenant }, data: Cre
                 throw new Error('Created ticket could not be reloaded after insert.');
             }
 
-            // The source asset must be one the creator may update and belong to the persisted ticket's client.
-            // This replaces the former read-only check: update authorization is the stricter record-level test,
-            // and a denied asset answers as missing where the kernel conceals denials.
+            // The source asset must be one the creator may read (a seat technician: their own client's; anything
+            // else answers as missing) and belong to the persisted ticket's client. Same record-level read rule as
+            // assetActions.linkAssetToTicket; no new coarse asset permission is required here.
             await assertTicketAssetLinksAllowed(trx, tenant, user, {
               ticketClientId: fullTicket.client_id,
               assetIds: [data.asset_id],

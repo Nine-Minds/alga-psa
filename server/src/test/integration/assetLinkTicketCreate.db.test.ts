@@ -66,6 +66,7 @@ import { createCoManagedSeatArrangement, setCoManagedSeatBoardScope } from '@alg
 import { retainBuiltinResolverSubject } from '@alga-psa/authorization/subject';
 import { CO_MANAGED_SEAT_RESOLVER_ID } from '@alga-psa/co-managed/seatAuthority';
 import { tenantDb } from '@alga-psa/db';
+import { createAuthorizationBundle, createBundleAssignment, publishBundleRevision, upsertBundleRule } from '@alga-psa/authorization/bundles/service';
 import { addTicket, createTicketFromAsset } from '../../../../packages/tickets/src/actions/ticketActions';
 import { assertTicketAssetLinksAllowed } from '../../../../packages/tickets/src/lib/ticketAssetLinkAuthorization';
 import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
@@ -80,6 +81,7 @@ let mspUser: any;
 let technician: any;
 let linker: any;
 let noAssetUser: any;
+let narrowedUser: any;
 let otherClientId: string;
 let ownAsset: string;
 let otherAsset: string;
@@ -173,7 +175,7 @@ beforeAll(async () => {
   });
   await insertTestAssets(db, [asset(ownAsset, fixture.clientId, 'Own PC'), asset(otherAsset, otherClientId, 'Other PC')]);
 
-  // A seat technician: coarse ticket create and asset update, but the seat baseline closes asset writes at record level.
+  // A seat technician: coarse ticket create and asset update; the seat baseline lets them read their own client's assets only.
   await db('co_managed_entitlements').insert({ tenant: tenant(), source: 'hosted', source_reference: `sub_${randomUUID()}`, capacity: 20,
     verified_at: new Date(Date.now() - 400 * DAY), valid_until: new Date(Date.now() + 365 * DAY) });
   const arrangement = await createCoManagedSeatArrangement(db, { sponsorTenant: tenant(), clientId: fixture.clientId,
@@ -191,6 +193,16 @@ beforeAll(async () => {
   // Plain internal users: one may link assets, one holds no asset:update.
   linker = await principal(await createUser('Linker', [['ticket', 'create'], ['ticket', 'read'], ['asset', 'read'], ['asset', 'update']]));
   noAssetUser = await principal(await createUser('NoAsset', [['ticket', 'create'], ['ticket', 'read'], ['asset', 'read']]));
+
+  // A plain user whose asset READ is narrowed by a bundle to a client other than the fixture's: coarse permissions held,
+  // but the fixture client's assets are unreadable at record level.
+  const narrowedId = await createUser('Narrowed', [['ticket', 'create'], ['ticket', 'read'], ['asset', 'read'], ['asset', 'update']]);
+  const bundle = await createAuthorizationBundle(db, { tenant: tenant(), name: `AL asset narrowing ${randomUUID()}`, actorUserId: admin.user_id });
+  await upsertBundleRule(db, { tenant: tenant(), bundleId: bundle.bundleId, revisionId: bundle.revisionId, resourceType: 'asset', action: 'read',
+    templateKey: 'selected_clients', config: { selectedClientIds: [otherClientId] }, actorUserId: admin.user_id });
+  await publishBundleRevision(db as any, { tenant: tenant(), bundleId: bundle.bundleId, revisionId: bundle.revisionId, actorUserId: admin.user_id });
+  await createBundleAssignment(db, { tenant: tenant(), bundleId: bundle.bundleId, targetType: 'user', targetId: narrowedId, actorUserId: admin.user_id });
+  narrowedUser = await principal(narrowedId);
 }, HOOK_TIMEOUT);
 
 afterAll(async () => {
@@ -199,16 +211,18 @@ afterAll(async () => {
 });
 
 describe('asset links on ticket create', () => {
-  it('1. refuses a seat technician linking another client\'s asset by the singular asset_id, writing nothing', async () => {
+  it('1. refuses a seat technician linking another client\'s asset by the singular asset_id, as not found, writing nothing', async () => {
     const [tickets, links] = [await ticketCount(), await linkCount()];
     const outcome = await create(technician, { asset_id: otherAsset });
     expect(outcome).toMatchObject({ ok: false });
+    expect((outcome as { message: string }).message).toMatch(/was not found/);
+    expect((outcome as { message: string }).message).not.toMatch(/does not belong/);
     expect(await ticketCount()).toBe(tickets);
     expect(await linkCount()).toBe(links);
   }, HOOK_TIMEOUT);
 
-  it('2. links an own-client asset by the singular asset_id for an actor who may update it', async () => {
-    const outcome = await create(linker, { asset_id: ownAsset });
+  it('2. lets a seat technician link an own-client asset by the singular asset_id', async () => {
+    const outcome = await create(technician, { asset_id: ownAsset });
     expect(outcome, JSON.stringify(outcome)).toMatchObject({ ok: true });
     const ticketId = (outcome as { ticketId: string }).ticketId;
     expect(await db('asset_associations').where({ tenant: tenant(), asset_id: ownAsset, entity_id: ticketId, entity_type: 'ticket' }).count('* as n').first())
@@ -233,12 +247,11 @@ describe('asset links on ticket create', () => {
     expect(await linkCount()).toBe(links);
   }, HOOK_TIMEOUT);
 
-  it('5. applies the record-level rule: a same-client asset the kernel denies for update is refused despite coarse asset:update', async () => {
+  it('5. applies the record-level read rule: a same-client asset the actor cannot read is refused as not found despite coarse permissions', async () => {
     const [tickets, links] = [await ticketCount(), await linkCount()];
-    const outcome = await create(technician, { asset_id: ownAsset });
+    const outcome = await create(narrowedUser, { asset_id: ownAsset });
     expect(outcome).toMatchObject({ ok: false });
-    expect((outcome as { message: string }).message).toMatch(/Permission denied|Invalid asset: .* was not found/);
-    expect((outcome as { message: string }).message).not.toMatch(/does not belong/);
+    expect((outcome as { message: string }).message).toMatch(/Invalid asset: .* was not found/);
     expect(await ticketCount()).toBe(tickets);
     expect(await linkCount()).toBe(links);
   }, HOOK_TIMEOUT);
@@ -250,6 +263,17 @@ describe('asset links on ticket create', () => {
       board_id: fixture.boardId, asset_id: otherAsset, client_id: fixture.clientId,
     })));
     expect(outcome).toMatchObject({ ok: false });
+    expect((outcome as { message: string }).message).toMatch(/does not belong to the selected client/);
+    expect(await ticketCount()).toBe(tickets);
+    expect(await linkCount()).toBe(links);
+
+    // A seat technician cannot read the other client's asset, so there it answers as not found.
+    const concealed = await settle(() => as(technician, () => createTicketFromAsset({
+      title: 'From asset', description: 'x', priority_id: fixture.priorityId, status_id: fixture.openStatusId,
+      board_id: fixture.boardId, asset_id: otherAsset, client_id: fixture.clientId,
+    })));
+    expect(concealed).toMatchObject({ ok: false });
+    expect((concealed as { message: string }).message).toMatch(/was not found/);
     expect(await ticketCount()).toBe(tickets);
     expect(await linkCount()).toBe(links);
 
