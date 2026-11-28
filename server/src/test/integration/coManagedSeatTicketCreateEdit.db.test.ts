@@ -506,5 +506,14 @@ describe('a seat technician and the billing profile on create (form action)', ()
     const ok = await createVia['the ticket form action'](mspUser, { billing_profile_id: profileB });
     expect(ok, JSON.stringify(ok)).toMatchObject({ ok: true });
     expect(await ticketRow((ok as { ticketId: string }).ticketId)).toMatchObject({ billing_profile_id: profileB });
+
+    // No resolver governs an MSP user, so assertProposedPlacementAllowed returns early; the ownership check that
+    // applies is TicketModel.resolveTicketBillingProfileId, inside the action's transaction. `before` is taken
+    // after the allowed create above, which added a row.
+    const before = await ticketCount();
+    const refused = await createVia['the ticket form action'](mspUser, { billing_profile_id: otherClientProfile });
+    expect(refused).toMatchObject({ ok: false });
+    expect((refused as { message: string }).message).toMatch(/billing profile does not belong to this client/);
+    expect(await ticketCount()).toBe(before);
   }, HOOK_TIMEOUT);
 });
