@@ -49,6 +49,7 @@ import {
   daysUntil,
   formatCategoryLabel,
 } from '@alga-psa/tickets/lib';
+import { buildTicketSearchPredicate } from './ticketSearchPredicate';
 
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -308,14 +309,8 @@ export function TicketList() {
         );
       }
 
-      if (debouncedSearchQuery) {
-        const query = debouncedSearchQuery.toLowerCase();
-        filteredTickets = filteredTickets.filter(ticket =>
-          ticket.title?.toLowerCase().includes(query) ||
-          ticket.ticket_number?.toLowerCase().includes(query) ||
-          ticket.status_name?.toLowerCase().includes(query) ||
-          ticket.priority_name?.toLowerCase().includes(query)
-        );
+      if (debouncedSearchQuery.trim()) {
+        filteredTickets = filteredTickets.filter(buildTicketSearchPredicate(debouncedSearchQuery, filteredTickets));
       }
 
       const sortedTickets = [...filteredTickets].sort((a, b) => {
