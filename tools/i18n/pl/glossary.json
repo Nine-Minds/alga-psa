@@ -2220,6 +2220,7 @@
       "{{field}}: {{from}} → {{to}}",
       "{{from}} → {{to}}",
       "RMA {{id}}",
+      "{{width}} × {{height}} mm",
       ",",
       "3CX",
       "Acme IT Solutions",

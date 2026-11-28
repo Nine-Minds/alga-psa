@@ -44,4 +44,12 @@ describe('designer.fields locale copy matches fieldCatalog', () => {
     }
     expect(fields.invoice_discount).toBeUndefined();
   });
+
+  it.each(LOCALES)('%s has label and description for the work-tag contact fields', (locale) => {
+    const fields = loadFields(locale);
+    for (const key of ['label_contactName', 'label_contactPhone', 'label_contactEmail']) {
+      expect(fields[key]?.label, `${locale}:${key}.label`).toBeTruthy();
+      expect(fields[key]?.description, `${locale}:${key}.description`).toBeTruthy();
+    }
+  });
 });

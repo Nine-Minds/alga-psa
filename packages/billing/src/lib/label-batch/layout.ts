@@ -7,6 +7,8 @@ import {
   type CustomPageSize,
   type InvoicePaperPresetId,
   type InvoicePdfPrintOptions,
+  type LabelClass,
+  type LabelPrintErrorCode,
 } from '@alga-psa/types';
 
 /**
@@ -65,17 +67,28 @@ export interface LabelBatchGeometry {
 }
 
 /** Machine-readable reasons a layout is refused, so a dialog never matches on message text. */
-export type LabelLayoutErrorCode = 'template-size-mismatch';
+export type LabelLayoutErrorCode = 'template-size-mismatch' | LabelPrintErrorCode;
 
 export class LabelLayoutError extends Error {
+  /** Why the layout itself was refused, e.g. a design that does not match the selected cell. */
   readonly code?: LabelLayoutErrorCode;
+  /** Why a worksheet could not print, kept separate from `code` so both reasons can be reported. */
+  readonly errorCode?: LabelPrintErrorCode;
+  /** 0-based indexes of the batch labels the error is about, when the check can name them. */
+  readonly labelIndexes?: number[];
 
-  constructor(message: string, code?: LabelLayoutErrorCode) {
+  constructor(
+    message: string,
+    details?: { code?: LabelLayoutErrorCode; errorCode?: LabelPrintErrorCode; labelIndexes?: number[] }
+  ) {
     super(message);
     this.name = 'LabelLayoutError';
-    if (code) this.code = code;
+    if (details?.code) this.code = details.code;
+    if (details?.errorCode) this.errorCode = details.errorCode;
+    if (details?.labelIndexes?.length) this.labelIndexes = [...details.labelIndexes];
   }
 }
+
 
 const EPSILON_MM = 0.01;
 const toMm = (value: number, unit: LabelLengthUnit): number => (unit === 'in' ? value * 25.4 : value);
@@ -121,15 +134,40 @@ export function resolveLayoutPageSizeMm(layout: LabelBatchLayout): { widthMm: nu
 }
 
 /**
+ * One template's contribution to the page a no-layout batch prints on: either the explicit size it
+ * declares (a thermal label cell), or the template itself, so a full-page worksheet's own paper is
+ * read from it. A bare `CustomPageSize` keeps the thermal-label path exactly as it was.
+ */
+export type TemplatePageSizeSource =
+  | CustomPageSize
+  | { labelClass: LabelClass; metadata?: LabelTemplatePageMetadata | null };
+
+/**
+ * The page a single template asks to print on: its explicit `customPageSize` if it declares one, else
+ * a worksheet template's own portrait paper (Letter, A4, ...) synthesised in mm, else null. A bare
+ * `CustomPageSize` is its own answer. Null means the template names no page, so the batch keeps its default.
+ */
+function templatePageSizeRequested(source: TemplatePageSizeSource | null | undefined): CustomPageSize | null {
+  if (!source) return null;
+  if (!('labelClass' in source)) return source;
+  const explicit = source.metadata?.printSettings?.customPageSize;
+  if (explicit) return explicit;
+  const worksheet = resolveWorksheetDesignSizeMm(source.labelClass, source.metadata);
+  return worksheet ? { width: worksheet.widthMm, height: worksheet.heightMm, unit: 'mm' } : null;
+}
+
+/**
  * The one page size every template in a batch declares, for printing at the template's own label
- * size. Null when any template declares none, declares an unusable one, or they disagree - the
- * caller then keeps its own default rather than guessing a size.
+ * size. Accepts an explicit size or the template itself, so a Letter or A4 worksheet prints on its own
+ * paper without the caller picking the page twice. Null when any template declares none, declares an
+ * unusable one, or they disagree - the caller then keeps its own default rather than guessing a size.
  */
 export function resolveCommonTemplatePageSize(
-  sizes: ReadonlyArray<CustomPageSize | null | undefined>
+  sources: ReadonlyArray<TemplatePageSizeSource | null | undefined>
 ): CustomPageSize | null {
   let agreed: { size: CustomPageSize; widthMm: number; heightMm: number } | null = null;
-  for (const size of sizes) {
+  for (const source of sources) {
+    const size = templatePageSizeRequested(source);
     if (!size || validateCustomPageSize(size) !== null) return null;
     const mm = customPageSizeToMm(size);
     if (!agreed) {
@@ -236,3 +274,72 @@ export function resolveLabelBatchPdfOptions(geometry: LabelBatchGeometry): Invoi
 }
 
 export const LABEL_SHEET_MIN_MM = CUSTOM_PAGE_SIZE_MM_RANGE.min;
+
+/**
+ * Page size range a template may ask the printer for on its own (the print dialog's "template paper"
+ * default). Wider than the schema's absolute bounds (10 - 1200 mm) on the small end because a page
+ * below ~60 mm is a die-cut tag, not paper a normal printer holds, and belongs on the roll layout.
+ */
+export const LABEL_TEMPLATE_FIT_PAGE_MM_RANGE = { min: 60, max: 1200 } as const;
+
+type LabelTemplatePageMetadata = {
+  printSettings?: { customPageSize?: CustomPageSize; paperPreset?: InvoicePaperPresetId };
+};
+
+/**
+ * The narrowest portrait paper a full-page worksheet may use. A4 (210 mm) is the narrower of the two
+ * standard office papers — Letter (215.9 mm) is wider — so one width floor admits both, and neither
+ * dimension is compared against a specific sheet (an A4 worksheet is 5.9 mm narrower than Letter and
+ * still fits A4 paper). Anything narrower than A4 is a tag or slip, not worksheet paper.
+ */
+export const WORKSHEET_MIN_WIDTH_MM = 210;
+
+/** The page a template declares for itself in mm: an explicit custom size, else its paper preset. */
+export function resolveTemplateDeclaredPageSizeMm(
+  metadata?: LabelTemplatePageMetadata | null
+): { widthMm: number; heightMm: number } | null {
+  const custom = metadata?.printSettings?.customPageSize;
+  if (custom) {
+    if (validateCustomPageSize(custom)) return null;
+    return customPageSizeToMm(custom);
+  }
+  const preset = metadata?.printSettings?.paperPreset
+    ? INVOICE_PAPER_PRESET_REGISTRY[metadata.printSettings.paperPreset]
+    : null;
+  return preset ? { widthMm: preset.widthMm, heightMm: preset.heightMm } : null;
+}
+
+/**
+ * True when a template is a full-page customer worksheet rather than a 4 x 2 in tag: a ticket work tag
+ * whose own page is portrait paper at least A4-wide (Letter, A4, Legal, A3, ...). Only ticket work tags
+ * are worksheets; a portrait asset, RMA or staging template keeps printing as a fixed label. The
+ * declared page size is the only gate — there is no separate worksheet flag.
+ */
+export function isWorksheetLabelTemplate(
+  labelClass: LabelClass | null | undefined,
+  metadata?: LabelTemplatePageMetadata | null
+): boolean {
+  if (labelClass !== 'ticket-work-tag') return false;
+  const size = resolveTemplateDeclaredPageSizeMm(metadata);
+  if (!size) return false;
+  return size.heightMm > size.widthMm && size.widthMm + 0.05 >= WORKSHEET_MIN_WIDTH_MM;
+}
+
+/** The worksheet design size a template asks for, or null when it is not a worksheet. */
+export function resolveWorksheetDesignSizeMm(
+  labelClass: LabelClass | null | undefined,
+  metadata?: LabelTemplatePageMetadata | null
+): { widthMm: number; heightMm: number } | null {
+  return isWorksheetLabelTemplate(labelClass, metadata) ? resolveTemplateDeclaredPageSizeMm(metadata) : null;
+}
+
+/** True when a template's own page size is paper an ordinary printer holds (a worksheet, not a tag). */
+export function labelMetadataPrefersPaperPage(
+  metadata?: LabelTemplatePageMetadata | null
+): boolean {
+  const size = resolveTemplateDeclaredPageSizeMm(metadata);
+  if (!size) return false;
+  const { widthMm, heightMm } = size;
+  const { min, max } = LABEL_TEMPLATE_FIT_PAGE_MM_RANGE;
+  return widthMm >= min && widthMm <= max && heightMm >= min && heightMm <= max;
+}

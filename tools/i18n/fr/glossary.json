@@ -2082,6 +2082,9 @@
   "identicalAllowlist": {
     "exact": [
       "true",
+      "A4",
+      "Letter",
+      "Legal",
       "minutes",
       "Urgent",
       "Standard",
@@ -2099,6 +2102,7 @@
       "Conversation",
       "{{from}} → {{to}}",
       "RMA {{id}}",
+      "{{width}} × {{height}} mm",
       "Datto RMM",
       "mention",
       ",",

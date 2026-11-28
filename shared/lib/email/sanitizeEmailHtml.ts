@@ -10,6 +10,19 @@ export interface SanitizeEmailHtmlOptions {
   hardenLinks?: boolean;
 }
 
+/** Parse an inert email fragment without executing scripts or loading resources. */
+export async function transformEmailHtmlFragment(
+  html: string,
+  transform: (fragment: DocumentFragment) => void,
+): Promise<string> {
+  const { JSDOM } = await import('jsdom');
+  const fragment = JSDOM.fragment(html);
+  transform(fragment);
+  const template = fragment.ownerDocument.createElement('template');
+  template.content.append(fragment);
+  return template.innerHTML;
+}
+
 /**
  * Harden one anchor the sanitizer has just cleaned. A hook rather than a pass
  * over the serialized output: a regex cannot tell an attribute value that
