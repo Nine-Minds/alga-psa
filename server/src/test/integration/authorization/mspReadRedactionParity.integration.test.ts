@@ -7,7 +7,7 @@ import {
   publishBundleRevision,
   upsertBundleRule,
 } from '@alga-psa/authorization/bundles/service';
-import { tenantDb } from '@alga-psa/db';
+import { runWithTenant, tenantDb } from '@alga-psa/db';
 import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 import { projectApiRecord } from '../../../lib/api/controllers/apiRecordProjection';
 
@@ -86,6 +86,7 @@ describe('T020: MSP reads omit redacted fields like REST', () => {
       targetId: ctx.user.user_id,
       actorUserId: ctx.user.user_id,
     });
+    return created;
   }
 
   const keys = (record: Record<string, unknown> | null | undefined) => Object.keys(record ?? {}).sort();
@@ -100,11 +101,18 @@ describe('T020: MSP reads omit redacted fields like REST', () => {
   ) {
     for (const field of hidden) {
       expect(unrestricted, `unrestricted ${resource} carries ${field}`).toHaveProperty(field);
-      expect(redacted, `redacted ${resource} omits ${field}`).not.toHaveProperty(field);
+      if (resource === 'ticket') {
+        if (field === 'title') expect([undefined, 'Restricted ticket']).toContain(redacted[field]);
+        else expect(redacted[field] == null, `redacted ticket masks ${field}`).toBe(true);
+      } else {
+        expect(redacted, `redacted ${resource} omits ${field}`).not.toHaveProperty(field);
+      }
     }
     const restProjection = projectApiRecord(resource, unrestricted, redactedFields);
     expect(restProjection).not.toBeNull();
-    expect(keys(redacted)).toEqual(keys(restProjection));
+    if (resource !== 'ticket') {
+      expect(keys(redacted)).toEqual(keys(restProjection));
+    }
   }
 
   it('ticket detail and list reads omit the redacted field', async () => {
@@ -162,6 +170,217 @@ describe('T020: MSP reads omit redacted fields like REST', () => {
     const hydrated: any = (await loadTicketListItemsByIds(listFilters, [ticketId]) as any).tickets[0];
     expectRestParity('ticket', fullHydrated, hydrated, redactedFields, ['client_id', 'client_name', 'title']);
   }, HOOK_TIMEOUT);
+
+  it.each(['users.first_name', 'users.last_name'] as const)(
+    'masks assignee and enterer names in SQL list rows and hydrated rows for %s', async (redactedField) => {
+      const { getTicketsForList, loadTicketListItemsByIds } = await import(
+        '@alga-psa/tickets/actions/optimizedTicketActions'
+      );
+      const seeded = await tenantTable('tickets').whereNotNull('board_id').whereNotNull('status_id').first();
+      const ticketId = randomUUID();
+      await tenantTable('tickets').insert({
+        board_id: seeded.board_id,
+        status_id: seeded.status_id,
+        priority_id: seeded.priority_id,
+        tenant: ctx.tenantId,
+        ticket_id: ticketId,
+        ticket_number: `TIC-${ticketId.slice(0, 8)}`,
+        title: 'Display name redaction fixture',
+        client_id: ctx.clientId,
+        entered_by: ctx.user.user_id,
+        assigned_to: ctx.user.user_id,
+        entered_at: new Date(),
+      });
+      const names = await tenantTable('users').where({ user_id: ctx.user.user_id }).first('first_name', 'last_name');
+      const filters = { boardFilterState: 'all', showOpenOnly: false } as any;
+      const readRows = async () => {
+        const list: any = await getTicketsForList(filters, 1, 5000);
+        const hydrated: any = await loadTicketListItemsByIds(filters, [ticketId]);
+        return {
+          list: list.tickets.find((row: any) => row.ticket_id === ticketId),
+          hydrated: hydrated.tickets.find((row: any) => row.ticket_id === ticketId),
+        };
+      };
+
+      const unrestricted = await readRows();
+      expect(unrestricted.list).toMatchObject({ assigned_to_name: `${names.first_name} ${names.last_name}`, entered_by_name: `${names.first_name} ${names.last_name}` });
+      expect(unrestricted.hydrated).toMatchObject({ assigned_to_name: `${names.first_name} ${names.last_name}`, entered_by_name: `${names.first_name} ${names.last_name}` });
+
+      await redactOnRead('ticket', [redactedField]);
+      const redacted = await readRows();
+      expect(redacted.list).toMatchObject({
+        title: 'Display name redaction fixture',
+        assigned_to: ctx.user.user_id,
+        entered_by: ctx.user.user_id,
+        assigned_to_name: null,
+        entered_by_name: null,
+      });
+      expect(redacted.hydrated).toMatchObject({
+        title: 'Display name redaction fixture',
+        assigned_to: ctx.user.user_id,
+        entered_by: ctx.user.user_id,
+        assigned_to_name: null,
+        entered_by_name: null,
+      });
+      expect(JSON.stringify(redacted)).not.toContain(`${names.first_name} ${names.last_name}`);
+      const { encodeSmartSearchEvent } = await import(
+        '../../../../../ee/server/src/app/api/smart-search/[entity]/stream/route'
+      );
+      const frame = new TextDecoder().decode(encodeSmartSearchEvent(new TextEncoder(), {
+        type: 'scored', items: [redacted.hydrated], metadata: {}, scored: {},
+      } as never));
+      expect(frame).toContain('event: scored');
+      expect(frame).toContain('Display name redaction fixture');
+      expect(frame).not.toContain(`${names.first_name} ${names.last_name}`);
+    },
+  );
+
+  it.each(['ticket_number', 'tickets.ticket_number', 'ticket', '*', 'future_ticket_property'] as const)(
+    'omits tickets with identity, resource, or unknown restriction %s from list, targets, and explicit hydration', async (identity) => {
+      const { getTicketsForList, getAllMatchingTicketIds, getTicketReadTargetsByIds, loadTicketListItemsByIds } = await import(
+        '@alga-psa/tickets/actions/optimizedTicketActions'
+      );
+      const { loadTicketCandidates, ticketSmartSearch } = await import(
+        '../../../../../ee/server/src/services/smartSearch/entities/ticket'
+      );
+      const { buildRelevanceRequest } = await import(
+        '../../../../../ee/server/src/services/smartSearch/scoreBatch'
+      );
+      const seeded = await tenantTable('tickets').whereNotNull('board_id').whereNotNull('status_id').first();
+      const ticketId = randomUUID();
+      await tenantTable('tickets').insert({
+        board_id: seeded.board_id,
+        status_id: seeded.status_id,
+        priority_id: seeded.priority_id,
+        tenant: ctx.tenantId,
+        ticket_id: ticketId,
+        ticket_number: `TIC-${ticketId.slice(0, 8)}`,
+        title: 'Identity redaction fixture',
+        client_id: ctx.clientId,
+        entered_by: ctx.user.user_id,
+        entered_at: new Date(),
+      });
+      const filters = { boardFilterState: 'all', showOpenOnly: false } as any;
+      const unrestricted: any = await getTicketsForList(filters, 1, 5000);
+      expect(unrestricted.tickets.some((row: any) => row.ticket_id === ticketId)).toBe(true);
+      expect(await getTicketReadTargetsByIds([ticketId])).toEqual([{ id: ticketId, redactedFields: [] }]);
+      expect((await loadTicketListItemsByIds(filters, [ticketId]) as any).tickets.map((row: any) => row.ticket_id)).toContain(ticketId);
+      const unrestrictedCandidates = await runWithTenant(ctx.tenantId, () => ctx.db.transaction((trx) => loadTicketCandidates(
+        trx, ctx.tenantId, currentUser, [ticketId], new Map([[ticketId, []]]),
+      )));
+      expect(unrestrictedCandidates).toHaveLength(1);
+
+      await redactOnRead('ticket', [identity]);
+      const listed: any = await getTicketsForList(filters, 1, 5000);
+      expect(listed.tickets.some((row: any) => row.ticket_id === ticketId)).toBe(false);
+      expect(await getAllMatchingTicketIds(filters)).not.toContain(ticketId);
+      expect(await getTicketReadTargetsByIds([ticketId])).toEqual([]);
+      const hydrated: any = await loadTicketListItemsByIds(filters, [ticketId]);
+      expect(hydrated.tickets.some((row: any) => row.ticket_id === ticketId)).toBe(false);
+      const deniedCandidates = await runWithTenant(ctx.tenantId, () => ctx.db.transaction((trx) => loadTicketCandidates(
+        trx, ctx.tenantId, currentUser, [ticketId], new Map([[ticketId, [identity]]]),
+      )));
+      expect(deniedCandidates).toEqual([]);
+      expect(buildRelevanceRequest(ticketSmartSearch.relevance, 'query', deniedCandidates).state.candidates).toEqual([]);
+    },
+  );
+
+  it.each(['title', 'fields.title', 'values.title'] as const)(
+    'applies equivalent SQL list masking for supported title path %s', async (redactedField) => {
+      const { getTicketsForList, getTicketReadTargetsByIds, loadTicketListItemsByIds } = await import(
+        '@alga-psa/tickets/actions/optimizedTicketActions'
+      );
+      const { loadTicketCandidates, ticketSmartSearch } = await import(
+        '../../../../../ee/server/src/services/smartSearch/entities/ticket'
+      );
+      const { buildRelevanceRequest } = await import(
+        '../../../../../ee/server/src/services/smartSearch/scoreBatch'
+      );
+      const seeded = await tenantTable('tickets').whereNotNull('board_id').whereNotNull('status_id').first();
+      const ticketId = randomUUID();
+      await tenantTable('tickets').insert({
+        board_id: seeded.board_id,
+        status_id: seeded.status_id,
+        priority_id: seeded.priority_id,
+        tenant: ctx.tenantId,
+        ticket_id: ticketId,
+        ticket_number: `TIC-${ticketId.slice(0, 8)}`,
+        title: 'Restricted via normalized path',
+        client_id: ctx.clientId,
+        entered_by: ctx.user.user_id,
+        entered_at: new Date(),
+      });
+      const filters = { boardFilterState: 'all', showOpenOnly: false } as any;
+      const full: any = await getTicketsForList(filters, 1, 5000);
+      expect(full.tickets.find((row: any) => row.ticket_id === ticketId)?.title).toBe('Restricted via normalized path');
+      await redactOnRead('ticket', [redactedField]);
+      const targets = await getTicketReadTargetsByIds([ticketId]);
+      expect(targets).toEqual([{ id: ticketId, redactedFields: [redactedField] }]);
+      const candidateRows = await runWithTenant(ctx.tenantId, () => ctx.db.transaction((trx) => loadTicketCandidates(
+        trx, ctx.tenantId, currentUser, [ticketId], new Map([[ticketId, [redactedField]]]),
+      )));
+      expect(candidateRows).toHaveLength(1);
+      const scorerState = buildRelevanceRequest(ticketSmartSearch.relevance, 'query', candidateRows).state;
+      expect(JSON.stringify(scorerState)).not.toContain('Restricted via normalized path');
+      expect(scorerState.candidates[0].title).toBe('Restricted ticket');
+      expect(scorerState.candidates[0].description).toBe('');
+      const listed: any = await getTicketsForList(filters, 1, 5000);
+      const hydrated: any = await loadTicketListItemsByIds(filters, [ticketId]);
+      expect(listed.tickets.find((row: any) => row.ticket_id === ticketId)).toMatchObject({ title: 'Restricted ticket' });
+      expect(hydrated.tickets.find((row: any) => row.ticket_id === ticketId)).toMatchObject({ title: 'Restricted ticket' });
+    },
+  );
+
+  it.each(['assigned_to', 'fields.assigned_to', 'values.assigned_to'] as const)(
+    'keeps the ticket while withholding assignee fields for supported path %s', async (redactedField) => {
+      const { getTicketsForList, loadTicketListItemsByIds } = await import(
+        '@alga-psa/tickets/actions/optimizedTicketActions'
+      );
+      const { loadTicketCandidates, ticketSmartSearch } = await import(
+        '../../../../../ee/server/src/services/smartSearch/entities/ticket'
+      );
+      const { buildRelevanceRequest } = await import(
+        '../../../../../ee/server/src/services/smartSearch/scoreBatch'
+      );
+      const seeded = await tenantTable('tickets').whereNotNull('board_id').whereNotNull('status_id').first();
+      const ticketId = randomUUID();
+      await tenantTable('tickets').insert({
+        board_id: seeded.board_id,
+        status_id: seeded.status_id,
+        priority_id: seeded.priority_id,
+        tenant: ctx.tenantId,
+        ticket_id: ticketId,
+        ticket_number: `TIC-${ticketId.slice(0, 8)}`,
+        title: 'Permitted ticket title',
+        client_id: ctx.clientId,
+        entered_by: ctx.user.user_id,
+        assigned_to: ctx.user.user_id,
+        entered_at: new Date(),
+      });
+      const filters = { boardFilterState: 'all', showOpenOnly: false } as any;
+      const control: any = await getTicketsForList(filters, 1, 5000);
+      expect(control.tickets.find((row: any) => row.ticket_id === ticketId)).toMatchObject({
+        title: 'Permitted ticket title', assigned_to: ctx.user.user_id,
+      });
+
+      await redactOnRead('ticket', [redactedField]);
+      const listed: any = await getTicketsForList(filters, 1, 5000);
+      const hydrated: any = await loadTicketListItemsByIds(filters, [ticketId]);
+      const listRow = listed.tickets.find((row: any) => row.ticket_id === ticketId);
+      const hydratedRow = hydrated.tickets.find((row: any) => row.ticket_id === ticketId);
+      expect(listRow).toMatchObject({ title: 'Permitted ticket title', assigned_to: null, assigned_to_name: null });
+      expect(hydratedRow).toMatchObject({ title: 'Permitted ticket title', assigned_to: null, assigned_to_name: null });
+
+      const target = (await (await import('@alga-psa/tickets/actions/optimizedTicketActions')).getTicketReadTargetsByIds([ticketId]))[0];
+      const candidates = await runWithTenant(ctx.tenantId, () => ctx.db.transaction((trx) => loadTicketCandidates(
+        trx, ctx.tenantId, currentUser, [ticketId], new Map([[ticketId, target.redactedFields]]),
+      )));
+      expect(candidates).toHaveLength(1);
+      const scorerState = buildRelevanceRequest(ticketSmartSearch.relevance, 'query', candidates).state;
+      expect(scorerState.candidates[0]).toMatchObject({ title: 'Permitted ticket title', assigned_to: null });
+      expect(JSON.stringify(scorerState)).not.toContain('Test internal User');
+    },
+  );
 
   it('project detail and list reads omit the redacted field', async () => {
     const { getProject, getProjects } = await import('@alga-psa/projects/actions/projectActions');

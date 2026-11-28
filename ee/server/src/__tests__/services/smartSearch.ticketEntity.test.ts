@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@alga-psa/tickets/actions/optimizedTicketActions', () => ({
   getAllMatchingTicketIds: vi.fn(),
+  getTicketReadTargetsByIds: vi.fn(),
   loadTicketListItemsByIds: vi.fn(),
 }));
 vi.mock('@alga-psa/tickets/schemas/ticket.schema', () => ({ ticketListFiltersSchema: { parse: (v: unknown) => v } }));
@@ -12,7 +13,8 @@ vi.mock('@alga-psa/db', () => ({ tenantDb: vi.fn() }));
 import { approxTokens } from '../../services/smartSearch/budgets';
 import { buildRelevanceRequest } from '../../services/smartSearch/scoreBatch';
 import { assembleTicketCandidate, ticketSmartSearch } from '../../services/smartSearch/entities/ticket';
-import { loadTicketListItemsByIds } from '@alga-psa/tickets/actions/optimizedTicketActions';
+import { getAllMatchingTicketIds, getTicketReadTargetsByIds, loadTicketListItemsByIds } from '@alga-psa/tickets/actions/optimizedTicketActions';
+import { redactTicketReadPayload } from '@alga-psa/tickets/lib';
 
 const row = (description: string | null = 'A plain description.') => ({
   ticket_id: 'tid',
@@ -77,6 +79,84 @@ describe('assembleTicketCandidate', () => {
     expect(candidate.state.description).toBe('');
     expect(candidate.state.client).toBe('Acme');
   });
+
+  it('keeps restricted ticket fields and derived comments out of the scorer candidate', () => {
+    const candidate = assembleTicketCandidate(row('SECRET DESCRIPTION'), [
+      { author: 'technician', text: 'SECRET COMMENT' },
+    ], undefined, ['title', 'description', 'client_name', 'assigned_to', 'due_date']);
+    const serialized = JSON.stringify(candidate.state);
+    expect(serialized).not.toContain('Printer offline');
+    expect(serialized).not.toContain('SECRET DESCRIPTION');
+    expect(serialized).not.toContain('Acme');
+    expect(serialized).not.toContain('Sam Tech');
+    expect(serialized).not.toContain('SECRET COMMENT');
+    expect(candidate.state.title).toBe('Restricted ticket');
+    expect(candidate.state.description).toBe('');
+    expect(candidate.state.due_date).toBeNull();
+  });
+
+  it.each(['title', 'fields.title', 'values.title'])(
+    'keeps the ticket candidate while masking title path %s from scorer state',
+    (redaction) => {
+      const candidate = assembleTicketCandidate(row('Permitted description'), [], undefined, [redaction]);
+      const request = buildRelevanceRequest(ticketSmartSearch.relevance, 'query', [candidate]);
+      expect(candidate.id).toBe('tid');
+      expect(request.state.candidates[0]).toMatchObject({ title: 'Restricted ticket', description: 'Permitted description' });
+      expect(JSON.stringify(request.state)).not.toContain('Printer offline');
+      expect(JSON.stringify(request.state)).toContain('Permitted description');
+    },
+  );
+
+  it.each(['users.first_name', 'users.last_name'])(
+    'masks the assignee name from scorer state for %s',
+    (redaction) => {
+      const candidate = assembleTicketCandidate(row(), [], undefined, [redaction]);
+      expect(JSON.stringify(buildRelevanceRequest(ticketSmartSearch.relevance, 'query', [candidate]).state))
+        .not.toContain('Sam Tech');
+      expect(candidate.state.title).toBe('Printer offline');
+    },
+  );
+
+  it.each(['assigned_to', 'fields.assigned_to', 'values.assigned_to'])(
+    'keeps candidate facts while masking assigned_to path %s',
+    (redaction) => {
+      const candidate = assembleTicketCandidate(row(), [], undefined, [redaction]);
+      const request = buildRelevanceRequest(ticketSmartSearch.relevance, 'query', [candidate]);
+      expect(request.state.candidates[0]).toMatchObject({ title: 'Printer offline', assigned_to: null });
+      expect(JSON.stringify(request.state)).not.toContain('Sam Tech');
+    },
+  );
+});
+
+describe('ticket list redaction projection', () => {
+  it('masks title, description, client, assignment, dates, and derived activity fields', () => {
+    const projected = redactTicketReadPayload({
+      title: 'Secret title',
+      attributes: { description: 'Secret description', public: true },
+      client_name: 'Secret client',
+      client_id: 'client-1',
+      assigned_to: 'user-1',
+      assigned_to_name: 'Secret assignee',
+      additional_agents: [{ user_id: 'user-2', name: 'Secret agent' }],
+      due_date: '2026-09-01',
+      latest_activity_actor: 'Secret author',
+      latest_activity_at: '2026-09-01T00:00:00Z',
+      bundle_child_count: 2,
+      bundle_master_ticket_number: 'SECRET MASTER NUMBER',
+    }, ['title', 'description', 'client_name', 'assigned_to', 'due_date']);
+    expect(projected.title).toBe('Restricted ticket');
+    expect(projected.attributes).toBeNull();
+    expect(projected.client_name).toBeNull();
+    expect(projected.client_id).toBeNull();
+    expect(projected.assigned_to).toBeNull();
+    expect(projected.assigned_to_name).toBeNull();
+    expect(projected.additional_agents).toEqual([]);
+    expect(projected.due_date).toBeNull();
+    expect(projected.latest_activity_actor).toBeNull();
+    expect(projected.latest_activity_at).toBeNull();
+    expect(projected.bundle_child_count).toBeNull();
+    expect(projected.bundle_master_ticket_number).toBeNull();
+  });
 });
 
 describe('ticketSmartSearch definition', () => {
@@ -96,6 +176,24 @@ describe('ticketSmartSearch definition', () => {
     vi.mocked(loadTicketListItemsByIds).mockResolvedValue({ permissionError: 'nope' } as never);
     await expect(ticketSmartSearch.hydrateRows({} as never, ['a'], new Map())).resolves.toEqual({ permissionError: 'nope' });
     expect(ticketSmartSearch.rowId({ ticket_id: 'z' } as never)).toBe('z');
+  });
+
+  it('enumerates authorized targets with each ticket redaction set and passes it to hydration', async () => {
+    vi.mocked(getAllMatchingTicketIds).mockResolvedValue(['a', 'b']);
+    vi.mocked(getTicketReadTargetsByIds).mockResolvedValue([
+      { id: 'a', redactedFields: ['description'] },
+      { id: 'b', redactedFields: [] },
+    ]);
+    vi.mocked(loadTicketListItemsByIds).mockResolvedValue({
+      tickets: [], metadata: { agentAvatarUrls: {}, teamAvatarUrls: {}, ticketTags: {} },
+    });
+    await expect(ticketSmartSearch.enumerate({} as never)).resolves.toEqual([
+      { id: 'a', redactedFields: ['description'] },
+      { id: 'b', redactedFields: [] },
+    ]);
+    const redactions = new Map([['a', ['description'] as const]]);
+    await ticketSmartSearch.hydrateRows({} as never, ['a'], redactions);
+    expect(loadTicketListItemsByIds).toHaveBeenLastCalledWith({}, ['a'], { a: ['description'] });
   });
 
   it('names the ticket facts in the question so a literal reader knows when to use them', () => {
