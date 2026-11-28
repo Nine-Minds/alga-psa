@@ -240,6 +240,15 @@ describe('deletion configs', () => {
     expect(dep?.foreignKey).toBe('ticket_id');
   });
 
+  it('ticket config blocks deletion while fixed-fee services reference the ticket', () => {
+    const dep = DELETION_CONFIGS.ticket.dependencies.find((d) => d.type === 'ticket_fixed_fee_service');
+    expect(dep).toMatchObject({ table: 'ticket_fixed_fee_services', foreignKey: 'ticket_id' });
+  });
+
+  it('service config blocks deletion while ticket fixed-fee services reference the service', () => {
+    const dep = DELETION_CONFIGS.service.dependencies.find((d) => d.type === 'ticket_fixed_fee_service');
+    expect(dep).toMatchObject({ table: 'ticket_fixed_fee_services', foreignKey: 'service_id' });
+  });
   it('project config includes project_material blocker', () => {
     const dep = DELETION_CONFIGS.project.dependencies.find((d) => d.type === 'project_material');
     expect(dep).toBeDefined();

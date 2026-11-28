@@ -1,24 +1,107 @@
 'use server';
 
 import { Knex } from 'knex';
-import { withTransaction, createTenantKnex } from '@alga-psa/db';
+import { revalidatePath } from 'next/cache';
+import { tenantDb, withTransaction, createTenantKnex } from '@alga-psa/db';
+import { authorizeTicketRecordAccess } from '@alga-psa/authorization/ticketRecordAuthorization';
+import { createProjectReadAuthorizer } from '@alga-psa/authorization/projectReadAuthorization';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { IStockMovement, IStockUnit, IProductInventorySettings } from '@alga-psa/types';
+import { IStockMovement, IStockUnit, IProductInventorySettings, IUserWithRoles } from '@alga-psa/types';
 import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { recordStockMovement, ensureStockLevel, assertLocationWritable } from '../lib';
+import { unwindDeliveredAsset } from '../lib/assetLink';
+import { findLatestUnitDelivery } from '../lib/consume';
 import { restockReturnActionErrorFrom } from './loanerRestockErrors';
 
-async function requireInvPerm(user: any, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
+async function requireInvPerm(user: IUserWithRoles, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
   if (!(await hasPermission(user, 'inventory', action))) {
     throw new Error(`Permission denied: inventory ${action} required`);
   }
 }
 
 export type RestockReturnActionError = ActionMessageError | ActionPermissionError;
+
+/**
+ * When the unit's LATEST delivery is a ticket/project material line, remove that line: this
+ * restock is the stock reversal, so leaving it would let a later material delete restore the
+ * unit a second time. Older material lines are history — once the unit went out again through
+ * something else (sales order, RMA replacement, another material) they are left untouched.
+ * A billed line is history too: the unit still comes back to stock (any restocking fee is
+ * billed separately by the caller), but the invoiced line and its asset links stay as they are.
+ * Otherwise mirrors deleteMaterial: unwinds the asset this delivery created (association,
+ * retirement, unit link) and releases any staging line that installed it.
+ */
+async function removeDeliveringMaterialLine(
+  trx: Knex.Transaction,
+  tenant: string,
+  unitId: string,
+  performedBy: string | null,
+  user: IUserWithRoles,
+): Promise<void> {
+  const db = tenantDb(trx, tenant);
+  const delivery = await findLatestUnitDelivery(trx, tenant, unitId);
+  if (!delivery?.source_doc_id) return;
+  if (delivery.source_doc_type !== 'ticket_material' && delivery.source_doc_type !== 'project_material') return;
+  const materialId = delivery.source_doc_id;
+
+  const parentType = delivery.source_doc_type === 'ticket_material' ? 'ticket' : 'project';
+  const table = parentType === 'ticket' ? 'ticket_materials' : 'project_materials';
+  const pk = parentType === 'ticket' ? 'ticket_material_id' : 'project_material_id';
+  const parentCol = parentType === 'ticket' ? 'ticket_id' : 'project_id';
+
+  const material = await db.table(table)
+    .where({ [pk]: materialId })
+    .forUpdate()
+    .first('is_billed', parentCol);
+  // The line was already removed, or it is billed: leave the invoiced history alone.
+  if (!material || material.is_billed) return;
+  if (!(await hasPermission(user, parentType, 'update'))) {
+    throw new Error(`Permission denied: ${parentType} update required`);
+  }
+  if (parentType === 'ticket') {
+    await authorizeTicketRecordAccess({
+      trx,
+      tenant,
+      user,
+      ticketId: material[parentCol],
+      action: 'update',
+    });
+  } else {
+    // Same record-level decision the project material actions make (bundle narrowing can
+    // restrict a user to a subset of projects).
+    const project = await db.table('projects')
+      .where({ project_id: material[parentCol] })
+      .first('project_id', 'client_id', 'assigned_to');
+    if (!project) throw new Error('Project not found');
+    const authorize = await createProjectReadAuthorizer(trx, tenant, user, 'update');
+    if (!(await authorize(project))) {
+      throw new Error('Permission denied: Cannot update project');
+    }
+  }
+
+  // Release the staging reference before deleting the material: its foreign key
+  // does not cascade.
+  if (parentType === 'project') {
+    await db.table('project_staging_lines')
+      .where({ project_material_id: materialId })
+      .update({
+        status: 'released',
+        project_material_id: null,
+        released_at: trx.fn.now(),
+        released_by: performedBy,
+        updated_at: trx.fn.now(),
+      });
+  }
+  await db.table(table).where(pk, materialId).del();
+  await unwindDeliveredAsset(trx, tenant, { unitId, parentType, parentId: material[parentCol], materialId });
+
+  const base = parentType === 'ticket' ? '/msp/tickets' : '/msp/projects';
+  revalidatePath(`${base}/${material[parentCol]}`);
+}
 
 async function withRestockReturnActionErrors<T>(work: () => Promise<T>): Promise<T | RestockReturnActionError> {
   try {
@@ -83,7 +166,7 @@ export const restockReturn = withAuth(
         const targetLocation = input.location_id ?? unit.location_id ?? null;
         if (!targetLocation) throw new Error('location_id is required to restock this unit');
         // Restocking writes into the location — van scoping applies (F036).
-        await assertLocationWritable(trx, tenant, (user as any)?.user_id, targetLocation);
+        await assertLocationWritable(trx, tenant, user.user_id, targetLocation);
         await ensureStockLevel(trx, tenant, unit.service_id, targetLocation);
         const movement = await recordStockMovement(trx, tenant, {
           movement_type: 'return_restock',
@@ -101,6 +184,13 @@ export const restockReturn = withAuth(
             delivered_at: null,
           },
         });
+
+        // The unit may still sit on a ticket/project as an unbilled material line (the
+        // common MSP "put it back" flow). This restock IS the stock reversal, so that
+        // line is removed here — otherwise a later material delete would double-restore
+        // stock. Billed lines and older deliveries are left as history.
+        await removeDeliveringMaterialLine(trx, tenant, input.unit_id, user.user_id, user);
+
         return {
           movement,
           restocking_fee_cents: restockingFee,
@@ -126,7 +216,7 @@ export const restockReturn = withAuth(
         throw new Error('This product is serialized; provide unit_id to restock a specific unit');
       }
       // Restocking writes into the location — van scoping applies (F036).
-      await assertLocationWritable(trx, tenant, (user as any)?.user_id, input.location_id);
+      await assertLocationWritable(trx, tenant, user.user_id, input.location_id);
       await ensureStockLevel(trx, tenant, input.service_id, input.location_id);
       const movement = await recordStockMovement(trx, tenant, {
         movement_type: 'return_restock',

@@ -1194,6 +1194,8 @@
         "kit": "Paket",
         "createsAsset": "Skapar tillgång vid leverans",
         "defaultAssetType": "Standardtyp för tillgång",
+        "specDefaults": "Standardspecifikationer för levererade tillgångar",
+        "specDefaultsHint": "Tillämpas när en levererad enhet med serienummer automatiskt skapar sin tillgång.",
         "reorderPoint": "Beställningspunkt",
         "reorderQuantity": "Beställningsantal",
         "kitPricingMode": "Prissättningsmetod för paket",

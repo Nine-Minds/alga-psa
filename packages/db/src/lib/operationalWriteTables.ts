@@ -27,6 +27,7 @@ export const OPERATIONAL_WRITE_TABLES: Readonly<Record<string, OperationalWriteT
   comment_threads: { reason: 'comment thread structure' },
   ticket_resources: { reason: 'ticket assignment' },
   ticket_materials: { reason: 'materials billed against a ticket' },
+  ticket_fixed_fee_services: { reason: 'fixed-fee services billed against a ticket' },
   ticket_checklist_items: { reason: 'ticket checklist progress' },
   ticket_entity_links: { reason: 'links from a ticket to other entities' },
   ticket_comment_attachments: { reason: 'attachments on ticket comments' },

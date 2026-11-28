@@ -1194,6 +1194,8 @@
         "kit": "Kit",
         "createsAsset": "Crea un asset alla consegna",
         "defaultAssetType": "Tipo di asset predefinito",
+        "specDefaults": "Specifiche predefinite per gli asset consegnati",
+        "specDefaultsHint": "Applicato quando un'unità serializzata consegnata crea automaticamente il proprio asset.",
         "reorderPoint": "Punto di riordino",
         "reorderQuantity": "Quantità di riordino",
         "kitPricingMode": "Modalità prezzo kit",

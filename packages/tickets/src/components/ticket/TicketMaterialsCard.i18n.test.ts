@@ -23,11 +23,16 @@ describe('ticket materials card i18n wiring contract', () => {
     expect(source).toContain("t('materials.quantity', 'Quantity')");
     expect(source).toContain("t('materials.total', 'Total')");
     expect(source).toContain("t('materials.descriptionOptional', 'Description (optional)')");
-    expect(source).toContain("t('materials.qty', 'Qty')");
-    expect(source).toContain("t('materials.rate', 'Rate')");
-    expect(source).toContain("t('materials.status', 'Status')");
-    expect(source).toContain("t('materials.billed', 'Billed')");
-    expect(source).toContain("t('materials.pending', 'Pending')");
+    expect(source).toContain('<TicketChargeTable');
+
+    const table = read('./TicketChargeTable.tsx');
+    expect(table).toContain("const { t } = useTranslation('features/tickets');");
+    expect(table).toContain("t('materials.qty', 'Qty')");
+    expect(table).toContain("t('materials.rate', 'Rate')");
+    expect(table).toContain("t('materials.total', 'Total')");
+    expect(table).toContain("t('materials.status', 'Status')");
+    expect(table).toContain("t('materials.billed', 'Billed')");
+    expect(table).toContain("t('materials.pending', 'Pending')");
   });
 
   it('T071: routes materials empty-state, validation, and remove/load error feedback through translations', () => {
@@ -42,6 +47,6 @@ describe('ticket materials card i18n wiring contract', () => {
     expect(source).toContain("t('materials.removeSuccess', 'Material removed')");
     expect(source).toContain("t('materials.loading', 'Loading materials...')");
     expect(source).toContain("t('materials.empty', 'No materials added to this ticket.')");
-    expect(source).toContain("t(\n              'materials.clientRequired'");
+    expect(source).toMatch(/t\(\s*'materials\.clientRequired'/);
   });
 });

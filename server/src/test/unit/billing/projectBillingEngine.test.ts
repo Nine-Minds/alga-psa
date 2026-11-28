@@ -926,6 +926,44 @@ describe("project billing engine orchestration", () => {
     expect(result.totalAmount).toBe(11_000);
   });
 
+  it("scheduled runs bill ticket fixed fees for clients that have a project billing config", async () => {
+    const billingContext = context(
+      [config({ billing_model: "time_and_materials", total_price: null })],
+      [],
+    );
+    const fixedFee = { type: "product", serviceName: "Onsite setup", total: 7_500 };
+    vi.spyOn(engine as any, "validateBillingPeriod").mockResolvedValue({
+      success: true,
+    });
+    vi.spyOn(engine as any, "getClientContractLinesAndCycle").mockResolvedValue({
+      clientContractLines: [
+        { client_contract_line_id: "line-1", currency_code: "USD" },
+      ],
+      billingCycle: "monthly",
+    });
+    vi.spyOn(engine as any, "buildRecurringTimingSelections").mockReturnValue({});
+    vi.spyOn(engine as any, "loadProjectBillingContext").mockResolvedValue(
+      billingContext,
+    );
+    vi.spyOn(DatabaseChargeSource.prototype, "pools").mockResolvedValue([]);
+    vi.spyOn(engine as any, "loadRecurringQuantityObligation").mockResolvedValue(undefined);
+    vi.spyOn(engine as any, "loadHourBlockDrawRows").mockResolvedValue([]);
+    vi.spyOn(engine as any, "calculateMaterialCharges").mockResolvedValue([]);
+    const calculateFixedFees = vi
+      .spyOn(engine as any, "calculateTicketFixedFeeCharges")
+      .mockResolvedValue([fixedFee]);
+
+    const result = await (engine as any).calculateBillingForPreparedPeriod(
+      "client-1",
+      PERIOD,
+      CLIENT,
+    );
+
+    expect(result.error).toBeUndefined();
+    expect(calculateFixedFees).toHaveBeenCalledTimes(1);
+    expect(result.charges).toContainEqual(fixedFee);
+  });
+
   it("T014: fixed-price standalone projects include materials but exclude labor activity", async () => {
     const projectConfig = config({ invoice_mode: "standalone" });
     const billingContext = context(
@@ -1127,6 +1165,8 @@ describe("project billing engine orchestration", () => {
     ]);
     vi.spyOn(engine as any, "calculateProductCharges").mockResolvedValue([]);
     vi.spyOn(engine as any, "calculateLicenseCharges").mockResolvedValue([]);
+    vi.spyOn(engine as any, "calculateContractLineHourBlockCharges").mockResolvedValue([]);
+    vi.spyOn(engine as any, "calculateTicketFixedFeeCharges").mockResolvedValue([]);
     vi.spyOn(engine as any, "loadHourBlockDrawRows").mockResolvedValue([]);
     vi.spyOn(engine as any, "calculateMaterialCharges").mockResolvedValue([
       material,
@@ -1294,8 +1334,8 @@ describe("ticket time project attribution", () => {
 
     // The exclusion itself is a loader predicate, and it keys off the project
     // the COALESCE join now resolves for ticket time.
-    expect(billingEngineSource).toContain(
-      'this.whereNull("projects.project_id").orWhereNotIn(\n          "projects.project_id",\n          fixedPriceProjectIds,',
+    expect(billingEngineSource).toMatch(
+      /this\.whereNull\("projects\.project_id"\)\.orWhereNotIn\(\s*"projects\.project_id",\s*fixedPriceProjectIds,/,
     );
   });
 
@@ -1371,8 +1411,8 @@ describe("ticket time project attribution", () => {
       "AND te.approval_status = 'APPROVED'",
     );
     expect(billingEngineSource).toContain("AND te.start_time >= ?");
-    expect(billingEngineSource).toContain(
-      "await this.getAmbiguousTicketProjectWarnings(\n            clientId,\n            billingPeriod,\n            options.projectTarget,\n          )",
+    expect(billingEngineSource).toMatch(
+      /await this\.getAmbiguousTicketProjectWarnings\(\s*clientId,\s*billingPeriod,\s*options\.projectTarget,\s*\)/,
     );
   });
 });

@@ -1194,6 +1194,8 @@
         "kit": "Set",
         "createsAsset": "Erstellt Asset bei Lieferung",
         "defaultAssetType": "Standard-Asset-Typ",
+        "specDefaults": "Standard-Spezifikationen für gelieferte Assets",
+        "specDefaultsHint": "Wird angewendet, wenn eine gelieferte serialisierte Einheit automatisch ihr Asset erstellt.",
         "reorderPoint": "Meldebestand",
         "reorderQuantity": "Nachbestellmenge",
         "kitPricingMode": "Set-Preismodus",

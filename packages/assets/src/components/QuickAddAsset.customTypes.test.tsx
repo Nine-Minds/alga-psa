@@ -346,7 +346,7 @@ describe('QuickAddAsset custom asset types', () => {
     expect(payload.workstation).toBeUndefined();
   });
 
-  it('T312: built-in flow regression — workstation extension fields render and submit unchanged, no attributes key', async () => {
+  it('T312: workstation uses the shared OS dropdown and submits its canonical value, no attributes key', async () => {
     const user = userEvent.setup();
     const { typeSelect } = await renderQuickAdd();
 
@@ -357,7 +357,7 @@ describe('QuickAddAsset custom asset types', () => {
     const osTypeInput = await screen.findByLabelText('workstation-os-type-input');
     expect(screen.queryByLabelText('quick-add-asset-field-account_name')).toBeNull();
 
-    await user.type(osTypeInput, 'Windows');
+    await user.selectOptions(osTypeInput, 'windows');
     await user.type(screen.getByLabelText('workstation-os-version-input'), '11');
     await user.click(screen.getByRole('button', { name: 'Create Asset' }));
 
@@ -365,7 +365,7 @@ describe('QuickAddAsset custom asset types', () => {
     const payload = mockCreateAsset.mock.calls[0][0];
     expect(payload.asset_type).toBe('workstation');
     expect(payload.workstation).toEqual({
-      os_type: 'Windows',
+      os_type: 'windows',
       os_version: '11',
       cpu_model: '',
       cpu_cores: null,

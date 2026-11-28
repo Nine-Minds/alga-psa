@@ -95,7 +95,9 @@ describe('profitability report action SQL contracts', () => {
 
   it('treats COGS as tenant-default-currency only and flags foreign-currency movements instead of mixing them', () => {
     expect(source).toContain('(COALESCE(sm.cost_currency, pis.cost_currency, ?) <> ?) AS currency_mismatch');
-    expect(source).toContain('SUM(sm.cogs_cost) FILTER (WHERE COALESCE(sm.cost_currency, pis.cost_currency, ?) = ?) AS cogs_cents');
+    expect(source).toContain("WHEN sm.movement_type = 'return_restock' THEN -ABS(sm.cogs_cost)");
+    expect(source).toContain('ELSE sm.cogs_cost');
+    expect(source).toContain(') FILTER (WHERE COALESCE(sm.cost_currency, pis.cost_currency, ?) = ?) AS cogs_cents');
     expect(source).toContain('COUNT(*) FILTER (WHERE COALESCE(sm.cost_currency, pis.cost_currency, ?) <> ?) AS mismatched_count');
     expect(source).toContain('(COALESCE(cogs.mismatched_count, 0) > 0) AS cogs_currency_mismatch');
     expect(source).toContain('WHEN COALESCE(cogs.mismatched_count, 0) = 0 AND cogs.cogs_cents IS NOT NULL THEN cogs.cogs_cents::bigint');

@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useSWRConfig } from 'swr';
+import { matchEntityAssetsCacheKeys } from '@alga-psa/core/assetCacheKeys';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -74,6 +76,9 @@ export default function ProjectMaterialsDrawer({
   clientId,
 }: ProjectMaterialsDrawerProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const { mutate } = useSWRConfig();
+  const refreshAssets = () => mutate(matchEntityAssetsCacheKeys('project', projectId))
+    .catch((cause) => handleError(cause));
   const { money } = useCurrencyFormat();
   const billingIntegration = useProjectBillingIntegration();
   const materialsT = useCallback((key: string, fallback: string, options?: Record<string, unknown>) =>
@@ -101,6 +106,7 @@ export default function ProjectMaterialsDrawer({
   const [selectedUnitId, setSelectedUnitId] = useState<string>('');
   // Per-location on-hand for the selected tracked product (F016), advisory only.
   const [availability, setAvailability] = useState<ProductAvailability | null>(null);
+  const serializedProduct = Boolean(availability?.is_serialized || availableUnits.length || selectedUnitId);
   // Inline add error (F018) — e.g. insufficient stock — shown in the form so the user's inputs survive.
   const [addError, setAddError] = useState<string | null>(null);
   // Soft-reservation refusal awaiting the user's override confirmation (B1).
@@ -210,16 +216,19 @@ export default function ProjectMaterialsDrawer({
 
   // Load available serialized stock units when a product is selected
   useEffect(() => {
+    setAvailableUnits([]);
+    setSelectedUnitId('');
     if (!selectedProductId) {
-      setAvailableUnits([]);
-      setSelectedUnitId('');
       return;
     }
     let cancelled = false;
     (async () => {
       try {
         const units = await listAvailableStockUnitsForMaterial(selectedProductId);
-        if (!cancelled) { setAvailableUnits(units); setSelectedUnitId(''); }
+        if (!cancelled) {
+          setAvailableUnits(units);
+          if (units.length) setQuantity(1);
+        }
       } catch {
         if (!cancelled) setAvailableUnits([]);
       }
@@ -230,15 +239,18 @@ export default function ProjectMaterialsDrawer({
   // Per-location on-hand for the selected product (F016). Advisory only — a failure
   // (e.g. the availability action unavailable) leaves the form fully usable.
   useEffect(() => {
+    setAvailability(null);
     if (!selectedProductId) {
-      setAvailability(null);
       return;
     }
     let cancelled = false;
     (async () => {
       try {
         const [result] = await getProductAvailability([selectedProductId]);
-        if (!cancelled) setAvailability(result ?? null);
+        if (!cancelled) {
+          setAvailability(result ?? null);
+          if (result?.is_serialized) setQuantity(1);
+        }
       } catch {
         if (!cancelled) setAvailability(null);
       }
@@ -308,7 +320,7 @@ export default function ProjectMaterialsDrawer({
       return;
     }
 
-    if (availableUnits.length > 0 && !selectedUnitId) {
+    if (serializedProduct && !selectedUnitId) {
       toast.error(materialsT('unitRequiredError', 'Please select a serial/unit to deliver'));
       return;
     }
@@ -320,7 +332,7 @@ export default function ProjectMaterialsDrawer({
         project_id: projectId,
         client_id: clientId,
         service_id: selectedProductId,
-        quantity,
+        quantity: serializedProduct ? 1 : quantity,
         rate: saleRate,
         currency_code: selectedPrice.currency_code,
         description: description.trim() || null,
@@ -356,6 +368,7 @@ export default function ProjectMaterialsDrawer({
       toast.success(materialsT('addedSuccess', 'Material added'));
       resetAddForm();
       await loadMaterials();
+      await refreshAssets();
     } catch (error) {
       // Inline so the user keeps their inputs and sees the exact reason (e.g. the
       // available quantity the backend reports for insufficient stock) (F018).
@@ -378,6 +391,7 @@ export default function ProjectMaterialsDrawer({
         return;
       }
       toast.success(materialsT('removedSuccess', 'Material removed'));
+      await refreshAssets();
     } catch (error) {
       // Revert on failure
       setMaterials(previousMaterials);
@@ -620,7 +634,9 @@ export default function ProjectMaterialsDrawer({
                   id="project-materials-quantity"
                   type="number"
                   min={1}
-                  value={quantity}
+                  max={serializedProduct ? 1 : undefined}
+                  disabled={serializedProduct}
+                  value={serializedProduct ? 1 : quantity}
                   onChange={(event) => setQuantity(Math.max(1, parseInt(event.target.value) || 1))}
                 />
               </div>
@@ -652,7 +668,7 @@ export default function ProjectMaterialsDrawer({
               </div>
             )}
 
-            {availableUnits.length > 0 && (
+            {serializedProduct && (
               <div className="space-y-2">
                 <Label>{materialsT('serialUnit', 'Serial / MAC (serialized product)')}</Label>
                 <CustomSelect

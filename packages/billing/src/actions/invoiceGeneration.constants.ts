@@ -57,6 +57,9 @@ export const USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY =
 export const RECURRING_PRICING_STALE_MESSAGE_KEY =
   'msp/invoicing:manualInvoices.errors.RECURRING_PRICING_STALE';
 
+export const SOURCE_CHANGED_MESSAGE_KEY =
+  'msp/invoicing:manualInvoices.errors.SOURCE_CHANGED';
+
 /**
  * Namespaced message key for a per-service usage pricing failure
  * (`USAGE_CALCULATION_ERROR`). A service whose recorded usage cannot be priced
