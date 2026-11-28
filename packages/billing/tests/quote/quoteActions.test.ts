@@ -582,7 +582,7 @@ describe('quoteActions', () => {
         is_recurring: true,
         billing_frequency: 'monthly',
       }),
-      { catalogDescriptionSnapshot: null }
+      { catalogDescriptionSnapshot: null, catalogDescriptionEdited: false }
     );
     expect(QuoteItem.create).toHaveBeenNthCalledWith(
       2,
@@ -594,7 +594,7 @@ describe('quoteActions', () => {
         is_optional: false,
         is_recurring: false,
       }),
-      { catalogDescriptionSnapshot: null }
+      { catalogDescriptionSnapshot: null, catalogDescriptionEdited: false }
     );
     expect(result).toMatchObject({ quote_id: QUOTE_ID, quote_items: templateQuote.quote_items });
   });

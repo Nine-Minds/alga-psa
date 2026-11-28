@@ -606,6 +606,13 @@
       "needMoreLocations": "Deze klant heeft maar één actieve locatie. Voeg in klantinstellingen een tweede locatie toe voor offertes met meerdere locaties.",
       "allLocationsInUse": "Elke actieve locatie van deze klant heeft al een groep op deze offerte.",
       "emptyGroup": "Nog geen items voor deze locatie."
+    },
+    "productDescription": {
+      "edited": "Aangepast voor deze offerte",
+      "label": "Productbeschrijving",
+      "matchesProduct": "Komt overeen met het product",
+      "productGone": "Product staat niet meer in de catalogus",
+      "useCurrent": "Huidige productbeschrijving gebruiken"
     }
   },
   "quoteRecipients": {

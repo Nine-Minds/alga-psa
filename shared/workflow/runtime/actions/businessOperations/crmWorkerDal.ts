@@ -567,6 +567,21 @@ function normalizeCatalogDescription(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+// LEVERAGE: friction quote-item-dal-dup — second instance (alga-2026-0002804):
+// the explicit-write rule below mirrors resolveCatalogDescriptionWrite in
+// packages/billing/src/lib/quoteItemCatalogDescription.ts, ported by hand again
+// because shared/ cannot import from packages/billing. Keep the two identical.
+function resolveCatalogDescriptionWrite(
+  callerValue: unknown,
+  catalogText: unknown
+): { catalog_description: string | null; catalog_description_edited: boolean } {
+  const written = normalizeCatalogDescription(callerValue);
+  return {
+    catalog_description: written,
+    catalog_description_edited: written !== normalizeCatalogDescription(catalogText),
+  };
+}
+
 async function getNextQuoteItemDisplayOrder(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
@@ -694,6 +709,8 @@ export const QuoteActivity = {
  */
 export type QuoteItemCreateOptions = {
   catalogDescriptionSnapshot?: string | null;
+  /** Carries the divergence flag with the snapshot; wins over any payload value. */
+  catalogDescriptionEdited?: boolean;
 };
 
 // LEVERAGE: friction quote-item-dal-dup — this QuoteItem DAL duplicates
@@ -722,7 +739,7 @@ export const QuoteItem = {
   async create(
     knexOrTrx: Knex | Knex.Transaction,
     tenant: string,
-    item: Omit<IQuoteItem, 'quote_item_id' | 'tenant' | 'total_price' | 'net_amount' | 'tax_amount' | 'display_order' | 'catalog_description' | 'created_at' | 'updated_at'> & Partial<Pick<IQuoteItem, 'display_order'>>,
+    item: Omit<IQuoteItem, 'quote_item_id' | 'tenant' | 'total_price' | 'net_amount' | 'tax_amount' | 'display_order' | 'catalog_description_edited' | 'created_at' | 'updated_at'> & Partial<Pick<IQuoteItem, 'display_order'>>,
     options: QuoteItemCreateOptions = {}
   ): Promise<IQuoteItem> {
     if (!tenant) {
@@ -732,14 +749,13 @@ export const QuoteItem = {
     ensureIntegerField(item.quantity, 'Quantity');
     ensureIntegerField(item.unit_price, 'Unit price');
 
-    // The catalog-description snapshot is never read from the caller-facing item
-    // payload. A value smuggled past schema validation (defense in depth) is
-    // dropped before insert so it can never persist. Verbatim snapshots arrive
-    // only through the internal `options.catalogDescriptionSnapshot` channel,
-    // used exclusively by trusted server-internal copy flows (e.g.
-    // crm.create_quote_from_template).
+    // `catalog_description` is an explicit write only on a catalog-backed line
+    // (handled below). The divergence flag is never read from the payload.
     let resolvedItem = { ...item } as Record<string, unknown> & { service_id?: string | null; quote_id: string; display_order?: number; unit_price?: number | null; quantity?: number | null; description?: string | null; service_item_kind?: string | null; cost?: number | null; cost_currency?: string | null; is_taxable?: boolean; tax_region?: string | null };
+    const callerCatalogDescription = (item as { catalog_description?: string | null }).catalog_description;
+    const callerSuppliedCatalogDescription = callerCatalogDescription !== undefined;
     delete (resolvedItem as { catalog_description?: string | null }).catalog_description;
+    delete (resolvedItem as { catalog_description_edited?: boolean }).catalog_description_edited;
 
     const snapshotFromOptions =
       options.catalogDescriptionSnapshot !== undefined
@@ -785,15 +801,23 @@ export const QuoteItem = {
 
       const resolvedItemKind = resolvedItem.service_item_kind ?? service.item_kind ?? 'service';
 
-      // Catalog-description snapshot policy: a trusted server-internal copy flow
-      // that supplies `options.catalogDescriptionSnapshot` keeps that value
-      // verbatim (including null). Otherwise — a freshly selected catalog-backed
-      // line — the authoritative, tenant-scoped catalog text is captured here.
-      // Persistence never trusts picker or caller data.
-      const resolvedCatalogDescription =
-        snapshotFromOptions !== undefined
-          ? snapshotFromOptions
-          : normalizeCatalogDescription(service.description);
+      // Catalog-description policy (same rules as the billing model): the
+      // internal copy channel keeps text and flag verbatim and wins; otherwise
+      // an explicit payload value is resolved against the catalog text and the
+      // flag derived; otherwise the catalog text is captured, not edited.
+      let resolvedCatalogDescription: string | null;
+      let resolvedCatalogDescriptionEdited: boolean;
+      if (snapshotFromOptions !== undefined) {
+        resolvedCatalogDescription = snapshotFromOptions;
+        resolvedCatalogDescriptionEdited = options.catalogDescriptionEdited ?? false;
+      } else if (callerSuppliedCatalogDescription) {
+        const write = resolveCatalogDescriptionWrite(callerCatalogDescription, service.description);
+        resolvedCatalogDescription = write.catalog_description;
+        resolvedCatalogDescriptionEdited = write.catalog_description_edited;
+      } else {
+        resolvedCatalogDescription = normalizeCatalogDescription(service.description);
+        resolvedCatalogDescriptionEdited = false;
+      }
 
       // Tax treatment follows the catalog service unless the caller made an
       // explicit choice. A service with no tax_rate_id is non-taxable (the
@@ -819,6 +843,7 @@ export const QuoteItem = {
         service_item_kind: resolvedItemKind,
         description: resolvedItem.description || service.service_name,
         catalog_description: resolvedCatalogDescription,
+        catalog_description_edited: resolvedCatalogDescriptionEdited,
         cost: resolvedItemKind === 'product' && service.cost != null ? Number(service.cost) : resolvedItem.cost ?? null,
         cost_currency: resolvedItemKind === 'product' && service.cost_currency ? service.cost_currency : resolvedItem.cost_currency ?? null,
       };
@@ -831,6 +856,9 @@ export const QuoteItem = {
       resolvedItem = {
         ...resolvedItem,
         catalog_description: snapshotFromOptions !== undefined ? snapshotFromOptions : null,
+        catalog_description_edited: snapshotFromOptions !== undefined
+          ? (options.catalogDescriptionEdited ?? false)
+          : false,
       };
     }
 

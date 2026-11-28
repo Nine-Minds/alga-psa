@@ -6,13 +6,15 @@ import { useBillingFrequencyOptions, useFormatBillingFrequency } from '@alga-psa
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { UnitOfMeasureInput } from '@alga-psa/ui/components/UnitOfMeasureInput';
 import type { UnitSelection } from '@alga-psa/ui/components/UnitOfMeasureInput';
 import { listTenantUnitsOfMeasure, registerTenantUnitOfMeasure } from '@alga-psa/billing/actions/unitOfMeasureActions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Pencil, Info } from 'lucide-react';
+import { Pencil, Info, RotateCcw } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import type { CatalogPickerItem } from '../../../actions/serviceActions';
+import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { getServiceCatalogDescriptions, type CatalogPickerItem } from '../../../actions/serviceActions';
 import ServiceCatalogPicker from '../contracts/ServiceCatalogPicker';
 import LocationPicker from '../locations/LocationPicker';
 import LocationAddress from '../locations/LocationAddress';
@@ -30,9 +32,12 @@ import {
   createCustomDraftQuoteItem,
   createDraftDiscountQuoteItem,
   createDraftQuoteItemFromService,
+  isCatalogDescriptionDiverged,
   resolveDraftDiscountAmounts,
+  withEditedCatalogDescription,
   type DraftQuoteItem,
 } from './quoteLineItemDraft';
+import { resolveCatalogDescriptionWrite } from '../../../lib/quoteItemCatalogDescription';
 import { isQuoteItemIncluded } from '../../../lib/quoteItemInclusion';
 
 interface InlineEditableValueProps {
@@ -274,6 +279,9 @@ const isQuoteWideGroup = (group: LocationGroupEntry<DraftQuoteItem>): boolean =>
   && group.items.length > 0
   && group.items.every((item) => item.is_discount);
 
+const LOOKUP_RETRY_INITIAL_DELAY_MS = 1000;
+const LOOKUP_RETRY_MAX_DELAY_MS = 30000;
+
 const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
   items,
   currencyCode,
@@ -298,6 +306,168 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
   const [discountTargetValue, setDiscountTargetValue] = useState('');
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+
+  // Current catalog text per product, for "Use current product description".
+  // `undefined` for a service id = not loaded yet; a loaded id with no key in
+  // the result means the product no longer exists (stored as `null` here would
+  // be indistinguishable from "empty text", so absence is tracked separately).
+  const [currentDescriptions, setCurrentDescriptions] = useState<Record<string, string | null>>({});
+  const [goneServiceIds, setGoneServiceIds] = useState<Record<string, true>>({});
+  const requestedServiceIds = useRef<Set<string>>(new Set());
+
+  // Stable key: only changes when the *set* of catalog-backed services changes,
+  // so typing / quantity edits don't re-run the lookup effect.
+  const catalogBackedServiceKey = useMemo(
+    () => Array.from(new Set(
+      items.filter((item) => !item.is_discount && item.service_id).map((item) => item.service_id as string)
+    )).sort().join('\u0000'),
+    [items]
+  );
+
+  // Unmount-only guard. Results of a started lookup are merged by id (idempotent)
+  // even if the quote lines changed meanwhile; dropping them would leave their ids
+  // marked as requested and therefore never fetched again.
+  const isMountedRef = useRef(true);
+
+  // A failed lookup releases its ids and schedules ONE retry timer. When it fires it
+  // bumps `lookupRetryNonce`, which re-runs the lookup effect even though the set of
+  // service ids (`catalogBackedServiceKey`) is unchanged. Backoff doubles per
+  // consecutive failure (1s, 2s, 4s ... capped at 30s) and resets after a success.
+  const [lookupRetryNonce, setLookupRetryNonce] = useState(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryDelayRef = useRef(LOOKUP_RETRY_INITIAL_DELAY_MS);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (retryTimerRef.current !== null) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const ids = catalogBackedServiceKey ? catalogBackedServiceKey.split('\u0000') : [];
+    const missing = ids.filter((id) => !requestedServiceIds.current.has(id));
+    if (missing.length === 0) return;
+    missing.forEach((id) => requestedServiceIds.current.add(id));
+
+    // Release the ids and, unless a retry is already pending, schedule one.
+    const failLookup = () => {
+      missing.forEach((id) => requestedServiceIds.current.delete(id));
+      if (!isMountedRef.current || retryTimerRef.current !== null) return;
+      const delay = retryDelayRef.current;
+      retryDelayRef.current = Math.min(delay * 2, LOOKUP_RETRY_MAX_DELAY_MS);
+      retryTimerRef.current = setTimeout(() => {
+        retryTimerRef.current = null;
+        if (isMountedRef.current) setLookupRetryNonce((n) => n + 1);
+      }, delay);
+    };
+
+    getServiceCatalogDescriptions(missing)
+      .then((result) => {
+        if (!isMountedRef.current) return;
+        if (isActionPermissionError(result) || isActionMessageError(result)) {
+          // A refusal is an answer, not an outage: retrying will not change it.
+          // Release the ids (a later change of lines may ask again) and leave the
+          // refresh button disabled; never read the error's keys as products.
+          missing.forEach((id) => requestedServiceIds.current.delete(id));
+          return;
+        }
+        if (!result || typeof result !== 'object') {
+          failLookup();
+          return;
+        }
+        retryDelayRef.current = LOOKUP_RETRY_INITIAL_DELAY_MS;
+        setCurrentDescriptions((prev) => ({ ...prev, ...result }));
+        const gone: Record<string, true> = {};
+        for (const id of missing) {
+          if (!Object.prototype.hasOwnProperty.call(result, id)) gone[id] = true;
+        }
+        if (Object.keys(gone).length > 0) setGoneServiceIds((prev) => ({ ...prev, ...gone }));
+      })
+      .catch(failLookup);
+  }, [catalogBackedServiceKey, lookupRetryNonce]);
+
+  const renderProductDescription = (item: DraftQuoteItem) => {
+    if (item.is_discount) return null;
+
+    // A line whose product was deleted keeps its frozen snapshot, read-only.
+    if (!item.service_id) {
+      if (!item.catalog_description) return null;
+      return (
+        <div className="space-y-1">
+          <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {t('quoteLineItems.productDescription.label', { defaultValue: 'Product description' })}
+          </div>
+          <p
+            id={`quote-line-product-description-readonly-${item.local_id}`}
+            className="whitespace-pre-wrap text-xs text-muted-foreground"
+          >
+            {item.catalog_description}
+          </p>
+        </div>
+      );
+    }
+
+    const serviceId = item.service_id;
+    const isGone = Boolean(goneServiceIds[serviceId]);
+    const isLoaded = Object.prototype.hasOwnProperty.call(currentDescriptions, serviceId);
+    const currentText = isLoaded ? currentDescriptions[serviceId] : undefined;
+    const matches = isLoaded
+      && !resolveCatalogDescriptionWrite(item.catalog_description, currentText).catalog_description_edited;
+    const canRefresh = !disabled && isLoaded && !isGone && !matches;
+    const disabledReason = isGone
+      ? t('quoteLineItems.productDescription.productGone', { defaultValue: 'Product no longer in the catalog' })
+      : matches
+        ? t('quoteLineItems.productDescription.matchesProduct', { defaultValue: 'Matches the product' })
+        : null;
+
+    const refreshButton = (
+      <Button
+        id={`quote-line-product-description-refresh-${item.local_id}`}
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled={!canRefresh}
+        onClick={() => updateItem(item.local_id, withEditedCatalogDescription(item, currentText ?? null))}
+      >
+        <RotateCcw className="mr-1 h-3 w-3" />
+        {t('quoteLineItems.productDescription.useCurrent', { defaultValue: 'Use current product description' })}
+      </Button>
+    );
+
+    return (
+      <div className="space-y-1">
+        <TextArea
+          id={`quote-line-product-description-${item.local_id}`}
+          label={t('quoteLineItems.productDescription.label', { defaultValue: 'Product description' })}
+          value={item.catalog_description ?? ''}
+          onChange={(event) => updateItem(item.local_id, withEditedCatalogDescription(item, event.target.value))}
+          disabled={disabled}
+          rows={2}
+        />
+        {isCatalogDescriptionDiverged(item, isLoaded ? currentText : undefined) && (
+          <div
+            id={`quote-line-product-description-edited-${item.local_id}`}
+            className="text-xs text-muted-foreground"
+          >
+            {t('quoteLineItems.productDescription.edited', { defaultValue: 'Edited for this quote' })}
+          </div>
+        )}
+        {!disabled && (
+          // A disabled button swallows pointer events, so the tooltip hangs off a wrapper.
+          disabledReason ? (
+            <Tooltip content={disabledReason}>
+              <span className="inline-block">{refreshButton}</span>
+            </Tooltip>
+          ) : refreshButton
+        )}
+      </div>
+    );
+  };
 
   const itemTargetOptions = items.filter((item) => !item.is_discount);
   const serviceTargetOptions = Array.from(new Map(
@@ -542,6 +712,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
                 )
               }
             </div>
+            {renderProductDescription(item)}
             {!isDiscount && (
               <UnitOfMeasureInput
                 id={`quote-line-item-unit-${item.local_id}`}

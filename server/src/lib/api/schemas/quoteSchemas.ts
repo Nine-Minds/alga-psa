@@ -80,11 +80,12 @@ export const createQuoteItemSchema = z.object({
   location_id: uuidSchema.optional().nullable(),
   cost: z.number().int().min(0).optional().nullable(),
   cost_currency: z.string().trim().length(3).optional().nullable(),
-  // The catalog-description snapshot is intentionally absent from this input
-  // shape: it is a server-captured, tenant-scoped snapshot of the catalog row,
-  // authoritative and immutable from the caller's perspective. Zod strips
-  // unknown keys, so any caller-supplied value is dropped here and never
-  // reaches the model.
+  // Explicit write of the line's product description (alga-2026-0002804). It is
+  // honoured only on a catalog-backed line (service_id set, and unchanged on
+  // update); custom, discount and deleted-product lines drop it, and omitting
+  // the key means "no change". `catalog_description_edited` is deliberately
+  // absent: the server derives it and zod strips any caller-supplied value.
+  catalog_description: z.string().max(4000).optional().nullable(),
 });
 
 export const updateQuoteItemSchema = partialWithoutDefaults(createQuoteItemSchema);
@@ -123,8 +124,8 @@ const quoteApiBaseSchema = z.object({
  * Strict on purpose (alga-2026-0002902): the published create body named
  * `notes`/`terms`, which zod silently stripped, so callers believed they had
  * saved text that was never persisted. Unknown top-level keys are now a 400.
- * `items` entries stay non-strict so the deliberate catalog_description strip
- * above keeps working. The deprecated `notes`/`terms`/`quote_number` aliases are
+ * `items` entries stay non-strict so a caller-supplied catalog_description_edited
+ * is stripped rather than rejected. The deprecated `notes`/`terms`/`quote_number` aliases are
  * folded onto their real names in ApiQuoteController.create() before this parse.
  */
 export const createQuoteApiSchema = quoteApiBaseSchema.strict();
