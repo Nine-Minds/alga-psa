@@ -6,8 +6,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { Flex, Text } from '@radix-ui/themes';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DeleteEntityDialog } from '@alga-psa/ui';
-import { createRole, updateRole, deleteRole, getRoles } from '../../../actions/policyActions';
-import { IRole, DeletionValidationResult } from '@alga-psa/types';
+import { createRole, updateRole, deleteRole, getInspectableRoles, getRolePermissions } from '../../../actions/policyActions';
+import { IRole, IPermission, DeletionValidationResult } from '@alga-psa/types';
+import { isManagedRole } from '../../../lib/managedRoles';
+import { ManagedRoleBadge, ManagedRoleNotice } from './ManagedRoleNotice';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import GenericDialog from '@alga-psa/ui/components/GenericDialog';
@@ -48,6 +50,9 @@ export default function RoleManagement() {
   const [editForm, setEditForm] = useState({ role_name: '', description: '' });
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  // A capability-owned role is inspected read-only; it has no edit or delete path.
+  const [inspectedRole, setInspectedRole] = useState<IRole | null>(null);
+  const [inspectedPermissions, setInspectedPermissions] = useState<IPermission[]>([]);
   const [roleToDelete, setRoleToDelete] = useState<IRole | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
@@ -67,10 +72,21 @@ export default function RoleManagement() {
   }, []);
 
   const fetchRoles = async () => {
-    const fetchedRoles = await getRoles();
+    // Inspectable, not editable: a capability-owned role arrives marked and is shown read-only.
+    const fetchedRoles = await getInspectableRoles();
     // Sort roles alphabetically by role_name
     const sortedRoles = fetchedRoles.sort((a, b) => a.role_name.localeCompare(b.role_name));
     setRoles(sortedRoles);
+  };
+
+  const openInspectDialog = async (role: IRole) => {
+    setInspectedRole(role);
+    setInspectedPermissions([]);
+    try {
+      setInspectedPermissions(await getRolePermissions(role.role_id));
+    } catch (error) {
+      handleError(error, t('roleManagement.errors.updateFailed'));
+    }
   };
 
   const handleCreateRole = async () => {
@@ -183,6 +199,12 @@ export default function RoleManagement() {
     {
       title: t('roleManagement.columns.roleNameRequired'),
       dataIndex: 'role_name',
+      render: (_: unknown, record: IRole) => (
+        <span className="flex items-center gap-2">
+          {record.role_name}
+          <ManagedRoleBadge role={record} />
+        </span>
+      ),
     },
     {
       title: t('roleManagement.fields.description'),
@@ -211,6 +233,13 @@ export default function RoleManagement() {
       width: '64px',
       render: (roleId: string, role: IRole) => {
         const isAdminRole = role.role_name.toLowerCase() === 'admin';
+        if (isManagedRole(role)) {
+          return (
+            <Button id={`view-role-${roleId}`} variant="ghost" size="sm" onClick={() => void openInspectDialog(role)}>
+              {t('managedRole.viewDetails')}
+            </Button>
+          );
+        }
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -268,6 +297,26 @@ export default function RoleManagement() {
           />
         </CardContent>
       </Card>
+
+      {/* Read-only inspection of a capability-owned role */}
+      <GenericDialog
+        isOpen={inspectedRole !== null}
+        onClose={() => setInspectedRole(null)}
+        title={t('managedRole.detailsTitle', { role: inspectedRole?.role_name ?? '' })}
+        id="inspect-managed-role-dialog"
+      >
+        {inspectedRole && (
+          <div className="space-y-4">
+            <ManagedRoleNotice role={inspectedRole} />
+            <ul className="text-sm columns-2" id="inspect-managed-role-permissions">
+              {inspectedPermissions
+                .map((permission) => `${permission.resource}:${permission.action}`)
+                .sort()
+                .map((key) => <li key={key}>{key}</li>)}
+            </ul>
+          </div>
+        )}
+      </GenericDialog>
 
       {/* Create Role Dialog */}
       <GenericDialog

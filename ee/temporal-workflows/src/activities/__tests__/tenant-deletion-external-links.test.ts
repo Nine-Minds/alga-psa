@@ -12,6 +12,7 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: harness.tenantDb,
   getTenantTableScope: () => ({ scope: 'tenant' }),
   retryOnReadOnly: (operation: () => Promise<unknown>) => operation(),
+  runAsTenantTeardown: (_tenant: string, fn: () => Promise<unknown>) => fn(),
 }));
 vi.mock('@alga-psa/shared/models/tagModel.js', () => ({ TagModel: {} }));
 vi.mock('@alga-psa/core/secrets', () => ({ getSecret: vi.fn() }));

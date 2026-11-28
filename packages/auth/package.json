@@ -138,6 +138,14 @@
       "import": "./src/nextauth/edge-auth.ts",
       "types": "./src/nextauth/edge-auth.ts"
     },
+    "./lib/managedRoles": {
+      "import": "./src/lib/managedRoles.ts",
+      "types": "./src/lib/managedRoles.ts"
+    },
+    "./components/settings/policy/ManagedRoleNotice": {
+      "import": "./src/components/settings/policy/ManagedRoleNotice.tsx",
+      "types": "./src/components/settings/policy/ManagedRoleNotice.tsx"
+    },
     "./lib/permissionCapabilities": {
       "import": "./src/lib/permissionCapabilities.ts",
       "types": "./src/lib/permissionCapabilities.ts"

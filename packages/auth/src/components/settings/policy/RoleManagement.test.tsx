@@ -6,12 +6,13 @@ import userEvent from '@testing-library/user-event';
 import type { IRole } from '@alga-psa/types';
 
 const mocks = vi.hoisted(() => ({
-  getRoles: vi.fn(),
+  getInspectableRoles: vi.fn(),
   updateRole: vi.fn(),
 }));
 
 vi.mock('../../../actions/policyActions', () => ({
-  getRoles: mocks.getRoles,
+  getInspectableRoles: mocks.getInspectableRoles,
+  getRolePermissions: vi.fn().mockResolvedValue([]),
   updateRole: mocks.updateRole,
   createRole: vi.fn(),
   deleteRole: vi.fn(),
@@ -41,10 +42,11 @@ describe('RoleManagement row actions', () => {
       removeItem: (key: string) => store.delete(key),
       clear: () => store.clear(),
     });
-    mocks.getRoles.mockResolvedValue([
+    mocks.getInspectableRoles.mockResolvedValue([
       role('r-admin', 'Admin', 'Full access'),
       role('r-tech', 'Technician'),
       role('r-custom', 'Night Shift', 'After-hours desk'),
+      { ...role('r-seat', 'Seat Technician'), managed_by: 'co-managed-seat' },
     ]);
     mocks.updateRole.mockResolvedValue(role('r-custom', 'Night Desk'));
   });
@@ -61,6 +63,13 @@ describe('RoleManagement row actions', () => {
     for (const id of ['r-admin', 'r-tech', 'r-custom']) {
       expect(document.querySelector(`#role-actions-${id}`)).not.toBeNull();
     }
+  });
+
+  it('offers a capability-owned role for inspection only, never the edit/delete menu', async () => {
+    render(<RoleManagement />);
+    await screen.findByText('Seat Technician');
+    expect(document.querySelector('#role-actions-r-seat')).toBeNull();
+    expect(document.querySelector('#view-role-r-seat')).not.toBeNull();
   });
 
   it('disables Delete for the Admin role', async () => {

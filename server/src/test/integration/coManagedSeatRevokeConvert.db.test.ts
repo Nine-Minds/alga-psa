@@ -292,10 +292,12 @@ describeDb('revoking and converting seat technicians', { shuffle: false }, () =>
     expect(refusal).toBeInstanceOf(SeatTechnicianGuardError);
     expect(isSeatTechnicianGuardError(refusal)).toBe(true);
     expect(refusal).toMatchObject({ code: 'SEAT_TECHNICIAN_ROLE_REFUSED', statusCode: 409, userIds: [tech.user_id] });
-    // Nothing was written, and the seat role is still acceptable to every writer.
+    // Nothing was written. The seat role is no longer a general writer's to re-write either: only
+    // the seat lifecycle (acceptance, revocation, conversion) changes who holds it.
     expect(await rolesOf(sponsor, tech.user_id)).toEqual([seatRole]);
-    await roles.replaceUserRoles(tech.user_id, [seatRole], context);
-    await runWithTenant(sponsor, () => db.transaction((trx) => User.updateUserRoles(trx, tech.user_id, [{ role_id: seatRole } as any])));
+    expect(await roles.replaceUserRoles(tech.user_id, [seatRole], context).catch((error) => error)).toMatchObject({ name: 'ManagedRoleOwnershipError', code: 'MANAGED_ROLE_MEMBERSHIP' });
+    expect(await runWithTenant(sponsor, () => db.transaction((trx) => User.updateUserRoles(trx, tech.user_id, [{ role_id: seatRole } as any]))).catch((error) => error))
+      .toMatchObject({ name: 'ManagedRoleOwnershipError', code: 'MANAGED_ROLE_MEMBERSHIP' });
     expect(await rolesOf(sponsor, tech.user_id)).toEqual([seatRole]);
 
     // An ordinary internal user takes any role through the same writers.

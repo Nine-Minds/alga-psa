@@ -20,7 +20,8 @@ import { assertSeatTechnicianWrite, assertUserRoleFloor, BaseService, ServiceCon
 import type { UserRoleFloorChange } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
 import { withTransaction } from '@alga-psa/db';
-import { unservedPermissionResources, unservedRoles } from '@alga-psa/auth/lib/permissionCapabilities';
+import { isManagedRoleOwnershipError } from '@alga-psa/types';
+import { unservedManagedOwners, unservedPermissionResources } from '@alga-psa/auth/lib/permissionCapabilities';
 import { 
   IRole, 
   IPermission, 
@@ -415,9 +416,10 @@ export class PermissionRoleService extends BaseService<IRole> {
 
     // A role that exists only for a capability is listed only for tenants served for it
     // (an ended arrangement or a kill switch leaves the row in place).
-    for (const hidden of await unservedRoles(context.tenant)) {
-      const visible = (query: Knex.QueryBuilder) => query.whereNot((role) =>
-        role.where({ 'r.role_name': hidden.role_name, 'r.msp': hidden.msp, 'r.client': hidden.client }));
+    const hiddenOwners = await unservedManagedOwners(context.tenant);
+    if (hiddenOwners.length > 0) {
+      const visible = (query: Knex.QueryBuilder) => query.where((role) =>
+        role.whereNull('r.managed_by').orWhereNotIn('r.managed_by', hiddenOwners));
       dataQuery = visible(dataQuery);
       countQuery = visible(countQuery);
     }
@@ -1579,6 +1581,8 @@ export class PermissionRoleService extends BaseService<IRole> {
           const role = await this.createRole(roleData, context);
           results.push(role);
         } catch (error) {
+          // The ownership refusal is the answer, not a generic conflict.
+          if (isManagedRoleOwnershipError(error)) throw error;
           logger.error(`Error creating role ${roleData.role_name}:`, error);
           throw new ConflictError(`Failed to create role ${roleData.role_name}. Check the role details and try again.`);
         }
@@ -1602,6 +1606,7 @@ export class PermissionRoleService extends BaseService<IRole> {
           const role = await this.updateRole(update.role_id, update.data, context);
           results.push(role);
         } catch (error) {
+          if (isManagedRoleOwnershipError(error)) throw error;
           logger.error(`Error updating role ${update.role_id}:`, error);
           throw new ConflictError(`Failed to update role ${update.role_id}. Check the role details and try again.`);
         }
@@ -1626,6 +1631,7 @@ export class PermissionRoleService extends BaseService<IRole> {
           await this.deleteRole(roleId, context);
           deletedCount++;
         } catch (error) {
+          if (isManagedRoleOwnershipError(error)) throw error;
           logger.error(`Error deleting role ${roleId}:`, error);
           errors.push(`${roleId}: Failed to delete role.`);
         }

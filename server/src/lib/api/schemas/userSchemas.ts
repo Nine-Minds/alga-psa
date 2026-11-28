@@ -112,7 +112,9 @@ export const roleResponseSchema = z.object({
   role_id: uuidSchema,
   role_name: z.string(),
   description: z.string(),
-  tenant: uuidSchema
+  tenant: uuidSchema,
+  /** Owning capability when a capability, not an administrator, controls this role (read-only). */
+  managed_by: z.string().nullable().optional()
 });
 
 // Permission schema

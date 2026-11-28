@@ -10,6 +10,7 @@ import {
 import { createTenantScopedRootQuery, type TenantScopedQuery } from './tenantScopedQuery';
 import { isOperationalWriteTable } from './operationalWriteTables';
 import { admitOperationalWrite, admitTenantWrite, isTenantWriteGuarded } from './writeAdmission';
+import { admitManagedRoleWrite, isManagedRoleTable } from './managedRoleOwnership';
 
 export interface TenantJoinOptions {
   type?: 'inner' | 'left';
@@ -108,17 +109,34 @@ function guardWrites<B extends Knex.QueryBuilder>(
   conn: Knex | Knex.Transaction,
   tenant: string,
   tableName: string,
+  rootAlias: string = tableName,
   armedOperation?: string,
+  inheritedProbe?: Knex.QueryBuilder,
 ): B {
-  if (!isOperationalWriteTable(tableName) || !isTenantWriteGuarded(tenant)) return builder;
+  const admission = isOperationalWriteTable(tableName) && isTenantWriteGuarded(tenant);
+  // Capability-owned roles: the one ownership guard sits on every write to the three role tables.
+  const ownership = isManagedRoleTable(tableName);
+  if (!admission && !ownership) return builder;
   const target = builder as any;
+  const originalClone = target.clone;
+  // The rows an update/delete will touch, captured as a SELECT before the terminal changes the method.
+  const probes = new WeakMap<object, Knex.QueryBuilder>();
+  if (inheritedProbe) probes.set(target, inheritedProbe);
 
   const arm = (result: any, operation: string) => {
     if (!result || result[WRITE_GUARDED]) return result;
     const originalThen = result.then;
     const originalStream = result.stream;
     result[WRITE_GUARDED] = true;
-    const admit = () => admitTenantWrite(conn, tenant, { table: tableName, operation: `${operation}:${tableName}` });
+    const admit = async () => {
+      if (admission) await admitTenantWrite(conn, tenant, { table: tableName, operation: `${operation}:${tableName}` });
+      if (ownership) {
+        await admitManagedRoleWrite({
+          conn, tenant, table: tableName as any, method: operation as any, rootAlias,
+          insert: result._single?.insert, update: result._single?.update, probe: probes.get(result),
+        });
+      }
+    };
     result.then = function guardedThen(onFulfilled?: any, onRejected?: any) {
       return admit().then(() => originalThen.call(result)).then(onFulfilled, onRejected);
     };
@@ -151,14 +169,21 @@ function guardWrites<B extends Knex.QueryBuilder>(
     const original = target[terminal];
     if (typeof original !== 'function') continue;
     target[terminal] = function guardedTerminal(this: any, ...args: unknown[]) {
+      // LEVERAGE: friction tenantdb-write-guard — a write terminal carries no row identity, so the ownership guard re-runs the builder's predicates as a cloned SELECT to learn which roles an update/delete touches
+      const probe = ownership && (terminal === 'update' || terminal === 'del' || terminal === 'delete')
+        ? originalClone.call(this) as Knex.QueryBuilder
+        : undefined;
       const result = original.apply(this, args);
+      if (probe && result) probes.set(result, probe);
       return arm(result, terminal);
     };
   }
 
-  const originalClone = target.clone;
   target.clone = function guardedClone(this: any, ...args: unknown[]) {
-    return guardWrites(originalClone.apply(this, args), conn, tenant, tableName, this[WRITE_GUARDED] ? this._method : undefined);
+    return guardWrites(
+      originalClone.apply(this, args), conn, tenant, tableName, rootAlias,
+      this[WRITE_GUARDED] ? this._method : undefined, this[WRITE_GUARDED] ? probes.get(this) : undefined,
+    );
   };
   if (armedOperation) arm(target, armedOperation);
   return builder;
@@ -231,7 +256,7 @@ export function tenantDb(conn: Knex | Knex.Transaction, tenantInput: string | nu
       alias: parsed.rootAlias,
       tenant,
       tenantColumn: tenantColumn(scope),
-      decorateBuilder: (builder) => guardWrites(builder, conn, tenant, parsed.tableName),
+      decorateBuilder: (builder) => guardWrites(builder, conn, tenant, parsed.tableName, parsed.rootAlias),
     });
   }
 
@@ -279,7 +304,7 @@ export function tenantDb(conn: Knex | Knex.Transaction, tenantInput: string | nu
         `${parsed.rootAlias}.${scope.childColumn}`,
       ]);
 
-    return guardWrites(conn<Row, Row[]>(tableExpression).whereExists(parentQuery), conn, tenant, parsed.tableName);
+    return guardWrites(conn<Row, Row[]>(tableExpression).whereExists(parentQuery), conn, tenant, parsed.tableName, parsed.rootAlias);
   }
 
   async function insertParentScoped<Row extends object = DynamicTenantRow>(

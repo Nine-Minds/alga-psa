@@ -2,7 +2,7 @@ import type { Knex } from 'knex';
 import { assertSeatTechnicianWrite, tenantDb } from '@alga-psa/db';
 import { UserSession } from '@alga-psa/db/models/UserSession';
 import { readCoManagedSeatAllocationState } from '@alga-psa/licensing';
-import { CO_MANAGED_SEAT_ROLE } from './seatRole';
+import { CO_MANAGED_SEAT_ROLE_OWNER, runAsCoManagedSeatLifecycle } from './seatRole';
 
 /**
  * Ending a seat technician's assignment: revoking it, and converting the technician to an
@@ -56,9 +56,9 @@ export interface CoManagedSeatRevocation {
   sessions_revoked: number;
 }
 
-/** The seat role ids of a sponsor, by the identity admission seeds them under. */
+/** The seat role ids of a sponsor, by the stable identity admission gives the role. */
 const seatRoleIds = (trx: Knex.Transaction, sponsorTenant: string): Promise<string[]> =>
-  tenantDb(trx, sponsorTenant).table('roles').where(CO_MANAGED_SEAT_ROLE).pluck('role_id');
+  tenantDb(trx, sponsorTenant).table('roles').where({ managed_by: CO_MANAGED_SEAT_ROLE_OWNER }).pluck('role_id');
 
 interface LockedAssignment {
   trialFunded?: boolean;
@@ -202,7 +202,8 @@ export async function revokeCoManagedSeatAssignment(
 
     const sponsor = tenantDb(trx, input.sponsorTenant);
     await sponsor.table('users').where('user_id', assignment.user_id).update({ is_inactive: true, updated_at: new Date() });
-    await sponsor.table('user_roles').where('user_id', assignment.user_id).del();
+    // Revocation is a seat lifecycle command: the one writer that may take the seat role away.
+    await runAsCoManagedSeatLifecycle(() => sponsor.table('user_roles').where('user_id', assignment.user_id as string).del());
     const sessions = await UserSession.revokeAllForUser(input.sponsorTenant, assignment.user_id, trx);
     return { ...result, revoked: true, sessions_revoked: sessions };
   });
@@ -284,7 +285,7 @@ export async function convertCoManagedSeatTechnicianToMspUser(
     // Only this sponsor's MSP roles, and never the seat role.
     const allowed = await sponsor.table('roles').whereIn('role_id', roleIds as string[])
       .where({ msp: true, client: false })
-      .whereRaw('NOT (role_name = ?)', [CO_MANAGED_SEAT_ROLE.role_name]).pluck('role_id');
+      .whereNull('managed_by').pluck('role_id');
     if (allowed.length !== roleIds.length) throw new CoManagedSeatEndError('ROLE_NOT_ALLOWED');
     const user = await sponsor.table('users').where('user_id', userId).forUpdate().first('user_type');
     if (user?.user_type !== 'internal') throw new CoManagedSeatEndError('ASSIGNMENT_NOT_LIVE');
@@ -300,8 +301,11 @@ export async function convertCoManagedSeatTechnicianToMspUser(
     await endAssignment(trx, input.sponsorTenant, assignment, 'converted');
     // Now an ordinary user: the guard that held the seat role in place has nothing to refuse.
     await assertSeatTechnicianWrite(trx, input.sponsorTenant, [userId], { roleIds });
-    await sponsor.table('user_roles').where('user_id', userId).del();
-    await sponsor.table('user_roles').insert(roleIds.map((roleId) => ({ tenant: input.sponsorTenant, user_id: userId, role_id: roleId })));
+    // Conversion is a seat lifecycle command: it replaces the seat role with the MSP roles named.
+    await runAsCoManagedSeatLifecycle(async () => {
+      await sponsor.table('user_roles').where('user_id', userId).del();
+      await sponsor.table('user_roles').insert(roleIds.map((roleId) => ({ tenant: input.sponsorTenant, user_id: userId, role_id: roleId })));
+    });
     await sponsor.table('users').where('user_id', userId).update({ is_inactive: false, updated_at: new Date() });
     await input.seatAdmission.assertWithinLimit(trx, input.sponsorTenant, admission);
 

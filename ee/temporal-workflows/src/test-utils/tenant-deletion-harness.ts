@@ -12,6 +12,8 @@ vi.mock('@alga-psa/db', async () => ({
   tenantDb: harness.tenantDb,
   getTenantTableScope: (await import('../../../../packages/db/src/lib/tenantTableMetadata')).getTenantTableScope,
   retryOnReadOnly: (operation: () => Promise<unknown>) => operation(),
+  // The fake tenantDb has no ownership guard, so the teardown scope only has to run its body.
+  runAsTenantTeardown: (_tenant: string, operation: () => Promise<unknown>) => operation(),
 }));
 vi.mock('@alga-psa/shared/models/tagModel.js', () => ({ TagModel: {} }));
 vi.mock('@alga-psa/core/secrets', () => ({ getSecret: vi.fn() }));

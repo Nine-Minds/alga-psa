@@ -55,6 +55,8 @@ export interface IRole {
   msp: boolean;
   client: boolean;
   tenant?: string;
+  /** Owning capability key when a capability, not an administrator, controls this role. */
+  managed_by?: string | null;
 }
 
 /**

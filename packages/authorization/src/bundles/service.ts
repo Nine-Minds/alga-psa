@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { ManagedRoleOwnershipError } from '@alga-psa/types';
 import type { AuthorizationEvaluationInput, AuthorizationSubject, RelationshipTemplateKey } from '../kernel';
 import type { BundleNarrowingRule } from '../kernel/providers/bundleProvider';
 import { assertBundleRuleCatalogInput } from './catalog';
@@ -548,10 +549,12 @@ async function assertTargetExists(trx: Knex | Knex.Transaction, target: BundleAs
     case 'role': {
       const row = await scopedDb.table('roles')
         .where({ role_id: target.targetId })
-        .first('role_id');
+        .first('role_id', 'managed_by');
       if (!row) {
         throw new Error('Bundle assignment target role was not found in tenant scope.');
       }
+      // A capability-owned role has one authoritative grant set; a bundle would widen it.
+      if (row.managed_by) throw new ManagedRoleOwnershipError('MANAGED_ROLE_GRANTS', row.managed_by, [row.role_id]);
       return;
     }
     case 'team': {

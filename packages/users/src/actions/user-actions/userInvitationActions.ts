@@ -122,6 +122,8 @@ export const sendUserInvitation = withAuth(async (
 
     const role = await tenantDb(knex, tenant).table('roles')
       .where({ role_id: params.roleId, msp: true })
+      // A capability-owned role (the seat role) is never offered by an ordinary invitation.
+      .whereNull('managed_by')
       .first();
     if (!role) {
       return { success: false, error: 'Invalid role selected', errorCode: 'INVALID_ROLE' };
@@ -405,7 +407,8 @@ export async function completeUserInvitationSetup(
             const invitationRole = invitationRoleId
               ? await tenantDb(trx, tenant).table('roles').where({ role_id: invitationRoleId }).first()
               : undefined;
-            if (!invitationRole) {
+            // An invitation minted before ownership existed may still name a capability-owned role.
+            if (!invitationRole || invitationRole.managed_by) {
               return {
                 rejected: {
                   success: false,

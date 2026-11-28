@@ -4180,7 +4180,8 @@
       "builtInRename": "Nie można zmieniać nazw wbudowanych ról.",
       "duplicateName": "Rola o nazwie „{{name}}” już istnieje dla tego portalu.",
       "lastMspAdmin": "Organizacja musi zachować co najmniej jednego aktywnego użytkownika z rolą MSP Admin.",
-      "lastRole": "Użytkownik musi zachować co najmniej jedną rolę. Najpierw przypisz inną rolę, a potem usuń tę."
+      "lastRole": "Użytkownik musi zachować co najmniej jedną rolę. Najpierw przypisz inną rolę, a potem usuń tę.",
+      "managedRole": "Ta rola jest zarządzana przez Co-managed IT i nie można jej tutaj zmieniać."
     },
     "secrets": {
       "tenantContextMissing": "Brak kontekstu organizacji. Odśwież stronę i spróbuj ponownie.",
@@ -4679,5 +4680,15 @@
       "openMenu": "Otwórz menu",
       "inactive": "Nieaktywny"
     }
+  },
+  "managedRole": {
+    "badge": "Zarządzane przez Co-managed IT",
+    "readOnlyNotice": "Tą rolą zarządza Alga. Jej nazwy, uprawnień i członków nie można tutaj zmieniać.",
+    "scopeHint": "Aby zmienić, do jakich tablic i projektów ma dostęp technik, edytuj ustalenie współzarządzania klienta.",
+    "openArrangement": "Otwórz Co-managed IT",
+    "permissionsLocked": "Uprawnienia roli {{role}} są zarządzane przez Co-managed IT i nie można ich tutaj zmieniać.",
+    "viewDetails": "Pokaż uprawnienia",
+    "detailsTitle": "{{role}} (tylko do odczytu)",
+    "assignedHint": "Przypisane przez miejsce współzarządzania. Zmiany dostępu wprowadza się w ustaleniu klienta."
   }
 }

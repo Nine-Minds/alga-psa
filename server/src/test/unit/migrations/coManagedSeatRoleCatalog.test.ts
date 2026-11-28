@@ -121,7 +121,7 @@ describe('the seat role in the permission catalog', () => {
     expect(without.missingGrants.some((grant: any) => grant.roleKey === SEAT_KEY)).toBe(false);
     expect(summarizePlan(without).unresolvedRoles.some((role: any) => role.roleKey === SEAT_KEY)).toBe(false);
 
-    const seat = { tenant: TENANT, role_id: 'seat', role_name: 'Seat Technician', msp: true, client: false };
+    const seat = { tenant: TENANT, role_id: 'seat', managed_by: 'co-managed-seat', role_name: 'Seat Technician', msp: true, client: false };
     const withRole = buildCatalogPlan({ tenantId: TENANT, product: 'psa', permissions: [], roles: [...roles, seat], rolePermissions: [] });
     expect(withRole.roleResolution.find((role: any) => role.roleKey === SEAT_KEY)).toEqual({ roleKey: SEAT_KEY, status: 'resolved', roleId: 'seat' });
     expect(withRole.missingGrants.find((grant: any) => grant.roleKey === SEAT_KEY).identities).toHaveLength(seatRole.grants.length);

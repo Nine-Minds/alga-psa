@@ -73,7 +73,8 @@ const DEFAULT_ROLES = {
  * catalog never reaches it by default.
  *
  * Synchronization treats one like a `legacy` role: granted when the tenant has it, skipped
- * silently (`capability-absent`) when it does not, never created.
+ * silently (`capability-absent`) when it does not, never created. It finds the role by `owner`
+ * (`roles.managed_by`), so a lookalike with the same name is never a grant target.
  *
  * `msp:Seat Technician` is the role of a client's technician working inside the sponsoring
  * MSP's workspace on a co-managed seat. Operational work only: it holds no sales, billing,
@@ -87,6 +88,8 @@ const CAPABILITY_ROLES = {
       msp: true,
       client: false,
       capabilities: ['co-managed-seat'],
+      // `roles.managed_by` of the role: its stable identity. The role is found by this, not by name.
+      owner: 'co-managed-seat',
       description: 'Client technician working this workspace on a co-managed seat',
       grants: [
         'asset:read',

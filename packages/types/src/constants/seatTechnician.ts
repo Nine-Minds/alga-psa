@@ -10,6 +10,9 @@
 /** The seat role's name, as seat admission seeds it (`msp = true`, `client = false`). */
 export const CO_MANAGED_SEAT_ROLE_NAME = 'Seat Technician';
 
+/** The `roles.managed_by` value of the seat role: the capability that owns it. */
+export const CO_MANAGED_SEAT_ROLE_OWNER_KEY = 'co-managed-seat';
+
 export type SeatTechnicianGuardCode = 'SEAT_TECHNICIAN_ROLE_REFUSED' | 'SEAT_TECHNICIAN_TEAM_REFUSED';
 
 const SEAT_TECHNICIAN_GUARD_MESSAGES: Record<SeatTechnicianGuardCode, string> = {
