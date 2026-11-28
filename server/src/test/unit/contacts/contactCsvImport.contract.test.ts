@@ -22,6 +22,12 @@ vi.mock('@alga-psa/authorization/recordCreateAuthorization', async (importOrigin
   assertRecordCreateAllowed: testState.assertRecordCreateAllowedMock,
 }));
 
+// createContactAs checks contact:create through the canonical RBAC module; grant it so the import logic runs.
+vi.mock('@alga-psa/authorization/rbac', async (importOriginal) => ({
+  ...(await importOriginal<any>()),
+  hasPermission: vi.fn(async () => true),
+}));
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => (...args: any[]) =>
     action({ user_id: testState.userId, tenant: testState.tenant }, { tenant: testState.tenant }, ...args),
