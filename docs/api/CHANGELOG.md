@@ -2,6 +2,18 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-27 — `GET /api/v1/software/search` works with API keys
+
+**Affected endpoint:** `GET /api/v1/software/search`
+
+Calls authenticated with `x-api-key` always failed with `500`, because the route did not pass the key's identity to the search action. Session callers were not affected.
+
+**Changes:**
+
+- API-key callers now get `200` with the paginated results. The search runs as the key's user, requires `asset:read`, and applies record-level read authorization.
+- Missing or invalid credentials return `401`, and a co-managed workspace still awaiting acceptance returns `409` (`CO_MANAGED_NOT_ACTIVE`). Both use the standard `{ "error": { "code", "message" } }` body. A caller without `asset:read` gets `403`, and invalid parameters get `400`, with the route's existing `{ "error": "<message>" }` body. Other failures are still `500`.
+- `limit` is documented as 1–100, matching what the route already enforced (the schema said 200). `limit=101` or more returns `400`.
+
 ## 2026-11-24 — Portal invitations: resend by invitation state, configurable validity
 
 **Affected endpoints:** `POST /api/v1/clients/{id}/portal-invitations`, `POST /api/v1/portal-invitations/bulk`
