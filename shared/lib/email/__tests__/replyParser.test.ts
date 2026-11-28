@@ -193,4 +193,79 @@ On Thu, Nov 20, 2025 at 7:58 AM Software <support@nineminds.com> wrote:
       expect(result.sanitizedHtml).not.toMatch(/<[^>]*$/);
     });
   });
+
+  // A successful parse owns the stored comment body (shared/services/email/inboundReplyBody.ts),
+  // so the parser is the only place left that can keep a trim from storing nothing at all. The
+  // text fallback above restores the text side; HTML-only mail has no text side to restore.
+  describe('a trim that consumes the whole body', () => {
+    it('preserves an HTML-only bottom answer after a legacy notification attribution', () => {
+      const result = parseEmailReply({
+        text: '',
+        html: '<div>On Mon, Nov 17, 2026 Dana Tech wrote:</div>'
+          + '<div style="display:none">[ALGA-REPLY-TOKEN bottom-token]</div>'
+          + '<div>--- Please reply above this line ---</div><div>New comment added</div>'
+          + '<div>Yes, Thursday works. Please book it.</div>',
+      });
+
+      expect(htmlToVisibleText(result.sanitizedHtml ?? '')).toContain('Yes, Thursday works. Please book it.');
+      expect(result.appliedHeuristics).not.toContain('html-marker-boundary');
+    });
+
+    it('restores the original HTML when a reply arrives entirely inside a quote', () => {
+      const result = parseEmailReply({
+        text: '',
+        html: '<blockquote type="cite"><p>Our invoice 1234 is wrong, please check the hours.</p></blockquote>',
+      });
+
+      expect(result.sanitizedHtml).toContain('invoice 1234 is wrong');
+      expect(result.appliedHeuristics).toContain('html-restore-original');
+      expect(result.warnings).toContain('Reply heuristics yielded empty body; using original HTML.');
+    });
+
+    it('restores the original HTML when the trailing signature trim empties it too', () => {
+      const result = parseEmailReply({
+        text: '',
+        html: '<blockquote class="gmail_quote"><p>Please confirm the hours on invoice 1234.</p></blockquote>'
+          + '<div>Thanks,</div><div>Jane</div>',
+      });
+
+      expect(htmlToVisibleText(result.sanitizedHtml ?? '')).toContain('Jane');
+    });
+
+    it('closes the paragraph above a banner when the text part confirms the boundary', () => {
+      const result = parseEmailReply({
+        // Quote prefixes independently confirm that nothing authored follows the banner.
+        text: 'Yes, Thursday works, please book it.\n> --- Please reply above this line ---\n> New comment added',
+        html: '<p>Yes, Thursday works, please book it.</p>--- Please reply above this line ---'
+          + '<div>New comment added</div>',
+      });
+
+      expect(result.sanitizedHtml).toContain('</p>');
+      expect(htmlToVisibleText(result.sanitizedHtml ?? '')).toContain('Yes, Thursday works, please book it.');
+      expect(htmlToVisibleText(result.sanitizedHtml ?? '')).not.toContain('New comment added');
+    });
+
+    it.each(['', '<html><body>', '<div><br></div>', '<div>&nbsp;</div>'])(
+      'keeps the answer of an HTML-only bottom reply after empty wrapper %j', (wrapper) => {
+        const result = parseEmailReply({
+          text: '',
+          html: wrapper + '<div style="display:none;max-height:0;overflow:hidden;">[ALGA-REPLY-TOKEN bottom-token'
+            + ' ticketId=11111111-2222-3333-4444-555555555555]</div>'
+            + '<div>--- Please reply above this line ---</div><div>New comment added</div>'
+            + '<div>Yes, Thursday works, please book it.</div>',
+        });
+
+        expect(htmlToVisibleText(result.sanitizedHtml ?? '')).toContain('Yes, Thursday works, please book it.');
+      },
+    );
+
+    it('leaves an empty reply to our own notification empty', () => {
+      const result = parseEmailReply({
+        text: '[ALGA-REPLY-TOKEN empty-token ticketId=ticket-1]\n--- Please reply above this line ---\nNew comment added',
+      });
+
+      expect(result.sanitizedText).toBe('');
+      expect(result.appliedHeuristics).not.toContain('html-restore-original');
+    });
+  });
 });

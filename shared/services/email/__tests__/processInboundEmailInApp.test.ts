@@ -1,7 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createHash } from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { EmailMessageDetails } from '../../../interfaces/inbound-email.interfaces';
 import { parseEmailReply } from '../../../lib/email/replyParser';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const readEmailFixture = (file: string) =>
+  fs.readFileSync(path.join(__dirname, '..', '..', '..', 'lib', 'email', '__fixtures__', file), 'utf8');
+
+/** Non-empty visible text of each stored BlockNote block, inline links included. */
+function blockTexts(blocks: any[]): string[] {
+  const inlineText = (node: any): string =>
+    typeof node?.text === 'string' ? node.text : (node?.content ?? []).map(inlineText).join('');
+  return blocks
+    .map((block) => (block?.content ?? []).map(inlineText).join('').trim())
+    .filter(Boolean);
+}
 
 /** Same algorithm as BaseEmailService.logEmailSendResult / notificationLoopDetection.ts. */
 function replyTokenHash(token: string): string {
@@ -724,6 +740,52 @@ describe('processInboundEmailInApp', () => {
 
     expect(result).toMatchObject({ outcome: 'replied', ticketId: 'ticket-html-only' });
     expect(createCommentFromEmailMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([false, true])('processes an attachment-only reply and reaches the comment writer (Alga token: %j)', async (withToken) => {
+    parseEmailReplyBodyMock.mockImplementation(async (body: any) => parseEmailReply(body));
+    findContactByEmailMock.mockResolvedValue({ contact_id: 'contact-1', client_id: 'client-1' });
+    reopenPolicyRows.ticket = { ticket_id: 'ticket-attachments', board_id: 'board-1', client_id: 'client-1', is_closed: false };
+    if (withToken) {
+      findTicketByReplyTokenMock.mockResolvedValue({ ticketId: 'ticket-attachments' });
+    } else {
+      findTicketByEmailThreadMock.mockResolvedValue({ ticketId: 'ticket-attachments', matchedBy: 'in_reply_to' });
+    }
+    const attachments = [{ id: 'attachment-1', name: 'diagnostics.txt', contentType: 'text/plain', size: 128 }];
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        from: { email: 'client@example.com', name: 'Client' },
+        inReplyTo: '<previous-message@example.test>',
+        body: {
+          text: withToken ? '[ALGA-REPLY-TOKEN attachment-token]\n--- Please reply above this line ---\nOld notification' : '',
+          html: '<div dir="ltr"><br></div>',
+        },
+        attachments,
+      }),
+    });
+
+    expect(result).toMatchObject({ outcome: 'replied', ticketId: 'ticket-attachments' });
+    expect(createCommentFromEmailMock).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        ticket_id: 'ticket-attachments',
+        author_type: 'contact',
+        contact_id: 'contact-1',
+        source: 'email',
+        inboundReplyEvent: expect.objectContaining({ from: 'client@example.com' }),
+      }),
+      'tenant-1',
+    );
+    expect(processInboundEmailArtifactsBestEffortMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ticketId: 'ticket-attachments',
+        scopeLabel: 'reply',
+        emailData: expect.objectContaining({ attachments }),
+      }),
+    );
+    expect(createTicketFromEmailMock).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -1570,6 +1632,149 @@ describe('processInboundEmailInApp', () => {
     expect(result.diagnostics?.notificationLoop?.evidence.tokenHashMatched).toBe(false);
     expect(result.outcome).not.toBe('skipped');
     expect(createTicketFromEmailMock).toHaveBeenCalled();
+  });
+
+  // alga-2026-0003353: the parser's safety net hands back the text result when it rejects its
+  // own HTML trim. The comment must then be built from that text, never from the original body,
+  // which still carries every level of quoted history.
+  describe('safety-net rejection of the HTML trim', () => {
+    const AUTHORED = 'Thursday afternoon works for us. Please go ahead and book it.';
+    const QUOTED_HISTORY = [
+      'ALGA-REPLY-TOKEN',
+      'Please reply above this line',
+      'still sealed in the shipping box',
+      'Comment from Dana Tech',
+      'Enroll both machines in Intune before delivery',
+      'runbooks/laptop-imaging',
+    ];
+
+    const storedCommentContent = async (emailId: string, body = {
+      text: readEmailFixture('gmail-reply-own-reply.txt'),
+      html: readEmailFixture('gmail-reply-own-reply.html'),
+    }): Promise<string> => {
+      findTicketByReplyTokenMock.mockResolvedValue({ ticketId: 'ticket-own-reply' });
+      let content = '';
+      createCommentFromEmailMock.mockImplementation(async (data: any) => {
+        content = String(data.content ?? '');
+        return 'comment-own-reply';
+      });
+
+      const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+      const result = await processInboundEmailInApp({
+        tenantId: 'tenant-1',
+        providerId: 'provider-1',
+        emailData: buildEmailData({
+          id: emailId,
+          from: { email: 'jane.client@example.test', name: 'Jane Client' },
+          body,
+        }),
+      });
+
+      expect(result).toMatchObject({ outcome: 'replied', ticketId: 'ticket-own-reply' });
+      expect(createCommentFromEmailMock).toHaveBeenCalledTimes(1);
+      return content;
+    };
+
+    it('builds the comment from the text result, not the original HTML', async () => {
+      parseEmailReplyBodyMock.mockResolvedValue({
+        sanitizedText: AUTHORED,
+        sanitizedHtml: undefined,
+        confidence: 'high',
+        strategy: 'custom-boundary',
+        appliedHeuristics: ['token-strip', 'explicit-boundary', 'html-blockquote-trim', 'html-trim-rejected'],
+        warnings: [
+          'HTML blockquote trim removed significantly more content than text heuristics; using text result.',
+        ],
+        tokens: { conversationToken: 'OWNREPLY-TOKEN-11', ticketId: 'ticket-own-reply' },
+      });
+
+      const content = await storedCommentContent('email-safety-net-rejected-1');
+
+      expect(content).toContain(AUTHORED);
+      for (const leaked of QUOTED_HISTORY) {
+        expect(content).not.toContain(leaked);
+      }
+    });
+
+    it('stores only the authored reply for the real Gmail reply-to-own-reply mail', async () => {
+      parseEmailReplyBodyMock.mockImplementation(async (body: any) => parseEmailReply(body));
+
+      const content = await storedCommentContent('email-own-reply-end-to-end-1');
+
+      expect(content).toContain(AUTHORED);
+      for (const leaked of QUOTED_HISTORY) {
+        expect(content).not.toContain(leaked);
+      }
+      // The comment the reporter saw was 65 blocks of thread. All that is left here is the
+      // authored line and the attribution ahead of the cut quote (existing parser behaviour).
+      const texts = blockTexts(JSON.parse(content));
+      expect(texts[0]).toBe(AUTHORED);
+      expect(texts).toHaveLength(2);
+      expect(texts[1]).toMatch(/^On Mon, .*wrote:$/);
+    });
+
+    it('stores a multipart bottom answer below a legacy notification', async () => {
+      parseEmailReplyBodyMock.mockImplementation(async (body: any) => parseEmailReply(body));
+      const answer = 'No, do not restart it. Payroll is still running.';
+      const content = await storedCommentContent('email-multipart-bottom-reply', {
+        text: 'See my answer below.\nOn Mon, Nov 17, 2026 Dana Tech wrote:\n'
+          + '[ALGA-REPLY-TOKEN OWNREPLY-TOKEN-11]\n--- Please reply above this line ---\n'
+          + `Old notification\n${answer}`,
+        html: '<p>See my answer below.</p><div>On Mon, Nov 17, 2026 Dana Tech wrote:</div>'
+          + '<div style="display:none">[ALGA-REPLY-TOKEN OWNREPLY-TOKEN-11]</div>'
+          + `<p>--- Please reply above this line ---</p><p>Old notification</p><p>${answer}</p>`,
+      });
+
+      expect(content).toContain(answer);
+    });
+
+    it.each([
+      'The deployment failed with this error:',
+      'Subject: Deployment failure',
+      'Here is what the deployment script wrote:',
+      'Deployment details:\n> Here is what the deployment script wrote:',
+      'On startup the deployment script wrote:',
+      'Deployment details:\nOn startup the deployment script wrote:',
+      'Deployment details:\n> On startup the deployment script wrote:',
+      'Deployment details:\nOn startup at 09:15 the deployment script wrote:',
+      'Deployment details:\n> On startup at 09:15 the deployment script wrote:',
+      'Deployment details:\nOn Nov 17 the deployment script wrote:',
+      'Deployment details:\n> On Nov 17 the deployment script wrote:',
+      'Le 17 novembre le script a écrit :',
+      'Deployment details:\n> Le 17 novembre le script a écrit :',
+      'Am 17. November schrieb das Skript:',
+      'Deployment details:\n> Am 17. November schrieb das Skript:',
+    ])(
+      'stores the trailing error quotation introduced by %s above an explicit reply boundary', async (prefix) => {
+        parseEmailReplyBodyMock.mockImplementation(async (body: any) => parseEmailReply(body));
+        const content = await storedCommentContent('email-trailing-error-quotation', {
+          text: readEmailFixture('authored-trailing-quotation.txt').replace('The deployment failed with this error:', prefix)
+            + '\n[ALGA-REPLY-TOKEN OWNREPLY-TOKEN-11]',
+          html: '',
+        });
+
+        expect(content).toContain('ACCESS DENIED (code 5). The service account cannot access the deployment share.');
+        expect(content).toContain('Retry failed. No machines were updated.');
+        expect(content).not.toContain('Old notification');
+        expect(content).not.toContain('[ALGA-REPLY-TOKEN');
+      },
+    );
+    it.each(['-----Original Message-----', ''])(
+      'stores pasted report evidence and subsequent instructions with separator %j', async (separator) => {
+        parseEmailReplyBodyMock.mockImplementation(async (body: any) => parseEmailReply(body));
+        const content = await storedCommentContent('email-forwarded-report', {
+          text: readEmailFixture('authored-forwarded-report.txt').replace('-----Original Message-----\n', separator ? `${separator}\n` : '')
+            + '\n[ALGA-REPLY-TOKEN OWNREPLY-TOKEN-11]',
+          html: '',
+        });
+
+        expect(content).toContain('Delivery failed: 550 5.1.1 Recipient address rejected.');
+        expect(content).toContain('Recipient: operations@example.test');
+        expect(content).toContain('This is the recipient we need you to restore. Please call me before making changes.');
+        expect(content).not.toContain('Old notification');
+        expect(content).not.toContain('[ALGA-REPLY-TOKEN');
+      },
+    );
   });
 
   describe('forwarded-sender attribution (new-ticket path)', () => {

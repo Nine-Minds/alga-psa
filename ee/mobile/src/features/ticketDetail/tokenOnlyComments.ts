@@ -1,6 +1,6 @@
 // Hides historical inbound-email comments that are nothing but automated
 // reply markers (e.g. "[ALGA-REPLY-TOKEN:...]"). Regexes ported verbatim from
-// stripAutomatedReplyMarkers in shared/services/email/processInboundEmailInApp.ts.
+// stripAutomatedReplyMarkers in shared/services/email/inboundReplyBody.ts.
 import type { TicketComment } from "../../api/tickets";
 import { extractPlainTextFromSerializedRichEditorContent } from "../ticketRichText/helpers";
 

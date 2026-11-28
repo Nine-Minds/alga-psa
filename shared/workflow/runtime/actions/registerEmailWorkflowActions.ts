@@ -19,6 +19,7 @@ import {
 } from '../../actions/emailWorkflowActions';
 import { countNonInlineAttachments } from '../../../services/email/countNonInlineAttachments';
 import { extractEmailDomain } from '../../../lib/email/addressUtils';
+import { hasSubstantiveReplyContent, substantiveReplyBody } from '../../../services/email/inboundReplyBody';
 
 // =============================================================================
 // SHARED OUTPUT SCHEMAS FOR EMAIL ACTIONS
@@ -122,19 +123,20 @@ const inboundTicketDefaultsSchema = z.object({
   location_id: z.string().optional().describe('Default location ID')
 });
 
-function buildCommentPayload(parsedEmail: any, emailData: any) {
-  const sanitizedHtml = parsedEmail?.sanitizedHtml;
-  const sanitizedText = parsedEmail?.sanitizedText;
-  const content = sanitizedHtml || sanitizedText || emailData?.body?.html || emailData?.body?.text || '';
-  const format = sanitizedHtml
-    ? 'html'
-    : sanitizedText
-      ? 'text'
-      : emailData?.body?.html
-        ? 'html'
-        : 'text';
-  const metadata = parsedEmail?.metadata;
-  return { content, format, metadata };
+/**
+ * Body the workflow stores for an inbound email, as the serialized BlockNote blocks a
+ * comment and a ticket description are read as — the same shape processInboundEmailInApp
+ * writes, so neither path renders raw markup. `substantiveReplyBody` decides which body
+ * is used: a successful parse owns it, and an empty parsed reply stays empty instead of
+ * reviving the quoted history the parser removed (alga-2026-0003353).
+ *
+ * BlockNote conversion is imported lazily: the action registry is loaded by workers that
+ * never touch an email body.
+ */
+async function buildInboundBodyBlocks(parsedEmail: any, emailData: any): Promise<string> {
+  const { blocksFromEmailBody } = await import('../../../services/email/inboundEmbeddedImageUrlRewrite');
+  const body = substantiveReplyBody(parsedEmail, emailData?.body);
+  return JSON.stringify(await blocksFromEmailBody(body));
 }
 
 /**
@@ -589,10 +591,14 @@ export function registerEmailWorkflowActionsV2(): void {
     handler: async (input, ctx) => {
       const tenant = ctx.tenantId ?? '';
       const emailData = input.emailData;
+      // One body for the description and the first comment, exactly as the in-app path
+      // stores them. The raw text must not come back here either: an empty parsed reply
+      // would otherwise put the quoted notification into the description.
+      const bodyBlocks = await buildInboundBodyBlocks(input.parsedEmail, emailData);
 
       const ticketResult = await createTicketFromEmail({
         title: emailData.subject,
-        description: input.parsedEmail?.sanitizedText || emailData.body?.text || '',
+        description: bodyBlocks,
         client_id: input.targetClientId ?? undefined,
         contact_id: input.targetContactId ?? undefined,
         source: 'email',
@@ -614,11 +620,9 @@ export function registerEmailWorkflowActionsV2(): void {
         }
       }, tenant);
 
-      const commentPayload = buildCommentPayload(input.parsedEmail, emailData);
       const commentId = await createCommentFromEmail({
         ticket_id: ticketResult.ticket_id,
-        content: commentPayload.content,
-        format: commentPayload.format,
+        content: bodyBlocks,
         source: 'email',
         author_type: 'contact',
         author_id: input.targetAuthorUserId ?? undefined,
@@ -627,7 +631,7 @@ export function registerEmailWorkflowActionsV2(): void {
         // (covered by the TICKET_CREATED email).
         opensTicket: true,
         attachmentCount: countNonInlineAttachments(emailData.attachments),
-        metadata: withEmailSenderMetadata(commentPayload.metadata, emailData.from)
+        metadata: withEmailSenderMetadata(input.parsedEmail?.metadata, emailData.from)
       }, tenant);
 
       return {
@@ -716,14 +720,28 @@ export function registerEmailWorkflowActionsV2(): void {
       source: z.string().optional().describe('Source of the comment (e.g., "email")')
     }),
     outputSchema: z.object({
-      comment_id: z.string().describe('Created comment unique identifier')
+      comment_id: z.string().optional().describe('Created comment unique identifier, absent when the reply held no content')
     }),
     sideEffectful: true,
     idempotency: { mode: 'engineProvided' },
     ui: { label: 'Create Comment from Parsed Email', category: 'Email' },
     handler: async (input, ctx) => {
       const tenant = ctx.tenantId ?? '';
-      const commentPayload = buildCommentPayload(input.parsedEmail, input.emailData);
+      if (!input.emailData?.attachments?.length
+        && !hasSubstantiveReplyContent(input.parsedEmail, input.emailData?.body)) {
+        // The in-app processor drops a token-only reply before it ever reaches a comment. The
+        // workflow definition has no such step, so the action makes the same judgement here
+        // rather than leaving a blank comment on the ticket (alga-2026-0003353).
+        // Attachments are a reply too: the comment writer must still update response state,
+        // record customer-replied activity, and notify staff before attachment processing.
+        console.info('create_comment_from_parsed_email: skipping reply with no content', {
+          tenantId: tenant,
+          ticketId: input.ticketId,
+          emailId: input.emailData?.id,
+        });
+        return {};
+      }
+      const bodyBlocks = await buildInboundBodyBlocks(input.parsedEmail, input.emailData);
       const senderEmail = input.emailData?.from?.email;
       const matchedContact =
         !input.contact_id && senderEmail
@@ -735,13 +753,12 @@ export function registerEmailWorkflowActionsV2(): void {
 
       const commentId = await createCommentFromEmail({
         ticket_id: input.ticketId,
-        content: commentPayload.content,
-        format: commentPayload.format,
+        content: bodyBlocks,
         source: input.source ?? 'email',
         author_type: resolvedAuthorType,
         author_id: resolvedAuthorId,
         contact_id: resolvedContactId,
-        metadata: withEmailSenderMetadata(commentPayload.metadata, input.emailData?.from)
+        metadata: withEmailSenderMetadata(input.parsedEmail?.metadata, input.emailData?.from)
       }, tenant);
       return { comment_id: commentId };
     }

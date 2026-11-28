@@ -531,4 +531,287 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
     expect(action!.outputSchema!.parse(result)).toMatchObject({ success, source: 'replyToken' });
   });
 
+  // alga-2026-0003353: a successful parse owns the comment body on this path too. When the
+  // parser's safety net rejects its own HTML trim it hands back only the text, and the raw
+  // body — still carrying every level of quoted history — must not be revived.
+  describe('comment body after a safety-net rejection', () => {
+    const AUTHORED = 'Thursday afternoon works for us. Please go ahead and book it.';
+    const QUOTED_MAIL = {
+      text: `${AUTHORED}\n\nOn Mon, Nov 17, 2026 at 8:42 AM Jane Client <jane.client@example.test>\nwrote:\n\n> [ALGA-REPLY-TOKEN OWNREPLY-TOKEN-11]\n> --- Please reply above this line ---\n> Comment from Dana Tech\n`,
+      html: `<div>${AUTHORED}</div><blockquote class="gmail_quote"><div>[ALGA-REPLY-TOKEN OWNREPLY-TOKEN-11]</div><div>--- Please reply above this line ---</div><div>Comment from Dana Tech</div></blockquote>`,
+    };
+    const LEAKS = ['[ALGA-REPLY-TOKEN', 'Please reply above this line', 'Comment from Dana Tech'];
+
+    const emailData = {
+      id: 'email-own-reply',
+      subject: 'Re: Laptop deployment',
+      body: QUOTED_MAIL,
+      from: { email: 'jane.client@example.test' },
+      to: [{ email: 'support@example.com' }],
+    };
+
+    /** Visible text of the stored body, which is serialized BlockNote blocks. */
+    const visibleText = (content: string): string => {
+      const collect = (node: any): string[] => {
+        if (Array.isArray(node)) return node.flatMap(collect);
+        if (!node || typeof node !== 'object') return [];
+        return [
+          ...(typeof node.text === 'string' ? [node.text] : []),
+          ...collect(node.content),
+          ...collect(node.children),
+        ];
+      };
+      return collect(JSON.parse(content)).join(' ').trim();
+    };
+
+    const expectNoLeaks = (content: string) => {
+      // Markup is converted, never stored as literal tags.
+      expect(content).not.toContain('<div');
+      expect(content).not.toContain('<br');
+      for (const leaked of LEAKS) {
+        expect(visibleText(content)).not.toContain(leaked);
+      }
+    };
+
+    const commentActionResult = async (parsedEmail: any, inboundEmail: any = emailData) => {
+      const { registerEmailWorkflowActionsV2 } = await import('../registerEmailWorkflowActions');
+      registerEmailWorkflowActionsV2();
+      const action = registeredActions.find((entry) => entry.id === 'create_comment_from_parsed_email');
+      expect(action).toBeDefined();
+
+      const result = await action!.handler(
+        { ticketId: 'ticket-own-reply', emailData: inboundEmail, parsedEmail },
+        { tenantId: 'tenant-1' }
+      );
+      // Whatever the handler decides, its output still has to satisfy the registered schema.
+      action!.outputSchema!.parse(result);
+      return result as any;
+    };
+
+    const writtenComment = async (parsedEmail: any, inboundEmail: any = emailData) => {
+      await commentActionResult(parsedEmail, inboundEmail);
+
+      expect(createCommentFromEmailMock).toHaveBeenCalledTimes(1);
+      return createCommentFromEmailMock.mock.calls[0][0] as any;
+    };
+
+    const writtenTicket = async (parsedEmail: any, inboundEmail: any = emailData) => {
+      const { registerEmailWorkflowActionsV2 } = await import('../registerEmailWorkflowActions');
+      registerEmailWorkflowActionsV2();
+      const action = registeredActions.find((entry) => entry.id === 'create_ticket_with_initial_comment');
+      expect(action).toBeDefined();
+
+      await action!.handler(
+        {
+          emailData: inboundEmail,
+          parsedEmail,
+          ticketDefaults: { board_id: 'board-1' },
+          targetClientId: 'client-1',
+          targetContactId: 'contact-1',
+          targetLocationId: null,
+        },
+        { tenantId: 'tenant-1' }
+      );
+
+      return {
+        ticket: createTicketFromEmailMock.mock.calls[0][0] as any,
+        comment: createCommentFromEmailMock.mock.calls[0][0] as any,
+      };
+    };
+
+    const REJECTED_TRIM = {
+      sanitizedText: AUTHORED,
+      sanitizedHtml: undefined,
+      confidence: 'high',
+      strategy: 'custom-boundary',
+      appliedHeuristics: ['token-strip', 'explicit-boundary', 'html-blockquote-trim', 'html-trim-rejected'],
+      warnings: [
+        'HTML blockquote trim removed significantly more content than text heuristics; using text result.',
+      ],
+      metadata: {},
+    };
+    const EMPTY_PARSE = {
+      sanitizedText: '',
+      sanitizedHtml: undefined,
+      confidence: 'high',
+      strategy: 'custom-boundary',
+      appliedHeuristics: ['token-strip', 'explicit-boundary'],
+      warnings: [],
+      metadata: {},
+    };
+
+    it('writes the parsed text, not the untrimmed original body', async () => {
+      const comment = await writtenComment(REJECTED_TRIM);
+
+      expect(visibleText(comment.content)).toBe(AUTHORED);
+      expectNoLeaks(comment.content);
+    });
+
+    it.each([
+      { fixture: 'authored-trailing-quotation.txt', introduction: 'Le 17 novembre le script a écrit :' },
+      { fixture: 'authored-trailing-quotation.txt', introduction: 'Am 17. November schrieb das Skript:' },
+      { fixture: 'authored-forwarded-report.txt', introduction: undefined },
+      { fixture: 'authored-forwarded-report.txt', introduction: undefined, removeSeparator: true },
+    ])('stores authored evidence from $fixture ($introduction, removeSeparator: $removeSeparator)', async ({ fixture, introduction, removeSeparator }) => {
+      const { parseEmailReply } = await import('../../../../lib/email/replyParser');
+      const fixturePath = new URL(`../../../../lib/email/__fixtures__/${fixture}`, import.meta.url);
+      let text = fs.readFileSync(fixturePath, 'utf8');
+      if (introduction) {
+        text = text.replace('The deployment failed with this error:', `Deployment details:\n${introduction}`);
+      }
+      if (removeSeparator) {
+        text = text.replace('-----Original Message-----\n', '');
+      }
+      const authored = text.split('\n\n--- Please reply above this line ---')[0];
+      const body = { text };
+      const comment = await writtenComment(parseEmailReply(body), { ...emailData, body });
+
+      for (const line of authored.split('\n').filter(Boolean)) {
+        expect(visibleText(comment.content)).toContain(line.replace(/^>\s*/, ''));
+      }
+      expect(visibleText(comment.content)).not.toContain('Old notification');
+      expect(visibleText(comment.content)).not.toContain('Please reply above this line');
+    });
+
+    // Same judgement the in-app processor makes before a comment exists: a reply that held
+    // nothing above the Alga boundary leaves no comment at all, rather than a blank one.
+    it('writes no comment at all for an empty parse', async () => {
+      const result = await commentActionResult(EMPTY_PARSE);
+
+      expect(createCommentFromEmailMock).not.toHaveBeenCalled();
+      expect(result.comment_id).toBeUndefined();
+    });
+
+    it.each([false, true])('creates a comment for an attachment-only reply (Alga token: %j)', async (withToken) => {
+      const { parseEmailReply } = await import('../../../../lib/email/replyParser');
+      const body = {
+        text: withToken ? '[ALGA-REPLY-TOKEN attachment-token]\n--- Please reply above this line ---\nOld notification' : '',
+        html: '<div dir="ltr"><br></div>',
+      };
+      const comment = await writtenComment(parseEmailReply(body), {
+        ...emailData,
+        body,
+        inReplyTo: '<original-message@example.test>',
+        attachments: [{ id: 'attachment-1', name: 'diagnostics.txt', contentType: 'text/plain', size: 128 }],
+      });
+
+      expect(comment.author_type).toBe('contact');
+      expect(comment.source).toBe('email');
+      expect(visibleText(comment.content)).toBe('');
+      expect(comment.content.length).toBeGreaterThan(0);
+      expectNoLeaks(comment.content);
+    });
+
+    // The parser reports an empty reply through sanitizedText alone; its HTML side may still
+    // hold the quoted notification when no blockquote wrapped it.
+    it('ignores the retained HTML of a reply the parser reported as empty', async () => {
+      await commentActionResult({ ...EMPTY_PARSE, sanitizedHtml: QUOTED_MAIL.html });
+
+      expect(createCommentFromEmailMock).not.toHaveBeenCalled();
+    });
+
+    it('stores a trimmed HTML-only reply as blocks, not as literal markup', async () => {
+      const comment = await writtenComment(
+        { ...REJECTED_TRIM, sanitizedText: '', sanitizedHtml: `<div dir="ltr">${AUTHORED}</div><br>` },
+        { ...emailData, body: { html: QUOTED_MAIL.html } }
+      );
+
+      expect(visibleText(comment.content)).toContain(AUTHORED);
+      expectNoLeaks(comment.content);
+    });
+
+    it.each([
+      ['', false],
+      ['<div>On Mon, Nov 17, 2026 Dana Tech wrote:</div>', false],
+      ['', true],
+      ['<div>On Mon, Nov 17, 2026 Dana Tech wrote:</div>', true],
+    ])(
+      'keeps a bottom answer with attribution %j and text part %j', async (attribution, multipart) => {
+        const { parseEmailReply } = await import('../../../../lib/email/replyParser');
+        const answer = 'No, do not restart it. Payroll is still running.';
+        const html = '<p>See my answer below.</p>' + attribution
+          + '<div style="display:none">[ALGA-REPLY-TOKEN bottom-token]</div>'
+          + '<p>--- Please reply above this line ---</p><p>Old notification</p>'
+          + `<p>${answer}</p>`;
+        const text = multipart ? 'See my answer below.\n'
+          + (attribution ? 'On Mon, Nov 17, 2026 Dana Tech wrote:\n' : '')
+          + '[ALGA-REPLY-TOKEN bottom-token]\n--- Please reply above this line ---\nOld notification\n'
+          + answer : '';
+        const comment = await writtenComment(
+          parseEmailReply({ text, html }),
+          { ...emailData, body: { text, html } },
+        );
+
+        expect(visibleText(comment.content)).toContain(answer);
+      },
+    );
+
+    it('builds the new ticket description and first comment from the parsed body', async () => {
+      const metadata = { parser: {
+        strategy: REJECTED_TRIM.strategy,
+        confidence: REJECTED_TRIM.confidence,
+        heuristics: REJECTED_TRIM.appliedHeuristics,
+        warnings: REJECTED_TRIM.warnings,
+      } };
+      const { ticket, comment } = await writtenTicket({ ...REJECTED_TRIM, metadata });
+
+      expect(visibleText(ticket.description)).toBe(AUTHORED);
+      expect(comment.content).toBe(ticket.description);
+      expect(comment.opensTicket).toBe(true);
+      expect(comment.metadata.parser).toEqual(metadata.parser);
+      expectNoLeaks(ticket.description);
+    });
+
+    it.each([
+      ['reply', false],
+      ['new ticket', false],
+      ['reply', true],
+      ['new ticket', true],
+    ])('preserves an image-only %s (multipart: %j)', async (kind, multipart) => {
+      const { parseEmailReply } = await import('../../../../lib/email/replyParser');
+      const html = '<img src="https://example.test/screenshot.png">'
+        + (multipart ? '<div data-alga-reply-boundary="true">--- Please reply above this line ---</div>'
+          + '<div style="display:none">[ALGA-REPLY-TOKEN image-token]</div>'
+          + '<p>Old notification</p><img src="https://example.test/quoted-logo.png">' : '');
+      const text = multipart
+        ? '[ALGA-REPLY-TOKEN image-token]\n--- Please reply above this line ---\nOld notification' : '';
+      const inboundEmail = { ...emailData, body: { text, html }, attachments: [] };
+      const parsed = parseEmailReply({ text, html });
+      expect(parsed.sanitizedText).toBe('');
+      expect(parsed.sanitizedHtml).toContain('https://example.test/screenshot.png');
+      let content: string;
+      if (kind === 'reply') {
+        content = (await writtenComment(parsed, inboundEmail)).content;
+      } else {
+        const { ticket, comment } = await writtenTicket(parsed, inboundEmail);
+        content = ticket.description;
+        expect(comment.content).toBe(content);
+      }
+
+      expect(JSON.parse(content)).toEqual(expect.arrayContaining([
+        expect.objectContaining({ type: 'image', props: expect.objectContaining({ url: 'https://example.test/screenshot.png' }) }),
+      ]));
+      expectNoLeaks(content);
+      expect(content).not.toContain('Old notification');
+      expect(content).not.toContain('quoted-logo.png');
+    });
+
+    it('does not restore the raw text into the description of an empty parse', async () => {
+      const { ticket, comment } = await writtenTicket(EMPTY_PARSE);
+
+      expect(visibleText(ticket.description)).toBe('');
+      expectNoLeaks(ticket.description);
+      // Still a valid body: an empty string would fail comment validation and leave the
+      // ticket behind with no comment at all.
+      expect(comment.content.length).toBeGreaterThan(0);
+      expectNoLeaks(comment.content);
+    });
+
+    it('still falls back to the raw body when parsing never produced a result', async () => {
+      const comment = await writtenComment(undefined);
+
+      expect(visibleText(comment.content)).toContain(AUTHORED);
+    });
+  });
+
 });

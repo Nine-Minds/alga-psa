@@ -110,6 +110,110 @@ interface TrimResult {
   heuristic?: string;
 }
 
+interface HtmlTrimResult extends TrimResult {
+  preserveUntrimmedText?: boolean;
+}
+
+/** Quoted lines a wrapped attribution must introduce: a whole quoted message, not one sentence. */
+const MIN_WRAPPED_HEADER_QUOTED_LINES = 2;
+/** Months a provider attribution spells out, in the languages the `On …` form covers. */
+const ATTRIBUTION_MONTHS = '(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\\.?';
+/** A provider attribution names the moment it quotes: a clock time or a calendar date. */
+const attributionDateTimeRegex = new RegExp(
+  `\\b\\d{1,2}:\\d{2}\\b|\\b\\d{1,2}[/.-]\\d{1,2}[/.-]\\d{2,4}\\b`
+  + `|\\b${ATTRIBUTION_MONTHS},?\\s+\\d{1,2}\\b|\\b\\d{1,2}\\s+${ATTRIBUTION_MONTHS}`,
+  'i',
+);
+/** A provider attribution's sender address sits directly before `wrote:`. */
+const providerAttributionTailRegex = /[^\s<>@]+@[^\s<>@]+\.[A-Za-z]{2,}>?\s*wrote:$/i;
+/** Localized providers place the sender before the verb, or after German `schrieb`. */
+const localizedProviderAttributionRegex = /(?:[^\s<>@]+@[^\s<>@]+\.[A-Za-z]{2,}>?\s*(?:a écrit|escribió|schrieb)\s*:|schrieb\s+[^:<>]*<?[^\s<>@]+@[^\s<>@]+\.[A-Za-z]{2,}>?\s*:)$/i;
+
+/**
+ * Does a quoted run start here and carry on to the end of the message, or to a signature?
+ * Authored text below a quote means the author quoted inline, so it is not trailing history
+ * and nothing above it may be cut.
+ */
+function isTrailingQuotedHistory(lines: string[], startIndex: number, config: ReplyParserConfig): boolean {
+  let quoted = 0;
+
+  for (let i = startIndex; i < lines.length; i += 1) {
+    const line = lines[i].trim();
+    if (!line) {
+      continue;
+    }
+    if (line.startsWith('>')) {
+      quoted += 1;
+      continue;
+    }
+    if (config.signatureMarkers.some((regex) => regex.test(line))) {
+      break;
+    }
+    return false;
+  }
+
+  return quoted >= MIN_WRAPPED_HEADER_QUOTED_LINES;
+}
+
+/**
+ * Does the attribution starting here introduce a quote the author wrote *around*, rather than
+ * the history trailing the message? Only a positive sighting counts: a `>`-quoted run followed
+ * by more authored text. Cutting at such an attribution deletes the customer's own answer —
+ * the reply-to-own-reply shape this parser exists to handle puts the answer right there
+ * (alga-2026-0003353). Mail whose quoted history is not `>`-prefixed (an Outlook envelope, an
+ * html-to-text rendition) shows no run, so it keeps being cut as before.
+ */
+function introducesInlineQuote(lines: string[], startIndex: number, config: ReplyParserConfig): boolean {
+  let sawQuotedLine = false;
+
+  for (let i = startIndex; i < lines.length; i += 1) {
+    const line = lines[i].trim();
+    if (!line) {
+      continue;
+    }
+    if (line.startsWith('>')) {
+      sawQuotedLine = true;
+      continue;
+    }
+    if (config.signatureMarkers.some((regex) => regex.test(line))) {
+      return false;
+    }
+    return sawQuotedLine;
+  }
+
+  return false;
+}
+
+/**
+ * Gmail wraps a long `On <date> <Name> <addr> wrote:` attribution over two or three lines, so the
+ * single-line `providerReplyHeaders` patterns miss it. Authored prose can wear the same clothes
+ * ("On Tuesday I emailed jane@example.com about the invoice. / She wrote: / > …"), and cutting
+ * there destroys everything the customer wrote below, so only accept the shape providers emit:
+ * a date or time in the `On …` part, the address immediately before `wrote:` within the next
+ * two lines, and the previous message — not a single line — quoted from there to the end of the
+ * message or to a signature.
+ */
+function isWrappedProviderReplyHeader(lines: string[], startIndex: number, config: ReplyParserConfig): boolean {
+  const opening = lines[startIndex].trim();
+  if (!/^on\b/i.test(opening) || !attributionDateTimeRegex.test(opening)) {
+    return false;
+  }
+
+  for (let offset = 1; offset <= 2; offset += 1) {
+    const continuation = (lines[startIndex + offset] ?? '').trim();
+    if (providerAttributionTailRegex.test(continuation)) {
+      return isTrailingQuotedHistory(lines, startIndex + offset + 1, config);
+    }
+    // A third line is allowed only after a folded display name, not an empty line,
+    // another attribution, or quoted content.
+    if (!/^[\p{L}\p{N} .,'’"_-]+<?$/u.test(continuation)) {
+      return false;
+    }
+  }
+
+  return false;
+}
+
 const htmlCommentTokenRegex = /<!--\s*alga:reply-token:(?<payload>[^-]+)-->?/i;
 const htmlTokenAttributeRegex = /data-alga-reply-token="(?<token>[^"]+)"/i;
 const htmlTicketAttributeRegex = /data-alga-ticket-id="(?<ticket>[^"]+)"/i;
@@ -271,6 +375,14 @@ export function htmlToVisibleText(html: string): string {
     .join('\n');
 }
 
+/** Media can carry a reply even when its HTML has no visible text. */
+export function hasHtmlMediaContent(html: string): boolean {
+  const content = stripPreheaderElements(html)
+    .replace(/<(?:style|script)\b[\s\S]*?<\/(?:style|script)>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '');
+  return /<(?:img|video|audio)\b/i.test(content);
+}
+
 /**
  * Does the blockquote's opening tag carry a marker mail clients use for quoted history?
  * Outlook's `elementToProof` class is explicitly NOT such a marker: it appears on
@@ -421,16 +533,30 @@ function trimQuotedHistoryBlockquotes(html: string, config: ReplyParserConfig): 
   return { html: result, removedQuote };
 }
 
-function trimHtmlAtBoundary(html: string, config: ReplyParserConfig): TrimResult {
+/**
+ * Where to cut for a marker found at `index`: the start of the tag that carries it, so an
+ * HTML-only reply retains no incomplete `<div` or `<p` and the element wrapping a marker goes
+ * with it. A closing tag is never severed from the element it closes — cutting at the `</p>`
+ * before a banner would leave the paragraph above it open.
+ */
+function cutOffsetForHtmlMarker(html: string, index: number): number {
+  const tagStart = html.lastIndexOf('<', index);
+  if (tagStart < 0) {
+    return index;
+  }
+  const insideTag = html.lastIndexOf('>', index) < tagStart;
+  if (insideTag) {
+    return tagStart;
+  }
+  return html.startsWith('</', tagStart) ? index : tagStart;
+}
+
+function trimHtmlAtBoundary(html: string, config: ReplyParserConfig, originalText: string): HtmlTrimResult {
   const attributeIndex = html.toLowerCase().indexOf(config.htmlBoundaryAttribute.toLowerCase());
 
   if (attributeIndex >= 0) {
-    // Cut before the marker's opening tag, not inside its attribute list.
-    // Otherwise an HTML-only reply retains an incomplete `<div` or `<p`.
-    const tagStart = html.lastIndexOf('<', attributeIndex);
-    const boundaryStart = tagStart >= 0 && html.lastIndexOf('>', attributeIndex) < tagStart ? tagStart : attributeIndex;
     return {
-      text: html.slice(0, boundaryStart).trim(),
+      text: html.slice(0, cutOffsetForHtmlMarker(html, attributeIndex)).trim(),
       matched: config.htmlBoundaryAttribute,
       heuristic: 'html-boundary',
     };
@@ -446,15 +572,65 @@ function trimHtmlAtBoundary(html: string, config: ReplyParserConfig): TrimResult
     };
   }
 
+  // Last resort: our own markers as visible HTML. Notifications sent before the boundary
+  // attribute existed carry the hidden token and the reply banner as ordinary nodes, and a
+  // client that quotes in plain divs (Outlook, and Gmail for some mail) gives the HTML side
+  // neither an attribute nor a blockquote to cut at. The text side cuts at the same marker,
+  // so without this the HTML kept the whole quoted notification and, being preferred over
+  // the text, was what the comment stored (alga-2026-0003353).
+  const markerIndex = earliestMarkerIndex(html, config);
+  if (markerIndex >= 0) {
+    // A text part is evidence only when its original suffix is entirely quoted history.
+    // Comparing already-trimmed renditions cannot detect an answer below the same marker
+    // in both parts. Preserve both renditions when that suffix is ambiguous, including
+    // HTML-only mail and notifications rendered without quote prefixes.
+    const textLines = normalizeText(originalText).split('\n');
+    const markerLine = textLines.findIndex((line) => earliestMarkerIndex(line, config) >= 0);
+    if (markerLine < 0 || !isTrailingQuotedHistory(textLines, markerLine, config)) {
+      return { text: html.trim(), preserveUntrimmedText: true };
+    }
+    return {
+      text: html.slice(0, cutOffsetForHtmlMarker(html, markerIndex)).trim(),
+      matched: 'alga-reply-marker',
+      heuristic: 'html-marker-boundary',
+    };
+  }
+
   return { text: html.trim() };
 }
 
-function stripProviderHeaders(text: string, config: ReplyParserConfig): TrimResult {
+/**
+ * Index of the first Alga reply marker (hidden token or reply banner) in an HTML body,
+ * or -1. A marker identifies a notification, but does not establish where its quote ends.
+ */
+function earliestMarkerIndex(html: string, config: ReplyParserConfig): number {
+  const haystack = html.toLowerCase();
+  const markers = ['[alga-reply-token', ...config.replyDelimiters.map((marker) => marker.toLowerCase())];
+  return markers.reduce((earliest, marker) => {
+    const index = haystack.indexOf(marker);
+    if (index < 0) return earliest;
+    return earliest < 0 ? index : Math.min(earliest, index);
+  }, -1);
+}
+
+function stripProviderHeaders(text: string, config: ReplyParserConfig, preserveUnattributedQuotes = false): TrimResult {
   const lines = normalizeText(text).split('\n');
   const kept: string[] = [];
   let matched: string | undefined;
   let heuristic: string | undefined;
   let removedQuoted = false;
+  const isProviderHeader = (line: string): boolean => {
+    if (!config.providerReplyHeaders.some((regex) => regex.test(line))) return false;
+    // Above our boundary, a script can have "written" authored evidence in any
+    // supported language. Require a sender address in the provider's attribution
+    // position; dates and times alone do not establish quoted history.
+    if (preserveUnattributedQuotes && !classifyForwardedHeaderField(line)) {
+      return /^on .+wrote:$/i.test(line)
+        ? attributionDateTimeRegex.test(line) && providerAttributionTailRegex.test(line)
+        : localizedProviderAttributionRegex.test(line);
+    }
+    return true;
+  };
 
   for (let i = 0; i < lines.length; i += 1) {
     const rawLine = lines[i];
@@ -465,14 +641,37 @@ function stripProviderHeaders(text: string, config: ReplyParserConfig): TrimResu
     }
 
     if (config.forwardedReplyHeaders.some((regex) => regex.test(line))) {
+      if (preserveUnattributedQuotes) {
+        // A forwarded report above our explicit boundary may be pasted evidence
+        // with instructions below it. Keep the remainder, including its envelope:
+        // continuing header stripping would cut at the report's From/Sent block.
+        kept.push(...lines.slice(i));
+        break;
+      }
       matched = line;
       heuristic = 'forwarded-header';
       break;
     }
 
-    if (config.providerReplyHeaders.some((regex) => regex.test(line))) {
+    if (isProviderHeader(line)) {
       const headerField = classifyForwardedHeaderField(line);
-      if (headerField && !parseForwardedHeaderBlock(lines, i)) {
+      if (headerField) {
+        // An Outlook envelope ends the reply only as a whole From/Sent/To/Subject block.
+        if (!parseForwardedHeaderBlock(lines, i)) {
+          kept.push(rawLine);
+          continue;
+        }
+        if (preserveUnattributedQuotes) {
+          // Above our boundary, an unquoted envelope can be pasted evidence even
+          // without a forwarding separator. It does not establish where the report
+          // ends or the customer's instructions resume, so preserve the remainder.
+          kept.push(...lines.slice(i));
+          break;
+        }
+      } else if (introducesInlineQuote(lines, i + 1, config)) {
+        // An `On … wrote:` line with the author still writing below its quote introduces an
+        // inline quote. Keep the line, drop its quoted run below, and keep reading: the words
+        // under it are the customer's.
         kept.push(rawLine);
         continue;
       }
@@ -482,8 +681,42 @@ function stripProviderHeaders(text: string, config: ReplyParserConfig): TrimResu
       break;
     }
 
+    if (isWrappedProviderReplyHeader(lines, i, config)) {
+      matched = line;
+      heuristic = 'provider-header';
+      break;
+    }
+
     if (line.startsWith('>')) {
-      removedQuoted = true;
+      let end = i + 1;
+      while (end < lines.length && (!lines[end].trim() || lines[end].trim().startsWith('>'))) {
+        end += 1;
+      }
+      const precedingLine = kept.filter((value) => value.trim()).at(-1)?.trim() ?? '';
+      const attributionLines = [precedingLine, ...lines.slice(i, end).map((value) => value.trim().replace(/^>\s*/, ''))];
+      const hasAttribution = [0, 1].some((index) => {
+        const value = attributionLines[index];
+        // Header-like fields need the same coherent envelope evidence here as above.
+        // An isolated Subject: (before or inside the quote) may label authored evidence.
+        if (classifyForwardedHeaderField(value)) {
+          return Boolean(parseForwardedHeaderBlock(attributionLines, index));
+        }
+        // Above an explicit boundary, "Here is what the deployment script wrote:"
+        // is not evidence of provider history. Keep legacy stripping elsewhere.
+        return (!preserveUnattributedQuotes && /\bwrote:$/i.test(value))
+          || isProviderHeader(value);
+      });
+      // Above an explicit boundary, even a trailing quotation may be authored evidence.
+      // Without an attribution, preserve it rather than silently deleting the customer's
+      // error message. Elsewhere, keep the existing inline-quotation safeguard.
+      if (!hasAttribution && (preserveUnattributedQuotes
+        || (precedingLine && introducesInlineQuote(lines, i, config)))) {
+        kept.push(...lines.slice(i, end));
+      } else {
+        kept.push(...lines.slice(i, end).filter((value) => !value.trim()));
+        removedQuoted = true;
+      }
+      i = end - 1;
       continue;
     }
 
@@ -657,21 +890,26 @@ export function parseEmailReply(input: ReplyParserInput, config: Partial<ReplyPa
   const textTokens = extractTokensFromText(originalText, mergedConfig);
   const tokens = mergeTokenMetadata(htmlTokens, textTokens);
 
-  // Step 1: explicit boundary trimming (text + html)
-  let { text: trimmedText, matched: textBoundary, heuristic: textBoundaryHeuristic } = trimAtExplicitDelimiter(
-    originalText,
-    mergedConfig,
-  );
+  // Step 1: explicit boundary trimming (text + html). An ambiguous legacy HTML boundary
+  // also invalidates the text cut: an authored bottom reply may follow it in both parts.
+  const trimmedHtmlResult = originalHtml
+    ? trimHtmlAtBoundary(originalHtml, mergedConfig, originalText)
+    : undefined;
+  const preserveUntrimmedText = trimmedHtmlResult?.preserveUntrimmedText;
+  const textTrim: TrimResult = preserveUntrimmedText
+    ? { text: originalText }
+    : trimAtExplicitDelimiter(originalText, mergedConfig);
+  let { text: trimmedText, matched: textBoundary, heuristic: textBoundaryHeuristic } = textTrim;
+
+  if (preserveUntrimmedText) {
+    appliedHeuristics.push('legacy-boundary-ambiguous');
+    warnings.push('Legacy reply marker has no confirmed trailing quote; preserving the body.');
+  }
 
   const tokenStrip = stripTokenArtifacts(trimmedText, mergedConfig);
   trimmedText = tokenStrip.text;
   if (tokenStrip.heuristic) {
     appliedHeuristics.push(tokenStrip.heuristic);
-  }
-
-  let trimmedHtmlResult: TrimResult | undefined;
-  if (originalHtml) {
-    trimmedHtmlResult = trimHtmlAtBoundary(originalHtml, mergedConfig);
   }
 
   if (textBoundaryHeuristic) {
@@ -684,17 +922,26 @@ export function parseEmailReply(input: ReplyParserInput, config: Partial<ReplyPa
   let strategy: ReplyParsingStrategy = textBoundary || trimmedHtmlResult?.matched ? 'custom-boundary' : 'fallback';
   let confidence: ReplyParseConfidence = strategy === 'custom-boundary' ? 'high' : 'low';
 
-  if (!textBoundary) {
-    const providerTrim = stripProviderHeaders(trimmedText, mergedConfig);
-    if (providerTrim.heuristic) {
-      trimmedText = providerTrim.text;
-      appliedHeuristics.push(providerTrim.heuristic);
+  // The explicit Alga boundary can sit several quote levels down (a reply to one's own reply
+  // quotes a notification that is itself quoted), so the text above it still holds provider
+  // attributions and quoted lines. Strip those too, but when the boundary already matched keep
+  // the result only if authored text survives: an empty reply above the boundary must stay
+  // empty, and ambiguous mail keeps preserving too much.
+  const providerTrim: TrimResult = preserveUntrimmedText
+    ? { text: trimmedText }
+    : stripProviderHeaders(trimmedText, mergedConfig, Boolean(textBoundary));
+  if (providerTrim.heuristic && (!textBoundary || providerTrim.text.trim())) {
+    trimmedText = providerTrim.text;
+    appliedHeuristics.push(providerTrim.heuristic);
+    if (!textBoundary) {
       strategy = providerTrim.heuristic === 'provider-header' ? 'provider-header' : 'quoted-block';
       confidence = confidence === 'high' ? 'high' : 'medium';
     }
   }
 
-  const signatureTrim = stripSignature(trimmedText, mergedConfig);
+  const signatureTrim: TrimResult = preserveUntrimmedText
+    ? { text: trimmedText }
+    : stripSignature(trimmedText, mergedConfig);
   if (signatureTrim.heuristic) {
     trimmedText = signatureTrim.text;
     appliedHeuristics.push(signatureTrim.heuristic);
@@ -755,19 +1002,43 @@ export function parseEmailReply(input: ReplyParserInput, config: Partial<ReplyPa
     // Safety net: if the blockquote cut removed a much larger share of the message than
     // the text heuristics did, the cut was likely a false positive — prefer the text
     // result so future misfires leak quoted history instead of destroying content.
-    if (sanitizedHtml && appliedHeuristics.includes('html-blockquote-trim')) {
+    //
+    // Provider headers and quote prefixes were already stripped together above. Do not
+    // strip again: removing the quote prefixes erased the evidence that an attribution
+    // introduced an inline question followed by the author's answer.
+    if (
+      sanitizedHtml
+      && (appliedHeuristics.includes('html-blockquote-trim') || appliedHeuristics.includes('html-marker-boundary'))
+    ) {
       const htmlVisibleLength = htmlToVisibleText(sanitizedHtml).replace(/\s+/g, ' ').trim().length;
       const textLength = trimmedText.replace(/\s+/g, ' ').trim().length;
       if (textLength > 0 && htmlVisibleLength < textLength * 0.5) {
         warnings.push(
           'HTML blockquote trim removed significantly more content than text heuristics; using text result.',
         );
+        appliedHeuristics.push('html-trim-rejected');
         sanitizedHtml = undefined;
       }
     }
 
     if (!sanitizedHtml) {
       sanitizedHtml = undefined;
+    }
+
+    // Never hand back a parse with nothing in it for mail that carried content. The consumer
+    // builds the comment from this result alone (shared/services/email/inboundReplyBody.ts), and
+    // the text fallback above can only restore a text part — HTML-only mail has none, so a trim
+    // that swallowed the whole body (a reply delivered inside a quote, an answer below an
+    // old-layout notification) would otherwise store a blank comment. An empty reply above our
+    // own boundary still stays empty, and preserving too much remains the safe failure mode.
+    const htmlHasContent = htmlToVisibleText(sanitizedHtml ?? '').trim().length > 0
+      || hasHtmlMediaContent(sanitizedHtml ?? '');
+    if (!htmlHasContent && !trimmedText && !emptyAlgaReply) {
+      sanitizedHtml = originalHtml.trim() || undefined;
+      if (sanitizedHtml) {
+        appliedHeuristics.push('html-restore-original');
+        warnings.push('Reply heuristics yielded empty body; using original HTML.');
+      }
     }
   }
 
