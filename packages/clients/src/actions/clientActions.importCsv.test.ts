@@ -31,6 +31,12 @@ vi.mock('@alga-psa/auth', () => ({
     fn(authUserRef.value, { tenant: 'tenant-1' }, ...args),
 }));
 
+// The billing write decision has its own DB suite (clientBillingWritePermission.db.test); here the subject may write billing.
+vi.mock('@alga-psa/auth/lib/clientBillingProjection', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/auth/lib/clientBillingProjection')>()),
+  canWriteClientBilling: async () => true,
+}));
+
 vi.mock('@alga-psa/core', () => ({
   deleteEntityWithValidation: vi.fn(),
   unparseCSV: vi.fn(),

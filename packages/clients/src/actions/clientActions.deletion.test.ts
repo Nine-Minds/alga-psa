@@ -34,8 +34,10 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 
 // The billing-column projection has its own DB suite (coManagedSeatCommercialLookups); here the subject may read billing.
-vi.mock('@alga-psa/auth/lib/clientBillingProjection', () => ({
+vi.mock('@alga-psa/auth/lib/clientBillingProjection', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/auth/lib/clientBillingProjection')>()),
   canReadClientBilling: async () => true,
+  canWriteClientBilling: async () => true,
   projectClientForSubject: async (_user: unknown, client: unknown) => client,
   projectClientsForSubject: async (_user: unknown, clients: unknown) => clients,
 }));

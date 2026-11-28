@@ -3,7 +3,7 @@
  * Business logic for client-related operations
  */
 
-import { CLIENT_BILLING_PERMISSION, omitClientBillingColumns } from '@alga-psa/auth/lib/clientBillingProjection';
+import { CLIENT_BILLING_PERMISSION, CLIENT_BILLING_WRITE_PERMISSION, omitClientBillingColumns, partitionClientBillingWrite } from '@alga-psa/auth/lib/clientBillingProjection';
 import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { deactivateClientScopedChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
 import { deactivateClientScopedTicketTemplates } from '@alga-psa/shared/lib/ticketTemplates';
@@ -734,6 +734,15 @@ export class ClientService extends BaseService<IClient> {
         delete updateData.properties;
       }
       const updatedFieldKeys = Object.keys(updateData);
+
+      // Changing a billing column needs billing:update; values equal to the stored ones are grandfathered.
+      const { changedBillingFields } = partitionClientBillingWrite(updateData, before as Record<string, unknown>);
+      if (
+        changedBillingFields.length > 0 &&
+        !(await hasApiContextPermission(context, CLIENT_BILLING_WRITE_PERMISSION.resource, CLIENT_BILLING_WRITE_PERMISSION.action, trx))
+      ) {
+        throw new ForbiddenError('Permission denied: Cannot update client billing settings');
+      }
 
       // LEVERAGE: pattern client-inactive-write — every clients.is_inactive write asks the seat arrangement guard in its transaction
       await assertClientPatchKeepsSeatArrangement(trx, context.tenant, id, updateData).catch((error: unknown) => {

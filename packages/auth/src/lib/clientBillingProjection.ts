@@ -84,3 +84,66 @@ export async function projectClientsForSubject<T extends object>(
   if (await canReadClientBilling(user, knexConnection)) return clients as T[];
   return clients.map(omitClientBillingColumns);
 }
+
+/** The permission that lets a subject change a client's billing columns, in its own scope. */
+export const CLIENT_BILLING_WRITE_PERMISSION = { resource: 'billing', action: 'update' } as const;
+
+/** The subject may change a client's billing columns when it holds `billing:update` in its own scope. */
+export async function canWriteClientBilling(
+  user: IUser,
+  knexConnection?: Knex | Knex.Transaction,
+): Promise<boolean> {
+  return hasPermission(user, CLIENT_BILLING_WRITE_PERMISSION.resource, CLIENT_BILLING_WRITE_PERMISSION.action, knexConnection);
+}
+
+const NUMERIC_TEXT = /^[+-]?(\d+\.?\d*|\.\d+)$/;
+
+/** Writers store `''` and `undefined` as null, so compare them as null. */
+function normalizeBillingValue(value: unknown): unknown {
+  return value === undefined || value === '' ? null : value;
+}
+
+function billingValuesEqual(next: unknown, stored: unknown): boolean {
+  const a = normalizeBillingValue(next);
+  const b = normalizeBillingValue(stored);
+  if (a === null || b === null) return a === b;
+  if (a instanceof Date || b instanceof Date) {
+    const at = a instanceof Date ? a.getTime() : new Date(a as string | number).getTime();
+    const bt = b instanceof Date ? b.getTime() : new Date(b as string | number).getTime();
+    return !Number.isNaN(at) && at === bt;
+  }
+  const isNumeric = (v: unknown) =>
+    (typeof v === 'number' && Number.isFinite(v)) || (typeof v === 'string' && NUMERIC_TEXT.test(v.trim()));
+  // Postgres returns decimals as strings: "500.00" is the same value as 500.
+  if (isNumeric(a) && isNumeric(b)) {
+    return Number(a) === Number(b);
+  }
+  if (typeof a === 'object' || typeof b === 'object') {
+    return JSON.stringify(a) === JSON.stringify(b);
+  }
+  return a === b;
+}
+
+/**
+ * Pure: which billing columns `update` would actually change against the `existing` row.
+ * A key counts as changed when it is present in `update` and its value differs from the stored one.
+ * A present value equal to the stored value is grandfathered, so a full-record round-trip still saves.
+ * `credit_balance` is not a stored column and is ignored. Keys absent from `update` are not changes.
+ */
+export function partitionClientBillingWrite(
+  update: Record<string, unknown>,
+  existing: Record<string, unknown>,
+): { changedBillingFields: ClientBillingColumn[]; nonBillingUpdate: Record<string, unknown> } {
+  const changedBillingFields: ClientBillingColumn[] = [];
+  const nonBillingUpdate: Record<string, unknown> = {};
+  const billing = new Set<string>(CLIENT_BILLING_COLUMNS);
+  for (const [key, value] of Object.entries(update)) {
+    if (!billing.has(key)) {
+      nonBillingUpdate[key] = value;
+      continue;
+    }
+    if (key === 'credit_balance') continue;
+    if (!billingValuesEqual(value, existing[key])) changedBillingFields.push(key as ClientBillingColumn);
+  }
+  return { changedBillingFields, nonBillingUpdate };
+}
