@@ -3,7 +3,8 @@
  *
  * A seat technician signs in to the MSP application and sees the operational surface only: tickets, projects,
  * devices, documents and time. Billing, settings, user administration, dispatch, reports and the co-managed
- * administration answer not found. The technician cannot be given an API key, and a REST request made with a key
+ * administration answer not found. The one exception is the technician's own profile (`/msp/profile`), which opens with
+ * seat-scoped tabs (no API Keys). The technician cannot be given an API key, and a REST request made with a key
  * that predates the seat is refused.
  *
  * STATUS: written, NOT RUN. It needs the app server and the e2e database, and this slice was built without
@@ -51,6 +52,7 @@ const CLOSED_ROUTES = [
   '/msp/co-managed',
   '/msp/clients',
   '/msp/tickets/customer',
+  '/msp/profile/anything',
 ];
 
 type Db = ReturnType<typeof createTestDbConnection>;
@@ -151,8 +153,26 @@ test.describe('Co-managed seat: the operational surface resolves per principal (
         expect(response?.status(), `${route} opens for a seat technician`).toBe(200);
       }
 
-      // No API key can be issued: the issuance boundary refuses, whatever the caller. (The profile screen that
-      // issues keys is itself not found for a seat technician, so the boundary is exercised directly.)
+      // The technician's own profile opens from the header account menu and by URL, and shows their own details.
+      await page.goto(`${baseUrl}/msp/tickets`, { waitUntil: 'domcontentloaded' });
+      await page.locator('#user-profile-menu-item').or(page.getByRole('button', { name: /account|profile/i }).first()).first().click().catch(() => undefined);
+      const profile = await page.goto(`${baseUrl}/msp/profile`, { waitUntil: 'domcontentloaded' });
+      expect(profile?.status(), 'the self-profile opens for a seat technician').toBe(200);
+      await expect(page.locator('#email')).toHaveValue(seat.email);
+      // Edit a personal field, save, reload: the value persists.
+      await page.locator('#firstName').fill('Seated');
+      await page.locator('#save-button').click();
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await expect(page.locator('#firstName')).toHaveValue('Seated');
+
+      // T002: no API Keys tab, and a saved ?tab=api-keys link lands on Profile without mounting key management.
+      await expect(page.getByRole('tab', { name: /API Keys/i })).toHaveCount(0);
+      await page.goto(`${baseUrl}/msp/profile?tab=api-keys`, { waitUntil: 'domcontentloaded' });
+      await expect(page.locator('#firstName')).toBeVisible();
+      await expect(page.getByRole('tab', { name: /API Keys/i })).toHaveCount(0);
+
+      // No API key can be issued: the issuance boundary refuses, whatever the caller, with the profile tab hidden too.
+      // (The boundary is exercised directly.)
       const { ApiKeyService } = await import('@alga-psa/auth');
       await expect(ApiKeyService.createApiKey(seat.userId, 'attempt', undefined, { tenantId: tenant })).rejects.toMatchObject({
         code: 'API_CREDENTIALS_REFUSED',

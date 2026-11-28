@@ -25,7 +25,8 @@ import UserAvatarUpload from '@alga-psa/users/components/profile/UserAvatarUploa
 import SessionManagement from '@alga-psa/auth/components/settings/security/SessionManagement';
 import ApiKeysSetup from './ApiKeysSetup';
 import KeyboardShortcutsPanel from '@/components/keyboard-shortcuts/KeyboardShortcutsPanel';
-import { isCalendarEnterpriseEdition, resolveUserProfileTab } from '@alga-psa/integrations/lib/calendarAvailability';
+import { isCalendarEnterpriseEdition } from '@alga-psa/integrations/lib/calendarAvailability';
+import { getEligibleProfileTabIds, resolveEligibleProfileTab } from './profileTabEligibility';
 import { useProduct } from '@/context/ProductContext';
 import { toast } from 'react-hot-toast';
 import { translateFieldValidation, validateContactName, validateEmailAddress, validateEmailAddressField, validatePhoneNumberField } from '@alga-psa/validation';
@@ -87,7 +88,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const { t: tValidation } = useTranslation('common');
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
-  const { isAlgaDesk } = useProduct();
+  const { isAlgaDesk, surfaceKind } = useProduct();
   const isCalendarTabAvailable = isCalendarEnterpriseEdition() && !isAlgaDesk;
   
   const [user, setUser] = useState<IUserWithRoles | null>(null);
@@ -108,16 +109,15 @@ export default function UserProfile({ userId }: UserProfileProps) {
   
   // Determine initial tab from URL or default to "Profile"
   const initialTab = useMemo(() => {
-    return resolveUserProfileTab(tabParam, isCalendarTabAvailable);
-  }, [isCalendarTabAvailable, tabParam]);
+    return resolveEligibleProfileTab(tabParam, { surfaceKind, isCalendarTabAvailable });
+  }, [isCalendarTabAvailable, surfaceKind, tabParam]);
 
   const [activeTab, setActiveTab] = useState<string>(initialTab);
 
   // Update active tab when URL parameter changes
   useEffect(() => {
-    const targetTab = resolveUserProfileTab(tabParam, isCalendarTabAvailable);
-    setActiveTab(prev => prev !== targetTab ? targetTab : prev);
-  }, [isCalendarTabAvailable, tabParam]);
+    setActiveTab(prev => prev !== initialTab ? initialTab : prev);
+  }, [initialTab]);
   
   // Handle tab change and update URL
   const handleTabChange = (tab: string) => {
@@ -542,10 +542,14 @@ export default function UserProfile({ userId }: UserProfileProps) {
     }] : []),
   ];
 
+  // Navigation and the URL tab come from the same eligibility decision.
+  const eligibleTabIds = getEligibleProfileTabIds({ surfaceKind, isCalendarTabAvailable });
+  const eligibleTabs = tabContent.filter((tab) => eligibleTabIds.includes(tab.id));
+
   return (
     <div className="space-y-6">
       <CustomTabs 
-        tabs={tabContent}
+        tabs={eligibleTabs}
         defaultTab={activeTab}
         onTabChange={handleTabChange}
       />
