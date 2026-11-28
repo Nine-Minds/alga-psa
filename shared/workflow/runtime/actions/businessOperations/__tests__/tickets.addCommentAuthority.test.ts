@@ -44,7 +44,7 @@ describe('tickets.add_comment co-managed authority', () => {
   });
 
   it('does not create a comment when the registered record authority denies scope', async () => {
-    coManagedWorkflowTicketSeam.register(() => ({ retain: async () => { throw Object.assign(new Error('scope denied'), { code: 'SCOPE_DENIED' }); } }));
+    coManagedWorkflowTicketSeam.register(() => ({ retain: vi.fn(), authorize: async () => { throw Object.assign(new Error('scope denied'), { code: 'SCOPE_DENIED' }); } }));
     const action = await getAddCommentAction();
 
     await expect(action.handler(action.inputSchema.parse({ ticket_id: 'd410d992-4e99-43e7-9390-f6b0ff744509', body: 'hello', visibility: 'public' }), ctx))
@@ -60,13 +60,24 @@ describe('tickets.add_comment co-managed authority', () => {
     expect(createCommentMock).not.toHaveBeenCalled();
   });
 
-  it('creates an in-scope comment after the authority retains the requested field', async () => {
+  it('fails closed when a served tenant provider only implements the legacy retain', async () => {
     const retain = vi.fn(async () => undefined);
     coManagedWorkflowTicketSeam.register(() => ({ retain }));
     const action = await getAddCommentAction();
 
+    await expect(action.handler(action.inputSchema.parse({ ticket_id: 'd410d992-4e99-43e7-9390-f6b0ff744509', body: 'hello', visibility: 'public' }), ctx))
+      .rejects.toMatchObject({ code: 'WORKFLOW_TICKET_AUTHORITY_UNAVAILABLE', reason: 'operation-authorizer-missing' });
+    expect(retain).not.toHaveBeenCalled();
+    expect(createCommentMock).not.toHaveBeenCalled();
+  });
+
+  it('creates an in-scope comment after the authority authorizes the requested update', async () => {
+    const authorize = vi.fn(async () => ({ redactedFields: [] as string[] }));
+    coManagedWorkflowTicketSeam.register(() => ({ retain: vi.fn(), authorize }));
+    const action = await getAddCommentAction();
+
     await action.handler(action.inputSchema.parse({ ticket_id: 'd410d992-4e99-43e7-9390-f6b0ff744509', body: 'hello', visibility: 'public' }), ctx);
-    expect(retain).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ fields: ['comments'], ticketId: 'd410d992-4e99-43e7-9390-f6b0ff744509' }));
+    expect(authorize).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ operation: 'update', fields: ['comments'], ticketId: 'd410d992-4e99-43e7-9390-f6b0ff744509' }));
     expect(createCommentMock).toHaveBeenCalledOnce();
   });
 });

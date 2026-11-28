@@ -81,7 +81,7 @@ Selector-scoped read (`tickets.find` by `ticket_number` or `external_ref`) is au
 - Add `WORKFLOW_TICKET_PATCH_FIELDS` (valid patch keys) and `WORKFLOW_TICKET_UPDATABLE_COLUMNS` (valid SQL columns) + `workflowTicketColumnPatch`; `update_fields` validates the patch allow-list before reading the ticket and wraps the `TicketModel.updateTicket` column object.
 - `tickets.find` uses `grant.ticket`/`grant.redactedFields` instead of its own query; `loadTicketDisplayNames` gains a `redactions` argument and skips masked lookups; comments/attachments includes are gated on their mask; `attributes` are omitted when any stored alias is masked.
 
-### 7. `server/migrations/20261102120000_add_ticket_external_ref_lookup_index.cjs` — indexed selector (perf/correctness)
+### 7. `server/migrations/20261128120000_add_ticket_external_ref_lookup_index.cjs` — indexed selector (perf/correctness)
 - `tickets.find` by `external_ref` now resolves candidates through a scope-narrowed query; add the `(tenant, (attributes->>'external_ref'))` index with `CREATE INDEX CONCURRENTLY`, `transaction: false`, invalid-index recovery, and wrong-definition refusal (reuse PR #4125's migration verbatim — already validated on PostgreSQL 15 and Citus 12.1, and it satisfies `migration-lint`). Include the isolated up/down/repeat/interrupted-recovery integration test.
 
 ### 8. Test registration fixups

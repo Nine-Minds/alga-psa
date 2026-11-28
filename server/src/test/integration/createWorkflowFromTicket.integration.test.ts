@@ -30,6 +30,7 @@ import { publishWorkflowDefinitionAction } from '@alga-psa/workflows/actions';
 import { resolveInputMapping } from '../../../../shared/workflow/runtime/utils/mappingResolver';
 import { getActionRegistryV2 } from '../../../../shared/workflow/runtime/registries/actionRegistry';
 import { initializeWorkflowRuntimeV2 } from '../../../../shared/workflow/runtime/init';
+import { useNativeCoManagedVerdict } from '../../../../shared/workflow/runtime/actions/__tests__/helpers/nativeCoManagedVerdict';
 
 vi.mock('@alga-psa/auth', async () => {
   const { createAuthModuleMock } = await import('../../../test-utils/authModuleMock');
@@ -78,6 +79,8 @@ async function loadEeAction() {
 }
 
 describe('Create workflow from ticket (integration)', () => {
+  useNativeCoManagedVerdict();
+
   const context = new TestContext({ runSeeds: true });
   let realPermissionCheck: typeof rbac.hasPermission;
 

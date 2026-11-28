@@ -8,6 +8,7 @@ import { tenantDb, withTransaction } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createClient, createTenant, createUser } from '../../../test-utils/testDataFactory';
 import { TicketService } from '../../lib/api/services/TicketService';
+import { useNativeCoManagedVerdict } from '../../../../shared/workflow/runtime/actions/__tests__/helpers/nativeCoManagedVerdict';
 
 /**
  * Ticket creation sites must publish TICKET_CREATED (one per created ticket, after commit) through a
@@ -56,6 +57,8 @@ const repoRoot = path.resolve(__dirname, '../../../..');
 const readSource = (rel: string) => fs.readFileSync(path.join(repoRoot, rel), 'utf8');
 
 describe('TICKET_CREATED coverage across creation sites (integration)', () => {
+  useNativeCoManagedVerdict();
+
   let tenant: string;
   let scoped: ReturnType<typeof tenantDb>;
   let clientId: string;
