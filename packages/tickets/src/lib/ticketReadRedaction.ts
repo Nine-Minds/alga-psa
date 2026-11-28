@@ -1,4 +1,10 @@
-import { isRecordFieldHidden } from '@alga-psa/authorization/recordProjection';
+import {
+  isReadFieldHidden,
+  isRecordFieldHidden,
+  isResourceHidden,
+  recordProjectionFieldAliases,
+  TICKET_IDENTITY_ALIASES,
+} from '@alga-psa/authorization/recordProjection';
 
 /** Canonical ticket fields exposed by list and smart-search readers. */
 const FIELD_ALIASES: Record<string, readonly string[]> = {
@@ -27,7 +33,7 @@ const FIELD_ALIASES: Record<string, readonly string[]> = {
   priority_name: ['priority', 'priority_name', 'priorities.priority_name'],
   priority_color: ['priority_color', 'priorities.color'],
   assigned_to: ['assigned_to', 'tickets.assigned_to', 'assignee'],
-  assigned_to_name: ['assigned_to_name', 'users.first_name', 'users.last_name'],
+  assigned_to_name: ['assigned_to_name'],
   assigned_team_id: ['assigned_team_id', 'tickets.assigned_team_id'],
   assigned_team_name: ['assigned_team_name', 'teams.team_name'],
   entered_by_name: ['entered_by_name'],
@@ -87,13 +93,19 @@ export interface TicketReadMask {
 
 export function ticketReadMask(redactedFields: readonly string[]): TicketReadMask {
   const fields = new Set<string>();
-  let dropResource = false;
+  let dropResource = isResourceHidden(redactedFields, ['ticket', 'tickets']) ||
+    isReadFieldHidden(redactedFields, TICKET_IDENTITY_ALIASES);
   for (const raw of redactedFields) {
     if (typeof raw !== 'string' || !raw.trim()) {
       dropResource = true;
       continue;
     }
-    const value = raw.trim().toLowerCase();
+    let value = raw.trim();
+    // Match the shared projector's two supported namespaces. Canonical names,
+    // `fields.*` response paths and `values.*` policy paths then use the same
+    // strict alias table below; arbitrary prefixes remain unknown and fail closed.
+    if (value.startsWith('fields.')) value = value.slice('fields.'.length);
+    if (value.startsWith('values.')) value = value.slice('values.'.length);
     if (value === '*' || value === 'fields' || value === 'ticket' || value === 'tickets') {
       dropResource = true;
       continue;
@@ -105,18 +117,29 @@ export function ticketReadMask(redactedFields: readonly string[]): TicketReadMas
     }
     const canonical = ALIAS_TO_FIELD.get(value);
     if (!canonical) {
-      dropResource = true;
+      // Resolve non-list aliases from the same exact field table as the shared
+      // projector. Exact matching avoids accepting unknown child paths through
+      // the projector's broader dependency-overlap checks.
+      const sharedFields = Object.keys(FIELD_ALIASES).filter((field) =>
+        recordProjectionFieldAliases('ticket', field).includes(value),
+      );
+      if (sharedFields.length === 0) {
+        dropResource = true;
+        continue;
+      }
+      sharedFields.forEach((field) => fields.add(field));
       continue;
     }
     fields.add(canonical);
   }
-  if (fields.has('ticket_id')) dropResource = true;
+  if (fields.has('ticket_id') || fields.has('ticket_number')) dropResource = true;
   return { fields, dropResource, redactDerived: redactedFields.length > 0 };
 }
 
 export function ticketReadFieldHidden(redactedFields: readonly string[], field: string): boolean {
   const mask = ticketReadMask(redactedFields);
   if (mask.dropResource || mask.fields.has(field)) return true;
+  if (isRecordFieldHidden('ticket', field, redactedFields)) return true;
   // These ticket-list labels are derived from foreign-key-backed shared fields.
   // Ask the shared projection policy so SQL and payload redaction follow the same
   // dependency graph as REST and other ticket readers.
@@ -132,9 +155,7 @@ export function ticketReadFieldHidden(redactedFields: readonly string[], field: 
     client_name: ['client_id'],
     contact_name_id: ['contact_name'],
     contact_name: ['contact_name_id'],
-    assigned_to: ['assigned_to_name'],
     assigned_to_name: ['assigned_to'],
-    entered_by: ['entered_by_name'],
     entered_by_name: ['entered_by'],
     assigned_team_id: ['assigned_team_name'],
     assigned_team_name: ['assigned_team_id'],

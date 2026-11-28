@@ -146,8 +146,8 @@ export function buildTicketListItemsQuery(
       joined('cn.full_name', 'contact_name', 'text', 'contact_name'),
       mask.redactDerived ? trx.raw("'[]'::json as contact_tags") : displayTagsForEntityQuery(trx, tenant, audience, 'contact', 't.contact_name_id').as('contact_tags'),
       mask.redactDerived ? trx.raw("'[]'::json as client_tags") : displayTagsForEntityQuery(trx, tenant, audience, 'client', 't.client_id').as('client_tags'),
-      joined("CONCAT(u.first_name, ' ', u.last_name)", 'entered_by_name', 'text', 'entered_by'),
-      joined("CONCAT(au.first_name, ' ', au.last_name)", 'assigned_to_name', 'text', 'assigned_to'),
+      joined("CONCAT(u.first_name, ' ', u.last_name)", 'entered_by_name', 'text', 'entered_by_name'),
+      joined("CONCAT(au.first_name, ' ', au.last_name)", 'assigned_to_name', 'text', 'assigned_to_name'),
       joined('tm.team_name', 'assigned_team_name', 'text', 'assigned_team_id'),
       joined('tloc.location_name', 'ticket_location_name', 'text', 'location_name'),
       // Additional agents from pre-aggregated JOIN

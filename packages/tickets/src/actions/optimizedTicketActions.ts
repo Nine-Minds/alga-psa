@@ -454,9 +454,21 @@ function readableTicketListItems<T extends Partial<ITicket>>(
 ): ITicketListItem[] {
   return reads.flatMap(({ ticket, redactedFields }) => {
     const [item] = mapTicketListItems([ticket]);
-    const readable = projectReadableRecord('ticket', item, redactedFields);
-    return readable ? [redactTicketReadPayload(readable as Record<string, any>, redactedFields) as ITicketListItem] : [];
+    return ticketReadMask(redactedFields).dropResource
+      ? []
+      : [redactTicketReadPayload(item as Record<string, any>, redactedFields) as ITicketListItem];
   });
+}
+
+function readableTicketListItemsForTargets<T extends Partial<ITicket> & { ticket_id?: string | null }>(
+  tickets: T[],
+  targets: TicketReadTarget[],
+): ITicketListItem[] {
+  const redactionsById = new Map(targets.map(({ id, redactedFields }) => [id, redactedFields] as const));
+  return readableTicketListItems(tickets.flatMap((ticket) => {
+    const redactedFields = ticket.ticket_id ? redactionsById.get(ticket.ticket_id) : undefined;
+    return redactedFields ? [{ ticket, redactedFields }] : [];
+  }));
 }
 
 type TicketAuthorizationContext = Awaited<ReturnType<typeof createTicketAuthorizationContext>>;
@@ -2351,7 +2363,7 @@ export const getTicketsForList = withAuth(async (
         trx, tenant, scopedBaseQuery.builder, displayAudienceForUser(user), targets, orderedIds, bundleChildReadScope(authorizationContext)
       );
       totalCount = count;
-      ticketListItems = mapTicketListItems(pageTickets);
+      ticketListItems = readableTicketListItemsForTargets(pageTickets, targets);
     } else {
       // The fallback query selects identities only. Authorization inputs are loaded separately, and final
       // display rows are fetched once per effective redaction set through masked SQL projections.
@@ -2373,7 +2385,7 @@ export const getTicketsForList = withAuth(async (
       const pageTickets = await loadTicketRowsByReadTargets(
         trx, tenant, baseQuery, displayAudienceForUser(user), pageTargets, paginatedIds, bundleChildReadScope(authorizationContext)
       );
-      ticketListItems = mapTicketListItems(pageTickets);
+      ticketListItems = readableTicketListItemsForTargets(pageTickets, pageTargets);
     }
 
     const enriched = await enrichTicketListItems(trx, tenant, ticketListItems);
@@ -2643,7 +2655,7 @@ export const loadTicketListItemsByIds = withAuth(async (
       const ordered = await loadTicketRowsByReadTargets(
         trx, tenant, effectiveBase, displayAudienceForUser(user), targets, requestedIds, bundleChildReadScope(authorizationContext)
       );
-      return enrichTicketListItems(trx, tenant, mapTicketListItems(ordered));
+      return enrichTicketListItems(trx, tenant, readableTicketListItemsForTargets(ordered, targets));
     } catch (error) {
       const expected = ticketListActionErrorFrom(error);
       if (expected) {

@@ -1024,6 +1024,11 @@ function projectableRecordSource(resource: ProjectableResource): RedactableRecor
   };
 }
 
+/** Exact field spellings supported by the shared projector for one canonical field. */
+export function recordProjectionFieldAliases(resource: ProjectableResource, field: string): readonly string[] {
+  return recordFieldAliases(projectableRecordSource(resource), field);
+}
+
 export function isRecordFieldHidden(resource: ProjectableResource, field: string, redactedFields: readonly string[]): boolean {
   return !createRecordProjectionPolicy(redactedFields, projectableRecordSource(resource)).readable(
     field, projectableRecordSource(resource),

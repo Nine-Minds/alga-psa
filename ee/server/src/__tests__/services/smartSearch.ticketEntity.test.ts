@@ -94,6 +94,38 @@ describe('assembleTicketCandidate', () => {
     expect(candidate.state.description).toBe('');
     expect(candidate.state.due_date).toBeNull();
   });
+
+  it.each(['title', 'fields.title', 'values.title'])(
+    'keeps the ticket candidate while masking title path %s from scorer state',
+    (redaction) => {
+      const candidate = assembleTicketCandidate(row('Permitted description'), [], undefined, [redaction]);
+      const request = buildRelevanceRequest(ticketSmartSearch.relevance, 'query', [candidate]);
+      expect(candidate.id).toBe('tid');
+      expect(request.state.candidates[0]).toMatchObject({ title: 'Restricted ticket', description: 'Permitted description' });
+      expect(JSON.stringify(request.state)).not.toContain('Printer offline');
+      expect(JSON.stringify(request.state)).toContain('Permitted description');
+    },
+  );
+
+  it.each(['users.first_name', 'users.last_name'])(
+    'masks the assignee name from scorer state for %s',
+    (redaction) => {
+      const candidate = assembleTicketCandidate(row(), [], undefined, [redaction]);
+      expect(JSON.stringify(buildRelevanceRequest(ticketSmartSearch.relevance, 'query', [candidate]).state))
+        .not.toContain('Sam Tech');
+      expect(candidate.state.title).toBe('Printer offline');
+    },
+  );
+
+  it.each(['assigned_to', 'fields.assigned_to', 'values.assigned_to'])(
+    'keeps candidate facts while masking assigned_to path %s',
+    (redaction) => {
+      const candidate = assembleTicketCandidate(row(), [], undefined, [redaction]);
+      const request = buildRelevanceRequest(ticketSmartSearch.relevance, 'query', [candidate]);
+      expect(request.state.candidates[0]).toMatchObject({ title: 'Printer offline', assigned_to: null });
+      expect(JSON.stringify(request.state)).not.toContain('Sam Tech');
+    },
+  );
 });
 
 describe('ticket list redaction projection', () => {
