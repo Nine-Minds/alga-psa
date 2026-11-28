@@ -1,0 +1,17 @@
+[
+  {
+    "id": "F001",
+    "description": "Use built-in seat restrictions and applicable bundles together in shared client and contact reads, including list and detail paths.",
+    "implemented": false
+  },
+  {
+    "id": "F002",
+    "description": "Scope the Add Ticket picker and the equivalent client picker before search result counts, pagination and selected-ID resolution.",
+    "implemented": false
+  },
+  {
+    "id": "F003",
+    "description": "Apply current assignment state on each request and preserve existing access for ordinary MSP staff.",
+    "implemented": false
+  }
+]

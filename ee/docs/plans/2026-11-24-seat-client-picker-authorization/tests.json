@@ -1,0 +1,38 @@
+[
+  {
+    "id": "T001",
+    "featureIds": [
+      "F001",
+      "F002"
+    ],
+    "description": "With a live seat and zero bundles, exercise both picker actions on migrated PostgreSQL. Check first page, total, search for the other client and lookup by mixed IDs.",
+    "implemented": false
+  },
+  {
+    "id": "T002",
+    "featureIds": [
+      "F001",
+      "F002"
+    ],
+    "description": "An unrelated assignment or an applicable bundle with no client read rule leaves the seat boundary intact. A client read rule selecting a different client gives an empty intersection.",
+    "implemented": false
+  },
+  {
+    "id": "T003",
+    "featureIds": [
+      "F001",
+      "F003"
+    ],
+    "description": "After revocation a fresh picker request returns no clients. Ordinary unrestricted MSP staff in the same tenant can still select both clients.",
+    "implemented": false
+  },
+  {
+    "id": "T004",
+    "featureIds": [
+      "F001",
+      "F003"
+    ],
+    "description": "Run the existing client/contact authorization integration suite and authorization package tests, including list/detail parity and the unrestricted fast path.",
+    "implemented": false
+  }
+]

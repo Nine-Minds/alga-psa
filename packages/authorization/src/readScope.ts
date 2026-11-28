@@ -41,6 +41,11 @@ export interface ResolveNarrowedReadScopeInput {
   resourceType: string;
   action?: string;
   requestCache?: AuthorizationRequestCache;
+  /**
+   * The request's already-resolved subject. A caller that evaluates several resources for one request resolves it
+   * once and passes it to each, so the subject load is not repeated per resource.
+   */
+  subject?: AuthorizationSubject;
 }
 
 /** The subject's narrowing for `resourceType:action`, or null when nothing narrows it (add no clause). */
@@ -57,7 +62,7 @@ export async function resolveNarrowedReadScope(
   if (!tenantScope.publishedAssignments && tenantScope.resolverSubjects === false) return null;
 
   // A fault in either load propagates: a scope that cannot be resolved must not read as "unrestricted".
-  const subject = await resolveAuthorizationSubject(conn, { tenant: input.tenant, user: input.user, requestCache });
+  const subject = input.subject ?? await resolveAuthorizationSubject(conn, { tenant: input.tenant, user: input.user, requestCache });
   const bundleRules = await resolveBundleNarrowingRulesForEvaluation(conn, {
     subject,
     resource: { type: input.resourceType, action },
