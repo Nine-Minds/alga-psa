@@ -2,6 +2,19 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-28 — Invoice finalize and apply-credit derive status from recorded payments
+
+**Affected endpoints:** `POST /api/v1/invoices/{id}/finalize`, `POST /api/v1/invoices/{id}/credit`
+
+Finalizing used to set status `sent` every time, even when the invoice already had payments recorded. Payments stay on an invoice when it is unfinalized, so an invoice that was paid, unfinalized, edited and finalized again lost its payment status.
+
+**Changes:**
+
+- Finalize sets the status from net recorded payments (payments less refunds): `sent` when nothing is paid, `partially_applied` when `total_amount - credit_applied - net_paid` is still above 0, `paid` when that balance is 0 or less. Credit alone never yields `paid`. The finalize engine is shared with the MSP app, so both produce the same status.
+- Apply credit no longer overwrites the status written while the credit was applied. It derives the status the same way and computes the balance due from total, credit and net payments. `INVOICE_STATUS_CHANGED` is published only when the derived status differs from the status before the credit was applied, and a prepaid replenishment invoice is settled when the derived status is `paid`.
+- `draft`, `cancelled` and `void` are never replaced by a payment status.
+- A one-time migration re-derives the status of existing finalized invoices in `sent`, `paid` or `partially_applied` that have recorded payments, so `GET` and list responses for those invoices may show a different `status` after upgrade. Drafts, cancelled and void invoices are not changed.
+
 ## 2026-11-27 — `GET /api/v1/assets/stats` reports asset value per currency
 
 **Affected endpoint:** `GET /api/v1/assets/stats`
