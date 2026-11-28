@@ -3,6 +3,8 @@ import type { IUserWithRoles } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
 import {
   RequestLocalAuthorizationCache,
+  builtinResolversRestrict,
+  closedBundlesNotNaming,
   compileResourceReadAuthorizationSql,
   matchRulesForAction,
   type AuthorizationSubject,
@@ -26,7 +28,7 @@ import {
  * request cache is shared by every narrowing built from it.
  *
  * Fast path: the tenant probe runs first. A tenant with no published bundle
- * assignment has no rule that could narrow, so the subject is never resolved,
+ * assignment and no built-in resolver subject (co-managed seat) has no rule that could narrow, so the subject is never resolved,
  * `apply` adds nothing and the query is exactly what it was before — the only
  * statement added is the one probe.
  */
@@ -47,7 +49,7 @@ const RESOURCES: Record<
 };
 
 export interface ClientScopeNarrowing {
-  /** True when at least one bundle rule narrows this resource for the subject. */
+  /** True when at least one bundle rule or built-in resolver narrows this resource for the subject. */
   readonly narrowed: boolean;
   /** AND the narrowing predicate onto `query`. A no-op when not narrowed. */
   apply<T extends Knex.QueryBuilder>(query: T): T;
@@ -83,7 +85,8 @@ export async function createClientScopeContext(
 ): Promise<ClientScopeContext> {
   // A probe that cannot be trusted reports the slow path, so this never skips rules a tenant has.
   const scope = await probeTenantAuthorizationScope(conn, tenant, requestCache);
-  if (!scope.publishedAssignments) return UNNARROWED_CONTEXT;
+  // Same condition as resolveNarrowedReadScope: a built-in resolver (a co-managed seat) can narrow with no bundle assigned.
+  if (!scope.publishedAssignments && scope.resolverSubjects === false) return UNNARROWED_CONTEXT;
 
   // A failed resolution propagates: a subject that cannot be resolved gets no rows.
   const subject: AuthorizationSubject = await resolveAuthorizationSubject(conn, { tenant, user, requestCache });
@@ -115,7 +118,12 @@ export async function createClientScopeContext(
       }
       const rules = await pending;
       const matching = matchRulesForAction(rules, resource, 'read');
-      if (matching.length === 0) return UNNARROWED;
+      // LEVERAGE: pattern resource-sql-narrowing — this narrowed decision mirrors resolveNarrowedReadScope (readScope.ts).
+      const narrows =
+        matching.length > 0 ||
+        closedBundlesNotNaming(rules, resource, 'read').length > 0 ||
+        builtinResolversRestrict({ subject, resource: { type: resource, action: 'read' } });
+      if (!narrows) return UNNARROWED;
 
       const adapter = def.adapter(columnAlias);
       return {

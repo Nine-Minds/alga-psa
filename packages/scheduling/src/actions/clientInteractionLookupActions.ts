@@ -3,6 +3,7 @@
 import { projectClientForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
 import type { Knex } from 'knex';
 import type { IClient, IInteraction, IUserWithRoles } from '@alga-psa/types';
 
@@ -28,6 +29,13 @@ export const getSchedulingClientById = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    // Scope check comes first: an out-of-scope client reads as not found and is never selected.
+    // Built from trx so the probe/resolvers share this transaction.
+    const scope = await createClientScopeContext(trx, tenant, user);
+    if (!await scope.permits('client', clientId)) {
+      return null;
+    }
+
     const result = await (tenantDb(trx, tenant) as any).table('clients')
       .select('*')
       .where({ client_id: clientId })
@@ -68,9 +76,19 @@ export const getSchedulingInteractionById = withAuth(async (
     scopedDb.tenantJoin(query, 'clients', 'interactions.client_id', 'clients.client_id', { type: 'left' });
     scopedDb.tenantJoin(query, 'users', 'interactions.user_id', 'users.user_id', { type: 'left' });
     scopedDb.tenantJoin(query, 'statuses', 'interactions.status_id', 'statuses.status_id', { type: 'left' });
-    return query
+    const row = await query
       .where('interactions.interaction_id', interactionId)
       .first();
+    if (!row) return row;
+
+    // LEVERAGE: pattern client-scope-permits — same permits('client', id) gate as getSchedulingClientById.
+    // An out-of-scope client reads as not found, indistinguishable from a missing interaction.
+    // A null client_id is passed through as-is: under narrowing permits() finds no row (fail closed).
+    const scope = await createClientScopeContext(trx, tenant, user);
+    if (!await scope.permits('client', row.client_id)) {
+      return undefined;
+    }
+    return row;
   });
 
   if (!interaction) {
