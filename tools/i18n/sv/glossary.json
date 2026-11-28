@@ -710,7 +710,7 @@
       "Google Calendar", "Google Cloud Console", "Google OAuth", "Google Play (Android)", "Google Workspace",
       "Hudu", "Huntress", "Keycloak", "Keycloak / OpenID Connect", "Knox", "Linux", "Meta", "Microsoft",
       "Microsoft 365", "Microsoft 365 (Microsoft Graph)", "Microsoft Entra", "Microsoft Entra ID", "Microsoft OAuth",
-      "Microsoft Teams", "NinjaOne", "Outlook", "QuickBooks", "QuickBooks CSV", "QuickBooks Online", "Stripe",
+      "Microsoft Teams", "NinjaOne", "NinjaOne Remote", "Outlook", "QuickBooks", "QuickBooks CSV", "QuickBooks Online", "Stripe",
       "Tactical RMM", "Tanium", "Teams", "Teams Phone", "Temporal", "Windows", "Xero", "Xero CSV", "Zoom", "iOS", "macOS",
       "AI", "API", "CPU", "CSV", "Cron", "DNS", "GB", "GHz", "GPU", "HMAC-SHA256", "HTML", "HTTP", "HTTPS",
       "ID", "IIF", "IMAP", "IMEI", "IP", "IT", "ITIL", "JSON", "KB", "LAN", "MAC", "MB", "MHz", "MRR", "MSP",

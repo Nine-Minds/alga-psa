@@ -129,6 +129,10 @@ describe('Datto asset device actions', () => {
     );
     expect(getDeviceCalls).toEqual(['dev-1']);
 
+    expect(await dattoRmmAssetDeviceActions.remoteControlUrl!(ref, 'SPLASHTOP')).toBe(
+      'https://concord.centrastage.net/csm/remote/dev-1'
+    );
+
     expect(await dattoRmmAssetDeviceActions.remoteControlUrl!(ref, 'shell')).toBeNull();
 
     device = { uid: 'dev-1', webRemoteUrl: '  ' };

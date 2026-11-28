@@ -5,6 +5,7 @@ let tables: Record<string, Row[]> = {};
 let permissionGranted = true;
 let executeCommandGranted = true;
 const adapterCalls: Array<{ op: string; ref: any }> = [];
+let remoteUrl = 'https://remote.example/x';
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) => fn({ user_id: 'u1' }, { tenant: 'tenant_1' }, ...args),
@@ -51,7 +52,7 @@ vi.mock('@alga-psa/integrations/lib/rmm/assetDeviceActions', () => ({
           },
           refresh: async (ref: any) => { adapterCalls.push({ op: 'refresh', ref }); },
           remoteControlTypes: async (ref: any) => { adapterCalls.push({ op: 'remoteControlTypes', ref }); return ['splashtop']; },
-          remoteControlUrl: async (ref: any) => { adapterCalls.push({ op: 'remoteControlUrl', ref }); return 'https://remote.example/x'; },
+          remoteControlUrl: async (ref: any, type: string) => { adapterCalls.push({ op: `remoteControlUrl:${type}`, ref }); return remoteUrl; },
           reboot: async (ref: any) => {
             adapterCalls.push({ op: 'reboot', ref });
             if (ref.deviceId === 'OFFLINE') throw new Error('Unable to contact the agent');
@@ -72,6 +73,7 @@ describe('asset RMM actions (provider dispatch)', () => {
     permissionGranted = true;
     executeCommandGranted = true;
     adapterCalls.length = 0;
+    remoteUrl = 'https://remote.example/x';
     tables = {
       assets: [
         workstation,
@@ -160,5 +162,26 @@ describe('asset RMM actions (provider dispatch)', () => {
     // Other providers keep the asset-update gate only.
     expect(await getAssetRemoteControlTypes('asset_1')).toEqual(['splashtop']);
     expect(await getAssetRemoteControlUrl('asset_1', 'splashtop')).toBe('https://remote.example/x');
+  });
+
+  it('hands an unknown provider type to the adapter and returns its https or app-launch URL', async () => {
+    const { getAssetRemoteControlUrl } = await import('@alga-psa/integrations/actions/integrations/assetRmmActions');
+    expect(await getAssetRemoteControlUrl('asset_1', 'Fancy Remote')).toBe('https://remote.example/x');
+    expect(adapterCalls.map((c) => c.op)).toEqual(['remoteControlUrl:fancy_remote']);
+    remoteUrl = 'ninjarmm://session/42';
+    expect(await getAssetRemoteControlUrl('asset_1', 'ninjaone_remote')).toBe('ninjarmm://session/42');
+  });
+
+  it.each(['javascript:alert(1)', ' data:text/html,x', 'file:///etc/passwd'])(
+    'refuses a provider URL with an unsafe scheme (%j)', async (url) => {
+      const { getAssetRemoteControlUrl } = await import('@alga-psa/integrations/actions/integrations/assetRmmActions');
+      remoteUrl = url;
+      expect(await getAssetRemoteControlUrl('asset_1', 'splashtop')).toBeNull();
+    });
+
+  it('rejects a malformed type before any adapter call', async () => {
+    const { getAssetRemoteControlUrl } = await import('@alga-psa/integrations/actions/integrations/assetRmmActions');
+    await expect(getAssetRemoteControlUrl('asset_1', '../x')).rejects.toThrow('Invalid remote control type');
+    expect(adapterCalls).toEqual([]);
   });
 });

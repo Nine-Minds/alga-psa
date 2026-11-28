@@ -854,7 +854,9 @@
     "connectionTypes": {
       "teamviewer": "TeamViewer",
       "vnc": "VNC",
-      "rdp": "RDP"
+      "rdp": "RDP",
+      "ninjaoneRemote": "NinjaOne Remote",
+      "generic": "Session à distance"
     },
     "remoteDesktop": "Bureau à distance",
     "remoteShell": "Shell à distance",
@@ -886,7 +888,7 @@
       "save": "Enregistrer",
       "label": "Libellé du bouton",
       "template": "Modèle d’URL",
-      "ninjaExample": "Exemple de tableau de bord d’appareil NinjaOne : https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Remplacez l’hôte par votre région NinjaOne : app, eu, ca, oc ou us2 .ninjarmm.com.",
+      "ninjaExample": "Exemple de tableau de bord d’appareil NinjaOne : https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Remplacez app dans l’hôte par votre région NinjaOne : app, eu, ca, oc ou us2.",
       "tokens": "Utilisez {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name} et {field.<key>} avec les clés de champs personnalisés définies dans Paramètres → Équipements → Types d’équipement.",
       "errors": {
         "load": "Impossible de charger les liens d’accès à distance.",

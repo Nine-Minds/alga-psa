@@ -88,9 +88,10 @@ describe('RemoteAccessButton availability', () => {
     open.mockRestore();
   });
 
-  it('offers only Remote Desktop for Datto assets and opens the Web Remote URL', async () => {
+  it('offers Datto Web Remote as Remote Desktop and opens the Web Remote URL', async () => {
     mockGetLinks.mockResolvedValue([]);
-    mockRmm.getAssetRemoteControlTypes.mockResolvedValue(['splashtop', 'shell']);
+    // The Datto adapter reports only its Web Remote slot; the menu shows what the adapter reports.
+    mockRmm.getAssetRemoteControlTypes.mockResolvedValue(['splashtop']);
     mockRmm.getAssetRemoteControlUrl.mockResolvedValue('https://concord.centrastage.net/csm/remote/dev-1');
     const open = vi.spyOn(window, 'open').mockImplementation(() => null);
     render(<RemoteAccessButton asset={asset({ rmm_provider: 'datto', rmm_device_id: 'dev-1' })} />);
@@ -145,5 +146,44 @@ describe('RemoteAccessButton availability', () => {
     expect(open).toHaveBeenCalledWith('https://remote.example/Workstation', '_blank', 'noopener,noreferrer');
     expect(open).toHaveBeenCalledTimes(1);
     open.mockRestore();
+  });
+
+  it('renders an unknown provider type with the generic label and opens its URL', async () => {
+    mockRmm.getAssetRemoteControlTypes.mockResolvedValue(['4242']);
+    mockRmm.getAssetRemoteControlUrl.mockResolvedValue('https://remote.example/unknown');
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    render(<RemoteAccessButton asset={asset({ rmm_provider: 'ninjaone', rmm_device_id: '123' })} />);
+    fireEvent.click(screen.getByTestId('open-menu'));
+    const item = await screen.findByText('remoteAccess.connectionTypes.generic');
+    item.closest('button')?.click();
+    await vi.waitFor(() => expect(mockRmm.getAssetRemoteControlUrl).toHaveBeenCalledWith('asset-1', '4242'));
+    expect(open).toHaveBeenCalledWith('https://remote.example/unknown', '_blank', 'noopener,noreferrer');
+    open.mockRestore();
+  });
+
+  it('humanizes a readable unknown type instead of showing a raw key', async () => {
+    mockRmm.getAssetRemoteControlTypes.mockResolvedValue(['fancy_remote']);
+    render(<RemoteAccessButton asset={asset({ rmm_provider: 'ninjaone', rmm_device_id: '123' })} />);
+    fireEvent.click(screen.getByTestId('open-menu'));
+    expect(await screen.findByText('Fancy remote')).toBeTruthy();
+  });
+
+  it('renders NinjaOne Remote with the monitor icon', async () => {
+    mockRmm.getAssetRemoteControlTypes.mockResolvedValue(['ninjaone_remote']);
+    render(<RemoteAccessButton asset={asset({ rmm_provider: 'ninjaone', rmm_device_id: '123' })} />);
+    fireEvent.click(screen.getByTestId('open-menu'));
+    const label = await screen.findByText('remoteAccess.connectionTypes.ninjaoneRemote');
+    const item = label.closest('button')!;
+    expect(item.querySelector('svg.lucide-monitor')).toBeTruthy();
+    expect(item.querySelector('svg.lucide-terminal')).toBeNull();
+  });
+
+  it('offers every type the adapter reports, ordering by provider hint without gating on it', async () => {
+    mockRmm.getAssetRemoteControlTypes.mockResolvedValue(['vnc', 'shell', 'splashtop']);
+    render(<RemoteAccessButton asset={asset({ rmm_provider: 'tacticalrmm', rmm_device_id: 'agent-1' })} />);
+    fireEvent.click(screen.getByTestId('open-menu'));
+    await screen.findByText('remoteAccess.connectionTypes.vnc');
+    const labels = screen.getAllByText(/^remoteAccess\.(remoteDesktop|remoteShell|connectionTypes\.vnc)$/).map((el) => el.textContent);
+    expect(labels).toEqual(['remoteAccess.remoteDesktop', 'remoteAccess.remoteShell', 'remoteAccess.connectionTypes.vnc']);
   });
 });

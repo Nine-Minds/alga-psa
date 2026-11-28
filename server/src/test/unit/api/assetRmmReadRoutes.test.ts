@@ -572,3 +572,25 @@ describe('asset RMM provider error provenance', () => {
     );
   }
 });
+
+describe('asset RMM remote-control type validation', () => {
+  const readType = (type: string) => remoteControlRoute(new Request(
+    `http://localhost/api/v1/assets/${h.state.assetId}/rmm/remote-control?type=${encodeURIComponent(type)}`,
+  ), { params: Promise.resolve({ id: h.state.assetId }) });
+
+  it.each(['bad/type', '../x', 'x'.repeat(65)])('rejects %j with 400 before provider work', async type => {
+    h.state.remoteControlUrl.mockClear();
+    const response = await readType(type);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'Invalid remote control type' });
+    expect(h.state.remoteControlUrl).not.toHaveBeenCalled();
+  });
+
+  it('normalizes aliases and passes unknown but plausible types to the provider', async () => {
+    h.state.remoteControlUrl.mockClear();
+    const response = await readType('NinjaOne Remote');
+    expect(response.status).toBe(200);
+    expect((await response.json()).data.type).toBe('ninjaone_remote');
+    expect(h.state.remoteControlUrl.mock.calls[0]?.[1]).toBe('ninjaone_remote');
+  });
+});

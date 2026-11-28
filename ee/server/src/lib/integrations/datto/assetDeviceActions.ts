@@ -3,6 +3,7 @@ import axios from 'axios';
 import { createTenantKnex } from '@alga-psa/db';
 
 import type { RmmAssetDeviceActions, RmmAssetDeviceRef, RmmRemoteConnectionType } from '@alga-psa/integrations/lib/rmm/assetDeviceActions';
+import { normalizeRmmConnectionType } from '@alga-psa/integrations/lib/rmm/connectionTypes';
 import { buildDattoClientForTenant, getDattoIntegrationRow } from './buildClient';
 import {
   DattoRmmAuthError,
@@ -150,7 +151,7 @@ export const dattoRmmAssetDeviceActions: RmmAssetDeviceActions = {
   },
 
   async remoteControlUrl(ref, connectionType) {
-    if (connectionType !== 'splashtop') return null;
+    if (normalizeRmmConnectionType(connectionType) !== 'splashtop') return null;
     try {
       const client = await requireClient(ref.tenant);
       // Fresh read: the stored URL can be stale after a device reinstall.

@@ -18,6 +18,12 @@ function tacticalCommandError(err: unknown, fallback: string): Error {
   return err instanceof Error && err.message ? err : new Error(fallback);
 }
 
+/** The MeshCentral URLs Tactical publishes, keyed by the connection type each one opens. */
+const MESH_LINK_BY_TYPE: ReadonlyMap<string, 'control' | 'terminal'> = new Map([
+  ['splashtop', 'control'],
+  ['shell', 'terminal'],
+]);
+
 export const tacticalRmmAssetDeviceActions: RmmAssetDeviceActions = {
   async remoteControlTypes(ref): Promise<RmmRemoteConnectionType[]> {
     const client = await buildTacticalClientForTenant(ref.tenant);
@@ -46,12 +52,13 @@ export const tacticalRmmAssetDeviceActions: RmmAssetDeviceActions = {
   },
 
   async remoteControlUrl(ref, connectionType) {
-    if (connectionType !== 'splashtop' && connectionType !== 'shell') return null;
+    const linkKey = MESH_LINK_BY_TYPE.get(connectionType);
+    if (!linkKey) return null;
     const client = await buildTacticalClientForTenant(ref.tenant);
     if (!client) throw new Error('No active Tactical RMM integration found');
     try {
       const links = await client.getAgentMeshCentralLinks(ref.deviceId);
-      const url = connectionType === 'splashtop' ? links.control : links.terminal;
+      const url = links[linkKey];
       // Tactical's response shape varies by version; a missing link means this action is unavailable.
       return typeof url === 'string' && url.trim() ? url : null;
     } catch (err) {

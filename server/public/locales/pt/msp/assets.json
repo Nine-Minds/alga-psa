@@ -854,7 +854,9 @@
     "connectionTypes": {
       "teamviewer": "TeamViewer",
       "vnc": "VNC",
-      "rdp": "RDP"
+      "rdp": "RDP",
+      "ninjaoneRemote": "NinjaOne Remote",
+      "generic": "Sessão remota"
     },
     "remoteDesktop": "Área de Trabalho Remota",
     "remoteShell": "Shell Remoto",
@@ -886,7 +888,7 @@
       "save": "Salvar",
       "label": "Rótulo do botão",
       "template": "Modelo de URL",
-      "ninjaExample": "Exemplo do painel de dispositivo do NinjaOne: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Substitua o host pela sua região do NinjaOne: app, eu, ca, oc ou us2 .ninjarmm.com.",
+      "ninjaExample": "Exemplo do painel de dispositivo do NinjaOne: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Substitua app no host pela sua região do NinjaOne: app, eu, ca, oc ou us2.",
       "tokens": "Use {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name} e {field.<key>} com as chaves de campos personalizados definidas em Configurações → Ativos → Tipos de ativo.",
       "errors": {
         "load": "Falha ao carregar os links de acesso remoto.",

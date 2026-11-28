@@ -5,6 +5,11 @@
  * currently supporting NinjaOne with extensibility for other providers.
  */
 
+import type { RmmRemoteConnectionType } from '@alga-psa/integrations/lib/rmm/connectionTypes';
+
+// One definition of the remote connection types, owned by the connection-type registry.
+export type { RmmRemoteConnectionType, KnownRmmRemoteConnectionType } from '@alga-psa/integrations/lib/rmm/connectionTypes';
+
 // Provider types
 // LEVERAGE: pattern rmm-provider-union — RmmProvider is duplicated in three files; every new provider edits all of them
 export type RmmProvider = 'ninjaone' | 'tacticalrmm' | 'tanium' | 'levelio' | 'unifi' | 'datto' | 'connectwise_automate' | 'huntress';
@@ -365,7 +370,7 @@ export interface RmmConnectionStatus {
 export interface RmmRemoteAccessLink {
   url: string;
   expires_at?: string;
-  connection_type: 'splashtop' | 'teamviewer' | 'vnc' | 'rdp' | 'shell';
+  connection_type: RmmRemoteConnectionType;
 }
 
 // Webhook payload types (for inbound webhooks from RMM)

@@ -365,7 +365,8 @@ export interface NinjaOneDevicePatchStatus {
 // Device Link (Remote Access)
 export interface NinjaOneDeviceLink {
   url: string;
-  type: 'SPLASHTOP' | 'TEAMVIEWER' | 'VNC' | 'RDP' | 'SHELL';
+  /** Provider-declared (e.g. SPLASHTOP, RDP, NinjaOne Remote); open set, normalized by the RMM connection-type registry. */
+  type: string;
 }
 
 // Ticketing (NinjaOne's PSA ticketing)
