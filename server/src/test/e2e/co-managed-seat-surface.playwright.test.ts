@@ -153,19 +153,37 @@ test.describe('Co-managed seat: the operational surface resolves per principal (
         expect(response?.status(), `${route} opens for a seat technician`).toBe(200);
       }
 
-      // The technician's own profile opens from the header account menu and by URL, and shows their own details.
+      // T001: Profile opens from the header account menu (no swallowed failures: each step must succeed).
       await page.goto(`${baseUrl}/msp/tickets`, { waitUntil: 'domcontentloaded' });
-      await page.locator('#user-profile-menu-item').or(page.getByRole('button', { name: /account|profile/i }).first()).first().click().catch(() => undefined);
+      await page.locator('#user-menu-trigger').click();
+      await page.locator('#user-profile-menu-item').click();
+      await expect(page).toHaveURL(/\/msp\/profile/);
+      await expect(page.locator('#email')).toHaveValue(seat.email);
+
+      // ...and by direct URL.
       const profile = await page.goto(`${baseUrl}/msp/profile`, { waitUntil: 'domcontentloaded' });
       expect(profile?.status(), 'the self-profile opens for a seat technician').toBe(200);
       await expect(page.locator('#email')).toHaveValue(seat.email);
-      // Edit a personal field, save, reload: the value persists.
+
+      // Edit a personal field, save, reload: the value persists. The original value is restored afterwards so a
+      // rerun against the same rows starts from the same state.
+      const originalFirstName = await page.locator('#firstName').inputValue();
       await page.locator('#firstName').fill('Seated');
       await page.locator('#save-button').click();
       await page.reload({ waitUntil: 'domcontentloaded' });
       await expect(page.locator('#firstName')).toHaveValue('Seated');
+      await page.locator('#firstName').fill(originalFirstName);
+      await page.locator('#save-button').click();
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await expect(page.locator('#firstName')).toHaveValue(originalFirstName);
+
+      // T001: the same technician still gets 404 on user administration, in this same flow (also in CLOSED_ROUTES).
+      const userAdmin = await page.goto(`${baseUrl}/msp/settings/users`, { waitUntil: 'domcontentloaded' });
+      expect(userAdmin?.status(), 'user administration is not found for the technician after using the profile').toBe(404);
 
       // T002: no API Keys tab, and a saved ?tab=api-keys link lands on Profile without mounting key management.
+      await page.goto(`${baseUrl}/msp/profile`, { waitUntil: 'domcontentloaded' });
+      await expect(page.getByRole('tab', { name: /Profile/i }).first()).toBeVisible();
       await expect(page.getByRole('tab', { name: /API Keys/i })).toHaveCount(0);
       await page.goto(`${baseUrl}/msp/profile?tab=api-keys`, { waitUntil: 'domcontentloaded' });
       await expect(page.locator('#firstName')).toBeVisible();
@@ -186,6 +204,13 @@ test.describe('Co-managed seat: the operational surface resolves per principal (
         const rest = await request.get(`${baseUrl}/api/v1/tickets`, { headers });
         expect(rest.status()).toBe(401);
       }
+
+      // T002 control: an ordinary MSP user (the tenant admin) gets API Keys, and the same link selects it.
+      await signInAs(page, db, tenantData, tenantData.adminUser);
+      await page.goto(`${baseUrl}/msp/profile?tab=api-keys`, { waitUntil: 'domcontentloaded' });
+      const apiKeysTab = page.getByRole('tab', { name: /API Keys/i });
+      await expect(apiKeysTab).toBeVisible();
+      await expect(apiKeysTab).toHaveAttribute('aria-selected', 'true');
     } finally {
       await db.destroy();
     }
