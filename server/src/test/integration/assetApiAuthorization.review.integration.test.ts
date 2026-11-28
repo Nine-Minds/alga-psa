@@ -710,6 +710,28 @@ describe('asset API-key authorization through public routes and migrated Postgre
     });
   }, 180_000);
 
+  it('leaves documents the caller cannot read out of the asset detail response', async () => {
+    const { a, b } = await clients();
+    const assetId = await createAsset(a, 'Detail target');
+    const caller = await createCaller(['read']);
+    await grantPermission(caller, 'document', 'read');
+    await grantBundle(caller, [a], ['read'], 'document');
+    const visibleDocument = await createDocument('Visible detail document', caller.userId, a);
+    const hiddenDocument = await createDocument('Hidden detail document', caller.userId, b);
+    for (const documentId of [visibleDocument, hiddenDocument]) {
+      await table('document_associations').insert({ tenant, entity_type: 'asset', entity_id: assetId, document_id: documentId });
+    }
+
+    await withEnterpriseKernel(async () => {
+      const response = await invoke(assetItemGet, request(caller, `/api/v1/assets/${assetId}`), { id: assetId });
+      expect(response.status, JSON.stringify(await response.clone().json())).toBe(200);
+      const body = await response.json();
+      expect(body.data.documents.map((row: any) => row.document_id)).toEqual([visibleDocument]);
+      expect(JSON.stringify(body)).not.toContain('Hidden detail document');
+      expect(JSON.stringify(body)).not.toContain(hiddenDocument);
+    });
+  }, 180_000);
+
   it('returns 404 for a tenant-scoped document association with a missing asset before coarse permission checks', async () => {
     const caller = await createCaller([]);
     const typeId = randomUUID();

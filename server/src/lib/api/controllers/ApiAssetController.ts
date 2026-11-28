@@ -248,9 +248,12 @@ export class ApiAssetController {
 
     const relationships = await this.projectAssetRelationships(context, asset, (asset as any).relationships ?? []);
 
+    const documents = await this.projectAssetDocuments(context, asset, (asset as any).documents ?? []);
+
     return createApiResponse({
       ...asset,
       relationships,
+      documents,
       _links: getHateoasLinks('asset', params.id)
     });
   }
@@ -661,14 +664,24 @@ export class ApiAssetController {
     const { projection: assetGate, denied } = await readAssetGateProjection(context, params.id, this.assetService);
     if (denied) return denied;
 
-    // Document-owned fields (name, size, MIME type, upload time) are decided per document by the shared document
-    // read policy, which also redacts; a document the caller cannot read is dropped even when it is attached to
-    // an asset they can read. The asset gate then governs the asset-owned part of each row.
     const associations = await this.assetService.getAssetDocuments(params.id, context);
+    return createApiResponse(await this.projectAssetDocuments(context, assetGate, associations));
+  }
+
+  /**
+   * Document-owned fields (name, size, MIME type, upload time) are decided per document by the shared document
+   * read policy, which also redacts; a document the caller cannot read is dropped even when it is attached to an
+   * asset they can read. The asset gate then governs the asset-owned part of each row.
+   */
+  private async projectAssetDocuments(
+    context: ApiContext,
+    assetGate: AuthorizedProjection<Record<string, any>>,
+    associations: Record<string, any>[],
+  ): Promise<AuthorizedProjection<Record<string, any>>[]> {
+    if (associations.length === 0) return [];
     const knex = await getConnection(context.tenant);
     const readable = await withTransaction(knex, async (trx) => {
       const documentIds = [...new Set(associations.map((row) => row.document_id as string))];
-      if (documentIds.length === 0) return new Map<string, Record<string, any>>();
       const documents = await tenantDb(trx, context.tenant).table('documents')
         .whereIn('document_id', documentIds)
         .select('document_id', 'created_by', 'is_client_visible', 'document_name', 'file_size', 'mime_type', 'entered_at');
@@ -678,15 +691,13 @@ export class ApiAssetController {
       return new Map(authorized.map((document) => [document.document_id, document as Record<string, any>]));
     });
 
-    const visible = associations.flatMap((association) => {
+    return associations.flatMap((association) => {
       const document = readable.get(association.document_id);
       if (!document) return [];
       const row = this.redactDocumentRow(association, document);
       const projection = reprojectUnderDecisions([assetGate], row, ASSET_DOCUMENTS_RESPONSE_SOURCE);
       return projection ? [projection] : [];
     });
-
-    return createApiResponse(visible);
   }
 
   /** Applies the document policy's field redactions to the copied document metadata of an association row. */
