@@ -205,19 +205,23 @@ async function resolveTicketRecord(
  * when the principal is not allowed to access this specific ticket (mapped to
  * 403). Returns the resolved row so callers can reuse it.
  */
-/** The columns of a ticket that decide where it sits: its client, its board and the contact it is for. */
-export type TicketProposedPlacement = Pick<Partial<ITicket>, 'client_id' | 'board_id' | 'contact_name_id'>;
+/**
+ * The columns of a ticket that decide where it sits (its client, its board and the contact it is for) and which
+ * invoice its charges land on (its billing profile).
+ */
+export type TicketProposedPlacement = Pick<Partial<ITicket>, 'client_id' | 'board_id' | 'contact_name_id' | 'billing_profile_id'>;
 
 async function assertProposedPlacementAllowed(
   trx: Conn,
   tenant: string,
+  user: IUserWithRoles,
   context: TicketAuthorizationContext,
   evaluation: Parameters<AuthorizationKernel['authorizeMutation']>[0],
   current: TicketRecordRow,
   proposed: TicketProposedPlacement,
 ): Promise<void> {
   const next: TicketRecordRow = { ...current };
-  for (const key of ['client_id', 'board_id', 'contact_name_id'] as const) {
+  for (const key of ['client_id', 'board_id', 'contact_name_id', 'billing_profile_id'] as const) {
     if (proposed[key] !== undefined) next[key] = proposed[key] as never;
   }
   const record = toTicketAuthorizationRecord(next as Partial<ITicket>);
@@ -233,6 +237,24 @@ async function assertProposedPlacementAllowed(
     allowed = Boolean(contact && record.clientId && contact.client_id === record.clientId);
   }
   if (!allowed) throw new Error('Permission denied: Cannot access ticket');
+
+  // The billing profile decides which invoice the ticket's charges land on. A governed subject (a seat technician)
+  // holds no billing permission, so changing or clearing it needs `billing:update`, and a profile must be the
+  // post-image client's own.
+  const proposedProfile = proposed.billing_profile_id === '' ? null : proposed.billing_profile_id;
+  const currentProfile = current.billing_profile_id ?? null;
+  if (proposedProfile !== undefined && proposedProfile !== currentProfile) {
+    if (!(await hasPermission({ ...user, tenant }, 'billing', 'update', trx))) {
+      throw new Error('Permission denied: Cannot change ticket billing profile');
+    }
+    if (proposedProfile !== null) {
+      const profile = await tenantScopedTable(trx, tenant, 'client_billing_profiles')
+        .where({ billing_profile_id: proposedProfile }).first('client_id');
+      if (!profile || !record.clientId || profile.client_id !== record.clientId) {
+        throw new Error('Permission denied: Cannot change ticket billing profile');
+      }
+    }
+  }
 }
 
 export async function authorizeTicketRecordAccess(input: {
@@ -283,7 +305,7 @@ export async function authorizeTicketRecordAccess(input: {
   }
 
   if (input.action === 'update' && input.proposed) {
-    await assertProposedPlacementAllowed(input.trx, input.tenant, context, evaluation, ticket, input.proposed);
+    await assertProposedPlacementAllowed(input.trx, input.tenant, input.user, context, evaluation, ticket, input.proposed);
   }
 
   if (input.action === 'delete' && !(await hasPermission(

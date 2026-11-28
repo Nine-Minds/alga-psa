@@ -79,6 +79,7 @@ import { createAuthorizationBundle, createBundleAssignment, publishBundleRevisio
 import { updateTicketWithCache } from '../../../../packages/tickets/src/actions/optimizedTicketActions';
 import { addTicket, updateTicket } from '../../../../packages/tickets/src/actions/ticketActions';
 import { TicketService } from '../../lib/api/services/TicketService';
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 import { createCloseRulesFixture, insertTicket, type CloseRulesFixture } from './helpers/closeRulesFixture';
 
 const HOOK_TIMEOUT = 240_000;
@@ -99,6 +100,12 @@ let secondBoard: Board;
 let outsideBoard: Board;
 let otherClientId: string;
 let otherContactId: string;
+/** Two billing profiles of the seat's own client, and one of another client. */
+let profileA: string;
+let profileB: string;
+let otherClientProfile: string;
+/** An own-client asset that carries `profileA`. */
+let assetWithProfile: string;
 
 const tenant = () => fixture.tenantId;
 
@@ -208,6 +215,18 @@ beforeAll(async () => {
   const ownContact = await db('contacts').where({ tenant: tenant(), contact_name_id: fixture.contactId }).first();
   await db('contacts').insert({ ...ownContact, contact_name_id: otherContactId, client_id: otherClientId,
     full_name: 'Other Client Contact', email: `s21-${otherContactId.slice(0, 8)}@example.com` });
+
+  [profileA, profileB, otherClientProfile] = [randomUUID(), randomUUID(), randomUUID()];
+  await db('client_billing_profiles').insert([
+    { tenant: tenant(), billing_profile_id: profileA, client_id: fixture.clientId, name: 'S21 profile A', is_default: true },
+    { tenant: tenant(), billing_profile_id: profileB, client_id: fixture.clientId, name: 'S21 profile B', is_default: false },
+    { tenant: tenant(), billing_profile_id: otherClientProfile, client_id: otherClientId, name: 'S21 other client profile', is_default: true },
+  ]);
+  assetWithProfile = randomUUID();
+  const assetNow = new Date().toISOString();
+  await insertTestAssets(db, [{ tenant: tenant(), asset_id: assetWithProfile, asset_type: 'workstation', client_id: fixture.clientId,
+    asset_tag: `S21-${assetWithProfile.slice(0, 8)}`, name: 'S21 billed PC', status: 'active', created_at: assetNow, updated_at: assetNow,
+    billing_profile_id: profileA }]);
 
   await db('co_managed_entitlements').insert({ tenant: tenant(), source: 'hosted', source_reference: `sub_${randomUUID()}`, capacity: 20,
     verified_at: new Date(Date.now() - 400 * DAY), valid_until: new Date(Date.now() + 365 * DAY) });
@@ -407,5 +426,77 @@ describe('control: the seat gate adds no authorization evaluation for a non-seat
     const bundleReads = statements.filter((sql) => /authorization_bundle/.test(sql));
     expect(bundleReads).toHaveLength(1);
     expect(bundleReads[0]).toContain('publishedAssignments');
+  }, HOOK_TIMEOUT);
+});
+
+// The billing profile decides which invoice a ticket's charges land on. A seat technician holds ticket:update and no
+// billing permission, so they may not set, change or clear it; an MSP user with billing:update may.
+describe.each(Object.entries(editVia))('a seat technician and the ticket billing profile through %s', (_via, edit) => {
+  it('is refused clearing the profile, and the stored value is unchanged', async () => {
+    const ticketId = await insertTicket(db, fixture, { billing_profile_id: profileA });
+    const outcome = await edit(technician, ticketId, { billing_profile_id: null });
+    expect(outcome).toMatchObject({ ok: false });
+    expect((outcome as { message: string }).message).toMatch(/Permission denied/);
+    expect(await ticketRow(ticketId)).toMatchObject({ billing_profile_id: profileA });
+  }, HOOK_TIMEOUT);
+
+  it('is refused a different profile of the same client, and the stored value is unchanged', async () => {
+    const ticketId = await insertTicket(db, fixture, { billing_profile_id: profileA });
+    const outcome = await edit(technician, ticketId, { billing_profile_id: profileB });
+    expect(outcome).toMatchObject({ ok: false });
+    expect((outcome as { message: string }).message).toMatch(/Permission denied/);
+    expect(await ticketRow(ticketId)).toMatchObject({ billing_profile_id: profileA });
+  }, HOOK_TIMEOUT);
+
+  it('may still edit other fields, with the profile unchanged or absent', async () => {
+    const ticketId = await insertTicket(db, fixture, { billing_profile_id: profileA });
+    const absent = await edit(technician, ticketId, { title: 'Renamed, no profile sent' });
+    expect(absent, JSON.stringify(absent)).toMatchObject({ ok: true });
+    const same = await edit(technician, ticketId, { title: 'Renamed, same profile', billing_profile_id: profileA });
+    expect(same, JSON.stringify(same)).toMatchObject({ ok: true });
+    expect(await ticketRow(ticketId)).toMatchObject({ title: 'Renamed, same profile', billing_profile_id: profileA });
+  }, HOOK_TIMEOUT);
+});
+
+describe.each(Object.entries(editVia))('control: an MSP user with billing:update changes the ticket billing profile through %s', (_via, edit) => {
+  it('changes and clears the profile', async () => {
+    const ticketId = await insertTicket(db, fixture, { billing_profile_id: profileA });
+    expect(await edit(mspUser, ticketId, { billing_profile_id: profileB })).toMatchObject({ ok: true });
+    expect(await ticketRow(ticketId)).toMatchObject({ billing_profile_id: profileB });
+    expect(await edit(mspUser, ticketId, { billing_profile_id: null })).toMatchObject({ ok: true });
+    expect((await ticketRow(ticketId)).billing_profile_id).toBeNull();
+  }, HOOK_TIMEOUT);
+});
+
+// The ownership check at ticketActions.updateTicket (unchanged); the screen save and the REST service never had one for a
+// subject no resolver governs, and this change deliberately leaves them as they were.
+describe('control: an MSP user is still refused another client\'s billing profile by the form update action', () => {
+  it('refuses it and keeps the stored value', async () => {
+    const ticketId = await insertTicket(db, fixture, { billing_profile_id: profileA });
+    const outcome = await editVia['the ticket form update action'](mspUser, ticketId, { billing_profile_id: otherClientProfile });
+    expect(outcome).toMatchObject({ ok: false });
+    expect(await ticketRow(ticketId)).toMatchObject({ billing_profile_id: profileA });
+  }, HOOK_TIMEOUT);
+});
+
+describe('a seat technician and the billing profile on create (form action)', () => {
+  it('is refused an explicit billing profile, and nothing is written', async () => {
+    const before = await ticketCount();
+    const outcome = await createVia['the ticket form action'](technician, { billing_profile_id: profileA });
+    expect(outcome).toMatchObject({ ok: false });
+    expect((outcome as { message: string }).message).toMatch(/Permission denied/);
+    expect(await ticketCount()).toBe(before);
+  }, HOOK_TIMEOUT);
+
+  it('may create from an asset, which lends its own profile to the ticket', async () => {
+    const outcome = await createVia['the ticket form action'](technician, { asset_id: assetWithProfile });
+    expect(outcome, JSON.stringify(outcome)).toMatchObject({ ok: true });
+    expect(await ticketRow((outcome as { ticketId: string }).ticketId)).toMatchObject({ billing_profile_id: profileA });
+  }, HOOK_TIMEOUT);
+
+  it('lets an MSP user with billing:update pick a profile of the ticket\'s client, and refuses another client\'s', async () => {
+    const ok = await createVia['the ticket form action'](mspUser, { billing_profile_id: profileB });
+    expect(ok, JSON.stringify(ok)).toMatchObject({ ok: true });
+    expect(await ticketRow((ok as { ticketId: string }).ticketId)).toMatchObject({ billing_profile_id: profileB });
   }, HOOK_TIMEOUT);
 });

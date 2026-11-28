@@ -717,6 +717,8 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       // is the QuickAddTicket path used by the asset header, the asset list,
       // service history and maintenance — `createTicketFromAsset` and the REST
       // create read the same rule from ticketAssetLinkModel.
+      // Remember what the caller sent before the inherited value fills it: only a supplied profile needs billing authority.
+      const suppliedBillingProfileId = createTicketInput.billing_profile_id;
       const billingProfileSourceAssetId = assetIdForBillingProfileInheritance(linkedAssetIds);
       if (billingProfileSourceAssetId && createTicketInput.client_id && !createTicketInput.billing_profile_id) {
         createTicketInput.billing_profile_id =
@@ -814,6 +816,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         assigned_to: createTicketInput.assigned_to,
         assigned_team_id: createTicketInput.assigned_team_id,
         entered_by: user.user_id,
+        billing_profile_id: suppliedBillingProfileId,
       });
 
       await assertActorMayAssign(trx, tenant, user, [createTicketInput.assigned_to]);
