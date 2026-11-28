@@ -62,7 +62,7 @@ function createRoot(options = {}) {
   const cluster = {};
   for (const namespace of fs.readdirSync(resourcesDir)) {
     cluster[namespace] = fs.readFileSync(path.join(resourcesDir, namespace), 'utf8').split('\n').filter(Boolean)
-      .map((ref) => ({ ref, restarted: false, inProgress: false }));
+      .map((ref) => ({ ref, restarted: false, inProgress: (options.unready || []).includes(ref.split('/')[1]) }));
   }
   fs.writeFileSync(clusterFile, JSON.stringify(cluster));
   fs.writeFileSync(path.join(root, 'bin', 'fakekubectl'), `#!/usr/bin/env node
@@ -123,7 +123,7 @@ const statusIndex = args.indexOf('status');
 if (args.includes('rollout') && statusIndex >= 0) {
   const workload = find(args[statusIndex + 1]);
   if (!workload) fail('not found');
-  if (slow(parseRef(workload.ref).name)) fail('rollout did not finish');
+  if (slow(parseRef(workload.ref).name)) fail('Waiting for deployment spec update to be observed...\\nerror: deployment "' + parseRef(workload.ref).name + '" exceeded its progress deadline');
   if (workload.inProgress) { workload.inProgress = false; workload.restarted = true; save(); }
   process.exit(0);
 }
@@ -492,6 +492,63 @@ test('a slow rollout is waited for on the next attempt, and nothing that finishe
   assert.deepEqual(kubectlCalls(harness, /rollout restart/), [], 'a resume must not restart any workload again');
   assert.equal(restartCount(harness), 1);
   assert.equal(readActivation(harness).stage, 'active');
+});
+
+const EMAIL_SERVICE_WORKLOADS = {
+  ...NAMESPACE_WORKLOADS,
+  msp: 'deployment.apps/alga-core-sebastian\ndeployment.apps/email-service\n'
+};
+
+// Field appliances on stable 1.6.11–1.6.16, 2026-10-21: email-service's
+// readiness probe hit an endpoint its image did not serve, so its Deployment sat
+// at ProgressDeadlineExceeded. Every activation failed on it, which blocked the
+// app update that would have fixed it.
+test('a workload that was already unready does not fail activation and is named in the record', () => {
+  const harness = createRoot({ systemdResolv: 'nameserver 192.0.2.53\n', workloads: EMAIL_SERVICE_WORKLOADS, unready: ['email-service'] });
+  const result = runHelper(harness, ['--activate'], { FAKE_SLOW_WORKLOADS: 'email-service' });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /deployment\/email-service in msp was already not ready before this activation .*exceeded its progress deadline/);
+
+  const activation = readActivation(harness);
+  assert.equal(activation.stage, 'active');
+  assert.deepEqual(activation.preexistingUnready, [
+    { namespace: 'msp', workload: 'deployment/email-service', reason: 'deployment "email-service" exceeded its progress deadline' }
+  ]);
+  assert.deepEqual(activation.pendingRollouts, []);
+  // The healthy workloads still moved onto the resolver; the broken one was
+  // waited on, never restarted.
+  assert.equal(kubectlCalls(harness, /rollout restart.*alga-core-sebastian/).length, 1);
+  assert.deepEqual(kubectlCalls(harness, /rollout restart.*email-service/), []);
+});
+
+test('a rollout the activation started stays its failure on every attempt until it completes', () => {
+  const harness = createRoot({ systemdResolv: 'nameserver 192.0.2.53\n', workloads: EMAIL_SERVICE_WORKLOADS });
+  const first = runHelper(harness, ['--activate'], { FAKE_SLOW_WORKLOADS: 'email-service' });
+  assert.notEqual(first.status, 0);
+  // kubectl gives up at once on a Deployment past its progress deadline; the
+  // message must carry that reason rather than claim the timeout elapsed.
+  assert.match(first.stderr, /email-service in msp did not complete \(deployment "email-service" exceeded its progress deadline\)/);
+  let activation = readActivation(harness);
+  assert.equal(activation.stage, 'failed');
+  assert.match(activation.error, /msp\/deployment\/email-service \(deployment "email-service" exceeded its progress deadline\)/);
+  assert.deepEqual(activation.pendingRollouts, ['msp/deployment/email-service']);
+  assert.deepEqual(activation.preexistingUnready, []);
+
+  // The next attempt finds email-service mid-rollout, exactly like a workload
+  // that was broken before activation. It must still count as a regression.
+  const second = runHelper(harness, ['--activate'], { FAKE_SLOW_WORKLOADS: 'email-service' });
+  assert.notEqual(second.status, 0);
+  activation = readActivation(harness);
+  assert.equal(activation.stage, 'failed');
+  assert.match(activation.error, /msp\/deployment\/email-service/);
+  assert.deepEqual(activation.preexistingUnready, []);
+  assert.equal(kubectlCalls(harness, /rollout restart.*email-service/).length, 1, 'the stuck rollout is waited for, not restarted again');
+
+  const recovered = runHelper(harness, ['--activate']);
+  assert.equal(recovered.status, 0, recovered.stderr || recovered.stdout);
+  activation = readActivation(harness);
+  assert.equal(activation.stage, 'active');
+  assert.deepEqual(activation.pendingRollouts, []);
 });
 
 test('a resumed activation recreates only the workloads whose pods predate the resolver', () => {
