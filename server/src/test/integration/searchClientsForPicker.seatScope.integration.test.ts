@@ -33,6 +33,12 @@ vi.mock('@alga-psa/db', async (importOriginal) => ({
   createTenantKnex: async () => ({ knex: ref.knex, tenant: ref.tenant }),
   getConnection: async () => ref.knex,
 }));
+vi.mock('@alga-psa/event-bus/publishers', async (importOriginal) => ({
+  ...(await importOriginal<any>()),
+  publishEvent: vi.fn(),
+  publishWorkflowEvent: vi.fn(),
+  publishStoredWorkflowEvent: vi.fn(),
+}));
 vi.mock('@alga-psa/formatting/avatarUtils', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/formatting/avatarUtils')>()),
   getClientLogoUrlsBatch: vi.fn(async (ids: string[]) => new Map(ids.map((id) => [id, null]))),
@@ -50,7 +56,8 @@ import {
 } from '@alga-psa/authorization/bundles/service';
 import { searchClientsForPicker as searchFromClients } from '@alga-psa/clients/actions/clientPickerActions';
 import { searchClientsForPicker as searchFromTickets } from '@alga-psa/tickets/actions/clientLookupActions';
-import { getClientById, getAllClients } from '@alga-psa/clients/actions/queryActions';
+import { getClientById, getAllClients, getAllContacts } from '@alga-psa/clients/actions/queryActions';
+import { getContactByContactNameId } from '../../../../packages/clients/src/actions/contact-actions/contactActions';
 
 const DAY = 86_400_000;
 const HOOK_TIMEOUT = 600_000;
@@ -65,11 +72,13 @@ describe('seat technician client picker scope (real kernel, real DB)', { shuffle
   let db: Knex;
   let sponsor: string;
   const clients = { seat: '', other: '', third: '' };
+  const contacts = { seat: randomUUID(), other: randomUUID(), orphan: randomUUID() };
   const users = { seat: '', staff: '', admin: '', narrowed: '', noRule: '', unrelated: '' };
   let arrangementId: string;
 
   const asUser = (userId: string) => { ref.userId = userId; };
   const idsOf = (r: { clients: { client_id: string }[] }) => r.clients.map((c) => c.client_id).sort();
+  const contactIdsOf = (rows: Array<{ contact_name_id: string }>) => rows.map((c) => c.contact_name_id).sort();
 
   const insertSeatAssignment = async (userId: string, arrangement: string) => {
     await db.transaction(async (trx) => {
@@ -83,7 +92,8 @@ describe('seat technician client picker scope (real kernel, real DB)', { shuffle
   /** A published bundle with the given rules, assigned to one user. */
   const assignBundle = async (
     userId: string,
-    rules: Array<{ resourceType: string; templateKey: string; config: Record<string, unknown> }>
+    rules: Array<{ resourceType: string; templateKey: string; config: Record<string, unknown> }>,
+    baseline: 'open' | 'closed' = 'open'
   ) => {
     const bundle = await createAuthorizationBundle(db, { tenant: sponsor, name: `bundle-${randomUUID().slice(0, 8)}`, actorUserId: users.admin });
     for (const rule of rules) {
@@ -93,7 +103,7 @@ describe('seat technician client picker scope (real kernel, real DB)', { shuffle
         config: rule.config as any, actorUserId: users.admin,
       });
     }
-    await publishBundleRevision(db as any, { tenant: sponsor, bundleId: bundle.bundleId, revisionId: bundle.revisionId, actorUserId: users.admin });
+    await publishBundleRevision(db as any, { tenant: sponsor, bundleId: bundle.bundleId, revisionId: bundle.revisionId, actorUserId: users.admin, baseline });
     await createBundleAssignment(db, { tenant: sponsor, bundleId: bundle.bundleId, targetType: 'user', targetId: userId, actorUserId: users.admin });
   };
 
@@ -114,6 +124,13 @@ describe('seat technician client picker scope (real kernel, real DB)', { shuffle
     clients.seat = await createClient(db, sponsor, 'Seat Client Inc');
     clients.other = await createClient(db, sponsor, 'Other Client LLC');
     clients.third = await createClient(db, sponsor, 'Third Client Ltd');
+    for (const [id, name, clientId] of [
+      [contacts.seat, 'Seat Contact', clients.seat],
+      [contacts.other, 'Other Contact', clients.other],
+      [contacts.orphan, 'Orphan Contact', null],
+    ] as const) {
+      await db('contacts').insert({ tenant: sponsor, contact_name_id: id, full_name: name, client_id: clientId, email: `${id}@example.com`, is_inactive: false });
+    }
 
     const arrangement = await createCoManagedSeatArrangement(db, {
       sponsorTenant: sponsor, clientId: clients.seat, operationId: randomUUID(), seats: 5,
@@ -181,6 +198,18 @@ describe('seat technician client picker scope (real kernel, real DB)', { shuffle
     expect(await getClientById(clients.other)).not.toBeNull();
   }, HOOK_TIMEOUT);
 
+  it('applies the seat boundary to contact reads (list and detail agree; a client-less contact is hidden)', async () => {
+    asUser(users.seat);
+    expect(contactIdsOf(await getAllContacts('all'))).toEqual([contacts.seat]);
+    expect((await getContactByContactNameId(contacts.seat))?.contact_name_id).toBe(contacts.seat);
+    expect(await getContactByContactNameId(contacts.other)).toBeNull();
+    expect(await getContactByContactNameId(contacts.orphan)).toBeNull();
+
+    asUser(users.staff);
+    expect(contactIdsOf(await getAllContacts('all'))).toEqual([contacts.seat, contacts.other, contacts.orphan].sort());
+    expect((await getContactByContactNameId(contacts.other))?.contact_name_id).toBe(contacts.other);
+  }, HOOK_TIMEOUT);
+
   // T002: bundles can only narrow the seat further.
   describe('with bundles assigned', () => {
     beforeAll(async () => {
@@ -239,6 +268,39 @@ describe('seat technician client picker scope (real kernel, real DB)', { shuffle
         expect(r.total).toBe(1);
       }
     }, HOOK_TIMEOUT);
+  });
+
+  // Closed baseline: a closed bundle denies every resource action it does not name, for staff and seat techs alike.
+  describe('a published closed-baseline bundle that names neither client nor contact read', () => {
+    const closed = { staff: '', seat: '' };
+    beforeAll(async () => {
+      closed.staff = await createUser(db, sponsor, { user_type: 'internal' });
+      closed.seat = await createUser(db, sponsor, { user_type: 'internal' });
+      await insertSeatAssignment(closed.seat, arrangementId);
+      for (const userId of [closed.staff, closed.seat]) {
+        await assignBundle(userId, [
+          { resourceType: 'ticket', templateKey: 'selected_clients', config: { selectedClientIds: [clients.seat] } },
+        ], 'closed');
+      }
+    }, HOOK_TIMEOUT);
+
+    it.each([['staff user', 'staff'], ['seat technician', 'seat']] as const)(
+      'denies the %s every client and contact read: picker, lists and detail',
+      async (_label, who) => {
+        asUser(closed[who]);
+        for (const [, search] of entryPoints) {
+          const r = await search({ status: 'all' });
+          expect(r.clients).toEqual([]);
+          expect(r.total).toBe(0);
+          expect((await search({ ids: [clients.seat, clients.other] })).clients).toEqual([]);
+        }
+        expect(await getAllClients()).toEqual([]);
+        expect(await getClientById(clients.seat)).toBeNull();
+        expect(await getAllContacts('all')).toEqual([]);
+        expect(await getContactByContactNameId(contacts.seat)).toBeNull();
+      },
+      HOOK_TIMEOUT
+    );
   });
 
   // T003: assignment state is read on every request.
