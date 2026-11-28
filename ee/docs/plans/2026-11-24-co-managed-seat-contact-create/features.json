@@ -9,13 +9,13 @@
     "id": "F002",
     "description": "Project the duplicate-email outcome through the actor's read scope: an in-scope match may be named or returned; an out-of-scope or client-less match yields one generic in-use result with no client name and no contact.",
     "prdRefs": ["Design / Contact create command", "Accepted limit"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F003",
     "description": "Provide find-or-create as the same command returning the in-scope existing contact instead of failing, with scope checked before any lookup result is disclosed.",
     "prdRefs": ["Design / Contact create command"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F004",
@@ -27,7 +27,7 @@
     "id": "F005",
     "description": "Route createOrFindContactByEmail through the command, keeping the client-portal own-client rule and removing the named-client error for callers who cannot read that client.",
     "prdRefs": ["Problem 2"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F006",

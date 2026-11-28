@@ -1,13 +1,12 @@
 'use server'
 
-import { assertRecordCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
-import { queueContactCreated } from '../lib/contactEvents';
 import type { IClient, IClientWithLocation, IContact, IInteraction } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { projectClientForSubject, projectClientsForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
 import { Knex } from 'knex';
 import { ContactModel } from '@alga-psa/shared/models/contactModel';
+import { findOrCreateContactAs, type ContactCreateActor } from '@alga-psa/shared/models/contactCreateCommand';
 import {
   getClientLogoUrl,
   getClientLogoUrlsBatch,
@@ -624,37 +623,14 @@ export const createOrFindContactByEmail = withAuth(async (
     const isClientPortal = isClientPortalUser(user);
     const normalizedEmail = email.toLowerCase();
 
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const existingContactInTenant = await ContactModel.getContactByEmail(normalizedEmail, tenant, trx);
-
-      if (existingContactInTenant) {
-        if (existingContactInTenant.client_id !== clientId) {
-          if (isClientPortal) {
-            throw new Error('EMAIL_EXISTS: This email address is already in use');
-          }
-          if (!existingContactInTenant.client_id) {
-            throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system without a client assignment');
-          }
-          const existingClient = await tenantScopedTable(trx, 'clients', tenant)
-            .select('client_name')
-            .where({ client_id: existingContactInTenant.client_id })
-            .first<{ client_name: string }>();
-          throw new Error(`EMAIL_EXISTS: This email is already associated with ${existingClient?.client_name || 'another client'}`);
-        }
-        const contactWithClientName = {
-          ...existingContactInTenant,
-          client_name: (existingContactInTenant as any).client_name || ''
-        };
-        return { contact: contactWithClientName, isNew: false };
-      }
-
-      await assertRecordCreateAllowed(trx, {
-        tenant,
-        user,
-        resourceType: 'contact',
-        record: { clientId },
-      }, 'contact');
-      const newContact = await ContactModel.createContact({
+    // Duplicate handling, including what a restricted caller may be told, lives in the create command.
+    return await withTransaction(knex, (trx: Knex.Transaction) => findOrCreateContactAs(trx, {
+      tenant,
+      actor: user as ContactCreateActor,
+      // The portal's right to create (`user:create` on their own client) was asserted above; the command's
+      // `contact:create` RBAC step does not apply to them.
+      authorizeActor: isClientPortal ? async () => undefined : undefined,
+      input: {
         full_name: name || extractNameFromEmail(email),
         email: normalizedEmail,
         client_id: clientId,
@@ -666,21 +642,8 @@ export const createOrFindContactByEmail = withAuth(async (
         }] : [],
         role: title,
         is_inactive: false,
-      }, tenant, trx);
-      queueContactCreated(trx, tenant, newContact as any, { actorUserId: user?.user_id });
-
-      const client = await tenantScopedTable(trx, 'clients', tenant)
-        .select('client_name')
-        .where({ client_id: clientId })
-        .first();
-
-      const contactWithClient = {
-        ...newContact,
-        client_name: client?.client_name || ''
-      };
-
-      return { contact: contactWithClient, isNew: true };
-    });
+      },
+    }));
   } catch (error) {
     console.error('Error creating or finding contact:', error);
     throw error;
