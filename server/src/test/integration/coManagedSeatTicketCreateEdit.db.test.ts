@@ -448,6 +448,14 @@ describe.each(Object.entries(editVia))('a seat technician and the ticket billing
     expect(await ticketRow(ticketId)).toMatchObject({ billing_profile_id: profileA });
   }, HOOK_TIMEOUT);
 
+  // A server action request can carry an explicit `undefined` (React's `$undefined`). The form update action stores a
+  // falsey profile as null, so the key must be judged as that null, not as "no change".
+  it('cannot clear the profile with an explicit undefined key', async () => {
+    const ticketId = await insertTicket(db, fixture, { billing_profile_id: profileA });
+    await edit(technician, ticketId, { title: 'Undefined profile key', billing_profile_id: undefined });
+    expect(await ticketRow(ticketId)).toMatchObject({ billing_profile_id: profileA });
+  }, HOOK_TIMEOUT);
+
   it('may still edit other fields, with the profile unchanged or absent', async () => {
     const ticketId = await insertTicket(db, fixture, { billing_profile_id: profileA });
     const absent = await edit(technician, ticketId, { title: 'Renamed, no profile sent' });
