@@ -4386,15 +4386,18 @@
         "disconnect": "Desconectar",
         "connect": "Conectar faixa",
         "connecting": "Conectando...",
-        "cancel": "Cancelar"
+        "cancel": "Cancelar",
+        "updateApiKeys": "Atualizar chaves de API"
       },
       "form": {
         "secretKeyLabel": "Chave secreta",
-        "secretKeyPlaceholder": "sk_live_... ou sk_test_...",
+        "secretKeyPlaceholder": "sk_live_... / rk_live_... (ou chaves de teste)",
         "publishableKeyLabel": "Chave publicável",
         "publishableKeyPlaceholder": "pk_live_... ou pk_test_...",
         "findKeyPrefix": "Encontre isso em seu",
-        "dashboardLink": "Painel Stripe → Chaves de API"
+        "dashboardLink": "Painel Stripe → Chaves de API",
+        "permissionHelp": "Usando uma chave restrita? Permissões necessárias",
+        "checkedOnFirstUse": "verificada no primeiro uso"
       },
       "webhook": {
         "heading": "Configuração de webhook",
@@ -4417,7 +4420,8 @@
         "connectedWebhookFailed": "Listra conectada! Observação: falha na configuração automática do webhook - pode ser necessário configurar webhooks manualmente no Stripe Dashboard.",
         "disconnected": "Faixa desconectada",
         "connectionSuccess": "Conexão bem-sucedida!",
-        "webhookConfigured": "Webhook configurado com sucesso!"
+        "webhookConfigured": "Webhook configurado com sucesso!",
+        "optionalPermissionsMissing": "Conectado. Adicione estas permissões do Stripe para habilitar mais recursos: {{warnings}}"
       },
       "errors": {
         "loadConfig": "Falha ao carregar a configuração do Stripe",
@@ -4426,7 +4430,7 @@
         "testConnection": "Falha no teste de conexão",
         "configureWebhook": "Falha ao configurar o webhook",
         "bothKeysRequired": "Insira a chave secreta e a chave publicável",
-        "secretKeyFormat": "A chave secreta deve começar com sk_",
+        "secretKeyFormat": "A chave deve ser válida: sk_live_, sk_test_, rk_live_ ou rk_test_.",
         "publishableKeyFormat": "A chave publicável deve começar com pk_"
       }
     },

@@ -1595,7 +1595,7 @@
     "messages": {
       "loadConfigFailed": "Error al cargar la configuración de pago",
       "keysRequired": "Introduzca tanto la clave secreta como la clave publicable",
-      "invalidSecretKey": "La clave secreta debe comenzar con sk_",
+      "invalidSecretKey": "La clave debe ser válida: sk_live_, sk_test_, rk_live_ o rk_test_.",
       "invalidPublishableKey": "La clave publicable debe comenzar con pk_",
       "connectSuccess": "¡Stripe conectado y webhooks configurados automáticamente!",
       "connectPartialSuccess": "¡Stripe conectado! Nota: la configuración automática del webhook falló — puede que necesite configurar los webhooks manualmente en el panel de Stripe.",
@@ -1676,14 +1676,17 @@
       },
       "connectForm": {
         "secretKeyLabel": "Clave secreta",
-        "secretKeyPlaceholder": "sk_live_... o sk_test_...",
+        "secretKeyPlaceholder": "sk_live_... / rk_live_... (o claves de prueba)",
         "secretKeyHelpPrefix": "Encuéntrela en su",
         "secretKeyHelpLink": "Panel de Stripe → Claves API",
         "publishableKeyLabel": "Clave publicable",
         "publishableKeyPlaceholder": "pk_live_... o pk_test_...",
         "connecting": "Conectando...",
         "connect": "Conectar Stripe",
-        "cancel": "Cancelar"
+        "cancel": "Cancelar",
+        "permissionHelp": "¿Usas una clave restringida? Permisos necesarios",
+        "checkedOnFirstUse": "se comprueba al usarla por primera vez",
+        "optionalPermissionsMissing": "Conectado. Añade estos permisos de Stripe para habilitar más funciones: {{warnings}}"
       },
       "empty": {
         "description": "Conecte su cuenta de Stripe para aceptar pagos en línea de facturas",

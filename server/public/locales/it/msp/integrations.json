@@ -4386,15 +4386,18 @@
         "disconnect": "Disconnetti",
         "connect": "Connetti Stripe",
         "connecting": "Connessione in corso...",
-        "cancel": "Annulla"
+        "cancel": "Annulla",
+        "updateApiKeys": "Aggiorna chiavi API"
       },
       "form": {
         "secretKeyLabel": "Chiave segreta",
-        "secretKeyPlaceholder": "sk_live_... o sk_test_...",
+        "secretKeyPlaceholder": "sk_live_... / rk_live_... (o chiavi di test)",
         "publishableKeyLabel": "Chiave pubblicabile",
         "publishableKeyPlaceholder": "pk_live_... o pk_test_...",
         "findKeyPrefix": "Trovala nella tua",
-        "dashboardLink": "Dashboard Stripe → Chiavi API"
+        "dashboardLink": "Dashboard Stripe → Chiavi API",
+        "permissionHelp": "Usi una chiave limitata? Autorizzazioni richieste",
+        "checkedOnFirstUse": "verificata al primo utilizzo"
       },
       "webhook": {
         "heading": "Configurazione webhook",
@@ -4417,7 +4420,8 @@
         "connectedWebhookFailed": "Stripe connesso! Nota: la configurazione automatica dei webhook non è riuscita: potrebbe essere necessario configurare i webhook manualmente nella Dashboard Stripe.",
         "disconnected": "Stripe disconnesso",
         "connectionSuccess": "Connessione riuscita!",
-        "webhookConfigured": "Webhook configurato con successo!"
+        "webhookConfigured": "Webhook configurato con successo!",
+        "optionalPermissionsMissing": "Connesso. Aggiungi queste autorizzazioni Stripe per attivare altre funzionalità: {{warnings}}"
       },
       "errors": {
         "loadConfig": "Impossibile caricare la configurazione Stripe",
@@ -4426,7 +4430,7 @@
         "testConnection": "Verifica connessione non riuscita",
         "configureWebhook": "Impossibile configurare il webhook",
         "bothKeysRequired": "Inserisci sia la chiave segreta sia la chiave pubblicabile",
-        "secretKeyFormat": "La chiave segreta deve iniziare con sk_",
+        "secretKeyFormat": "La chiave deve essere valida: sk_live_, sk_test_, rk_live_ o rk_test_.",
         "publishableKeyFormat": "La chiave pubblicabile deve iniziare con pk_"
       }
     },

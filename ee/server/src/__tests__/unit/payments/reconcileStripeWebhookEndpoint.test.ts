@@ -16,11 +16,12 @@ vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: vi.fn(async () => ({ getTenantSecret: vi.fn(async () => 'sk_test') })),
 }));
 vi.mock('@alga-psa/db', () => ({
-  getConnection: vi.fn(async () => ({ fn: { now: () => 'NOW' } })),
+  getConnection: vi.fn(async () => ({ transaction: (work: (trx: object) => unknown) => work({}), fn: { now: () => 'NOW' } })),
   tenantDb: vi.fn(() => ({
     table: () => ({
       where: () => ({
-        first: async () => ({ config_id: 'c1', configuration: { webhook_endpoint_id: 'we_1' } }),
+        forShare() { return this; },
+        first: async () => ({ is_enabled: true, config_id: 'c1', configuration: { webhook_endpoint_id: 'we_1' } }),
         update: dbUpdate,
       }),
     }),

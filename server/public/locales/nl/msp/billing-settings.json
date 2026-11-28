@@ -1595,7 +1595,7 @@
     "messages": {
       "loadConfigFailed": "Kan betalingsconfiguratie niet laden",
       "keysRequired": "Voer zowel de geheime sleutel als de publiceerbare sleutel in",
-      "invalidSecretKey": "Geheime sleutel moet beginnen met sk_",
+      "invalidSecretKey": "De sleutel moet een geldige sk_live_-, sk_test_-, rk_live_- of rk_test_-sleutel zijn.",
       "invalidPublishableKey": "Publiceerbare sleutel moet beginnen met pk_",
       "connectSuccess": "Stripe verbonden en webhooks automatisch geconfigureerd!",
       "connectPartialSuccess": "Stripe verbonden! Opmerking: automatische webhook-configuratie mislukt — u moet webhooks mogelijk handmatig configureren in het Stripe-dashboard.",
@@ -1676,14 +1676,17 @@
       },
       "connectForm": {
         "secretKeyLabel": "Geheime sleutel",
-        "secretKeyPlaceholder": "sk_live_... of sk_test_...",
+        "secretKeyPlaceholder": "sk_live_... / rk_live_... (of testsleutels)",
         "secretKeyHelpPrefix": "Vind dit in uw",
         "secretKeyHelpLink": "Stripe Dashboard → API-sleutels",
         "publishableKeyLabel": "Publiceerbare sleutel",
         "publishableKeyPlaceholder": "pk_live_... of pk_test_...",
         "connecting": "Verbinden...",
         "connect": "Stripe verbinden",
-        "cancel": "Annuleren"
+        "cancel": "Annuleren",
+        "permissionHelp": "Beperkte sleutel? Vereiste machtigingen",
+        "checkedOnFirstUse": "wordt gecontroleerd bij eerste gebruik",
+        "optionalPermissionsMissing": "Verbonden. Voeg deze Stripe-machtigingen toe om meer mogelijkheden in te schakelen: {{warnings}}"
       },
       "empty": {
         "description": "Verbind uw Stripe-account om online betalingen voor facturen te accepteren",

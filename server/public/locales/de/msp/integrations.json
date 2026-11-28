@@ -4386,15 +4386,18 @@
         "disconnect": "Trennen",
         "connect": "Stripe verbinden",
         "connecting": "Verbindung wird hergestellt...",
-        "cancel": "Abbrechen"
+        "cancel": "Abbrechen",
+        "updateApiKeys": "API-Schlüssel aktualisieren"
       },
       "form": {
         "secretKeyLabel": "Geheimer Schlüssel",
-        "secretKeyPlaceholder": "sk_live_... oder sk_test_...",
+        "secretKeyPlaceholder": "sk_live_... / rk_live_... (oder Testschlüssel)",
         "publishableKeyLabel": "Veröffentlichbarer Schlüssel",
         "publishableKeyPlaceholder": "pk_live_... oder pk_test_...",
         "findKeyPrefix": "Finden Sie dies in Ihrem",
-        "dashboardLink": "Stripe-Dashboard → API-Schlüssel"
+        "dashboardLink": "Stripe-Dashboard → API-Schlüssel",
+        "permissionHelp": "Eingeschränkter Schlüssel? Erforderliche Berechtigungen",
+        "checkedOnFirstUse": "bei erster Verwendung geprüft"
       },
       "webhook": {
         "heading": "Webhook-Konfiguration",
@@ -4417,7 +4420,8 @@
         "connectedWebhookFailed": "Stripe verbunden! Hinweis: Die automatische Webhook-Konfiguration ist fehlgeschlagen – Sie müssen Webhooks möglicherweise manuell im Stripe Dashboard konfigurieren.",
         "disconnected": "Stripe getrennt",
         "connectionSuccess": "Verbindung erfolgreich!",
-        "webhookConfigured": "Webhook erfolgreich konfiguriert!"
+        "webhookConfigured": "Webhook erfolgreich konfiguriert!",
+        "optionalPermissionsMissing": "Verbunden. Füge diese Stripe-Berechtigungen hinzu, um weitere Funktionen zu aktivieren: {{warnings}}"
       },
       "errors": {
         "loadConfig": "Stripe-Konfiguration konnte nicht geladen werden",
@@ -4426,7 +4430,7 @@
         "testConnection": "Verbindungstest fehlgeschlagen",
         "configureWebhook": "Webhook konnte nicht konfiguriert werden",
         "bothKeysRequired": "Bitte geben Sie sowohl Secret Key als auch Publishable Key ein",
-        "secretKeyFormat": "Secret Key sollte mit sk_ beginnen",
+        "secretKeyFormat": "Der Schlüssel muss ein gültiger sk_live_-, sk_test_-, rk_live_- oder rk_test_-Schlüssel sein.",
         "publishableKeyFormat": "Publishable Key sollte mit pk_ beginnen"
       }
     },

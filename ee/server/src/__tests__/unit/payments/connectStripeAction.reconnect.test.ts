@@ -6,6 +6,43 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const store: { row: Record<string, any> | null } = { row: null };
+const stripeMocks = vi.hoisted(() => ({
+  accountRetrieve: vi.fn(), webhookList: vi.fn(), webhookCreate: vi.fn(), webhookUpdate: vi.fn(), webhookDelete: vi.fn(),
+  webhookRetrieve: vi.fn(), customerList: vi.fn(), setupIntentList: vi.fn(), paymentIntentList: vi.fn(),
+  checkoutSessionList: vi.fn(), paymentMethodList: vi.fn(), chargeList: vi.fn(),
+}));
+const vaultValues = vi.hoisted(() => new Map<string, string>());
+const secretMocks = vi.hoisted(() => ({ set: vi.fn(), get: vi.fn(), delete: vi.fn() }));
+const dbMocks = vi.hoisted(() => {
+  let tail = Promise.resolve();
+  return {
+    failUpdate: false,
+    failCommit: false,
+    updateHandler: null as null | ((patch: Record<string, any>) => Promise<void>),
+    resetLock: () => { tail = Promise.resolve(); },
+    transaction: async (callback: (transaction: any) => Promise<unknown>) => {
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => { release = resolve; });
+      const previous = tail;
+      tail = previous.then(() => held);
+      await previous;
+      const before = store.row;
+      try {
+        const result = await callback(fakeKnex);
+        if (dbMocks.failCommit) {
+          dbMocks.failCommit = false;
+          throw new Error('database rejected COMMIT');
+        }
+        return result;
+      } catch (error) {
+        store.row = before;
+        throw error;
+      } finally {
+        release();
+      }
+    },
+  };
+});
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) => fn({ user_id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
@@ -15,9 +52,9 @@ vi.mock('@alga-psa/core/logger', () => ({
 }));
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: vi.fn(async () => ({
-    setTenantSecret: vi.fn(),
-    getTenantSecret: vi.fn(async () => 'sk_test_stored'),
-    deleteTenantSecret: vi.fn(),
+    setTenantSecret: secretMocks.set,
+    getTenantSecret: secretMocks.get,
+    deleteTenantSecret: secretMocks.delete,
   })),
 }));
 vi.mock('../../../lib/payments/stripeWebhookEvents', () => ({
@@ -28,19 +65,27 @@ vi.mock('../../../lib/payments/stripeWebhookEvents', () => ({
 }));
 vi.mock('stripe', () => ({
   default: vi.fn().mockImplementation(function () { return {
-    accounts: { retrieve: vi.fn().mockResolvedValue({ id: 'acct_1' }) },
+    accounts: { retrieve: stripeMocks.accountRetrieve },
     webhookEndpoints: {
-      list: vi.fn().mockResolvedValue({ data: [] }),
-      create: vi.fn().mockResolvedValue({ id: 'we_1', secret: 'whsec_1' }),
-      update: vi.fn(),
-      del: vi.fn(),
+      list: stripeMocks.webhookList,
+      create: stripeMocks.webhookCreate,
+      update: stripeMocks.webhookUpdate,
+      del: stripeMocks.webhookDelete,
+      retrieve: stripeMocks.webhookRetrieve,
     },
+    customers: { list: stripeMocks.customerList },
+    setupIntents: { list: stripeMocks.setupIntentList },
+    paymentIntents: { list: stripeMocks.paymentIntentList },
+    checkout: { sessions: { list: stripeMocks.checkoutSessionList } },
+    paymentMethods: { list: stripeMocks.paymentMethodList },
+    charges: { list: stripeMocks.chargeList },
   }; }),
 }));
 
 const fakeKnex: any = {
   fn: { now: () => 'NOW' },
   raw: (sql: string) => ({ __raw: sql }),
+  transaction: (callback: (transaction: any) => Promise<unknown>) => dbMocks.transaction(callback),
 };
 
 vi.mock('@/lib/db', () => ({
@@ -50,8 +95,12 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: vi.fn(() => ({
     table: () => ({
       where: () => ({
+        forShare() { return this; },
+        forUpdate() { return this; },
         first: async () => (store.row ? { ...store.row } : undefined),
         update: async (patch: Record<string, any>) => {
+          if (dbMocks.updateHandler) await dbMocks.updateHandler(patch);
+          if (dbMocks.failUpdate) throw new Error('database unavailable');
           const next: Record<string, any> = { ...store.row, ...patch };
           // disconnect strips webhook_endpoint_id with a raw jsonb expression
           if (patch.configuration && (patch.configuration as any).__raw) {
@@ -69,7 +118,7 @@ vi.mock('@alga-psa/db', () => ({
   })),
 }));
 
-import { connectStripeAction, disconnectStripeAction } from '../../../lib/actions/payment-actions';
+import { connectStripeAction, disconnectStripeAction, testStripeConnectionAction } from '../../../lib/actions/payment-actions';
 import { DEFAULT_PAYMENT_SETTINGS } from '@alga-psa/types';
 
 const credentials = { secretKey: 'sk_test_x', publishableKey: 'pk_test_x' };
@@ -88,6 +137,31 @@ const customised = {
 
 describe('connectStripeAction settings preservation', () => {
   beforeEach(() => {
+    secretMocks.set.mockReset();
+    secretMocks.get.mockReset();
+    secretMocks.delete.mockReset();
+    vaultValues.clear();
+    vaultValues.set('tenant-1|stripe_payment_secret_key', 'sk_test_stored');
+    vaultValues.set('tenant-1|stripe_payment_webhook_secret', 'whsec_test_stored');
+    secretMocks.set.mockImplementation(async (tenant: string, key: string, value: string) => { vaultValues.set(`${tenant}|${key}`, value); });
+    secretMocks.get.mockImplementation(async (tenant: string, key: string) => vaultValues.get(`${tenant}|${key}`) ?? null);
+    secretMocks.delete.mockImplementation(async (tenant: string, key: string) => { vaultValues.delete(`${tenant}|${key}`); });
+    stripeMocks.accountRetrieve.mockReset().mockResolvedValue({ id: 'acct_1' });
+    stripeMocks.webhookList.mockReset().mockResolvedValue({ data: [] });
+    stripeMocks.webhookCreate.mockReset().mockResolvedValue({ id: 'we_1', secret: 'whsec_1' });
+    stripeMocks.webhookUpdate.mockReset().mockResolvedValue({});
+    stripeMocks.webhookRetrieve.mockReset().mockImplementation(async (id: string) => ({ id, url: 'http://localhost:3000/api/webhooks/stripe/payments/tenant-1' }));
+    stripeMocks.webhookDelete.mockReset().mockResolvedValue({});
+    stripeMocks.customerList.mockReset().mockResolvedValue({ data: [] });
+    stripeMocks.setupIntentList.mockReset().mockResolvedValue({ data: [] });
+    stripeMocks.paymentIntentList.mockReset().mockResolvedValue({ data: [] });
+    stripeMocks.checkoutSessionList.mockReset().mockResolvedValue({ data: [] });
+    stripeMocks.paymentMethodList.mockReset().mockResolvedValue({ data: [] });
+    stripeMocks.chargeList.mockReset().mockResolvedValue({ data: [] });
+    dbMocks.failUpdate = false;
+    dbMocks.failCommit = false;
+    dbMocks.updateHandler = null;
+    dbMocks.resetLock();
     store.row = {
       config_id: 'cfg-1',
       tenant: 'tenant-1',
@@ -104,6 +178,153 @@ describe('connectStripeAction settings preservation', () => {
     expect(result.success).toBe(true);
     expect(store.row!.settings).toEqual({ ...DEFAULT_PAYMENT_SETTINGS, ...customised });
     expect(store.row!.configuration.publishable_key).toBe('pk_test_x');
+  });
+
+  it('connects with sk_ and rk_ keys with identical successful results', async () => {
+    const standardResult = await (connectStripeAction as any)({ ...credentials, secretKey: 'sk_test_x' });
+    store.row = {
+      config_id: 'cfg-1', tenant: 'tenant-1', provider_type: 'stripe', is_enabled: true,
+      configuration: { publishable_key: 'pk_old', webhook_endpoint_id: 'we_old' },
+      webhook_secret_vault_path: null, settings: { ...customised },
+    };
+    stripeMocks.webhookList.mockClear();
+    stripeMocks.webhookCreate.mockClear();
+    stripeMocks.webhookUpdate.mockClear();
+    const restrictedResult = await (connectStripeAction as any)({ ...credentials, secretKey: 'rk_test_x' });
+    expect(standardResult).toEqual(restrictedResult);
+    expect(restrictedResult.success).toBe(true);
+    expect(stripeMocks.webhookList).toHaveBeenCalledWith({ limit: 1 });
+    expect(stripeMocks.customerList).toHaveBeenCalledWith({ limit: 1 });
+    expect(stripeMocks.setupIntentList).toHaveBeenCalledWith({ limit: 1 });
+    expect(stripeMocks.paymentIntentList).toHaveBeenCalledWith({ limit: 1 });
+    expect(stripeMocks.checkoutSessionList).toHaveBeenCalledWith({ limit: 1 });
+    expect(stripeMocks.paymentMethodList).toHaveBeenCalledWith({ limit: 1 });
+    expect(stripeMocks.chargeList).toHaveBeenCalledWith({ limit: 1 });
+  });
+
+  it('replaces a connected key in place while retaining the endpoint, signing-secret path, and settings', async () => {
+    const url = 'http://localhost:3000/api/webhooks/stripe/payments/tenant-1';
+    store.row!.webhook_secret_vault_path = 'tenant/tenant-1/stripe_payment_webhook_secret';
+    stripeMocks.webhookList.mockResolvedValue({ data: [{ id: 'we_old', url }, { id: 'we_duplicate', url: 'http://localhost:3000/api/webhooks/stripe/payments' }] });
+
+    const result = await (connectStripeAction as any)({ ...credentials, secretKey: 'rk_test_replacement' });
+
+    expect(result.success).toBe(true);
+    expect(store.row!.configuration.webhook_endpoint_id).toBe('we_old');
+    expect(store.row!.webhook_secret_vault_path).toBe('tenant/tenant-1/stripe_payment_webhook_secret');
+    expect(store.row!.settings).toEqual({ ...DEFAULT_PAYMENT_SETTINGS, ...customised });
+    expect(stripeMocks.webhookUpdate).toHaveBeenCalledWith('we_old', expect.objectContaining({ enabled_events: ['checkout.session.completed'] }));
+    expect(stripeMocks.webhookRetrieve).toHaveBeenCalledWith('we_old');
+    expect(stripeMocks.webhookList).toHaveBeenCalledTimes(1); // manifest permission probe only
+    expect(stripeMocks.webhookList).toHaveBeenCalledWith({ limit: 1 });
+    expect(secretMocks.set).toHaveBeenCalledWith('tenant-1', 'stripe_payment_secret_key_alternate', 'rk_test_replacement');
+    expect(secretMocks.set).not.toHaveBeenCalledWith('tenant-1', 'stripe_payment_webhook_secret', expect.anything());
+  });
+
+  it('rejects malformed keys before making any Stripe call', async () => {
+    const result = await (connectStripeAction as any)({ ...credentials, secretKey: 'pk_test_nope' });
+    expect(result.success).toBe(false);
+    expect(stripeMocks.webhookList).not.toHaveBeenCalled();
+    expect(stripeMocks.accountRetrieve).not.toHaveBeenCalled();
+  });
+
+  it('keeps the active key, webhook, signing secret path, and settings after webhook permission denial during replacement', async () => {
+    stripeMocks.webhookList.mockResolvedValue({ data: [{ id: 'we_old', url: 'http://localhost:3000/api/webhooks/stripe/payments/tenant-1' }] });
+    stripeMocks.webhookUpdate.mockRejectedValue({ type: 'StripePermissionError', statusCode: 403, message: 'Permission denied.' });
+    store.row!.webhook_secret_vault_path = 'tenant/tenant-1/stripe_payment_webhook_secret';
+    const priorRow = {
+      ...store.row!,
+      configuration: { ...store.row!.configuration },
+      settings: { ...store.row!.settings },
+    };
+    const result = await (connectStripeAction as any)({ ...credentials, secretKey: 'rk_test_replacement' });
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('webhook_write');
+    expect(result.error).toContain('webhooks');
+    expect(secretMocks.set).not.toHaveBeenCalled();
+    expect(store.row).toEqual(priorRow);
+  });
+
+  it('blocks connect before storing when a required core permission is denied', async () => {
+    stripeMocks.customerList.mockRejectedValue({ type: 'StripeInvalidRequestError', message: 'Missing permissions: customer_read.' });
+    const result = await (connectStripeAction as any)({ ...credentials, secretKey: 'rk_test_missingcore' });
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('core-payments');
+    expect(result.error).toContain('customer_read');
+    expect(stripeMocks.webhookCreate).not.toHaveBeenCalled();
+    expect(store.row!.configuration.publishable_key).toBe('pk_old');
+  });
+
+  it('returns per-capability results from Test Connection when required permission is denied', async () => {
+    stripeMocks.customerList.mockRejectedValue({ type: 'StripePermissionError', statusCode: 403, message: 'Permission denied.' });
+    const result = await (testStripeConnectionAction as any)();
+    expect(secretMocks.get).toHaveBeenCalledWith('tenant-1', 'stripe_payment_secret_key');
+    expect(result.success).toBe(false);
+    expect(result.data.capabilities).toContainEqual(expect.objectContaining({ capability: 'core-payments', status: 'denied', missingPermissions: expect.arrayContaining(['customer_read']) }));
+    expect(result.data.permissions.customer_read).toBe('denied');
+  });
+
+  it('connects and reports a denied optional customer-import permission', async () => {
+    stripeMocks.setupIntentList.mockRejectedValue({ type: 'StripePermissionError', statusCode: 403, message: 'Permission denied.' });
+    const result = await (connectStripeAction as any)(credentials);
+    expect(result.success).toBe(true);
+    expect(result.data.unavailableCapabilities).toContainEqual({ capability: 'customer-import', permissionId: 'setup_intent_read' });
+    expect(result.data.unavailableCapabilities).toContainEqual({ capability: 'saved-cards-auto-pay', permissionId: 'setup_intent_read' });
+  });
+
+  it.each(['failUpdate', 'failCommit'] as const)('keeps the old key active after %s', async (failure) => {
+    const priorRow = { ...store.row!, configuration: { ...store.row!.configuration }, settings: { ...store.row!.settings } };
+    dbMocks[failure] = true;
+    const result = await (connectStripeAction as any)({ ...credentials, secretKey: 'rk_test_replacement' });
+    expect(result.success).toBe(false);
+    expect(secretMocks.set).toHaveBeenCalledWith('tenant-1', 'stripe_payment_secret_key_alternate', 'rk_test_replacement');
+    expect(vaultValues.get('tenant-1|stripe_payment_secret_key')).toBe('sk_test_stored');
+    expect(vaultValues.has('tenant-1|stripe_payment_secret_key_alternate')).toBe(false);
+    expect(store.row).toEqual(priorRow);
+  });
+
+  it('serializes overlapping replacements so a failed request cannot roll back a later success', async () => {
+    let updateStarted!: () => void;
+    let releaseFailedUpdate!: () => void;
+    const started = new Promise<void>((resolve) => { updateStarted = resolve; });
+    const hold = new Promise<void>((resolve) => { releaseFailedUpdate = resolve; });
+    let firstUpdate = true;
+    dbMocks.updateHandler = async () => {
+      if (!firstUpdate) return;
+      firstUpdate = false;
+      updateStarted();
+      await hold;
+      throw new Error('first database update failed');
+    };
+
+    const failedRotation = (connectStripeAction as any)({ ...credentials, secretKey: 'rk_test_rotationa' });
+    await started;
+    const successfulRotation = (connectStripeAction as any)({ ...credentials, secretKey: 'rk_test_rotationb' });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(vaultValues.get('tenant-1|stripe_payment_secret_key')).toBe('sk_test_stored');
+    releaseFailedUpdate();
+
+    const [failed, succeeded] = await Promise.all([failedRotation, successfulRotation]);
+    expect(failed.success).toBe(false);
+    expect(succeeded.success).toBe(true);
+    expect(store.row!.credentials_vault_path).toBe('tenant/tenant-1/stripe_payment_secret_key_alternate');
+    expect(vaultValues.get('tenant-1|stripe_payment_secret_key_alternate')).toBe('rk_test_rotationb');
+    expect(vaultValues.has('tenant-1|stripe_payment_secret_key')).toBe(false);
+    secretMocks.get.mockClear();
+    expect((await (testStripeConnectionAction as any)()).success).toBe(true);
+    expect(secretMocks.get).toHaveBeenCalledWith('tenant-1', 'stripe_payment_secret_key_alternate');
+    expect((await (connectStripeAction as any)(credentials)).success).toBe(true);
+    expect(store.row!.credentials_vault_path).toBe('tenant/tenant-1/stripe_payment_secret_key');
+    expect(vaultValues.has('tenant-1|stripe_payment_secret_key_alternate')).toBe(false);
+  });
+
+  it('preserves standard-key partial success when a non-permission webhook setup error occurs initially', async () => {
+    store.row = null;
+    stripeMocks.webhookCreate.mockRejectedValue(new Error('stripe unavailable'));
+    const result = await (connectStripeAction as any)(credentials);
+    expect(result.success).toBe(true);
+    expect(result.data.webhookConfigured).toBe(false);
+    expect(store.row!.is_enabled).toBe(true);
   });
 
   it('keeps all saved settings across disconnect then reconnect', async () => {

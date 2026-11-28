@@ -21,6 +21,8 @@ import { resolvePaymentBillingProfileId } from '@alga-psa/shared/billingClients/
 import { offSessionEvidence, toCustomerSnapshot } from './stripeImportSnapshot';
 import type { StripeCustomerSnapshot } from './stripeImportClassifier';
 import { buildAutopayPaymentIntentRequest, mapStripeAutopayError } from './stripeAutopayParams';
+import { readStripeCredentials } from './stripeTenantCredentials';
+import { withStripePermissionErrors } from './stripePermissionManifest';
 import {
   PaymentProvider,
   PaymentProviderCapabilities,
@@ -29,7 +31,6 @@ import {
   PaymentWebhookEvent,
   PaymentDetails,
   PaymentStatus,
-  IPaymentProviderConfig,
   IClientPaymentCustomer,
   IInvoicePaymentLink,
   CreatePaymentMethodSetupSessionRequest,
@@ -55,23 +56,14 @@ async function getStripePaymentConfig(tenantId: string): Promise<StripePaymentCo
   const secretProvider = await getSecretProviderInstance();
 
   // First check for tenant-specific configuration
-  const config = await tenantDb(knex, tenantId).table<IPaymentProviderConfig>('payment_provider_configs')
-    .where({
-      tenant: tenantId,
-      provider_type: 'stripe',
-      is_enabled: true,
-    })
-    .first();
-
-  if (config?.credentials_vault_path) {
-    // Use tenant-specific credentials from vault
-    const secretKey = await secretProvider.getTenantSecret(tenantId, 'stripe_payment_secret_key');
+  const { config, secretKey: tenantKey } = await readStripeCredentials(knex, tenantId);
+  if (config?.is_enabled && config.credentials_vault_path) {
     const publishableKey = config.configuration?.publishable_key as string;
 
-    if (secretKey && publishableKey) {
+    if (tenantKey && publishableKey) {
       // Webhook secret is optional - only needed for verifying incoming webhooks
       const webhookSecret = await secretProvider.getTenantSecret(tenantId, 'stripe_payment_webhook_secret') || '';
-      return { secretKey, webhookSecret, publishableKey };
+      return { secretKey: tenantKey, webhookSecret, publishableKey };
     }
   }
 
@@ -176,7 +168,7 @@ export class StripePaymentProvider implements PaymentProvider {
     if (!this.stripe) {
       throw new Error('Stripe client not initialized');
     }
-    return this.stripe;
+    return withStripePermissionErrors(this.stripe);
   }
 
   /**

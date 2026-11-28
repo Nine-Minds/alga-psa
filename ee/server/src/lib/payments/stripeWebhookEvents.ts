@@ -1,11 +1,10 @@
 import * as fs from 'fs';
 import Stripe from 'stripe';
 import { tenantDb } from '@alga-psa/db';
-import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { readStripeCredentials } from './stripeTenantCredentials';
 import { getConnection } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { stripeApiOverride } from '../stripe/stripeApiOverride';
-import type { IPaymentProviderConfig } from 'server/src/interfaces/payment.interfaces';
 
 /**
  * Events we subscribe to for invoice payment processing and saved-card auto-pay.
@@ -93,13 +92,9 @@ export async function reconcileStripeWebhookEvents(
 ): Promise<boolean> {
   const urlOnly = options.scope === 'url';
   const knex = await getConnection(tenant);
-  const config = await tenantDb(knex, tenant).table<IPaymentProviderConfig>('payment_provider_configs')
-    .where({ provider_type: 'stripe', is_enabled: true }).first();
-  const endpointId = (config?.configuration as any)?.webhook_endpoint_id;
-  if (!config || !endpointId) return false;
-  const secretProvider = await getSecretProviderInstance();
-  const secretKey = await secretProvider.getTenantSecret(tenant, 'stripe_payment_secret_key');
-  if (!secretKey) return false;
+  const { config, secretKey } = await readStripeCredentials(knex, tenant);
+  const endpointId = config?.configuration?.webhook_endpoint_id as string | undefined;
+  if (!config?.is_enabled || !endpointId || !secretKey) return false;
   // LEVERAGE: pattern stripe-client — tenant Stripe clients are built ad hoc here, in payment-actions.ts and StripePaymentProvider (each with or without the emulator override); a shared tenant-client factory would end the drift.
   const stripe = new Stripe(secretKey, { apiVersion: '2024-12-18.acacia' as any, ...stripeApiOverride(secretKey) });
   const { tenantUrl } = stripeWebhookUrls(options.baseUrl ?? getStripeBaseUrl(), tenant);

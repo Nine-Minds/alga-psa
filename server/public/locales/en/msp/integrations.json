@@ -4409,15 +4409,18 @@
         "disconnect": "Disconnect",
         "connect": "Connect Stripe",
         "connecting": "Connecting...",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "updateApiKeys": "Update API keys"
       },
       "form": {
         "secretKeyLabel": "Secret Key",
-        "secretKeyPlaceholder": "sk_live_... or sk_test_...",
+        "secretKeyPlaceholder": "sk_live_... / rk_live_... (or test keys)",
         "publishableKeyLabel": "Publishable Key",
         "publishableKeyPlaceholder": "pk_live_... or pk_test_...",
         "findKeyPrefix": "Find this in your",
-        "dashboardLink": "Stripe Dashboard → API Keys"
+        "dashboardLink": "Stripe Dashboard → API Keys",
+        "permissionHelp": "Using a restricted key? Required permissions",
+        "checkedOnFirstUse": "checked on first use"
       },
       "webhook": {
         "heading": "Webhook Configuration",
@@ -4440,7 +4443,8 @@
         "connectedWebhookFailed": "Stripe connected! Note: Webhook auto-configuration failed - you may need to configure webhooks manually in Stripe Dashboard.",
         "disconnected": "Stripe disconnected",
         "connectionSuccess": "Connection successful!",
-        "webhookConfigured": "Webhook configured successfully!"
+        "webhookConfigured": "Webhook configured successfully!",
+        "optionalPermissionsMissing": "Connected. Add these Stripe permissions to enable more capabilities: {{warnings}}"
       },
       "errors": {
         "loadConfig": "Failed to load Stripe configuration",
@@ -4449,7 +4453,7 @@
         "testConnection": "Connection test failed",
         "configureWebhook": "Failed to configure webhook",
         "bothKeysRequired": "Please enter both secret key and publishable key",
-        "secretKeyFormat": "Secret key should start with sk_",
+        "secretKeyFormat": "Secret key should be a valid sk_live_, sk_test_, rk_live_, or rk_test_ key.",
         "publishableKeyFormat": "Publishable key should start with pk_"
       }
     },

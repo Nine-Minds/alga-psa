@@ -1595,7 +1595,7 @@
     "messages": {
       "loadConfigFailed": "Det gick inte att läsa in betalningskonfigurationen",
       "keysRequired": "Ange både den hemliga och den publicerbara nyckeln",
-      "invalidSecretKey": "Den hemliga nyckeln ska börja med sk_",
+      "invalidSecretKey": "Nyckeln måste vara en giltig sk_live_, sk_test_, rk_live_ eller rk_test_-nyckel.",
       "invalidPublishableKey": "Den publicerbara nyckeln ska börja med pk_",
       "connectSuccess": "Stripe har anslutits och webhookar har konfigurerats automatiskt.",
       "connectPartialSuccess": "Stripe har anslutits. Obs: Den automatiska konfigurationen av webhookar misslyckades. Du kan behöva konfigurera webhookar manuellt i Stripe Dashboard.",
@@ -1676,14 +1676,17 @@
       },
       "connectForm": {
         "secretKeyLabel": "Hemlig nyckel",
-        "secretKeyPlaceholder": "sk_live_... eller sk_test_...",
+        "secretKeyPlaceholder": "sk_live_... / rk_live_... (eller testnycklar)",
         "secretKeyHelpPrefix": "Du hittar den här i",
         "secretKeyHelpLink": "Stripe Dashboard → API-nycklar",
         "publishableKeyLabel": "Publicerbar nyckel",
         "publishableKeyPlaceholder": "pk_live_... eller pk_test_...",
         "connecting": "Ansluter…",
         "connect": "Anslut Stripe",
-        "cancel": "Avbryt"
+        "cancel": "Avbryt",
+        "permissionHelp": "Använder du en begränsad nyckel? Nödvändiga behörigheter",
+        "checkedOnFirstUse": "kontrolleras första gången den används",
+        "optionalPermissionsMissing": "Ansluten. Lägg till dessa Stripe-behörigheter för att aktivera fler funktioner: {{warnings}}"
       },
       "empty": {
         "description": "Anslut ditt Stripe-konto för att ta emot onlinebetalningar för fakturor",

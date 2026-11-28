@@ -1595,7 +1595,7 @@
     "messages": {
       "loadConfigFailed": "Failed to load payment configuration",
       "keysRequired": "Please enter both secret key and publishable key",
-      "invalidSecretKey": "Secret key should start with sk_",
+      "invalidSecretKey": "Secret key should be a valid sk_live_, sk_test_, rk_live_, or rk_test_ key.",
       "invalidPublishableKey": "Publishable key should start with pk_",
       "connectSuccess": "Stripe connected and webhooks configured automatically!",
       "connectPartialSuccess": "Stripe connected! Note: Webhook auto-configuration failed - you may need to configure webhooks manually in Stripe Dashboard.",
@@ -1676,14 +1676,17 @@
       },
       "connectForm": {
         "secretKeyLabel": "Secret Key",
-        "secretKeyPlaceholder": "sk_live_... or sk_test_...",
+        "secretKeyPlaceholder": "sk_live_... / rk_live_... (or test keys)",
         "secretKeyHelpPrefix": "Find this in your",
         "secretKeyHelpLink": "Stripe Dashboard → API Keys",
         "publishableKeyLabel": "Publishable Key",
         "publishableKeyPlaceholder": "pk_live_... or pk_test_...",
         "connecting": "Connecting...",
         "connect": "Connect Stripe",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "permissionHelp": "Using a restricted key? Required permissions",
+        "checkedOnFirstUse": "checked on first use",
+        "optionalPermissionsMissing": "Connected. Add these Stripe permissions to enable more capabilities: {{warnings}}"
       },
       "empty": {
         "description": "Connect your Stripe account to accept online payments for invoices",

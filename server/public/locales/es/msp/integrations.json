@@ -4386,15 +4386,18 @@
         "disconnect": "Desconectar",
         "connect": "Conectar Stripe",
         "connecting": "Conectando...",
-        "cancel": "Cancelar"
+        "cancel": "Cancelar",
+        "updateApiKeys": "Actualizar claves API"
       },
       "form": {
         "secretKeyLabel": "Clave secreta",
-        "secretKeyPlaceholder": "sk_live_... or sk_test_...",
+        "secretKeyPlaceholder": "sk_live_... / rk_live_... (o claves de prueba)",
         "publishableKeyLabel": "Clave publicable",
         "publishableKeyPlaceholder": "pk_live_... or pk_test_...",
         "findKeyPrefix": "Encuéntrela en",
-        "dashboardLink": "Stripe Dashboard → API Keys"
+        "dashboardLink": "Stripe Dashboard → API Keys",
+        "permissionHelp": "¿Usas una clave restringida? Permisos necesarios",
+        "checkedOnFirstUse": "se comprueba al usarla por primera vez"
       },
       "webhook": {
         "heading": "Configuración de webhooks",
@@ -4417,7 +4420,8 @@
         "connectedWebhookFailed": "¡Stripe conectado! Nota: no se pudo configurar automáticamente el webhook; quizá deba configurar los webhooks manualmente en Stripe Dashboard.",
         "disconnected": "Stripe desconectado",
         "connectionSuccess": "¡Conexión establecida correctamente!",
-        "webhookConfigured": "¡Webhook configurado correctamente!"
+        "webhookConfigured": "¡Webhook configurado correctamente!",
+        "optionalPermissionsMissing": "Conectado. Añade estos permisos de Stripe para habilitar más funciones: {{warnings}}"
       },
       "errors": {
         "loadConfig": "No se pudo cargar la configuración de Stripe",
@@ -4426,7 +4430,7 @@
         "testConnection": "Falló la prueba de conexión",
         "configureWebhook": "No se pudo configurar el webhook",
         "bothKeysRequired": "Ingrese la clave secreta y la clave publicable",
-        "secretKeyFormat": "La clave secreta debe comenzar con sk_",
+        "secretKeyFormat": "La clave debe ser válida: sk_live_, sk_test_, rk_live_ o rk_test_.",
         "publishableKeyFormat": "La clave publicable debe comenzar con pk_"
       }
     },
