@@ -289,4 +289,24 @@ describe('registered ticket action authorization boundary', () => {
     coManagedWorkflowTicketSeam.register(() => ({ retain: async () => {} }));
     await expect(action('find').handler({ ticket_id: ticketId }, ctx)).rejects.toMatchObject({ code: 'WORKFLOW_TICKET_AUTHORITY_UNAVAILABLE' });
   });
+
+  it.each(['create', 'add_comment', 'update_fields', 'assign', 'close', 'link_entities', 'add_attachment', 'apply_checklist', 'add_checklist_items', 'find'])(
+    'fails %s closed with operation-authorizer-missing when a served provider only implements retain', async name => {
+    coManagedWorkflowTicketSeam.reset();
+    const retain = vi.fn(async () => {});
+    coManagedWorkflowTicketSeam.register(() => ({ retain }));
+    const input = action(name).inputSchema.parse({ ticket_id: ticketId, client_id: boardId, board_id: boardId, priority_id: boardId, title: 'x',
+      description: 'Review', patch: { title: 'changed' }, body: 'Review', assignment: { primary: { type: 'user', id: clientId } },
+      resolution: { code: 'done' }, entity_type: 'asset', entity_id: boardId, link_type: 'related',
+      source: { document_id: boardId }, template_id: boardId, items: [{ item_name: 'Review' }] });
+    await expect(action(name).handler(input, ctx)).rejects.toMatchObject({ code: 'WORKFLOW_TICKET_AUTHORITY_UNAVAILABLE', reason: 'operation-authorizer-missing' });
+    expect(retain).not.toHaveBeenCalled();
+    expect(state.writes).toEqual([]);
+  });
+
+  it('fails find by selector closed with selector-authorizer-missing when the provider has no findCandidates', async () => {
+    coManagedWorkflowTicketSeam.reset();
+    coManagedWorkflowTicketSeam.register(() => ({ retain: async () => {}, authorize }));
+    await expect(action('find').handler({ ticket_number: 'T-1' }, ctx)).rejects.toMatchObject({ code: 'WORKFLOW_TICKET_AUTHORITY_UNAVAILABLE', reason: 'selector-authorizer-missing' });
+  });
 });
